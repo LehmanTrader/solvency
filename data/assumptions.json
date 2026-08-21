@@ -1,0 +1,82 @@
+{
+  "$schema_version": "1.0.0",
+  "description": "Every modeled parameter in Denominator. NONE of these are measurements. Each carries provenance and is overridable in the calculator.",
+  "task_tiers": {
+    "light": {
+      "label": "Light",
+      "examples": "bug fix, small refactor, single-file change",
+      "input_tokens_per_loop": 5000,
+      "output_tokens_per_loop": 1500,
+      "loops_low": 1,
+      "loops_high": 3,
+      "loops_default": 2,
+      "kind": "assumption",
+      "provenance": "digitalapplied, 'AI Coding Agent Cost Calculator: 10 Tools Compared 2026'",
+      "provenance_url": "https://www.digitalapplied.com/blog/ai-coding-agent-cost-calculator-10-tools-2026",
+      "provenance_note": "The source explicitly states these are modeling assumptions, not industry-standard benchmarks, and that real consumption varies with codebase size, context strategy, and tool configuration. Denominator inherits that caveat verbatim."
+    },
+    "moderate": {
+      "label": "Moderate",
+      "examples": "multi-file refactor, feature with tests",
+      "input_tokens_per_loop": 20000,
+      "output_tokens_per_loop": 4000,
+      "loops_low": 8,
+      "loops_high": 12,
+      "loops_default": 10,
+      "kind": "assumption",
+      "provenance": "digitalapplied, 'AI Coding Agent Cost Calculator: 10 Tools Compared 2026'",
+      "provenance_url": "https://www.digitalapplied.com/blog/ai-coding-agent-cost-calculator-10-tools-2026",
+      "provenance_note": "Same caveat as light tier."
+    },
+    "heavy": {
+      "label": "Heavy",
+      "examples": "full-stack scaffold, cross-cutting migration",
+      "input_tokens_per_loop": 30000,
+      "output_tokens_per_loop": 6000,
+      "loops_low": 20,
+      "loops_high": 30,
+      "loops_default": 25,
+      "kind": "assumption",
+      "provenance": "digitalapplied, 'AI Coding Agent Cost Calculator: 10 Tools Compared 2026'",
+      "provenance_url": "https://www.digitalapplied.com/blog/ai-coding-agent-cost-calculator-10-tools-2026",
+      "provenance_note": "Per-loop token figures for the heavy tier were supplied in the Denominator brief citing the same source. Loop range 20-30 verified against the source."
+    }
+  },
+  "frontier_efficiency": {
+    "description": "Frontier models are assumed to need fewer agent loops than small models to reach the same result, most visibly on heavy tasks.",
+    "multipliers_by_tier": {
+      "light": 1,
+      "moderate": 1,
+      "heavy": 0.6
+    },
+    "applies_to_capability_class": "frontier",
+    "kind": "assumption",
+    "provenance": "Denominator house assumption. NOT MEASURED and NOT sourced from any published study.",
+    "provenance_note": "SUPERSEDED WHERE MEASURED DATA EXISTS. Artificial Analysis publishes an observed per-task cost (and observed token usage) for current models; those rows bypass the loop model and this multiplier entirely, so no efficiency assumption touches them. This multiplier now applies ONLY as a labelled fallback for models with a pass rate but no measured cost (currently the SEAL and Aider rows). It remains a house assumption with no published source and it materially advantages frontier models on the heavy tier. Set to 1.0 to see unadjusted results. Phase 3 replaces the fallback outright.",
+    "status": "DEMOTED_TO_FALLBACK"
+  },
+  "retry_model": {
+    "max_attempts": 3,
+    "residual_human_cost_usd": 0,
+    "kind": "assumption",
+    "provenance": "Denominator house assumption, per the Denominator brief.",
+    "provenance_note": "max_attempts caps expected attempts because in practice an operator abandons or takes over after a few failures. residual_human_cost_usd defaults to $0 so the published headline never silently imputes a labour rate; set it to a real blended hourly cost to model takeover."
+  },
+  "cache_hit_fraction": {
+    "value": 0,
+    "kind": "assumption",
+    "provenance": "Denominator house default.",
+    "provenance_note": "Defaults to 0 (no prompt caching) because caching behaviour is harness-specific and assuming it would understate real-world cost. Providers with no published cached rate cannot be modelled with caching at all."
+  },
+  "metr_caveat": {
+    "kind": "caveat",
+    "text": "METR randomized controlled trial: experienced open-source developers took 19% LONGER to complete tasks when using early-2025 AI tools. They expected AI to speed them up by 24%, and even after experiencing the slowdown still believed AI had sped them up by 20%. Denominator measures cost per benchmark-solved task. It does not measure developer throughput, and a low cost-per-solved-task must not be read as a productivity gain.",
+    "provenance_url": "https://metr.org/blog/2025-07-10-early-2025-ai-experienced-os-dev-study/",
+    "last_verified": "2026-08-21",
+    "verification_status": "verified_against_primary_source"
+  },
+  "loop_model_scope": {
+    "kind": "scope_rule",
+    "text": "The task-tier loop model applies ONLY to rows with cost_basis=modelled_by_denominator. Rows with cost_basis=measured_by_source carry a cost the benchmark source actually observed, and no loop count, per-loop token figure, or frontier-efficiency multiplier is applied to them. The two bases are labelled separately everywhere and are never averaged together."
+  }
+}

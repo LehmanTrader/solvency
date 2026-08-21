@@ -1,0 +1,120 @@
+{
+  "$schema_version": "2.0.0",
+  "description": "Public benchmark results used as pass-rate inputs. Denominator needs only pass_rate from a benchmark; cost is normally recomputed from current verified prices in models.json. Sources that publish their own measured per-task cost are marked cost_basis='measured_by_source' and bypass Denominator's loop model entirely.",
+  "redistribution_policy": "Every row here is THIRD-PARTY data, ingested by reference. None of it may be republished in Denominator's CC-BY /data export. Rows carry redistributable=false and must be surfaced as attributed, linked citations only. Only Denominator's own Phase 3 measured runs are published as open data.",
+  "cost_bases": {
+    "measured_by_source": "The source ran the model and observed the cost. Uses real token usage; no Denominator loop-count assumption applies. Priced at the source's own pricing snapshot, which Denominator cannot recompute without per-model token counts.",
+    "modelled_by_denominator": "The source publishes only a pass rate. Cost comes from Denominator's loop model (an ASSUMPTION) times current verified prices.",
+    "historical_at_run_date": "The source published a cost, but at the prices in force on run_date. Never displayed as a current figure."
+  },
+  "sources": [
+    {
+      "benchmark": "aa-coding-agent-index",
+      "name": "Artificial Analysis Coding Agent Index v1.4",
+      "version": "v1.4",
+      "components": [
+        { "name": "DeepSWE", "tasks_n": 113, "by": "Datacurve" },
+        { "name": "Terminal-Bench v2.1", "tasks_n": 89, "by": "Laude Institute" },
+        { "name": "SWE-Atlas-QnA", "tasks_n": 124, "by": "Scale AI" }
+      ],
+      "tasks_n": 326,
+      "attempts_per_task": 3,
+      "scoring": "Task-normalized average pass@1: the 3 attempts are averaged per task, then task scores are averaged so every task has equal weight. All component outcomes are binary. Index is a simple average of the 3 component scores.",
+      "measures": ["index score", "cost per task (USD)", "token usage by input/cache/cache-write/reasoning/output", "wall-clock time per task"],
+      "cost_methodology": "Average pay-per-token API cost per task using provider token pricing, with cached input priced separately from uncached input and cache-write charges included where providers bill for them. Not consumer plan pricing.",
+      "source_url": "https://artificialanalysis.ai/agents/coding-agents",
+      "methodology_url": "https://artificialanalysis.ai/methodology/coding-agents-benchmarking",
+      "terms_url": "https://artificialanalysiscdn.com/legal/ProDataPlatformTerms.pdf",
+      "last_verified": "2026-08-21",
+      "verified_via": "live page read in-browser; the leaderboard table is client-rendered and is not visible to plain HTTP fetch",
+      "redistributable": false,
+      "attribution": "Data: Artificial Analysis Coding Agent Index v1.4",
+      "covers_current_models": true,
+      "caveats": [
+        "Rows are HARNESS + MODEL combinations, not bare models. Claude Code + Opus 5 is not the same measurement as Opus 5 in another harness; AA's own harness comparison shows the harness materially changes the score. Never present an AA figure as a property of the model alone.",
+        "Index scores are read from the published chart as 0-100 composite values. Denominator derives pass_rate = index / 100 on the basis that the index is an average of task-normalized pass@1 rates. This derivation is an INTERPRETATION, flagged per row as pass_rate_derivation.",
+        "Per-model token counts are published as charts only; numeric values were not captured, so Denominator cannot recompute AA's cost at current prices. AA's cost is carried as measured, at AA's pricing snapshot.",
+        "AA notes prompt cache hit rates vary significantly by provider routing, which can materially change effective cost."
+      ]
+    },
+    {
+      "benchmark": "seal-swe-bench-pro",
+      "name": "Scale SEAL leaderboard - SWE-bench Pro (public)",
+      "tasks_n": 1865,
+      "public_instances_n": 731,
+      "scoring": "Pass@1, every model run through the same scaffolding (SWE-Agent standard; rows marked * use the mini-swe-agent harness). Turn limit 250 standard, 50 for cost-capped rows.",
+      "measures": ["Pass@1 with confidence interval"],
+      "source_url": "https://labs.scale.com/leaderboard/swe_bench_pro_public",
+      "last_verified": "2026-08-21",
+      "redistributable": false,
+      "attribution": "Data: Scale SEAL leaderboard, SWE-bench Pro",
+      "covers_current_models": true,
+      "caveats": [
+        "Per-model dollar cost was NOT captured from the page. These rows therefore use Denominator's loop model for cost, which is an assumption. Marked cost_basis='modelled_by_denominator'.",
+        "Only a partial leaderboard was captured (6 rows visible). This is not the complete SEAL table.",
+        "Last-updated date is not stated on the page, so staleness cannot be computed for this source."
+      ]
+    },
+    {
+      "benchmark": "aider-polyglot",
+      "name": "Aider polyglot benchmark",
+      "tasks_n": 225,
+      "languages": ["C++", "Go", "Java", "JavaScript", "Python", "Rust"],
+      "scoring": "Percent of 225 exercises solved.",
+      "source_url": "https://aider.chat/docs/leaderboards/",
+      "raw_data_url": "https://raw.githubusercontent.com/Aider-AI/aider/main/aider/website/_data/polyglot_leaderboard.yml",
+      "last_verified": "2026-08-21",
+      "latest_entry_date": "2025-10-03",
+      "redistributable": false,
+      "attribution": "Data: Aider polyglot benchmark",
+      "covers_current_models": false,
+      "caveats": [
+        "STALE. Verified against the raw leaderboard YAML on 2026-08-21: zero entries dated 2026, newest is 2025-10-03. Covers no 2026-generation model.",
+        "Published costs were incurred at the prices in force on each run_date and are never displayed as current figures."
+      ]
+    }
+  ],
+  "sources_evaluated_and_rejected": [
+    {
+      "name": "Holistic Agent Leaderboard (HAL), Princeton SAgE",
+      "source_url": "https://hal.cs.princeton.edu/",
+      "checked": "2026-08-21",
+      "why_rejected": "Publishes standardized agent runs with centralized cost tracking across 9 benchmarks and 26,597 rollouts, which is exactly the right shape. But the project states it has PAUSED updating with new models to focus on reliability measurement, and its most recent entries date to August-September 2025. It covers GPT-5, o3, o4-mini and Claude Opus/Sonnet of that era, not the 2026 generation. Same staleness failure as Aider, from a different direction.",
+      "recheck_if": "HAL resumes model updates."
+    },
+    {
+      "name": "llm-stats.com AA Coding Agent Index v1.1 mirror",
+      "source_url": "https://llm-stats.com/benchmarks/artificial-analysis-coding-agent-index-v1.1",
+      "checked": "2026-08-21",
+      "why_rejected": "Human-verification wall; not bypassed. It is also a secondary mirror of an older index version (v1.1) when the primary source publishes v1.4."
+    }
+  ],
+  "results": [
+    { "model_id": "claude-opus-5", "harness": "Claude Code", "variant": "Opus 5 (xhigh)", "entry_label": "Claude Code - Opus 5 (xhigh)", "benchmark": "aa-coding-agent-index", "index_score": 68, "pass_rate": 0.68, "pass_rate_derivation": "index_score / 100", "measured_cost_per_task_usd": 8.17, "measured_time_per_task_min": 23.7, "cost_basis": "measured_by_source", "tasks_n": 326, "run_date": "2026-08-21", "date_basis": "date_observed_on_source_page", "source_url": "https://artificialanalysis.ai/agents/coding-agents", "redistributable": false },
+    { "model_id": "claude-fable-5", "harness": "Claude Code", "variant": "Fable 5 (max) (with fallback)", "entry_label": "Claude Code - Fable 5 (max) (with fallback)", "benchmark": "aa-coding-agent-index", "index_score": 67, "pass_rate": 0.67, "pass_rate_derivation": "index_score / 100", "measured_cost_per_task_usd": 11.70, "measured_time_per_task_min": 23.5, "cost_basis": "measured_by_source", "tasks_n": 326, "run_date": "2026-08-21", "date_basis": "date_observed_on_source_page", "source_url": "https://artificialanalysis.ai/agents/coding-agents", "redistributable": false, "row_note": "Run used a fallback configuration; AA flags a higher rate of content safety filtering observed on this endpoint since benchmarking." },
+    { "model_id": "gpt-5.6-sol", "harness": "Codex", "variant": "GPT-5.6 Sol (max)", "entry_label": "Codex - GPT-5.6 Sol (max)", "benchmark": "aa-coding-agent-index", "index_score": 65, "pass_rate": 0.65, "pass_rate_derivation": "index_score / 100", "measured_cost_per_task_usd": 6.42, "measured_time_per_task_min": 10.2, "cost_basis": "measured_by_source", "tasks_n": 326, "run_date": "2026-08-21", "date_basis": "date_observed_on_source_page", "source_url": "https://artificialanalysis.ai/agents/coding-agents", "redistributable": false },
+    { "model_id": "grok-4.5", "harness": "Grok Build", "variant": "Grok 4.5 (high)", "entry_label": "Grok Build - Grok 4.5 (high)", "benchmark": "aa-coding-agent-index", "index_score": 64, "pass_rate": 0.64, "pass_rate_derivation": "index_score / 100", "measured_cost_per_task_usd": 2.44, "measured_time_per_task_min": 15.5, "cost_basis": "measured_by_source", "tasks_n": 326, "run_date": "2026-08-21", "date_basis": "date_observed_on_source_page", "source_url": "https://artificialanalysis.ai/agents/coding-agents", "redistributable": false },
+    { "model_id": "gemini-3.7-flash", "harness": "Opencode", "variant": "Gemini 3.7 Flash (high)", "entry_label": "Opencode - Gemini 3.7 Flash (high)", "benchmark": "aa-coding-agent-index", "index_score": 60, "pass_rate": 0.60, "pass_rate_derivation": "index_score / 100", "measured_cost_per_task_usd": 1.27, "measured_time_per_task_min": 8.8, "cost_basis": "measured_by_source", "tasks_n": 326, "run_date": "2026-08-21", "date_basis": "date_observed_on_source_page", "source_url": "https://artificialanalysis.ai/agents/coding-agents", "redistributable": false },
+    { "model_id": "deepseek-v4-flash", "harness": "Codex", "variant": "DeepSeek V4 Flash 0731 (max)", "entry_label": "Codex - DeepSeek V4 Flash 0731 (max)", "benchmark": "aa-coding-agent-index", "index_score": 50, "pass_rate": 0.50, "pass_rate_derivation": "index_score / 100", "measured_cost_per_task_usd": 0.06, "measured_time_per_task_min": 14.5, "cost_basis": "measured_by_source", "tasks_n": 326, "run_date": "2026-08-21", "date_basis": "date_observed_on_source_page", "source_url": "https://artificialanalysis.ai/agents/coding-agents", "redistributable": false },
+    { "model_id": null, "unmatched_reason": "Kimi K3 (Moonshot AI) is not carried in models.json; no verified price row.", "harness": "Kimi Code CLI", "entry_label": "Kimi Code CLI - Kimi K3", "benchmark": "aa-coding-agent-index", "index_score": 63, "pass_rate": 0.63, "pass_rate_derivation": "index_score / 100", "measured_cost_per_task_usd": 3.08, "measured_time_per_task_min": 24.1, "cost_basis": "measured_by_source", "tasks_n": 326, "run_date": "2026-08-21", "date_basis": "date_observed_on_source_page", "source_url": "https://artificialanalysis.ai/agents/coding-agents", "redistributable": false },
+    { "model_id": null, "unmatched_reason": "GLM-5.2 was served via Novita in this run; the only GLM-5.2 price Denominator has verified is Mistral's resale listing, which is a different serving venue and may not match Novita's rate.", "harness": "Claude Code", "entry_label": "Claude Code - GLM-5.2", "benchmark": "aa-coding-agent-index", "index_score": 43, "pass_rate": 0.43, "pass_rate_derivation": "index_score / 100", "measured_cost_per_task_usd": 6.66, "measured_time_per_task_min": 25.1, "cost_basis": "measured_by_source", "tasks_n": 326, "run_date": "2026-08-21", "date_basis": "date_observed_on_source_page", "source_url": "https://artificialanalysis.ai/agents/coding-agents", "redistributable": false },
+    { "model_id": null, "unmatched_reason": "Cursor Composer 2.5 Fast is a Cursor-proprietary model with no public per-token API price.", "harness": "Cursor CLI", "entry_label": "Cursor CLI - Composer 2.5 Fast", "benchmark": "aa-coding-agent-index", "index_score": 38, "pass_rate": 0.38, "pass_rate_derivation": "index_score / 100", "measured_cost_per_task_usd": 0.56, "measured_time_per_task_min": 7.9, "cost_basis": "measured_by_source", "tasks_n": 326, "run_date": "2026-08-21", "date_basis": "date_observed_on_source_page", "source_url": "https://artificialanalysis.ai/agents/coding-agents", "redistributable": false },
+
+    { "model_id": "gpt-5.4", "entry_label": "gpt-5.4 (xHigh)", "benchmark": "seal-swe-bench-pro", "pass_rate": 0.5910, "pass_rate_ci": 3.56, "cost_basis": "modelled_by_denominator", "tasks_n": 1865, "run_date": "2026-08-21", "date_basis": "date_observed_on_source_page; source does not state a run or update date", "source_url": "https://labs.scale.com/leaderboard/swe_bench_pro_public", "redistributable": false, "row_note": "mini-swe-agent harness." },
+    { "model_id": "claude-opus-4-6", "entry_label": "claude-opus-4-6 (thinking)", "benchmark": "seal-swe-bench-pro", "pass_rate": 0.5190, "pass_rate_ci": 3.61, "cost_basis": "modelled_by_denominator", "tasks_n": 1865, "run_date": "2026-08-21", "date_basis": "date_observed_on_source_page; source does not state a run or update date", "source_url": "https://labs.scale.com/leaderboard/swe_bench_pro_public", "redistributable": false, "row_note": "mini-swe-agent harness." },
+    { "model_id": "gemini-3.1-pro-preview", "entry_label": "gemini-3.1-pro (thinking)", "benchmark": "seal-swe-bench-pro", "pass_rate": 0.4610, "pass_rate_ci": 3.60, "cost_basis": "modelled_by_denominator", "tasks_n": 1865, "run_date": "2026-08-21", "date_basis": "date_observed_on_source_page; source does not state a run or update date", "source_url": "https://labs.scale.com/leaderboard/swe_bench_pro_public", "redistributable": false, "match_confidence": "approximate", "match_note": "SEAL lists 'gemini-3.1-pro'; Google prices 'gemini-3.1-pro-preview'. Treated as the same model. If Google ships a non-preview GA build at different pricing, this join must be revisited." },
+    { "model_id": "claude-opus-4-5", "entry_label": "claude-opus-4-5-20251101", "benchmark": "seal-swe-bench-pro", "pass_rate": 0.4589, "pass_rate_ci": 3.60, "cost_basis": "modelled_by_denominator", "tasks_n": 1865, "run_date": "2026-08-21", "date_basis": "date_observed_on_source_page; source does not state a run or update date", "source_url": "https://labs.scale.com/leaderboard/swe_bench_pro_public", "redistributable": false, "row_note": "SWE-Agent standard scaffolding." },
+    { "model_id": null, "unmatched_reason": "Muse Spark / Muse Spark 1.1 vendor and per-token pricing not identified; no verified price row.", "entry_label": "Muse Spark 1.1", "benchmark": "seal-swe-bench-pro", "pass_rate": 0.6150, "pass_rate_ci": 3.10, "cost_basis": "modelled_by_denominator", "tasks_n": 1865, "run_date": "2026-08-21", "date_basis": "date_observed_on_source_page", "source_url": "https://labs.scale.com/leaderboard/swe_bench_pro_public", "redistributable": false },
+
+    { "model_id": "gpt-5", "entry_label": "gpt-5 (high)", "benchmark": "aider-polyglot", "pass_rate": 0.880, "total_cost_usd": 29.0829, "cost_per_task": 0.12926, "cost_basis": "historical_at_run_date", "tasks_n": 225, "edit_format": "diff", "run_date": "2025-08-23", "source_url": "https://aider.chat/docs/leaderboards/", "redistributable": false },
+    { "model_id": "gpt-5", "entry_label": "gpt-5 (medium)", "benchmark": "aider-polyglot", "pass_rate": 0.867, "total_cost_usd": 17.6930, "cost_per_task": 0.07864, "cost_basis": "historical_at_run_date", "tasks_n": 225, "edit_format": "diff", "run_date": "2025-08-25", "source_url": "https://aider.chat/docs/leaderboards/", "redistributable": false },
+    { "model_id": "o3-pro", "entry_label": "o3-pro (high)", "benchmark": "aider-polyglot", "pass_rate": 0.849, "total_cost_usd": 146.3249, "cost_per_task": 0.65033, "cost_basis": "historical_at_run_date", "tasks_n": 225, "edit_format": "diff", "run_date": "2025-06-28", "source_url": "https://aider.chat/docs/leaderboards/", "redistributable": false },
+    { "model_id": "gemini-2.5-pro", "entry_label": "gemini-2.5-pro-06-05 (32k think)", "benchmark": "aider-polyglot", "pass_rate": 0.831, "total_cost_usd": 49.8822, "cost_per_task": 0.22170, "cost_basis": "historical_at_run_date", "tasks_n": 225, "edit_format": "diff-fenced", "run_date": "2025-06-06", "source_url": "https://aider.chat/docs/leaderboards/", "redistributable": false },
+    { "model_id": "o3", "entry_label": "o3 (high)", "benchmark": "aider-polyglot", "pass_rate": 0.813, "total_cost_usd": 21.2259, "cost_per_task": 0.09434, "cost_basis": "historical_at_run_date", "tasks_n": 225, "edit_format": "diff", "run_date": "2025-06-25", "source_url": "https://aider.chat/docs/leaderboards/", "redistributable": false },
+    { "model_id": "claude-opus-4", "entry_label": "claude-opus-4 (32k thinking)", "benchmark": "aider-polyglot", "pass_rate": 0.720, "total_cost_usd": 65.7484, "cost_per_task": 0.29222, "cost_basis": "historical_at_run_date", "tasks_n": 225, "edit_format": "diff", "run_date": "2025-05-25", "source_url": "https://aider.chat/docs/leaderboards/", "redistributable": false },
+    { "model_id": "claude-sonnet-4", "entry_label": "claude-sonnet-4 (32k thinking)", "benchmark": "aider-polyglot", "pass_rate": 0.613, "total_cost_usd": 26.5755, "cost_per_task": 0.11811, "cost_basis": "historical_at_run_date", "tasks_n": 225, "edit_format": "diff", "run_date": "2025-05-24", "source_url": "https://aider.chat/docs/leaderboards/", "redistributable": false },
+    { "model_id": "gpt-4.1", "entry_label": "gpt-4.1", "benchmark": "aider-polyglot", "pass_rate": 0.524, "total_cost_usd": 9.8556, "cost_per_task": 0.04380, "cost_basis": "historical_at_run_date", "tasks_n": 225, "edit_format": "diff", "run_date": "2025-04-14", "source_url": "https://aider.chat/docs/leaderboards/", "redistributable": false },
+    { "model_id": null, "unmatched_reason": "grok-4 is no longer list-priced by xAI.", "entry_label": "grok-4 (high)", "benchmark": "aider-polyglot", "pass_rate": 0.796, "total_cost_usd": 59.6182, "cost_per_task": 0.26497, "cost_basis": "historical_at_run_date", "tasks_n": 225, "edit_format": "diff", "run_date": "2025-07-11", "source_url": "https://aider.chat/docs/leaderboards/", "redistributable": false },
+    { "model_id": null, "unmatched_reason": "DeepSeek V3.2-Exp is no longer listed on DeepSeek's pricing page; only the V4 family is priced.", "entry_label": "DeepSeek-V3.2-Exp (Reasoner)", "benchmark": "aider-polyglot", "pass_rate": 0.742, "total_cost_usd": 1.3045, "cost_per_task": 0.00580, "cost_basis": "historical_at_run_date", "tasks_n": 225, "edit_format": "diff", "run_date": "2025-10-03", "source_url": "https://aider.chat/docs/leaderboards/", "redistributable": false }
+  ]
+}
