@@ -1,0 +1,34 @@
+{
+  "divergence": {
+    "title": "Token price is not task cost",
+    "subtitle": [
+      "Log scale, normalised to the cheapest model on each axis.",
+      "Measured rows only, so no Denominator assumption is inside these numbers."
+    ],
+    "source": [
+      "Cost per solved task = measured cost per task / pass rate.",
+      "Data: Artificial Analysis Coding Agent Index v1.4. Prices verified 2026-08-21."
+    ]
+  },
+  "pareto": {
+    "title": "What one index point costs",
+    "subtitle": [
+      "Coding Agent Index vs cost per solved task.",
+      "Dashed line: the frontier — nothing cheaper scores higher."
+    ],
+    "source": [
+      "Rows are harness+model pairs, not bare models.",
+      "Data: Artificial Analysis Coding Agent Index v1.4. Verified 2026-08-21."
+    ]
+  },
+  "staleness": {
+    "title": "Newest entry, by source",
+    "subtitle": [
+      "Bar runs from each source’s newest published entry to today. Longer is worse."
+    ],
+    "source": [
+      "Aider verified against its raw leaderboard YAML.",
+      "SEAL publishes no update date, so its staleness is unknown, not zero."
+    ]
+  }
+}

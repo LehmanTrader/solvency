@@ -30,15 +30,41 @@ function inline(s: string): string {
 }
 
 let figureNo = 0;
+const metaPath = join(srcDir, 'charts-light', 'meta.json');
+const CHART_META: Record<string, { title: string; subtitle: string[]; source: string[] }> =
+  existsSync(metaPath) ? JSON.parse(readFileSync(metaPath, 'utf8')) : {};
+
+/**
+ * Charts are set as cards: the title, method note and source rail are real type
+ * in the page, not baked into the SVG, so they share the document's typography.
+ */
 function inlineSvg(rel: string, alt: string): string {
   const light = join(srcDir, rel.replace(/^charts\//, 'charts-light/'));
   const p = existsSync(light) ? light : join(srcDir, rel);
   if (!existsSync(p)) throw new Error(`chart not found: ${p}`);
   const svg = readFileSync(p, 'utf8')
     .replace(/<\?xml[^>]*\?>/, '')
-    .replace(/<svg /, '<svg preserveAspectRatio="xMidYMid meet" style="width:100%;height:auto" ');
+    .replace(/<svg /, '<svg preserveAspectRatio="xMidYMid meet" style="width:100%;height:auto;display:block" ');
   figureNo++;
-  return `<figure>${svg}<figcaption><span class="fig-no">Figure ${figureNo}</span>${esc(alt)}</figcaption></figure>`;
+
+  const key = (rel.match(/([a-z]+)\.svg$/) ?? [, ''])[1];
+  const m = CHART_META[key];
+  const title = m?.title ?? alt;
+  const notes = [...(m?.subtitle ?? [])];
+  const sources: string[] = [];
+  for (const line of m?.source ?? []) (line.startsWith('Data:') ? sources : notes).push(line);
+
+  return `<figure class="chart">
+  <div class="chart-head">
+    <div class="chart-title"><b>Figure ${figureNo}:</b> ${esc(title)}</div>
+    ${notes.length ? `<div class="chart-note">${notes.map(esc).join('<br>')}</div>` : ''}
+  </div>
+  <div class="chart-plot">${svg}</div>
+  <div class="chart-foot">
+    <span>${sources.map(esc).join(' ')}</span>
+    <span class="mark">DENOMINATOR</span>
+  </div>
+</figure>`;
 }
 
 /** The chunk before the first horizontal rule becomes the cover. */
@@ -83,8 +109,8 @@ function mdToHtml(md: string): string {
       const align = cells(rows[1] ?? '').map((a) => (a.endsWith(':') ? (a.startsWith(':') ? 'center' : 'right') : 'left'));
       const body = rows.slice(2).map(cells);
       out.push(
-        `<table><thead><tr>${head.map((c, n) => `<th style="text-align:${align[n] ?? 'left'}">${inline(esc(c))}</th>`).join('')}</tr></thead>` +
-        `<tbody>${body.map((r) => `<tr>${r.map((c, n) => `<td style="text-align:${align[n] ?? 'left'}">${inline(esc(c))}</td>`).join('')}</tr>`).join('')}</tbody></table>`);
+        `<div class="t-wrap"><table><thead><tr>${head.map((c, n) => `<th style="text-align:${align[n] ?? 'left'}">${inline(esc(c))}</th>`).join('')}</tr></thead>` +
+        `<tbody>${body.map((r) => `<tr>${r.map((c, n) => `<td style="text-align:${align[n] ?? 'left'}">${inline(esc(c))}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`);
       continue;
     }
 
@@ -121,101 +147,120 @@ const CSS = `
   @page { size: A4; margin: 0; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; box-sizing: border-box; }
   :root {
-    --paper:#FCFBF9; --ink:#14171A; --ink-soft:#394046; --muted:#6E747B;
-    --rule:#E6E1D8; --rule-mid:#CFC8BB; --accent:#B0691A; --panel:#F5F2EC;
-    --serif: ui-serif, "New York", "Iowan Old Style", Charter, Georgia, serif;
+    --page:#F4F3F1; --card:#FFFFFF; --ink:#1B1B20; --body:#3A3D42; --muted:#6E7278;
+    --rule:#E4E2DE; --rule-soft:#EDEBE7; --accent:#A9631A; --amber:#FFB000;
+    --sans: -apple-system, "SF Pro Text", "Helvetica Neue", Inter, Arial, sans-serif;
+    --display: ui-serif, "New York", "Iowan Old Style", Charter, Georgia, serif;
     --mono: "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
   }
-  html, body { background: var(--paper); }
-  body { margin:0; color: var(--ink-soft); font-family: var(--serif);
-         font-size: 10pt; line-height: 1.62; font-kerning: normal;
-         -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+  html, body { background: var(--page); }
+  body { margin:0; color: var(--body); font-family: var(--sans); font-size: 9.6pt;
+         line-height: 1.62; -webkit-font-smoothing: antialiased; }
 
   /* ---- cover ---------------------------------------------------------- */
-  .cover { height: 10.1in; display: flex; flex-direction: column;
-           justify-content: space-between; break-after: page; }
-  .wordmark { font-family: var(--mono); font-size: 8.5pt; letter-spacing: .34em;
-              color: var(--accent); font-weight: 600; }
-  .cover-top { border-bottom: .5pt solid var(--rule-mid); padding-bottom: 9pt;
-               display:flex; justify-content: space-between; align-items: baseline; }
-  .cover-kicker { font-family: var(--mono); font-size: 7.5pt; letter-spacing: .16em;
-                  color: var(--muted); text-transform: uppercase; }
-  .cover-mid { padding-bottom: 1.1in; }
-  .cover h1 { font-family: var(--serif); font-size: 40pt; line-height: 1.06;
-              letter-spacing: -0.5pt; color: var(--ink); font-weight: 600; margin: 0 0 18pt; }
-  .cover .lead { font-size: 12.5pt; line-height: 1.55; color: var(--ink-soft);
-                 max-width: 5in; margin: 0; }
-  .cover .lead strong { color: var(--ink); font-weight: 600; }
-  .cover-foot { border-top: .5pt solid var(--rule-mid); padding-top: 10pt;
-                display: flex; gap: 26pt; font-family: var(--mono); font-size: 7.5pt;
-                line-height: 1.5; color: var(--muted); }
-  .cover-foot dt { text-transform: uppercase; letter-spacing: .12em; color: var(--muted); white-space: nowrap; }
+  .cover { height: 10.05in; display:flex; flex-direction:column; break-after: page; }
+  .cover h1 { font-family: var(--display); font-size: 33pt; font-weight: 600; color: var(--ink);
+              line-height: 1.08; letter-spacing: -0.4pt; margin: 0 0 9pt; }
+  .cover .deck { font-size: 11.5pt; color: var(--muted); margin: 0 0 7pt; max-width: 4.9in; }
+  .cover .date { font-family: var(--mono); font-size: 7.2pt; letter-spacing: .12em;
+                 text-transform: uppercase; color: var(--muted); margin: 0; }
+  .hero { flex: 1; margin-top: 15pt; background: var(--card); border: .75pt solid var(--rule);
+          border-radius: 7pt; overflow: hidden; display:flex; flex-direction:column; }
+  .hero-top { display:flex; justify-content:space-between; align-items:flex-start; padding: 17pt 19pt 0; }
+  .hero-mark { font-family: var(--mono); font-weight:700; letter-spacing:.26em; font-size: 8.5pt; color: var(--ink); }
+  .hero-no { font-family: var(--mono); font-size: 10.5pt; color: var(--ink); text-align:right; line-height:1.2; }
+  .hero-mid { flex:1; display:flex; align-items:center; justify-content:center; padding: 0 30pt; }
+  .hero-title { font-family: var(--mono); font-size: 20pt; letter-spacing:.15em; color: var(--ink);
+                text-align:center; line-height:1.62; }
+  .hero-bar { height: 10pt; background: linear-gradient(90deg, var(--amber) 0%, #E08A1C 55%, #8A4A0A 100%); }
+  .tagline { margin-top: 9pt; background: var(--card); border:.75pt solid var(--rule); border-radius: 7pt;
+             padding: 12pt 17pt; display:flex; justify-content:space-between; align-items:center;
+             font-family: var(--mono); font-size: 8.4pt; color: var(--ink); }
+  .tagline .mark { font-weight:700; letter-spacing:.2em; font-size:7pt; color: var(--muted); }
+  .cover-foot { display:flex; gap: 20pt; margin-top: 10pt; font-family: var(--mono);
+                font-size: 7pt; line-height:1.5; color: var(--muted); }
+  .cover-foot > div { flex: 0 0 auto; }
+  .cover-foot dd { white-space: nowrap; }
+  .cover-foot dt { text-transform: uppercase; letter-spacing:.12em; white-space: nowrap; }
   .cover-foot dd { margin: 2pt 0 0; color: var(--ink); }
 
   /* ---- flow ----------------------------------------------------------- */
-  h2 { font-family: var(--serif); font-size: 16pt; font-weight: 600; color: var(--ink);
-       line-height: 1.2; letter-spacing: -0.2pt; margin: 0 0 10pt;
-       padding-top: 7pt; border-top: 1.6pt solid var(--accent);
-       break-after: avoid; break-inside: avoid; }
-  h2:not(:first-child) { margin-top: 24pt; }
-  h3 { font-family: var(--mono); font-size: 8pt; font-weight: 600; text-transform: uppercase;
-       letter-spacing: .15em; color: var(--accent); margin: 16pt 0 6pt; break-after: avoid; }
+  h2 { font-family: var(--sans); font-size: 14pt; font-weight: 700; color: var(--ink);
+       line-height:1.25; letter-spacing:-0.15pt; margin: 0 0 9pt; padding-top: 10pt;
+       border-top: .75pt solid var(--rule); break-after: avoid; break-inside: avoid; }
+  h2:not(:first-child) { margin-top: 21pt; }
+  h3 { font-family: var(--mono); font-size: 7.6pt; font-weight: 700; text-transform: uppercase;
+       letter-spacing: .15em; color: var(--accent); margin: 15pt 0 6pt; break-after: avoid; }
   p { margin: 0 0 8pt; }
-  p + p { text-indent: 0; }
   a { color: var(--ink); text-decoration: none; border-bottom: .5pt solid var(--accent); }
   strong { color: var(--ink); font-weight: 600; }
-  em { font-style: italic; }
-  hr { border: 0; border-top: .5pt solid var(--rule); margin: 18pt 0; }
+  hr { border:0; border-top:.75pt solid var(--rule); margin: 17pt 0; }
   ul, ol { margin: 0 0 9pt; padding-left: 14pt; }
   li { margin-bottom: 4.5pt; padding-left: 2pt; }
   li::marker { color: var(--accent); }
+  code { font-family: var(--mono); font-size: 8.1pt; color: var(--ink);
+         background: var(--card); border:.4pt solid var(--rule); padding: .4pt 3pt; border-radius: 2px; }
+  pre { background: var(--card); border:.75pt solid var(--rule); border-radius: 6pt;
+        padding: 10pt 12pt; margin: 0 0 10pt; break-inside: avoid; }
+  pre code { background:none; border:0; padding:0; font-size: 8pt; line-height:1.55; color: var(--body); }
 
-  code { font-family: var(--mono); font-size: 8.3pt; color: var(--ink);
-         background: var(--panel); padding: .5pt 3pt; border-radius: 2px; }
-  pre { background: var(--panel); border: .5pt solid var(--rule); border-radius: 2px;
-        padding: 9pt 11pt; margin: 0 0 10pt; break-inside: avoid; }
-  pre code { background: none; padding: 0; font-size: 8.2pt; line-height: 1.55;
-             color: var(--ink-soft); }
-
-  /* ---- tables --------------------------------------------------------- */
-  table { width: 100%; border-collapse: collapse; margin: 2pt 0 6pt;
-          font-family: var(--mono); font-size: 8.1pt; line-height: 1.4;
-          font-variant-numeric: tabular-nums; break-inside: avoid; }
-  th { text-align: left; font-weight: 600; font-size: 6.8pt; letter-spacing: .13em;
+  /* ---- tables as cards ------------------------------------------------ */
+  .t-wrap { background: var(--card); border:.75pt solid var(--rule); border-radius: 6pt;
+            padding: 10pt 13pt 4pt; margin: 3pt 0 10pt; break-inside: avoid; }
+  table { width:100%; border-collapse: collapse; font-family: var(--mono); font-size: 7.9pt;
+          line-height:1.4; font-variant-numeric: tabular-nums; }
+  th { text-align:left; font-weight:700; font-size: 6.6pt; letter-spacing:.13em;
        text-transform: uppercase; color: var(--muted); padding: 0 7pt 5pt;
-       border-bottom: .8pt solid var(--ink); white-space: nowrap; }
-  td { padding: 4.6pt 7pt; border-bottom: .4pt solid var(--rule); color: var(--ink-soft); }
-  tbody tr:last-child td { border-bottom: .8pt solid var(--rule-mid); }
-  td strong { color: var(--ink); font-weight: 600; }
+       border-bottom: .75pt solid var(--ink); white-space: nowrap; }
+  td { padding: 4.4pt 7pt; border-bottom: .4pt solid var(--rule-soft); color: var(--body); }
+  tbody tr:last-child td { border-bottom: 0; }
+  td strong { color: var(--ink); font-weight: 700; }
 
-  blockquote { margin: 10pt 0 12pt; padding: 0 0 0 14pt;
-               border-left: 1.6pt solid var(--accent); color: var(--ink);
-               font-size: 10.5pt; line-height: 1.5; break-inside: avoid; }
+  blockquote { background: var(--card); border:.75pt solid var(--rule);
+               border-left: 2.5pt solid var(--amber); border-radius: 6pt;
+               padding: 11pt 14pt; margin: 10pt 0 12pt; color: var(--ink);
+               font-size: 9.6pt; break-inside: avoid; }
 
-  /* ---- figures -------------------------------------------------------- */
-  figure { margin: 12pt -0.4in 16pt; break-inside: avoid; }
-  figure svg { display: block; border: .5pt solid var(--rule); }
-  figcaption { font-family: var(--mono); font-size: 7pt; letter-spacing: .05em;
-               color: var(--muted); margin-top: 6pt; padding: 0 .4in; }
-  .fig-no { color: var(--accent); font-weight: 600; text-transform: uppercase;
-            letter-spacing: .13em; margin-right: 8pt; }
+  /* ---- chart cards ---------------------------------------------------- */
+  figure.chart { background: var(--card); border:.75pt solid var(--rule); border-radius: 7pt;
+                 margin: 12pt -0.34in 15pt; padding: 14pt 16pt 0; overflow:hidden;
+                 break-inside: avoid; }
+  .chart-title { font-family: var(--mono); font-size: 9.8pt; color: var(--ink); line-height:1.38; }
+  .chart-title b { font-weight: 700; }
+  .chart-note { font-family: var(--mono); font-size: 7.3pt; color: var(--muted);
+                margin-top: 5pt; line-height:1.5; }
+  .chart-plot { margin-top: 11pt; }
+  .chart-foot { margin-top: 9pt; border-top:.5pt solid var(--rule); padding: 7pt 0 12pt;
+                display:flex; justify-content:space-between; gap: 14pt;
+                font-family: var(--mono); font-size: 6.7pt; color: var(--muted); }
+  .chart-foot .mark { font-weight:700; letter-spacing:.19em; color: var(--ink); white-space:nowrap; }
+
 `;
 
 const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(coverTitle)}</title>
 <style>${CSS}</style></head><body>
 <section class="cover">
-  <div class="cover-top">
-    <span class="wordmark">DENOMINATOR</span>
-    <span class="cover-kicker">Research Note 01</span>
-  </div>
-  <div class="cover-mid">
+  <div>
     <h1>${esc(coverTitle)}</h1>
-    <p class="lead">${inline(esc(coverLead))}</p>
+    <p class="deck">${inline(esc(coverLead))}</p>
+    <p class="date">21 August 2026</p>
+  </div>
+  <div class="hero">
+    <div class="hero-top">
+      <span class="hero-mark">DENOMINATOR</span>
+      <span class="hero-no">NOTE&#8202;&#8211;<br>01</span>
+    </div>
+    <div class="hero-mid"><div class="hero-title">COST PER<br>SOLVED TASK</div></div>
+    <div class="hero-bar"></div>
+  </div>
+  <div class="tagline">
+    <span>The denominator is the whole story.</span>
+    <span class="mark">DENOMINATOR</span>
   </div>
   <dl class="cover-foot">
     <div><dt>Verified</dt><dd>2026-08-21</dd></div>
-    <div><dt>Sources</dt><dd>Artificial Analysis · Scale SEAL · Aider</dd></div>
-    <div><dt>Method</dt><dd>cost per attempt ÷ pass rate</dd></div>
+    <div><dt>Sources</dt><dd>AA · SEAL · Aider</dd></div>
+    <div><dt>Method</dt><dd>cost ÷ pass rate</dd></div>
     <div><dt>Status</dt><dd>Phase 0 — validation</dd></div>
   </dl>
 </section>

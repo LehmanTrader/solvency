@@ -22,7 +22,7 @@ const opts = defaultOptions(assumptions);
 const ASOF = '2026-08-21';
 
 const PALETTE = THEME === 'light'
-  ? { BG: '#FCFBF9', GRID: '#E6E1D8', TEXT: '#14171A', MUTED: '#6E747B', ACCENT: '#B0691A', ACCENT_DIM: '#D8C3A0' }
+  ? { BG: '#FFFFFF', GRID: '#E7E4DE', TEXT: '#14171A', MUTED: '#6E747B', ACCENT: '#B0691A', ACCENT_DIM: '#D8C3A0' }
   : { BG: '#0A0C0D', GRID: '#1C2226', TEXT: '#E6EAED', MUTED: '#78838A', ACCENT: '#FFB000', ACCENT_DIM: '#8A6210' };
 const { BG, GRID, TEXT, MUTED, ACCENT, ACCENT_DIM } = PALETTE;
 const MONO = "JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace";
@@ -33,20 +33,37 @@ const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 const txt = (x: number, y: number, s: string, o: { fill?: string; size?: number; anchor?: string; weight?: number } = {}) =>
   `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" fill="${o.fill ?? TEXT}" font-family="${MONO}" font-size="${((o.size ?? 12) * FS).toFixed(1)}" font-weight="${o.weight ?? 400}" text-anchor="${o.anchor ?? 'start'}">${esc(s)}</text>`;
 
-function frame(w: number, h: number, title: string, subtitle: string | string[], body: string, footer: string | string[]) {
+interface ChartMeta { title: string; subtitle: string[]; source: string[]; }
+const META: Record<string, ChartMeta> = {};
+
+/**
+ * Screen builds are self-contained SVGs with their own title and source line.
+ * Print builds emit only the plot, cropped to its content, and hand the title,
+ * subtitle and source back through META so the report can set them as card
+ * furniture in real type rather than baked-in SVG text.
+ */
+function frame(name: string, w: number, h: number, title: string, subtitle: string | string[],
+               body: string, footer: string | string[], crop?: { y0: number; y1: number }) {
   const subs = Array.isArray(subtitle) ? subtitle : [subtitle];
   const foots = Array.isArray(footer) ? footer : [footer];
-  const showTitle = THEME !== 'light';
-  const subY = showTitle ? 62 : 44;
-  const shift = showTitle ? 0 : -20;
-  const subLines = subs.map((l, i) => txt(32, subY + i * 15 * FS, l, { size: 11, fill: MUTED })).join('\n');
+  META[name] = { title, subtitle: subs, source: foots };
+
+  if (THEME === 'light' && crop) {
+    const ch = crop.y1 - crop.y0;
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${ch}" viewBox="0 ${crop.y0} ${w} ${ch}" role="img" aria-label="${esc(title)}">
+<rect x="0" y="${crop.y0}" width="${w}" height="${ch}" fill="${BG}"/>
+${body}
+</svg>`;
+  }
+
+  const subLines = subs.map((l, i) => txt(32, 62 + i * 15 * FS, l, { size: 11, fill: MUTED })).join('\n');
   const footLines = foots.map((l, i) =>
     txt(32, h - 16 - (foots.length - 1 - i) * 14 * FS, l, { size: 10, fill: MUTED })).join('\n');
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(title)}">
 <rect width="${w}" height="${h}" fill="${BG}"/>
-${showTitle ? txt(32, 42, title, { size: 16, weight: 700 }) : ''}
+${txt(32, 42, title, { size: 16, weight: 700 })}
 ${subLines}
-<g transform="translate(0,${shift})">${body}</g>
+${body}
 ${footLines}
 </svg>`;
 }
@@ -100,11 +117,11 @@ function chartDivergence() {
   const spreadTok = Math.max(...pts.map((p) => p.tok)), spreadSol = Math.max(...pts.map((p) => p.sol));
   b += txt(32, H - 62, `Spread widens ${spreadTok.toFixed(0)}x -> ${spreadSol.toFixed(0)}x. Ranking by token price does not reproduce the cost ranking.`, { size: 11, fill: ACCENT });
 
-  writeFileSync(join(OUT, 'divergence.svg'), frame(W, H, 'Token price is not task cost',
+  writeFileSync(join(OUT, 'divergence.svg'), frame('divergence', W, H, 'Token price is not task cost',
     ['Log scale, normalised to the cheapest model on each axis.',
      'Measured rows only, so no Denominator assumption is inside these numbers.'],
     b, ['Cost per solved task = measured cost per task / pass rate.',
-        `Data: Artificial Analysis Coding Agent Index v1.4. Prices verified ${ASOF}.`]));
+        `Data: Artificial Analysis Coding Agent Index v1.4. Prices verified ${ASOF}.`], { y0: 86, y1: H - 46 }));
   return { spreadTok, spreadSol, pts };
 }
 
@@ -180,11 +197,11 @@ function chartPareto() {
     b += txt(lx, ly + 14, sub, { size: 10, fill: MUTED, anchor: slot.anchor });
   }
   b = leaders.join('') + b; // leaders underneath, so type always reads on top
-  writeFileSync(join(OUT, 'pareto.svg'), frame(W, H, 'What one index point costs',
+  writeFileSync(join(OUT, 'pareto.svg'), frame('pareto', W, H, 'What one index point costs',
     ['Coding Agent Index vs cost per solved task.',
      'Dashed line: the frontier — nothing cheaper scores higher.'],
     b, ['Rows are harness+model pairs, not bare models.',
-        `Data: Artificial Analysis Coding Agent Index v1.4. Verified ${ASOF}.`]));
+        `Data: Artificial Analysis Coding Agent Index v1.4. Verified ${ASOF}.`], { y0: 98, y1: H - 30 }));
   return { front };
 }
 
@@ -226,16 +243,18 @@ function chartStaleness() {
     }
   });
   const defs = `<defs><pattern id="hatch" width="8" height="8" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><line x1="0" y1="0" x2="0" y2="8" stroke="${MUTED}" stroke-width="2"/></pattern></defs>`;
-  writeFileSync(join(OUT, 'staleness.svg'), frame(W, H, 'Newest entry, by source',
+  writeFileSync(join(OUT, 'staleness.svg'), frame('staleness', W, H, 'Newest entry, by source',
     ['Bar runs from each source’s newest published entry to today. Longer is worse.'],
     defs + b, ['Aider verified against its raw leaderboard YAML.',
-               'SEAL publishes no update date, so its staleness is unknown, not zero.']));
+               'SEAL publishes no update date, so its staleness is unknown, not zero.'],
+    { y0: 96, y1: T + (4 - 1) * 46 + 34 }));
   return rows;
 }
 
 const d1 = chartDivergence(); chartPareto(); chartStaleness();
 
-console.log('wrote reports/charts/{divergence,pareto,staleness}.svg\n');
+writeFileSync(join(OUT, 'meta.json'), JSON.stringify(META, null, 2) + '\n');
+console.log(`wrote ${THEME} charts + meta.json\n`);
 console.log('COMPUTED FIGURES FOR THE REPORT');
 console.log('-'.repeat(64));
 for (const d of measured) {
