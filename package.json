@@ -15,6 +15,8 @@
     "charts": "node scripts/charts.ts",
     "report": "npm run charts && npm test",
     "charts:light": "DENOM_THEME=light node scripts/charts.ts",
-    "pdf": "npm run charts && npm run charts:light && node scripts/render-pdf.ts reports/2026-08-cost-per-solved-task.md"
+    "pdf": "npm run charts && npm run charts:light && node scripts/render-pdf.ts reports/2026-08-cost-per-solved-task.md",
+    "png": "node scripts/png.ts",
+    "budget": "node scripts/bench-budget.ts"
   }
 }
