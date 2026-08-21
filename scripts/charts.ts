@@ -22,22 +22,32 @@ const opts = defaultOptions(assumptions);
 const ASOF = '2026-08-21';
 
 const PALETTE = THEME === 'light'
-  ? { BG: '#FFFFFF', GRID: '#E4E8EB', TEXT: '#11171B', MUTED: '#68737A', ACCENT: '#A85F00', ACCENT_DIM: '#D7A860' }
+  ? { BG: '#FCFBF9', GRID: '#E6E1D8', TEXT: '#14171A', MUTED: '#6E747B', ACCENT: '#B0691A', ACCENT_DIM: '#D8C3A0' }
   : { BG: '#0A0C0D', GRID: '#1C2226', TEXT: '#E6EAED', MUTED: '#78838A', ACCENT: '#FFB000', ACCENT_DIM: '#8A6210' };
 const { BG, GRID, TEXT, MUTED, ACCENT, ACCENT_DIM } = PALETTE;
 const MONO = "JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace";
+/** Print figures scale to ~0.75x in the PDF; set type larger so it stays legible. */
+const FS = THEME === 'light' ? 1.25 : 1;
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const txt = (x: number, y: number, s: string, o: { fill?: string; size?: number; anchor?: string; weight?: number } = {}) =>
-  `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" fill="${o.fill ?? TEXT}" font-family="${MONO}" font-size="${o.size ?? 12}" font-weight="${o.weight ?? 400}" text-anchor="${o.anchor ?? 'start'}">${esc(s)}</text>`;
+  `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" fill="${o.fill ?? TEXT}" font-family="${MONO}" font-size="${((o.size ?? 12) * FS).toFixed(1)}" font-weight="${o.weight ?? 400}" text-anchor="${o.anchor ?? 'start'}">${esc(s)}</text>`;
 
-function frame(w: number, h: number, title: string, subtitle: string, body: string, footer: string) {
+function frame(w: number, h: number, title: string, subtitle: string | string[], body: string, footer: string | string[]) {
+  const subs = Array.isArray(subtitle) ? subtitle : [subtitle];
+  const foots = Array.isArray(footer) ? footer : [footer];
+  const showTitle = THEME !== 'light';
+  const subY = showTitle ? 62 : 44;
+  const shift = showTitle ? 0 : -20;
+  const subLines = subs.map((l, i) => txt(32, subY + i * 15 * FS, l, { size: 11, fill: MUTED })).join('\n');
+  const footLines = foots.map((l, i) =>
+    txt(32, h - 16 - (foots.length - 1 - i) * 14 * FS, l, { size: 10, fill: MUTED })).join('\n');
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(title)}">
 <rect width="${w}" height="${h}" fill="${BG}"/>
-${txt(32, 40, title, { size: 16, weight: 700 })}
-${txt(32, 60, subtitle, { size: 11, fill: MUTED })}
-${body}
-${txt(32, h - 18, footer, { size: 10, fill: MUTED })}
+${showTitle ? txt(32, 42, title, { size: 16, weight: 700 }) : ''}
+${subLines}
+<g transform="translate(0,${shift})">${body}</g>
+${footLines}
 </svg>`;
 }
 
@@ -58,7 +68,7 @@ const measured = models
 // Rank by token price, then by cost per solved task. The orders disagree and
 // the spread widens -- that gap is the whole product.
 function chartDivergence() {
-  const W = 900, H = 580, LX = 300, RX = 660, TOP = 110, BOT = H - 70;
+  const W = 900, H = 600, LX = 300, RX = 660, TOP = 128, BOT = H - 84;
   const cheapTok = Math.min(...measured.map((d) => d.m.output_per_mtok));
   const cheapSolved = Math.min(...measured.map((d) => d.solved));
   const pts = measured.map((d) => ({ ...d, tok: d.m.output_per_mtok / cheapTok, sol: d.solved / cheapSolved }));
@@ -88,20 +98,22 @@ function chartDivergence() {
     b += txt(RX + 60, y2 + 4, `$${p.solved.toFixed(2)}`, { size: 11, fill: MUTED });
   }
   const spreadTok = Math.max(...pts.map((p) => p.tok)), spreadSol = Math.max(...pts.map((p) => p.sol));
-  b += txt(32, H - 34, `Spread widens ${spreadTok.toFixed(0)}x -> ${spreadSol.toFixed(0)}x. Ranking by token price does not reproduce the cost ranking.`, { size: 11, fill: ACCENT });
+  b += txt(32, H - 62, `Spread widens ${spreadTok.toFixed(0)}x -> ${spreadSol.toFixed(0)}x. Ranking by token price does not reproduce the cost ranking.`, { size: 11, fill: ACCENT });
 
   writeFileSync(join(OUT, 'divergence.svg'), frame(W, H, 'Token price is not task cost',
-    'Log scale, normalised to the cheapest model on each axis. Measured rows only, so no Denominator assumption is inside these numbers.',
-    b, `Cost per solved task = measured cost per task / pass rate. Data: Artificial Analysis Coding Agent Index v1.4. Prices verified ${ASOF}.`));
+    ['Log scale, normalised to the cheapest model on each axis.',
+     'Measured rows only, so no Denominator assumption is inside these numbers.'],
+    b, ['Cost per solved task = measured cost per task / pass rate.',
+        `Data: Artificial Analysis Coding Agent Index v1.4. Prices verified ${ASOF}.`]));
   return { spreadTok, spreadSol, pts };
 }
 
 // ---------------------------------------------------------------- chart 2
 function chartPareto() {
-  const W = 900, H = 560, L = 90, R = W - 210, T = 110, B = H - 80;
+  const W = 900, H = 660, L = 96, R = W - 250, T = 128, B = H - 94;
   const xs = measured.map((d) => d.solved);
   const lo = Math.min(...xs) * 0.7, hi = Math.max(...xs) * 1.5;
-  const yLo = 40, yHi = 75;
+  const yLo = 45, yHi = 71;
   const X = (v: number) => logScale(v, lo, hi, L, R);
   const Y = (v: number) => B - ((v - yLo) / (yHi - yLo)) * (B - T);
 
@@ -127,6 +139,7 @@ function chartPareto() {
   // that clears every label already placed. Width is estimated from character
   // count at the monospace advance, so the test is on boxes, not anchor points.
   const CH = 6.6;
+  const leaders: string[] = [];
   const boxes: { x0: number; x1: number; y0: number; y1: number }[] = [];
   // A ladder of candidate offsets, nearest-first, on both sides of the point.
   const slots: { dx: number; dy: number; anchor: 'start' | 'end' }[] = [];
@@ -160,21 +173,24 @@ function chartPareto() {
     const x0 = slot.anchor === 'start' ? lx : lx - w;
     // Displaced far from its point: draw a leader so the pairing stays obvious.
     if (Math.abs(slot.dy) > 24) {
-      b += `<line x1="${x}" y1="${yy}" x2="${lx}" y2="${ly + (slot.dy < 0 ? 4 : -8)}" stroke="${MUTED}" stroke-width="0.8" opacity="0.5"/>`;
+      leaders.push(`<line x1="${x}" y1="${yy}" x2="${lx}" y2="${ly + (slot.dy < 0 ? 4 : -8)}" stroke="${MUTED}" stroke-width="0.8" opacity="0.45"/>`);
     }
     boxes.push({ x0, x1: x0 + w, y0: ly - 12, y1: ly + 18 });
     b += txt(lx, ly, d.m.display_name, { size: 11, fill: on ? TEXT : MUTED, anchor: slot.anchor });
     b += txt(lx, ly + 14, sub, { size: 10, fill: MUTED, anchor: slot.anchor });
   }
+  b = leaders.join('') + b; // leaders underneath, so type always reads on top
   writeFileSync(join(OUT, 'pareto.svg'), frame(W, H, 'What one index point costs',
-    'Coding Agent Index vs cost per solved task. Dashed line: the frontier — nothing cheaper scores higher.',
-    b, `Rows are harness+model pairs, not bare models. Data: Artificial Analysis Coding Agent Index v1.4. Verified ${ASOF}.`));
+    ['Coding Agent Index vs cost per solved task.',
+     'Dashed line: the frontier — nothing cheaper scores higher.'],
+    b, ['Rows are harness+model pairs, not bare models.',
+        `Data: Artificial Analysis Coding Agent Index v1.4. Verified ${ASOF}.`]));
   return { front };
 }
 
 // ---------------------------------------------------------------- chart 3
 function chartStaleness() {
-  const W = 900, H = 380, L = 232, R = W - 90, T = 120;
+  const W = 900, H = 352, L = 240, R = W - 96, T = 140;
   const t0 = Date.parse('2024-11-01'), t1 = Date.parse('2026-10-01');
   const X = (d: string) => L + ((Date.parse(d) - t0) / (t1 - t0)) * (R - L);
 
@@ -187,10 +203,10 @@ function chartStaleness() {
 
   let b = '';
   for (const y of ['2025-01-01', '2025-07-01', '2026-01-01', '2026-07-01']) {
-    b += `<line x1="${X(y)}" y1="${T - 24}" x2="${X(y)}" y2="${T + rows.length * 46}" stroke="${GRID}"/>`;
+    b += `<line x1="${X(y)}" y1="${T - 24}" x2="${X(y)}" y2="${T + (rows.length - 1) * 46 + 24}" stroke="${GRID}"/>`;
     b += txt(X(y), T - 32, y.slice(0, 7), { fill: MUTED, size: 10, anchor: 'middle' });
   }
-  b += `<line x1="${X(ASOF)}" y1="${T - 24}" x2="${X(ASOF)}" y2="${T + rows.length * 46}" stroke="${ACCENT}" stroke-width="1.5" opacity="0.6"/>`;
+  b += `<line x1="${X(ASOF)}" y1="${T - 24}" x2="${X(ASOF)}" y2="${T + (rows.length - 1) * 46 + 24}" stroke="${ACCENT}" stroke-width="1.5" opacity="0.6"/>`;
   b += txt(X(ASOF) + 6, T - 32, 'today', { fill: ACCENT, size: 10 });
 
   rows.forEach((r, i) => {
@@ -211,8 +227,9 @@ function chartStaleness() {
   });
   const defs = `<defs><pattern id="hatch" width="8" height="8" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><line x1="0" y1="0" x2="0" y2="8" stroke="${MUTED}" stroke-width="2"/></pattern></defs>`;
   writeFileSync(join(OUT, 'staleness.svg'), frame(W, H, 'Newest entry, by source',
-    'Bar runs from each source’s newest published entry to today. Longer is worse.',
-    defs + b, `Aider verified against its raw leaderboard YAML. SEAL publishes no update date, so its staleness is unknown, not zero.`));
+    ['Bar runs from each source’s newest published entry to today. Longer is worse.'],
+    defs + b, ['Aider verified against its raw leaderboard YAML.',
+               'SEAL publishes no update date, so its staleness is unknown, not zero.']));
   return rows;
 }
 
