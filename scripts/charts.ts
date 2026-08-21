@@ -9,12 +9,22 @@ import { dirname, join } from 'node:path';
 import { models, tiers, assumptions, results, sources, benchmarksFile, bestResultFor, extrasFor, modelById, stalenessDays } from './load.ts';
 import { costPerSolvedTask, defaultOptions } from './solved-cost.ts';
 
-const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'reports', 'charts');
+/**
+ * Two themes. `dark` is the house style for screen and the site. `light` exists
+ * because Chrome only paints a page background on the first printed page, so a
+ * dark PDF comes out white from page 2 -- the print build uses light charts and
+ * a light page rather than a document that is half one theme and half the other.
+ */
+const THEME = process.env.DENOM_THEME === 'light' ? 'light' : 'dark';
+const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'reports',
+  THEME === 'light' ? 'charts-light' : 'charts');
 const opts = defaultOptions(assumptions);
 const ASOF = '2026-08-21';
 
-const BG = '#0A0C0D', GRID = '#1C2226', TEXT = '#E6EAED', MUTED = '#78838A';
-const ACCENT = '#FFB000', ACCENT_DIM = '#8A6210';
+const PALETTE = THEME === 'light'
+  ? { BG: '#FFFFFF', GRID: '#E4E8EB', TEXT: '#11171B', MUTED: '#68737A', ACCENT: '#A85F00', ACCENT_DIM: '#D7A860' }
+  : { BG: '#0A0C0D', GRID: '#1C2226', TEXT: '#E6EAED', MUTED: '#78838A', ACCENT: '#FFB000', ACCENT_DIM: '#8A6210' };
+const { BG, GRID, TEXT, MUTED, ACCENT, ACCENT_DIM } = PALETTE;
 const MONO = "JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace";
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
