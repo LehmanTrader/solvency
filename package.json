@@ -5,10 +5,14 @@
   "type": "module",
   "description": "Cost per solved task for AI coding models. Every number carries a source and a last_verified date.",
   "license": "CC-BY-4.0",
-  "engines": { "node": ">=24" },
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "test": "node --test --experimental-strip-types test/*.test.ts",
     "coverage": "node scripts/coverage.ts",
-    "table": "node scripts/table.ts"
+    "table": "node scripts/table.ts",
+    "charts": "node scripts/charts.ts",
+    "report": "npm run charts && npm test"
   }
 }
