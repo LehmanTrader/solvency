@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import { CF_BEACON_TOKEN } from '../lib/site-config.ts';
 interface Props { title: string; description: string; og?: string; }
 const { title, description, og = '/og/divergence-og.png' } = Astro.props;
 const url = new URL(Astro.url.pathname, Astro.site).href;
@@ -18,6 +19,10 @@ const url = new URL(Astro.url.pathname, Astro.site).href;
   <meta property="og:image" content={new URL(og, Astro.site).href} />
   <meta name="twitter:card" content="summary_large_image" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%230A0C0D'/><text y='23' x='6' font-family='monospace' font-size='20' font-weight='700' fill='%23FFB000'>S</text></svg>" />
+  {CF_BEACON_TOKEN && (
+    <script defer src="https://static.cloudflareinsights.com/beacon.min.js"
+            data-cf-beacon={`{"token": "${CF_BEACON_TOKEN}"}`}></script>
+  )}
 </head>
 <body>
   <header class="border-b border-[var(--color-rule)]">
