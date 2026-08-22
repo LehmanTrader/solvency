@@ -1,0 +1,51 @@
+---
+/** Bare widget for embedding. No site chrome, no navigation, attribution always on. */
+import '../../styles/global.css';
+---
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Cost per solved task — Solvency</title><meta name="robots" content="noindex" />
+<style>html,body{margin:0;background:#0A0C0D}</style>
+</head><body>
+  <div class="p-4">
+    <table class="w-full font-mono text-[12px] tabular-nums">
+      <thead><tr class="text-[9px] uppercase tracking-[0.14em] text-[var(--color-muted)] border-b border-[var(--color-accent)]">
+        <th class="text-left pb-2 pr-3">Model</th><th class="text-right px-3">Pass</th><th class="text-right pl-3">$ / solved task</th>
+      </tr></thead>
+      <tbody id="e-body"></tbody>
+    </table>
+    <p id="e-note" class="mt-3 font-mono text-[9px] text-[var(--color-muted)]"></p>
+    <p class="mt-1 font-mono text-[9px]">
+      <a href="https://solvency.dev" target="_blank" rel="noopener" class="text-[var(--color-accent)]">Data: Solvency (solvency.dev)</a>
+    </p>
+  </div>
+<script>
+  import { models, assumptions, tiers, bestResultFor, extrasFor } from '../../lib/data.ts';
+  import { costPerSolvedTask, defaultOptions } from '../../lib/engine.ts';
+  const q = new URLSearchParams(location.search);
+  const want = (q.get('models') ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+  const tier = (q.get('tier') ?? 'heavy') as 'light' | 'moderate' | 'heavy';
+  const opts = defaultOptions(assumptions);
+  const money = (n: number) => n >= 100 ? `$${n.toFixed(0)}` : `$${n.toFixed(2)}`;
+
+  const pool = want.length ? models.filter((m) => want.includes(m.model_id)) : models;
+  const rows = pool.map((m) => {
+    const r = bestResultFor(m.model_id); if (!r) return null;
+    const out = costPerSolvedTask(m, tier, tiers[tier], r.pass_rate, opts, extrasFor(r));
+    return out.value ? { m, r, cost: out.value.naive, basis: out.value.costBasis } : null;
+  }).filter(Boolean) as any[];
+
+  // one basis only: mixing measured and modelled costs in one ranked list is invalid
+  const measured = rows.filter((x) => x.basis === 'measured_by_source');
+  const show = (measured.length ? measured : rows).sort((a, b) => a.cost - b.cost);
+  document.getElementById('e-body')!.innerHTML = show.map(({ m, r, cost }) => `
+    <tr class="border-b border-[var(--color-rule)]">
+      <td class="py-1.5 pr-3 text-[var(--color-ink)]">${m.display_name}</td>
+      <td class="px-3 text-right text-[var(--color-body)]">${(r.pass_rate * 100).toFixed(0)}%</td>
+      <td class="pl-3 text-right text-[var(--color-accent)]">${money(cost)}</td>
+    </tr>`).join('');
+  document.getElementById('e-note')!.textContent =
+    `${measured.length ? 'Measured' : 'Modelled'} basis · ${tier} tier · prices verified ${models[0].last_verified}`;
+</script>
+</body></html>

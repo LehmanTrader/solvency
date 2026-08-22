@@ -1,5 +1,6 @@
 import { defineConfig } from 'astro/config';
 import tailwind from '@tailwindcss/vite';
+import sitemap from '@astrojs/sitemap';
 
 /**
  * The canonical report markdown lives in ../reports and references its charts
@@ -20,6 +21,11 @@ function absoluteChartPaths() {
 
 export default defineConfig({
   site: 'https://solvency.dev',
-  vite: { plugins: [tailwind()] },
+  integrations: [sitemap()],
+  vite: {
+    plugins: [tailwind()],
+    // the engine and datasets live one level up, in the repository root
+    server: { fs: { allow: ['..'] } },
+  },
   markdown: { remarkPlugins: [absoluteChartPaths] },
 });

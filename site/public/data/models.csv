@@ -1,0 +1,26 @@
+model_id,provider,display_name,status,capability_class,input_per_mtok,output_per_mtok,cached_input_per_mtok,context_window,source_url,last_verified
+claude-opus-5,anthropic,Claude Opus 5,current,frontier,5,25,0.5,1000000,https://platform.claude.com/docs/en/about-claude/pricing,2026-08-21
+claude-sonnet-5,anthropic,Claude Sonnet 5,current,frontier,2,10,0.2,1000000,https://platform.claude.com/docs/en/about-claude/pricing,2026-08-21
+claude-haiku-4-5,anthropic,Claude Haiku 4.5,current,small,1,5,0.1,200000,https://platform.claude.com/docs/en/about-claude/pricing,2026-08-21
+gpt-5.6-sol,openai,GPT-5.6 Sol,current,frontier,5,30,0.5,1050000,https://developers.openai.com/api/docs/pricing,2026-08-21
+gpt-5.6-terra,openai,GPT-5.6 Terra,current,frontier,2,12,0.2,1050000,https://developers.openai.com/api/docs/pricing,2026-08-21
+gpt-5.6-luna,openai,GPT-5.6 Luna,current,small,0.2,1.2,0.02,1050000,https://developers.openai.com/api/docs/pricing,2026-08-21
+gpt-5.3-codex,openai,GPT-5.3 Codex,current,frontier,1.75,14,0.175,,https://developers.openai.com/api/docs/pricing,2026-08-21
+gemini-3.1-pro-preview,google,Gemini 3.1 Pro (preview),current,frontier,2,12,0.2,,https://ai.google.dev/gemini-api/docs/pricing,2026-08-21
+gemini-3.7-flash,google,Gemini 3.7 Flash,current,small,0.75,3.75,0.075,,https://ai.google.dev/gemini-api/docs/pricing,2026-08-21
+deepseek-v4-pro,deepseek,DeepSeek V4 Pro,current,frontier,1.32,3.96,0.044,1000000,https://api-docs.deepseek.com/quick_start/pricing/,2026-08-21
+deepseek-v4-flash,deepseek,DeepSeek V4 Flash,current,small,0.44,1.32,0.014,1000000,https://api-docs.deepseek.com/quick_start/pricing/,2026-08-21
+grok-4.6,xai,Grok 4.6,current,frontier,2,6,0.5,500000,https://docs.x.ai/docs/models,2026-08-21
+mistral-medium-latest,mistral,Mistral Medium 3.5,current,small,1.5,7.5,,,https://mistral.ai/pricing/api,2026-08-21
+gpt-5,openai,GPT-5,legacy,frontier,1.25,10,0.125,,https://developers.openai.com/api/docs/pricing,2026-08-21
+o3,openai,o3,legacy,frontier,2,8,0.5,,https://developers.openai.com/api/docs/pricing,2026-08-21
+o3-pro,openai,o3-pro,legacy,frontier,20,80,,,https://developers.openai.com/api/docs/pricing,2026-08-21
+gpt-4.1,openai,GPT-4.1,legacy,small,2,8,0.5,,https://developers.openai.com/api/docs/pricing,2026-08-21
+gemini-2.5-pro,google,Gemini 2.5 Pro,legacy,frontier,1.25,10,0.125,,https://ai.google.dev/gemini-api/docs/pricing,2026-08-21
+claude-opus-4,anthropic,Claude Opus 4,retired,frontier,15,75,1.5,,https://platform.claude.com/docs/en/about-claude/pricing,2026-08-21
+claude-sonnet-4,anthropic,Claude Sonnet 4,retired,frontier,3,15,0.3,,https://platform.claude.com/docs/en/about-claude/pricing,2026-08-21
+claude-fable-5,anthropic,Claude Fable 5,current,frontier,10,50,1,1000000,https://platform.claude.com/docs/en/about-claude/pricing,2026-08-21
+grok-4.5,xai,Grok 4.5,current,frontier,2,6,0.3,500000,https://docs.x.ai/docs/models,2026-08-21
+gpt-5.4,openai,GPT-5.4,current,frontier,2.5,15,0.25,272000,https://developers.openai.com/api/docs/pricing,2026-08-21
+claude-opus-4-6,anthropic,Claude Opus 4.6,legacy,frontier,5,25,0.5,1000000,https://platform.claude.com/docs/en/about-claude/pricing,2026-08-21
+claude-opus-4-5,anthropic,Claude Opus 4.5,legacy,frontier,5,25,0.5,200000,https://platform.claude.com/docs/en/about-claude/pricing,2026-08-21

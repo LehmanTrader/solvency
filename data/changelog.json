@@ -1,0 +1,12 @@
+{
+  "$schema_version": "1.0.0",
+  "description": "Every change to published figures. Appended by a human after verifying a price against its source page; the watcher never writes here.",
+  "entries": [
+    {
+      "date": "2026-08-21",
+      "kind": "initial",
+      "summary": "Initial dataset published: 25 models priced, each verified against its provider's own pricing page.",
+      "detail": "Sources ingested: Artificial Analysis Coding Agent Index v1.4, Scale SEAL SWE-bench Pro, Aider polyglot. HAL evaluated and rejected as stale."
+    }
+  ]
+}

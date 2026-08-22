@@ -18,6 +18,8 @@
     "pdf": "npm run charts && npm run charts:light && node scripts/render-pdf.ts reports/2026-08-cost-per-solved-task.md",
     "png": "node scripts/png.ts",
     "budget": "node scripts/bench-budget.ts",
-    "docx": "node scripts/docx.ts"
+    "docx": "node scripts/docx.ts",
+    "watch": "node scripts/watch-prices.ts",
+    "site": "cd site && npm run build"
   }
 }

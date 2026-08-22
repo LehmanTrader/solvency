@@ -1,0 +1,107 @@
+---
+import { TIER_NAMES } from '../lib/data.ts';
+import { DEFAULTS, compute, groupsHtml, calloutHtml, missingHtml } from '../lib/calc.ts';
+// Rendered at build time so the page is useful without JavaScript and the
+// island does not shift layout when it takes over.
+const { rows, missing } = compute(DEFAULTS);
+const initialGroups = groupsHtml(rows, DEFAULTS.volume);
+const initialCallout = calloutHtml(rows, DEFAULTS.volume);
+const initialMissing = missingHtml(missing);
+---
+<section id="calc" class="mt-14 border border-[var(--color-rule)] rounded-md overflow-hidden">
+  <div class="border-b border-[var(--color-rule)] p-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+    <label class="block">
+      <span class="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted)]">Task tier</span>
+      <select id="c-tier" class="mt-2 w-full bg-[var(--color-panel)] border border-[var(--color-rule)] rounded px-3 py-2 font-mono text-sm text-[var(--color-ink)]">
+        {TIER_NAMES.map((t) => <option value={t} selected={t === 'moderate'}>{t}</option>)}
+      </select>
+    </label>
+    <label class="block">
+      <span class="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted)]">Tasks per month</span>
+      <input id="c-volume" type="number" min="1" step="1" value="200"
+        class="mt-2 w-full bg-[var(--color-panel)] border border-[var(--color-rule)] rounded px-3 py-2 font-mono text-sm text-[var(--color-ink)] tabular-nums" />
+    </label>
+    <label class="block">
+      <span class="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted)]">Retry model</span>
+      <select id="c-variant" class="mt-2 w-full bg-[var(--color-panel)] border border-[var(--color-rule)] rounded px-3 py-2 font-mono text-sm text-[var(--color-ink)]">
+        <option value="naive">naive — cost ÷ pass rate</option>
+        <option value="capped">capped — max 3 attempts</option>
+        <option value="truncatedGeometric">truncated geometric</option>
+      </select>
+    </label>
+    <label class="block">
+      <span class="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted)]">Cache hit rate <span id="c-cache-v" class="text-[var(--color-accent)]">0%</span></span>
+      <input id="c-cache" type="range" min="0" max="90" step="10" value="0" class="mt-3 w-full accent-[var(--color-accent)]" />
+    </label>
+    <label class="block">
+      <span class="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted)]">Human takeover cost $</span>
+      <input id="c-residual" type="number" min="0" step="10" value="0"
+        class="mt-2 w-full bg-[var(--color-panel)] border border-[var(--color-rule)] rounded px-3 py-2 font-mono text-sm text-[var(--color-ink)] tabular-nums" />
+    </label>
+    <label class="flex items-end gap-3 pb-2">
+      <input id="c-frontier" type="checkbox" checked class="accent-[var(--color-accent)] size-4" />
+      <span class="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted)]">Frontier efficiency <span class="text-[#E8895A]">assumption</span></span>
+    </label>
+  </div>
+
+  <div id="c-callout" class="px-5 py-4 border-b border-[var(--color-rule)] text-[var(--color-ink)]" set:html={initialCallout}></div>
+
+  <div id="c-groups" set:html={initialGroups}></div>
+  <div id="c-missing" class="px-5 py-4 border-t border-[var(--color-rule)] font-mono text-[11px] text-[var(--color-muted)]" set:html={initialMissing}></div>
+  <div class="px-5 py-3 border-t border-[var(--color-rule)] flex flex-wrap gap-4 items-center justify-between">
+    <p class="font-mono text-[10px] text-[var(--color-muted)] max-w-lg">
+      Measured rows carry a cost the benchmark observed, so the tier, cache and efficiency controls cannot move them. Modelled rows are priced by an assumed loop model.
+    </p>
+    <button id="c-share" class="font-mono text-[11px] border border-[var(--color-rule)] rounded px-3 py-1.5 hover:border-[var(--color-accent)]/60 hover:text-[var(--color-accent)]">Copy link to this scenario</button>
+  </div>
+</section>
+
+<script>
+  import { compute, groupsHtml, calloutHtml, missingHtml } from '../lib/calc.ts';
+
+  const $ = (id: string) => document.getElementById(id)!;
+  const CTRL = {
+    tier: $('c-tier') as HTMLSelectElement,
+    volume: $('c-volume') as HTMLInputElement,
+    variant: $('c-variant') as HTMLSelectElement,
+    cache: $('c-cache') as HTMLInputElement,
+    residual: $('c-residual') as HTMLInputElement,
+    frontier: $('c-frontier') as HTMLInputElement,
+  };
+
+  // hydrate from the URL so a shared link reproduces the scenario exactly
+  const q = new URLSearchParams(location.search);
+  if (q.get('tier')) CTRL.tier.value = q.get('tier')!;
+  if (q.get('volume')) CTRL.volume.value = q.get('volume')!;
+  if (q.get('variant')) CTRL.variant.value = q.get('variant')!;
+  if (q.get('cache')) CTRL.cache.value = q.get('cache')!;
+  if (q.get('residual')) CTRL.residual.value = q.get('residual')!;
+  if (q.get('frontier')) CTRL.frontier.checked = q.get('frontier') === '1';
+
+  function render() {
+    const s = {
+      tier: CTRL.tier.value as 'light' | 'moderate' | 'heavy',
+      volume: Math.max(1, Number(CTRL.volume.value) || 1),
+      variant: CTRL.variant.value as 'naive' | 'capped' | 'truncatedGeometric',
+      cache: Number(CTRL.cache.value) / 100,
+      residual: Math.max(0, Number(CTRL.residual.value) || 0),
+      frontier: CTRL.frontier.checked,
+    };
+    $('c-cache-v').textContent = `${CTRL.cache.value}%`;
+    const { rows, missing } = compute(s);
+    $('c-groups').innerHTML = groupsHtml(rows, s.volume);
+    $('c-callout').innerHTML = calloutHtml(rows, s.volume);
+    $('c-missing').textContent = missingHtml(missing);
+    const p = new URLSearchParams({ tier: s.tier, volume: String(s.volume), variant: s.variant,
+      cache: CTRL.cache.value, residual: String(s.residual), frontier: s.frontier ? '1' : '0' });
+    history.replaceState(null, '', `${location.pathname}?${p}`);
+  }
+
+  Object.values(CTRL).forEach((el) => { el.addEventListener('input', render); el.addEventListener('change', render); });
+  $('c-share').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(location.href); $('c-share').textContent = 'Copied'; setTimeout(() => ($('c-share').textContent = 'Copy link to this scenario'), 1600); }
+    catch { $('c-share').textContent = 'Copy failed — use the address bar'; }
+  });
+  // only re-render if the URL carried a non-default scenario
+  if ([...q.keys()].length) render();
+</script>

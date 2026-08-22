@@ -1,0 +1,49 @@
+---
+import Base from '../layouts/Base.astro';
+import { models, sources } from '../lib/data.ts';
+const schema = {
+  '@context': 'https://schema.org', '@type': 'Dataset',
+  name: 'Solvency model pricing dataset',
+  description: 'Verified API list pricing for AI coding models. Every row carries the provider pricing page it was verified against and the date of verification.',
+  url: 'https://solvency.dev/data', license: 'https://creativecommons.org/licenses/by/4.0/',
+  creator: { '@type': 'Organization', name: 'Solvency', url: 'https://solvency.dev' },
+  dateModified: '2026-08-21',
+  distribution: [
+    { '@type': 'DataDownload', encodingFormat: 'application/json', contentUrl: 'https://solvency.dev/data/models.json' },
+    { '@type': 'DataDownload', encodingFormat: 'text/csv', contentUrl: 'https://solvency.dev/data/models.csv' },
+  ],
+};
+---
+<Base title="Data — Solvency" description="Verified AI model pricing, free under CC-BY. Every row carries a source URL and a verification date.">
+  <script type="application/ld+json" set:html={JSON.stringify(schema)} />
+  <h1 class="font-mono text-3xl font-bold text-[var(--color-ink)]">Data</h1>
+  <p class="mt-4 max-w-2xl">Verified API list pricing for {models.length} models. Every row carries the provider pricing page it was checked against and the date it was checked.</p>
+
+  <div class="mt-8 flex flex-wrap gap-3">
+    <a href="/data/models.json" class="font-mono text-[13px] border border-[var(--color-accent)]/50 text-[var(--color-accent)] rounded px-4 py-2 hover:bg-[var(--color-accent)]/10">models.json ↓</a>
+    <a href="/data/models.csv" class="font-mono text-[13px] border border-[var(--color-rule)] rounded px-4 py-2 hover:border-[var(--color-accent)]/60">models.csv ↓</a>
+  </div>
+
+  <div class="prose mt-12">
+    <h3>Licence</h3>
+    <p>The pricing dataset is published under <a href="https://creativecommons.org/licenses/by/4.0/">CC-BY 4.0</a>.
+      Use it commercially, modify it, redistribute it — attribute it as <code>Source: Solvency (solvency.dev)</code> with a link.</p>
+
+    <h3>What is not here, and why</h3>
+    <p>Benchmark pass rates are <strong>not</strong> included in any download. They are third-party
+      data, licensed to their publishers, and Solvency cites and links them rather than
+      redistributing them. The build fails if any benchmark row is not marked non-redistributable,
+      so this cannot be forgotten in a future change.</p>
+    <ul>
+      {sources.map((s) => <li><a href={s.source_url}>{s.attribution}</a> — cited, not redistributed.</li>)}
+    </ul>
+    <p>Solvency's own measured benchmark runs, once they exist, will be published here under the same CC-BY terms.</p>
+
+    <h3>Caveats that travel with the data</h3>
+    <ul>
+      <li>Prices are standard list, global routing, no negotiated discount, and no batch discount.</li>
+      <li>Several providers price by prompt length, time of day, or promotional period. Those rows record the tier used and state the alternative in <code>pricing_notes</code>.</li>
+      <li>A missing value is <code>null</code>. It is never a zero.</li>
+    </ul>
+  </div>
+</Base>
