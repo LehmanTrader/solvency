@@ -20,7 +20,7 @@ const modelled = rows.filter((x) => x.r!.cost_basis !== 'measured_by_source');
 
 console.log(`COST PER SOLVED TASK  --  variant=${variant}  --  computed ${asOf}\n`);
 
-console.log(`== MEASURED  (source observed real cost; NO Denominator loop assumption) ==`);
+console.log(`== MEASURED  (source observed real cost; NO Solvency loop assumption) ==`);
 console.log(`${'model'.padEnd(24)}${'harness'.padEnd(13)}${'pass'.padStart(6)}${'$/task'.padStart(9)}${'$/solved'.padStart(10)}`);
 console.log('-'.repeat(60));
 for (const { m, r } of measured.sort((a, b) => b.r!.pass_rate - a.r!.pass_rate)) {
@@ -33,7 +33,7 @@ for (const { m, r } of measured.sort((a, b) => b.r!.pass_rate - a.r!.pass_rate))
   );
 }
 
-console.log(`\n== MODELLED  (pass rate published, cost from Denominator's ASSUMED loop model) ==`);
+console.log(`\n== MODELLED  (pass rate published, cost from Solvency's ASSUMED loop model) ==`);
 console.log(`${'model'.padEnd(24)}${'source'.padEnd(13)}${'pass'.padStart(6)}${'age'.padStart(7)}` + TIER_NAMES.map((t) => t.padStart(10)).join(''));
 console.log('-'.repeat(80));
 for (const { m, r } of modelled.sort((a, b) => b.r!.pass_rate - a.r!.pass_rate)) {

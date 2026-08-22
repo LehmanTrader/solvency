@@ -1,5 +1,5 @@
 /**
- * Denominator core computation.
+ * Solvency core computation.
  *
  * cost per solved task = cost per attempt / probability the attempt solves it
  *
@@ -89,7 +89,7 @@ export function costPerAttempt(
 }
 
 /** Which cost basis produced the attempt cost. Never conflated in output. */
-export type CostBasis = 'measured_by_source' | 'modelled_by_denominator';
+export type CostBasis = 'measured_by_source' | 'modelled_by_solvency';
 
 export interface SolvedCost {
   /** Where the attempt cost came from. `measured_by_source` uses NO loop assumption. */
@@ -178,7 +178,7 @@ export function costPerSolvedTask(
 
   return {
     value: {
-      costBasis: useMeasured ? 'measured_by_source' : 'modelled_by_denominator',
+      costBasis: useMeasured ? 'measured_by_source' : 'modelled_by_solvency',
       naive: cost / p,
       capped: expectedAttemptsCapped * cost + residual * pFailAll,
       truncatedGeometric: pSolved === 0

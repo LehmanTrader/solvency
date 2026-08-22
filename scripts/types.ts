@@ -22,7 +22,7 @@ export interface BenchmarkResult {
   entry_label: string;
   benchmark: string;
   pass_rate: number;
-  cost_basis: 'measured_by_source' | 'modelled_by_denominator' | 'historical_at_run_date';
+  cost_basis: 'measured_by_source' | 'modelled_by_solvency' | 'historical_at_run_date';
   tasks_n: number;
   run_date: string;
   source_url: string;

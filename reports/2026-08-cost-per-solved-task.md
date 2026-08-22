@@ -16,7 +16,7 @@ output token**. On measured agentic coding tasks it costs **100x less per solved
 per-token gap understates the real gap by a factor of five, because token price says nothing
 about how many tokens a model burns to close a task, or how often it closes one at all.
 
-The denominator is the whole story. Hence the name.
+The denominator is the whole story.
 
 ---
 
@@ -246,7 +246,7 @@ Several providers do not have a single price. We record the tier used and state 
 Evaluated and rejected: **HAL (Princeton)** — paused updating, newest entries ~Sep 2025.
 **llm-stats.com** — human-verification wall, and a mirror of an older index version.
 
-All benchmark data is third-party, cited and linked. None of it is redistributed. Denominator's
+All benchmark data is third-party, cited and linked. None of it is redistributed. Solvency's
 own measured runs, when they exist, will be published as open data under CC-BY.
 
 ---

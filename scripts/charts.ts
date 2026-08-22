@@ -119,7 +119,7 @@ function chartDivergence() {
 
   writeFileSync(join(OUT, 'divergence.svg'), frame('divergence', W, H, 'Token price is not task cost',
     ['Log scale, normalised to the cheapest model on each axis.',
-     'Measured rows only, so no Denominator assumption is inside these numbers.'],
+     'Measured rows only, so no Solvency assumption is inside these numbers.'],
     b, ['Cost per solved task = measured cost per task / pass rate.',
         `Data: Artificial Analysis Coding Agent Index v1.4. Prices verified ${ASOF}.`], { y0: 86, y1: H - 46 }));
   return { spreadTok, spreadSol, pts };

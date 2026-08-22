@@ -1,10 +1,10 @@
 {
   "$schema_version": "2.0.0",
-  "description": "Public benchmark results used as pass-rate inputs. Denominator needs only pass_rate from a benchmark; cost is normally recomputed from current verified prices in models.json. Sources that publish their own measured per-task cost are marked cost_basis='measured_by_source' and bypass Denominator's loop model entirely.",
-  "redistribution_policy": "Every row here is THIRD-PARTY data, ingested by reference. None of it may be republished in Denominator's CC-BY /data export. Rows carry redistributable=false and must be surfaced as attributed, linked citations only. Only Denominator's own Phase 3 measured runs are published as open data.",
+  "description": "Public benchmark results used as pass-rate inputs. Solvency needs only pass_rate from a benchmark; cost is normally recomputed from current verified prices in models.json. Sources that publish their own measured per-task cost are marked cost_basis='measured_by_source' and bypass Solvency's loop model entirely.",
+  "redistribution_policy": "Every row here is THIRD-PARTY data, ingested by reference. None of it may be republished in Solvency's CC-BY /data export. Rows carry redistributable=false and must be surfaced as attributed, linked citations only. Only Solvency's own Phase 3 measured runs are published as open data.",
   "cost_bases": {
-    "measured_by_source": "The source ran the model and observed the cost. Uses real token usage; no Denominator loop-count assumption applies. Priced at the source's own pricing snapshot, which Denominator cannot recompute without per-model token counts.",
-    "modelled_by_denominator": "The source publishes only a pass rate. Cost comes from Denominator's loop model (an ASSUMPTION) times current verified prices.",
+    "measured_by_source": "The source ran the model and observed the cost. Uses real token usage; no Solvency loop-count assumption applies. Priced at the source's own pricing snapshot, which Solvency cannot recompute without per-model token counts.",
+    "modelled_by_solvency": "The source publishes only a pass rate. Cost comes from Solvency's loop model (an ASSUMPTION) times current verified prices.",
     "historical_at_run_date": "The source published a cost, but at the prices in force on run_date. Never displayed as a current figure."
   },
   "sources": [
@@ -49,8 +49,8 @@
       "covers_current_models": true,
       "caveats": [
         "Rows are HARNESS + MODEL combinations, not bare models. Claude Code + Opus 5 is not the same measurement as Opus 5 in another harness; AA's own harness comparison shows the harness materially changes the score. Never present an AA figure as a property of the model alone.",
-        "Index scores are read from the published chart as 0-100 composite values. Denominator derives pass_rate = index / 100 on the basis that the index is an average of task-normalized pass@1 rates. This derivation is an INTERPRETATION, flagged per row as pass_rate_derivation.",
-        "Per-model token counts are published as charts only; numeric values were not captured, so Denominator cannot recompute AA's cost at current prices. AA's cost is carried as measured, at AA's pricing snapshot.",
+        "Index scores are read from the published chart as 0-100 composite values. Solvency derives pass_rate = index / 100 on the basis that the index is an average of task-normalized pass@1 rates. This derivation is an INTERPRETATION, flagged per row as pass_rate_derivation.",
+        "Per-model token counts are published as charts only; numeric values were not captured, so Solvency cannot recompute AA's cost at current prices. AA's cost is carried as measured, at AA's pricing snapshot.",
         "AA notes prompt cache hit rates vary significantly by provider routing, which can materially change effective cost."
       ],
       "newest_entry_date": "2026-08-21",
@@ -72,7 +72,7 @@
       "attribution": "Data: Scale SEAL leaderboard, SWE-bench Pro",
       "covers_current_models": true,
       "caveats": [
-        "Per-model dollar cost was NOT captured from the page. These rows therefore use Denominator's loop model for cost, which is an assumption. Marked cost_basis='modelled_by_denominator'.",
+        "Per-model dollar cost was NOT captured from the page. These rows therefore use Solvency's loop model for cost, which is an assumption. Marked cost_basis='modelled_by_solvency'.",
         "Only a partial leaderboard was captured (6 rows visible). This is not the complete SEAL table.",
         "Last-updated date is not stated on the page, so staleness cannot be computed for this source."
       ],
@@ -257,7 +257,7 @@
     },
     {
       "model_id": null,
-      "unmatched_reason": "GLM-5.2 was served via Novita in this run; the only GLM-5.2 price Denominator has verified is Mistral's resale listing, which is a different serving venue and may not match Novita's rate.",
+      "unmatched_reason": "GLM-5.2 was served via Novita in this run; the only GLM-5.2 price Solvency has verified is Mistral's resale listing, which is a different serving venue and may not match Novita's rate.",
       "harness": "Claude Code",
       "entry_label": "Claude Code - GLM-5.2",
       "benchmark": "aa-coding-agent-index",
@@ -297,7 +297,7 @@
       "benchmark": "seal-swe-bench-pro",
       "pass_rate": 0.591,
       "pass_rate_ci": 3.56,
-      "cost_basis": "modelled_by_denominator",
+      "cost_basis": "modelled_by_solvency",
       "tasks_n": 1865,
       "run_date": "2026-08-21",
       "date_basis": "date_observed_on_source_page; source does not state a run or update date",
@@ -311,7 +311,7 @@
       "benchmark": "seal-swe-bench-pro",
       "pass_rate": 0.519,
       "pass_rate_ci": 3.61,
-      "cost_basis": "modelled_by_denominator",
+      "cost_basis": "modelled_by_solvency",
       "tasks_n": 1865,
       "run_date": "2026-08-21",
       "date_basis": "date_observed_on_source_page; source does not state a run or update date",
@@ -325,7 +325,7 @@
       "benchmark": "seal-swe-bench-pro",
       "pass_rate": 0.461,
       "pass_rate_ci": 3.6,
-      "cost_basis": "modelled_by_denominator",
+      "cost_basis": "modelled_by_solvency",
       "tasks_n": 1865,
       "run_date": "2026-08-21",
       "date_basis": "date_observed_on_source_page; source does not state a run or update date",
@@ -340,7 +340,7 @@
       "benchmark": "seal-swe-bench-pro",
       "pass_rate": 0.4589,
       "pass_rate_ci": 3.6,
-      "cost_basis": "modelled_by_denominator",
+      "cost_basis": "modelled_by_solvency",
       "tasks_n": 1865,
       "run_date": "2026-08-21",
       "date_basis": "date_observed_on_source_page; source does not state a run or update date",
@@ -355,7 +355,7 @@
       "benchmark": "seal-swe-bench-pro",
       "pass_rate": 0.615,
       "pass_rate_ci": 3.1,
-      "cost_basis": "modelled_by_denominator",
+      "cost_basis": "modelled_by_solvency",
       "tasks_n": 1865,
       "run_date": "2026-08-21",
       "date_basis": "date_observed_on_source_page",

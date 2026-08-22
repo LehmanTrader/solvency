@@ -8,7 +8,7 @@ import { models, results, sources, benchmarksFile, bestResultFor, sourceFor, sta
 const asOf = process.argv[2] ?? new Date().toISOString().slice(0, 10);
 const current = models.filter((m) => m.status === 'current');
 
-console.log(`DENOMINATOR COVERAGE AUDIT  (as of ${asOf})\n`);
+console.log(`SOLVENCY COVERAGE AUDIT  (as of ${asOf})\n`);
 console.log(`Models priced:  ${models.length}  (${current.length} current)`);
 console.log(`Benchmark rows: ${results.length}  from ${sources.length} sources\n`);
 
@@ -33,8 +33,8 @@ const covered = models.map((m) => ({ m, r: bestResultFor(m.model_id) })).filter(
 const byBasis = (b: string) => covered.filter((x) => x.r!.cost_basis === b);
 
 console.log(`\n-- Coverage by cost basis ------------------------------------`);
-console.log(`  measured_by_source      ${byBasis('measured_by_source').length}  (no Denominator assumption in the cost)`);
-console.log(`  modelled_by_denominator ${byBasis('modelled_by_denominator').length}  (loop model applies -- ASSUMPTION)`);
+console.log(`  measured_by_source      ${byBasis('measured_by_source').length}  (no Solvency assumption in the cost)`);
+console.log(`  modelled_by_solvency ${byBasis('modelled_by_solvency').length}  (loop model applies -- ASSUMPTION)`);
 console.log(`  historical_at_run_date  ${byBasis('historical_at_run_date').length}  (Aider; cost recomputed, pass rate stale)`);
 
 const currentCovered = current.filter((m) => bestResultFor(m.model_id));
@@ -48,4 +48,4 @@ for (const r of benchOnly) console.log(`  ${r.entry_label.padEnd(36)} ${(r.pass_
 console.log(`\n-- Redistribution --------------------------------------------`);
 console.log(`  Rows publishable in the CC-BY /data export: ${results.filter((r) => r.redistributable).length} of ${results.length}`);
 console.log(`  All ingested benchmark data is third-party, cited and linked only.`);
-console.log(`  Only Denominator's own Phase 3 runs may be published as open data.`);
+console.log(`  Only Solvency's own Phase 3 runs may be published as open data.`);

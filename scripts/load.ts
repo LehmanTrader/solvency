@@ -18,7 +18,7 @@ export const tiers: Record<TierName, TaskTier> = assumptions.task_tiers;
 export const TIER_NAMES: TierName[] = ['light', 'moderate', 'heavy'];
 
 /**
- * Source preference, best first. Ordered by how few Denominator assumptions the
+ * Source preference, best first. Ordered by how few Solvency assumptions the
  * row requires, then by freshness:
  *   1. AA  -- publishes an observed per-task cost, so the loop model is bypassed entirely.
  *   2. SEAL -- current models, uniform scaffolding, but pass rate only (cost is modelled).
@@ -35,7 +35,7 @@ export function sourceFor(benchmark: string) {
 }
 
 /**
- * Pick the row Denominator will publish for a model: the most-preferred source
+ * Pick the row Solvency will publish for a model: the most-preferred source
  * that covers it, and within that source the model's best published
  * configuration. The chosen entry_label always travels with the number.
  */

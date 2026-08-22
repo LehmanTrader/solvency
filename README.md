@@ -1,4 +1,4 @@
-# Denominator
+# Solvency
 
 Cost per solved task for AI coding models.
 
@@ -24,13 +24,13 @@ Node >= 24 (TypeScript runs natively via type stripping). **Zero dependencies.**
 cost_per_solved_task = cost_per_attempt / pass_rate
 ```
 
-Denominator needs only `pass_rate` from a benchmark. Cost comes from one of two clearly
+Solvency needs only `pass_rate` from a benchmark. Cost comes from one of two clearly
 separated bases, which are labeled everywhere and **never averaged together**:
 
 | Basis | Cost comes from | Assumptions applied |
 |---|---|---|
 | `measured_by_source` | A per-task cost the benchmark source actually observed | **None** |
-| `modelled_by_denominator` | Loop model x current verified prices | Loop count, per-loop tokens, frontier-efficiency |
+| `modelled_by_solvency` | Loop model x current verified prices | Loop count, per-loop tokens, frontier-efficiency |
 
 Where a source publishes measured cost, the loop model is bypassed outright — no loop count,
 no per-loop token figure, and no frontier-efficiency multiplier touches the number. Tests
@@ -52,12 +52,12 @@ Two proven results:
 
 ## Sources
 
-In preference order — fewest Denominator assumptions first, then freshness.
+In preference order — fewest Solvency assumptions first, then freshness.
 
 | Source | Tasks | Covers 2026 models | Publishes cost | Basis |
 |---|---|---|---|---|
 | [Artificial Analysis Coding Agent Index v1.4](https://artificialanalysis.ai/agents/coding-agents) | 326 | **Yes** | Yes, measured | `measured_by_source` |
-| [Scale SEAL — SWE-bench Pro](https://labs.scale.com/leaderboard/swe_bench_pro_public) | 1,865 | **Yes** | Not captured | `modelled_by_denominator` |
+| [Scale SEAL — SWE-bench Pro](https://labs.scale.com/leaderboard/swe_bench_pro_public) | 1,865 | **Yes** | Not captured | `modelled_by_solvency` |
 | [Aider polyglot](https://aider.chat/docs/leaderboards/) | 225 | No | Yes, historical | `historical_at_run_date` |
 
 Evaluated and rejected: **HAL** (Princeton) — right shape, 26,597 rollouts with centralized
@@ -68,13 +68,13 @@ cost tracking, but the project has paused updating and its newest entries are Au
 
 All ingested benchmark data is third-party and carries `redistributable: false`. It is cited
 and linked, never republished. **Nothing here may enter the CC-BY `/data` export** — only
-Denominator's own Phase 3 measured runs are published as open data. Enforced by test.
+Solvency's own Phase 3 measured runs are published as open data. Enforced by test.
 
 ### AA caveat that matters
 
 AA rows are **harness + model combinations**, not bare models. "Claude Code + Opus 5" is not a
 property of Opus 5; AA's own harness comparison shows the harness materially moves the score.
-Denominator carries the harness on every row and must never present these as model properties.
+Solvency carries the harness on every row and must never present these as model properties.
 
 AA's index is read from the published chart as a 0–100 composite. `pass_rate = index / 100` is
 an **interpretation**, flagged per row as `pass_rate_derivation`.
@@ -118,4 +118,4 @@ unadjusted results. Phase 3 replaces it outright.
 
 A METR randomized controlled trial found experienced open-source developers were **19% slower**
 using early-2025 AI tools while believing they were **20% faster** (they expected 24%).
-Denominator measures cost per benchmark-solved task, not developer throughput.
+Solvency measures cost per benchmark-solved task, not developer throughput.

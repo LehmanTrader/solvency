@@ -134,12 +134,12 @@ describe('measured cost supersedes the loop model', () => {
 
   test('the task tier cannot move a measured row either', () => {
     const vals = TIER_NAMES.map((t) => costPerSolvedTask(m(), t, tiers[t], 0.68, opts, { measuredAttemptCostUsd: 8.17 }).value!.naive);
-    assert.equal(new Set(vals).size, 1, 'a measured per-task cost is not a function of Denominator task tiers');
+    assert.equal(new Set(vals).size, 1, 'a measured per-task cost is not a function of Solvency task tiers');
   });
 
   test('rows without a measured cost still report the modelled basis', () => {
     const out = costPerSolvedTask(m(), 'heavy', tiers.heavy, 0.68, opts);
-    assert.equal(out.value!.costBasis, 'modelled_by_denominator');
+    assert.equal(out.value!.costBasis, 'modelled_by_solvency');
   });
 
   test('measured and modelled figures for the same model genuinely differ', () => {
@@ -189,7 +189,7 @@ describe('data integrity', () => {
         assert.ok(r.run_date < '2026-01-01',
           `${r.entry_label}: a historical cost basis implies an older run_date`);
       }
-      if (r.cost_basis === 'modelled_by_denominator') {
+      if (r.cost_basis === 'modelled_by_solvency') {
         assert.equal(r.measured_cost_per_task_usd, undefined,
           `${r.entry_label}: a modelled row must not carry a measured cost`);
       }
@@ -227,7 +227,7 @@ describe('data integrity', () => {
   });
 
   test('every row declares a cost basis, and measured rows carry a measured cost', () => {
-    const valid = ['measured_by_source', 'modelled_by_denominator', 'historical_at_run_date'];
+    const valid = ['measured_by_source', 'modelled_by_solvency', 'historical_at_run_date'];
     for (const r of results) {
       assert.ok(valid.includes(r.cost_basis), `${r.entry_label}: ${r.cost_basis}`);
       if (r.cost_basis === 'measured_by_source') {

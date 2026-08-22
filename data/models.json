@@ -113,7 +113,7 @@
       "context_window": null,
       "source_url": "https://ai.google.dev/gemini-api/docs/pricing",
       "last_verified": "2026-08-21",
-      "pricing_notes": "PROMPT-LENGTH TIERED. Rates shown apply to prompts <= 200k tokens. Above 200k: $4.00 in / $18.00 out / $0.40 cache. All Denominator task tiers stay under 200k, so the low tier is the correct one. Context window not stated on the pricing page."
+      "pricing_notes": "PROMPT-LENGTH TIERED. Rates shown apply to prompts <= 200k tokens. Above 200k: $4.00 in / $18.00 out / $0.40 cache. All Solvency task tiers stay under 200k, so the low tier is the correct one. Context window not stated on the pricing page."
     },
     {
       "model_id": "gemini-3.7-flash",

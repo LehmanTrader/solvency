@@ -62,7 +62,7 @@ function inlineSvg(rel: string, alt: string): string {
   <div class="chart-plot">${svg}</div>
   <div class="chart-foot">
     <span>${sources.map(esc).join(' ')}</span>
-    <span class="mark">DENOMINATOR</span>
+    <span class="mark">SOLVENCY</span>
   </div>
 </figure>`;
 }
@@ -247,7 +247,7 @@ const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(cove
   </div>
   <div class="hero">
     <div class="hero-top">
-      <span class="hero-mark">DENOMINATOR</span>
+      <span class="hero-mark">SOLVENCY</span>
       <span class="hero-no">RESEARCH<br>NOTE&#8202;&#8211;&#8202;01</span>
     </div>
     <div class="hero-mid"><div class="hero-title">COST PER<br>SOLVED TASK</div></div>
@@ -255,7 +255,7 @@ const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(cove
   </div>
   <div class="tagline">
     <span>The denominator is the whole story.</span>
-    <span class="mark">DENOMINATOR</span>
+    <span class="mark">SOLVENCY</span>
   </div>
   <dl class="cover-foot">
     <div><dt>Verified</dt><dd>2026-08-21</dd></div>
@@ -275,7 +275,7 @@ writeFileSync(htmlPath, html);
 const FOOTER = `<div style="width:100%;font-family:'SFMono-Regular',Menlo,monospace;font-size:7px;
   color:#6E747B;padding:0 1.02in;display:flex;justify-content:space-between;letter-spacing:.08em;
   -webkit-print-color-adjust:exact;">
-  <span>DENOMINATOR &nbsp;·&nbsp; RESEARCH NOTE 01 &nbsp;·&nbsp; COST PER SOLVED TASK &nbsp;·&nbsp; AUGUST 2026</span>
+  <span>SOLVENCY &nbsp;·&nbsp; RESEARCH NOTE 01 &nbsp;·&nbsp; COST PER SOLVED TASK &nbsp;·&nbsp; AUGUST 2026</span>
   <span class="pageNumber"></span></div>`;
 
 const PRINT_OPTS = {

@@ -63,11 +63,11 @@ for (const f of files) {
       display:flex;justify-content:space-between}
   </style>
   <div class="wrap">
-    <div class="top"><span class="mark">DENOMINATOR</span><span class="note">RESEARCH NOTE 01 · AUGUST 2026</span></div>
+    <div class="top"><span class="mark">SOLVENCY</span><span class="note">RESEARCH NOTE 01 · AUGUST 2026</span></div>
     <div class="title">${m?.title ?? key}</div>
     <div class="sub">${(m?.subtitle ?? [])[0] ?? ''}</div>
     <div class="plot">${svg}</div>
-    <div class="foot"><span>${(m?.source ?? []).find((l: string) => l.startsWith('Data:')) ?? ''}</span><span>denominator</span></div>
+    <div class="foot"><span>${(m?.source ?? []).find((l: string) => l.startsWith('Data:')) ?? ''}</span><span>solvency.dev</span></div>
   </div>`;
   shot(card, 1200, 630, join(OUT, `${key}-og.png`), 2);
   console.log(`${key}: ${w}x${h}@2x + 1200x630 og`);

@@ -1,5 +1,5 @@
 /**
- * Estimates the API cost of a Denominator benchmark run, and the statistical
+ * Estimates the API cost of a Solvency benchmark run, and the statistical
  * precision that scope buys. Phase 3 requires a dry-run estimate before any
  * live spend; this is that estimator.
  *

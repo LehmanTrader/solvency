@@ -3,7 +3,7 @@
     "title": "Token price is not task cost",
     "subtitle": [
       "Log scale, normalised to the cheapest model on each axis.",
-      "Measured rows only, so no Denominator assumption is inside these numbers."
+      "Measured rows only, so no Solvency assumption is inside these numbers."
     ],
     "source": [
       "Cost per solved task = measured cost per task / pass rate.",
