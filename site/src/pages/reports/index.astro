@@ -1,21 +1,44 @@
 ---
 import { getCollection } from 'astro:content';
 import Base from '../../layouts/Base.astro';
+import Share from '../../components/Share.astro';
+import { headline, fmtX, money } from '../../lib/headline.ts';
 const reports = (await getCollection('reports')).sort((a, b) => b.data.date - a.data.date);
+const href = (r) => `/reports/${r.id.replace(/^\d{4}-\d{2}-/, '')}`;
+const h = headline();
 ---
-<Base title="Reports — Solvency" description="Research notes on the real cost of AI coding models.">
-  <h1 class="font-mono text-3xl font-bold text-[var(--color-ink)]">Reports</h1>
-  <ul class="mt-10 divide-y divide-[var(--color-rule)]">
-    {reports.map((r) => (
-      <li class="py-6">
-        <a href={`/reports/${r.id.replace(/^\d{4}-\d{2}-/, '')}`} class="group block">
-          <p class="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--color-accent)]">
-            Note {String(r.data.note).padStart(2, '0')} · {r.data.date.toISOString().slice(0, 10)}
-          </p>
-          <h2 class="mt-2 font-mono text-2xl font-bold text-[var(--color-ink)] group-hover:text-[var(--color-accent)]">{r.data.title}</h2>
-          <p class="mt-2 text-[var(--color-muted)]">{r.data.description}</p>
-        </a>
-      </li>
-    ))}
-  </ul>
+<Base title="Research notes — Solvency" description="Research notes on the real cost of AI coding models. Every figure sourced, dated, and re-derived by test.">
+  <div class="wrap pt-10">
+    <p class="eyebrow">Research notes</p>
+    <h1 class="h-page mt-3">Reports</h1>
+    <p class="lede mt-4 max-w-2xl">Each note is re-derived from the datasets by the test suite before it is published, so a table in a note can never drift from the data behind it.</p>
+
+    <div class="mt-8 card card-pad flex flex-wrap items-center justify-between gap-4">
+      <div class="max-w-xl">
+        <p class="label">Headline finding</p>
+        <p class="mt-2 text-[var(--color-ink)] leading-relaxed">
+          <strong class="text-[var(--color-accent)]">{h.cheap.m.display_name}</strong> is {fmtX(h.inX)} cheaper than {h.dear.m.display_name} per input token and
+          {fmtX(h.outX)} per output token — but <strong class="text-[var(--color-accent)]">{fmtX(h.solvedX)}</strong> cheaper per solved task
+          ({money(h.cheap.cost)} vs {money(h.dear.cost)}).
+        </p>
+      </div>
+      <Share url={new URL(href(reports[0]), Astro.site).href} compact />
+    </div>
+
+    <ul class="mt-10 grid gap-4">
+      {reports.map((r) => (
+        <li class="card overflow-hidden">
+          <a href={href(r)} class="block card-pad hover:bg-[var(--color-panel-2)] transition-colors group">
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+              <p class="eyebrow">Note {String(r.data.note).padStart(2, '0')}</p>
+              <p class="small">published {r.data.date.toISOString().slice(0, 10)}</p>
+            </div>
+            <h2 class="mt-2 font-mono text-2xl font-bold tracking-tight text-[var(--color-ink)] group-hover:text-[var(--color-accent)]">{r.data.title}</h2>
+            <p class="mt-2 text-[var(--color-muted)] max-w-3xl leading-relaxed">{r.data.description}</p>
+            <p class="mt-4 small text-[var(--color-accent)]">Read the note →</p>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </div>
 </Base>

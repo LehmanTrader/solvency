@@ -1,7 +1,10 @@
 ---
 import Base from '../../layouts/Base.astro';
-import { assumptions, tiers, bestResultFor, extrasFor } from '../../lib/data.ts';
-import { costPerSolvedTask, defaultOptions } from '../../lib/engine.ts';
+import Badge from '../../components/Badge.astro';
+import BarChart from '../../components/BarChart.astro';
+import Provenance from '../../components/Provenance.astro';
+import { sourceFor } from '../../lib/data.ts';
+import { solvedFor, money, ratio, fmtX } from '../../lib/headline.ts';
 
 export async function getStaticPaths() {
   const { models } = await import('../../lib/data.ts');
@@ -13,74 +16,101 @@ export async function getStaticPaths() {
 }
 
 const { a, b } = Astro.props;
-const opts = defaultOptions(assumptions);
-const solved = (m) => {
-  const r = bestResultFor(m.model_id);
-  if (!r) return { v: null, r: null };
-  const out = costPerSolvedTask(m, 'heavy', tiers.heavy, r.pass_rate, opts, extrasFor(r));
-  return { v: out.value?.naive ?? null, r };
-};
-const sa = solved(a), sb = solved(b);
-const money = (n) => n >= 100 ? `$${n.toFixed(0)}` : `$${n.toFixed(2)}`;
-const ratio = (x, y) => (x > y ? x / y : y / x);
-const outRatio = ratio(a.output_per_mtok, b.output_per_mtok);
+const sa = solvedFor(a.model_id, 'heavy'), sb = solvedFor(b.model_id, 'heavy');
+const outX = ratio(a.output_per_mtok, b.output_per_mtok);
+const inX = ratio(a.input_per_mtok, b.input_per_mtok);
 const cheaperTokens = a.output_per_mtok < b.output_per_mtok ? a : b;
-const both = sa.v !== null && sb.v !== null;
-const solvedRatio = both ? ratio(sa.v, sb.v) : null;
-const cheaperSolved = both ? (sa.v < sb.v ? a : b) : null;
+const both = sa !== null && sb !== null;
+const sameBasis = both && sa.basisKey === sb.basisKey;
+const solvedX = both ? ratio(sa.cost, sb.cost) : null;
+const cheaperSolved = both ? (sa.cost < sb.cost ? a : b) : null;
 const flips = both && cheaperTokens.model_id !== cheaperSolved.model_id;
-const rows = [
-  ['Input $/Mtok', `$${a.input_per_mtok}`, `$${b.input_per_mtok}`],
-  ['Output $/Mtok', `$${a.output_per_mtok}`, `$${b.output_per_mtok}`],
-  ['Cached in $/Mtok', a.cached_input_per_mtok === null ? 'missing' : `$${a.cached_input_per_mtok}`, b.cached_input_per_mtok === null ? 'missing' : `$${b.cached_input_per_mtok}`],
-  ['Pass rate', sa.r ? `${(sa.r.pass_rate*100).toFixed(0)}%` : 'missing', sb.r ? `${(sb.r.pass_rate*100).toFixed(0)}%` : 'missing'],
-  ['Cost per solved task', sa.v === null ? 'missing' : money(sa.v), sb.v === null ? 'missing' : money(sb.v)],
+const basisLabel = (s) => s ? (s.basisKey === 'measured_by_source' ? 'measured' : 'modelled') : null;
+const price = (n) => n === null || n === undefined ? null : `$${n.toFixed(3).replace(/0+$/, '').replace(/\.$/, '')}`;
+const metric = (label, va, vb, fmt, note?) => ({ label, note, items: [
+  { label: a.display_name, value: va ?? 0, display: va == null ? 'missing' : fmt(va), lead: va != null && vb != null && va <= vb },
+  { label: b.display_name, value: vb ?? 0, display: vb == null ? 'missing' : fmt(vb), lead: va != null && vb != null && vb < va },
+]});
+const charts = [
+  metric('Input $/M tokens', a.input_per_mtok, b.input_per_mtok, price, 'lower is better'),
+  metric('Output $/M tokens', a.output_per_mtok, b.output_per_mtok, price, 'lower is better'),
+  metric('Cost per solved task', sa?.cost ?? null, sb?.cost ?? null, money, both ? (sameBasis ? `${basisLabel(sa)} basis · lower is better` : 'different bases — not comparable') : 'needs a pass rate for both'),
 ];
-const desc = both
-  ? `${cheaperSolved.display_name} costs ${solvedRatio.toFixed(1)}x less per solved task. Token price alone would tell you ${cheaperTokens.display_name} is ${outRatio.toFixed(1)}x cheaper.`
-  : `Verified API pricing for ${a.display_name} and ${b.display_name}. Cost per solved task requires a published pass rate for both.`;
+const rows = [
+  ['Input $/Mtok', price(a.input_per_mtok), price(b.input_per_mtok)],
+  ['Output $/Mtok', price(a.output_per_mtok), price(b.output_per_mtok)],
+  ['Cached input $/Mtok', price(a.cached_input_per_mtok) ?? 'missing', price(b.cached_input_per_mtok) ?? 'missing'],
+  ['Pass rate', sa ? `${Math.round(sa.r.pass_rate * 100)}%` : 'missing', sb ? `${Math.round(sb.r.pass_rate * 100)}%` : 'missing'],
+  ['Pass rate source', sa ? sourceFor(sa.r.benchmark)?.name?.split(' ')[0] : 'missing', sb ? sourceFor(sb.r.benchmark)?.name?.split(' ')[0] : 'missing'],
+  ['Cost basis', basisLabel(sa) ?? 'missing', basisLabel(sb) ?? 'missing'],
+  ['Cost per solved task', sa ? money(sa.cost) : 'missing', sb ? money(sb.cost) : 'missing'],
+];
+const desc = both && sameBasis
+  ? `${cheaperSolved.display_name} costs ${fmtX(solvedX)} less per solved task (${basisLabel(sa)}). Token price alone would tell you ${cheaperTokens.display_name} is ${fmtX(outX)} cheaper.`
+  : `Verified API pricing for ${a.display_name} and ${b.display_name}. Cost per solved task requires a published pass rate for both, on the same cost basis.`;
+const srcA = sa ? sourceFor(sa.r.benchmark) : null;
 ---
 <Base title={`${a.display_name} vs ${b.display_name} — cost per solved task — Solvency`} description={desc}>
-  <p class="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--color-accent)]">Head to head</p>
-  <h1 class="mt-3 font-mono text-3xl sm:text-4xl font-bold tracking-tight text-[var(--color-ink)]">
-    {a.display_name} <span class="text-[var(--color-muted)]">vs</span> {b.display_name}
-  </h1>
-
-  {both && (
-    <div class="mt-8 border border-[var(--color-rule)] rounded-md p-6">
-      <p class="text-lg text-[var(--color-ink)]">
-        <strong class="text-[var(--color-accent)]">{cheaperSolved.display_name}</strong> costs
-        <strong class="text-[var(--color-accent)]"> {solvedRatio.toFixed(1)}x less</strong> per solved task.
-      </p>
-      <p class="mt-3 text-[var(--color-muted)]">
-        On output token price alone, {cheaperTokens.display_name} looks {outRatio.toFixed(1)}x cheaper.
-        {flips ? ' The ranking reverses once you divide by pass rate — the cheaper tokens do not win the task.' : ' The ranking holds, but the margin changes.'}
-      </p>
+  <div class="wrap pt-10">
+    <p class="eyebrow">Head to head</p>
+    <h1 class="h-page mt-3">{a.display_name} <span class="text-[var(--color-muted)]">vs</span> {b.display_name}</h1>
+    <div class="mt-4 flex flex-wrap gap-2">
+      <Badge tone={a.status === 'current' ? 'accent' : 'warn'}>{a.display_name}: {a.status}</Badge>
+      <Badge tone={b.status === 'current' ? 'accent' : 'warn'}>{b.display_name}: {b.status}</Badge>
+      <Badge>heavy tier</Badge>
     </div>
-  )}
-  {!both && (
-    <p class="mt-8 text-[var(--color-muted)]">
-      Cost per solved task needs a published pass rate for both models. At least one of these has none, so it is reported as missing rather than estimated.
-    </p>
-  )}
 
-  <div class="mt-10 overflow-x-auto"><table class="w-full font-mono text-[13px] tabular-nums">
-    <thead><tr class="text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted)] border-b border-[var(--color-accent)]">
-      <th class="text-left py-2 pr-4"></th>
-      <th class="text-right px-4">{a.display_name}</th><th class="text-right pl-4">{b.display_name}</th>
-    </tr></thead>
-    <tbody>{rows.map(([k, x, y]) => (
-      <tr class="border-b border-[var(--color-rule)]">
-        <td class="py-2.5 pr-4 text-[var(--color-muted)]">{k}</td>
-        <td class={`px-4 text-right ${x === 'missing' ? 'text-[var(--color-muted)]' : 'text-[var(--color-ink)]'}`}>{x}</td>
-        <td class={`pl-4 text-right ${y === 'missing' ? 'text-[var(--color-muted)]' : 'text-[var(--color-ink)]'}`}>{y}</td>
-      </tr>))}</tbody>
-  </table></div>
+    <div class="mt-8 grid gap-4 lg:grid-cols-[1.1fr_1fr] items-start">
+      <div class="card card-pad">
+        {both && sameBasis ? (
+          <>
+            <p class="label">Verdict · {basisLabel(sa)} basis</p>
+            <p class="mt-2 text-xl leading-snug text-[var(--color-ink)]">
+              <strong class="text-[var(--color-accent)]">{cheaperSolved.display_name}</strong> costs
+              <strong class="text-[var(--color-accent)]"> {fmtX(solvedX)} less</strong> per solved task.
+            </p>
+            <p class="mt-3 text-[var(--color-muted)] leading-relaxed">
+              On output token price alone, {cheaperTokens.display_name} looks {fmtX(outX)} cheaper ({fmtX(inX)} on input).
+              {flips ? ' The ranking reverses once you divide by pass rate — the cheaper tokens do not win the task.' : ' The ranking holds, but the margin changes.'}
+            </p>
+          </>
+        ) : both ? (
+          <>
+            <p class="label">No verdict</p>
+            <p class="mt-2 text-[var(--color-ink)] leading-relaxed">One cost is measured by its benchmark and the other is modelled by Solvency. The two bases are never ranked against each other, so no verdict is given here.</p>
+          </>
+        ) : (
+          <>
+            <p class="label">No verdict</p>
+            <p class="mt-2 text-[var(--color-ink)] leading-relaxed">Cost per solved task needs a published pass rate for both models. At least one has none, so it is reported as missing rather than estimated.</p>
+          </>
+        )}
+        <Provenance source={srcA?.attribution} href={srcA?.attribution_url ?? srcA?.source_url} verified={a.last_verified} note="prices from each provider's pricing page" />
+      </div>
 
-  <p class="mt-6 font-mono text-[11px] text-[var(--color-muted)]">
-    Heavy task tier. Prices verified {a.last_verified}.
-    <a class="text-[var(--color-ink)] border-b border-[var(--color-accent)]/50" href="/methodology">Methodology</a> ·
-    <a class="text-[var(--color-ink)] border-b border-[var(--color-accent)]/50" href={`/models/${a.model_id}`}>{a.display_name}</a> ·
-    <a class="text-[var(--color-ink)] border-b border-[var(--color-accent)]/50" href={`/models/${b.model_id}`}>{b.display_name}</a>
-  </p>
+      <div class="card overflow-hidden">
+        {charts.map((c) => (
+          <div class="card-pad border-b border-[var(--color-rule)] last:border-b-0">
+            <div class="flex items-baseline justify-between gap-3"><p class="label">{c.label}</p><p class="small">{c.note}</p></div>
+            <BarChart items={c.items} class="mt-3" />
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <div class="mt-6 card overflow-hidden"><div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th></th><th class="r"><a href={`/models/${a.model_id}`}>{a.display_name}</a></th><th class="r"><a href={`/models/${b.model_id}`}>{b.display_name}</a></th></tr></thead>
+      <tbody>{rows.map(([k, x, y]) => (
+        <tr>
+          <td class="muted">{k}</td>
+          <td class={`r ${x === 'missing' ? 'missing' : 'ink'}`}>{x}</td>
+          <td class={`r ${y === 'missing' ? 'missing' : 'ink'}`}>{y}</td>
+        </tr>))}</tbody>
+    </table></div></div>
+    <Provenance verified={a.last_verified} note="heavy task tier; measured rows ignore the tier">
+      · <a class="link" href="/methodology">Methodology</a>
+      · <a class="link" href={`/models/${a.model_id}`}>{a.display_name}</a>
+      · <a class="link" href={`/models/${b.model_id}`}>{b.display_name}</a>
+    </Provenance>
+  </div>
 </Base>

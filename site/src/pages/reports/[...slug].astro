@@ -1,6 +1,8 @@
 ---
 import { getCollection, render } from 'astro:content';
 import Base from '../../layouts/Base.astro';
+import Share from '../../components/Share.astro';
+import { sources } from '../../lib/data.ts';
 
 export async function getStaticPaths() {
   const reports = await getCollection('reports');
@@ -11,27 +13,50 @@ export async function getStaticPaths() {
 }
 
 const { report } = Astro.props;
-const { Content } = await render(report);
+const { Content, headings } = await render(report);
 const d = report.data;
 const stamp = d.date.toISOString().slice(0, 10);
+const url = new URL(Astro.url.pathname, Astro.site).href;
+const toc = headings.filter((h) => h.depth === 2);
+const SHORT = { 'aa-coding-agent-index': 'AA', 'seal-swe-bench-pro': 'SEAL', 'aider-polyglot': 'Aider' };
+const srcNames = sources.map((s) => SHORT[s.benchmark] ?? s.name.split(' ')[0]).join(' · ');
 ---
-<Base title={`${d.title} — Solvency`} description={d.description}>
-  <article>
-    <p class="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--color-accent)]">
-      Research Note {String(d.note).padStart(2, '0')}
-    </p>
-    <h1 class="mt-3 font-mono text-4xl sm:text-5xl font-bold leading-[1.08] tracking-tight text-[var(--color-ink)]">
-      {d.title}
-    </h1>
-    <p class="mt-5 text-lg leading-relaxed text-[var(--color-muted)]">{d.description}</p>
+<Base title={`${d.title} — Solvency`} description={d.description} type="article">
+  <article class="wrap pt-10">
+    <header class="max-w-3xl">
+      <p class="eyebrow">Research note {String(d.note).padStart(2, '0')}</p>
+      <h1 class="h-display mt-3">{d.title}</h1>
+      <p class="lede mt-5 text-[var(--color-muted)]">{d.description}</p>
+    </header>
 
-    <dl class="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-y-4 gap-x-6 border-y border-[var(--color-rule)] py-4 font-mono text-[11px]">
-      <div><dt class="uppercase tracking-[0.14em] text-[var(--color-muted)]">Verified</dt><dd class="mt-1 text-[var(--color-ink)]">{stamp}</dd></div>
-      <div><dt class="uppercase tracking-[0.14em] text-[var(--color-muted)]">Sources</dt><dd class="mt-1 text-[var(--color-ink)]">AA · SEAL · Aider</dd></div>
-      <div><dt class="uppercase tracking-[0.14em] text-[var(--color-muted)]">Method</dt><dd class="mt-1 text-[var(--color-ink)]">cost ÷ pass rate</dd></div>
-      <div><dt class="uppercase tracking-[0.14em] text-[var(--color-muted)]">Status</dt><dd class="mt-1 text-[var(--color-accent)]">Phase 0</dd></div>
-    </dl>
+    <div class="mt-8 card overflow-hidden">
+      <dl class="grid grid-cols-2 sm:grid-cols-4 font-mono text-[11px] divide-x divide-[var(--color-rule)]">
+        <div class="px-4 py-3"><dt class="label">Published</dt><dd class="mt-1 text-[var(--color-ink)]">{stamp}</dd></div>
+        <div class="px-4 py-3"><dt class="label">Prices verified</dt><dd class="mt-1 text-[var(--color-ink)]">{stamp}</dd></div>
+        <div class="px-4 py-3"><dt class="label">Sources</dt><dd class="mt-1 text-[var(--color-ink)]">{srcNames}</dd></div>
+        <div class="px-4 py-3"><dt class="label">Method</dt><dd class="mt-1 text-[var(--color-ink)]">cost ÷ pass rate</dd></div>
+      </dl>
+      <div class="card-head border-t border-b-0">
+        <p class="small">Every table in this note is re-derived from the datasets by the test suite.</p>
+        <Share url={url} compact />
+      </div>
+    </div>
 
-    <div class="prose mt-10"><Content /></div>
+    <div class="mt-10 grid gap-10 lg:grid-cols-[14rem_minmax(0,1fr)]">
+      <nav aria-label="Contents" class="hidden lg:block">
+        <div class="sticky top-20 toc">
+          <p class="label mb-3">Contents</p>
+          {toc.map((h) => <a href={`#${h.slug}`}>{h.text}</a>)}
+          <a href="#share" class="mt-4 text-[var(--color-accent)]">Share this note</a>
+        </div>
+      </nav>
+      <div class="prose max-w-3xl min-w-0"><Content /></div>
+    </div>
+
+    <section id="share" class="mt-16 max-w-3xl lg:ml-[calc(14rem+2.5rem)] card card-pad" aria-label="Share this note">
+      <p class="eyebrow">Share this note</p>
+      <p class="mt-1 text-sm text-[var(--color-muted)]">The tweet text is generated from the data, so it matches the tables above.</p>
+      <Share url={url} class="mt-4" />
+    </section>
   </article>
 </Base>

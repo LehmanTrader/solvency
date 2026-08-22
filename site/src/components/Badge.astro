@@ -1,9 +1,5 @@
 ---
 const { tone = 'muted' } = Astro.props;
-const tones = {
-  muted: 'text-[var(--color-muted)] border-[var(--color-rule)]',
-  accent: 'text-[var(--color-accent)] border-[var(--color-accent)]/40',
-  warn: 'text-[#E8895A] border-[#E8895A]/40',
-};
+const tones = { muted: '', accent: 'pill-accent', warn: 'pill-warn', ink: 'pill-ink' };
 ---
-<span class={`inline-block font-mono text-[10px] uppercase tracking-[0.14em] border rounded px-2 py-[3px] ${tones[tone]}`}><slot /></span>
+<span class={`pill ${tones[tone] ?? ''}`}><slot /></span>

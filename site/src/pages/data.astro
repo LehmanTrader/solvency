@@ -16,8 +16,10 @@ const schema = {
 ---
 <Base title="Data — Solvency" description="Verified AI model pricing, free under CC-BY. Every row carries a source URL and a verification date.">
   <script type="application/ld+json" set:html={JSON.stringify(schema)} />
-  <h1 class="font-mono text-3xl font-bold text-[var(--color-ink)]">Data</h1>
-  <p class="mt-4 max-w-2xl">Verified API list pricing for {models.length} models. Every row carries the provider pricing page it was checked against and the date it was checked.</p>
+  <div class="wrap pt-10 max-w-4xl">
+  <p class="eyebrow">Open data</p>
+  <h1 class="h-page mt-3">Data</h1>
+  <p class="lede mt-4 max-w-2xl">Verified API list pricing for {models.length} models. Every row carries the provider pricing page it was checked against and the date it was checked.</p>
 
   <div class="mt-8 flex flex-wrap gap-3">
     <a href="/data/models.json" class="font-mono text-[13px] border border-[var(--color-accent)]/50 text-[var(--color-accent)] rounded px-4 py-2 hover:bg-[var(--color-accent)]/10">models.json ↓</a>
@@ -45,5 +47,6 @@ const schema = {
       <li>Several providers price by prompt length, time of day, or promotional period. Those rows record the tier used and state the alternative in <code>pricing_notes</code>.</li>
       <li>A missing value is <code>null</code>. It is never a zero.</li>
     </ul>
+  </div>
   </div>
 </Base>
