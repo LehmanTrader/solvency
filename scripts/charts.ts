@@ -20,6 +20,8 @@ const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'reports',
   THEME === 'light' ? 'charts-light' : 'charts');
 const opts = defaultOptions(assumptions);
 const ASOF = '2026-08-21';
+/** Exact attribution required by AA's Data Platform Terms s.5. Do not paraphrase. */
+const AA_ATTRIB = 'Source: Artificial Analysis (artificialanalysis.ai)';
 
 const PALETTE = THEME === 'light'
   ? { BG: '#FFFFFF', GRID: '#E7E4DE', TEXT: '#14171A', MUTED: '#6E747B', ACCENT: '#B0691A', ACCENT_DIM: '#D8C3A0' }
@@ -121,7 +123,7 @@ function chartDivergence() {
     ['Log scale, normalised to the cheapest model on each axis.',
      'Measured rows only, so no Solvency assumption is inside these numbers.'],
     b, ['Cost per solved task = measured cost per task / pass rate.',
-        `Data: Artificial Analysis Coding Agent Index v1.4. Prices verified ${ASOF}.`], { y0: 86, y1: H - 46 }));
+        `${AA_ATTRIB} — Coding Agent Index v1.4. Prices verified ${ASOF}.`], { y0: 86, y1: H - 46 }));
   return { spreadTok, spreadSol, pts };
 }
 
@@ -201,7 +203,7 @@ function chartPareto() {
     ['Coding Agent Index vs cost per solved task.',
      'Dashed line: the frontier — nothing cheaper scores higher.'],
     b, ['Rows are harness+model pairs, not bare models.',
-        `Data: Artificial Analysis Coding Agent Index v1.4. Verified ${ASOF}.`], { y0: 98, y1: H - 30 }));
+        `${AA_ATTRIB} — Coding Agent Index v1.4. Verified ${ASOF}.`], { y0: 98, y1: H - 30 }));
   return { front };
 }
 

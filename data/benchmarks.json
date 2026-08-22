@@ -45,7 +45,9 @@
       "last_verified": "2026-08-21",
       "verified_via": "live page read in-browser; the leaderboard table is client-rendered and is not visible to plain HTTP fetch",
       "redistributable": false,
-      "attribution": "Data: Artificial Analysis Coding Agent Index v1.4",
+      "attribution": "Source: Artificial Analysis (artificialanalysis.ai)",
+      "attribution_url": "https://artificialanalysis.ai/agents/coding-agents",
+      "attribution_note": "Exact string and hyperlink required by the Data Platform Terms, section 5. Do not paraphrase.",
       "covers_current_models": true,
       "caveats": [
         "Rows are HARNESS + MODEL combinations, not bare models. Claude Code + Opus 5 is not the same measurement as Opus 5 in another harness; AA's own harness comparison shows the harness materially changes the score. Never present an AA figure as a property of the model alone.",
@@ -69,7 +71,7 @@
       "source_url": "https://labs.scale.com/leaderboard/swe_bench_pro_public",
       "last_verified": "2026-08-21",
       "redistributable": false,
-      "attribution": "Data: Scale SEAL leaderboard, SWE-bench Pro",
+      "attribution": "Source: Scale SEAL leaderboard, SWE-bench Pro",
       "covers_current_models": true,
       "caveats": [
         "Per-model dollar cost was NOT captured from the page. These rows therefore use Solvency's loop model for cost, which is an assumption. Marked cost_basis='modelled_by_solvency'.",
@@ -98,7 +100,7 @@
       "last_verified": "2026-08-21",
       "latest_entry_date": "2025-10-03",
       "redistributable": false,
-      "attribution": "Data: Aider polyglot benchmark",
+      "attribution": "Source: Aider polyglot benchmark",
       "covers_current_models": false,
       "caveats": [
         "STALE. Verified against the raw leaderboard YAML on 2026-08-21: zero entries dated 2026, newest is 2025-10-03. Covers no 2026-generation model.",

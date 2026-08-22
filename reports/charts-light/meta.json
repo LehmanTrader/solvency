@@ -7,7 +7,7 @@
     ],
     "source": [
       "Cost per solved task = measured cost per task / pass rate.",
-      "Data: Artificial Analysis Coding Agent Index v1.4. Prices verified 2026-08-21."
+      "Source: Artificial Analysis (artificialanalysis.ai) — Coding Agent Index v1.4. Prices verified 2026-08-21."
     ]
   },
   "pareto": {
@@ -18,7 +18,7 @@
     ],
     "source": [
       "Rows are harness+model pairs, not bare models.",
-      "Data: Artificial Analysis Coding Agent Index v1.4. Verified 2026-08-21."
+      "Source: Artificial Analysis (artificialanalysis.ai) — Coding Agent Index v1.4. Verified 2026-08-21."
     ]
   },
   "staleness": {

@@ -38,7 +38,7 @@ inside these figures.**
 | Gemini 3.7 Flash | Opencode | 60 | $1.27 | **$2.12** |
 | DeepSeek V4 Flash | Codex | 50 | $0.06 | **$0.12** |
 
-Source: [Artificial Analysis Coding Agent Index v1.4](https://artificialanalysis.ai/agents/coding-agents),
+Source: [Artificial Analysis (artificialanalysis.ai)](https://artificialanalysis.ai/agents/coding-agents) — Coding Agent Index v1.4,
 326 tasks, 3 attempts each, read 2026-08-21.
 
 ### B. Modelled
@@ -239,7 +239,7 @@ Several providers do not have a single price. We record the tier used and state 
 
 | Source | Tasks | Covers 2026 models | Publishes cost | Newest entry |
 |---|---|---:|---|---|
-| [AA Coding Agent Index v1.4](https://artificialanalysis.ai/agents/coding-agents) | 326 | Yes | Yes, measured | Read 2026-08-21 |
+| [Artificial Analysis (artificialanalysis.ai)](https://artificialanalysis.ai/agents/coding-agents) — Coding Agent Index v1.4 | 326 | Yes | Yes, measured | Read 2026-08-21 |
 | [Scale SEAL — SWE-bench Pro](https://labs.scale.com/leaderboard/swe_bench_pro_public) | 1,865 | Yes | Not published | **Unknown** |
 | [Aider polyglot](https://aider.chat/docs/leaderboards/) | 225 | No | Historical only | 2025-10-03 |
 
