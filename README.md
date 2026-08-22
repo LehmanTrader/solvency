@@ -7,16 +7,19 @@ source URL. A stale-but-labeled number is fine. An unlabeled number is a bug.
 
 ## Status
 
-Phase 0 (validation report). Seed dataset, three ingested benchmark sources, and the
-computation engine are complete. The report is not written and nothing has been published.
+Phase 1 shipped and live at [solvency.dev](https://solvency.dev) (2026-08-22). Research Note 01
+(cost per solved task, August 2026), a calculator, 25 model pages, 300 comparison pages, a CC-BY
+pricing export, an embed widget and a changelog. Every push to `main` runs the test suite and
+deploys via GitHub Actions to Cloudflare Pages. Phase 3 (Solvency's own measured runs) is not
+started.
 
 ```
-npm test          # 31 tests
+npm test          # 38 tests; the report tests re-derive every published table
 npm run coverage  # source, coverage and staleness audit
 npm run table     # headline table
+npm run watch     # checks each recorded price still appears on its source page; never writes
+npm run site      # builds the Astro site in site/
 ```
-
-Node >= 24 (TypeScript runs natively via type stripping). **Zero dependencies.**
 
 ## Method
 
