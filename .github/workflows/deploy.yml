@@ -1,0 +1,47 @@
+name: Deploy
+
+# Cloudflare cannot convert a direct-upload Pages project to a Git-connected
+# one, and both custom domains are attached to the existing project. So the
+# build runs here and publishes to that project, rather than moving domains.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      # Guards the published figures: the report tests re-derive every table
+      # from the datasets, so a bad price edit fails here rather than shipping.
+      - name: Verify datasets and published figures
+        run: npm test
+
+      - name: Install site dependencies
+        working-directory: site
+        run: npm install --no-audit --no-fund
+
+      - name: Build site
+        working-directory: site
+        run: npm run build
+
+      - name: Publish to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy site/dist --project-name solvency --branch main
