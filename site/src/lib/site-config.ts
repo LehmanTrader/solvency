@@ -11,7 +11,7 @@
  *
  * Leave empty to disable. Nothing is loaded and no request is made when unset.
  */
-export const CF_BEACON_TOKEN = '';
+export const CF_BEACON_TOKEN = 'a4d65768a6bf4a20bc936d00c3ec5c10';
 
 /** Cookieless, no consent banner required, no personal data collected. */
 export const ANALYTICS_NOTE =
