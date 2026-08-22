@@ -14,8 +14,11 @@ import { execFileSync, spawn } from 'node:child_process';
 import { dirname, join, resolve, basename } from 'node:path';
 
 const src = resolve(process.argv[2] ?? 'reports/2026-08-cost-per-solved-task.md');
+/** Frontmatter feeds the website; the PDF builds its cover from the body below it. */
+const rawFile = readFileSync(resolve(process.argv[2] ?? 'reports/2026-08-cost-per-solved-task.md'), 'utf8');
+const raw = rawFile.replace(/^---\n[\s\S]*?\n---\n\s*/, '');
 const outDir = resolve(process.argv[3] ?? join(dirname(src), 'build'));
-const raw = readFileSync(src, 'utf8');
+
 const srcDir = dirname(src);
 const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 

@@ -1,0 +1,47 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../layouts/Base.astro';
+const latest = (await getCollection('reports')).sort((a, b) => b.data.date - a.data.date)[0];
+const stats = [
+  { k: 'Per output token', v: '19x', n: 'cheaper' },
+  { k: 'Per solved task', v: '100x', n: 'cheaper', accent: true },
+  { k: 'Understatement', v: '5x', n: 'factor' },
+  { k: 'Spread widens', v: '38→146x', n: 'token price → cost' },
+];
+---
+<Base title="Solvency — the real cost of AI coding models"
+      description="Per-token pricing does not predict what a coding task actually costs. Solvency measures cost per solved task.">
+  <h1 class="font-mono text-4xl sm:text-5xl font-bold leading-[1.1] tracking-tight text-[var(--color-ink)]">
+    Token price is not<br />task cost.
+  </h1>
+  <p class="mt-6 text-lg leading-relaxed max-w-2xl">
+    Every pricing page compares dollars per million tokens. That number ignores how many
+    tokens a model burns to finish a job, and how often it fails and has to start again.
+    Solvency measures <strong class="text-[var(--color-ink)]">cost per solved task</strong>.
+  </p>
+
+  <div class="mt-12 grid grid-cols-2 lg:grid-cols-4 border border-[var(--color-rule)] rounded-md overflow-hidden">
+    {stats.map((s) => (
+      <div class="p-5 border-r border-b border-[var(--color-rule)] last:border-r-0">
+        <p class="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted)]">{s.k}</p>
+        <p class={`mt-2 font-mono text-[1.75rem] leading-none whitespace-nowrap font-bold ${s.accent ? 'text-[var(--color-accent)]' : 'text-[var(--color-ink)]'}`}>{s.v}</p>
+        <p class="mt-1 font-mono text-[11px] text-[var(--color-muted)]">{s.n}</p>
+      </div>
+    ))}
+  </div>
+  <p class="mt-3 font-mono text-[11px] text-[var(--color-muted)]">
+    DeepSeek V4 Flash against Claude Opus 5, measured on agentic coding tasks.
+  </p>
+
+  {latest && (
+    <a href={`/reports/${latest.id.replace(/^\d{4}-\d{2}-/, '')}`}
+       class="mt-14 block border border-[var(--color-rule)] rounded-md p-6 hover:border-[var(--color-accent)]/60 transition-colors">
+      <p class="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--color-accent)]">
+        Research Note {String(latest.data.note).padStart(2, '0')} — latest
+      </p>
+      <h2 class="mt-2 font-mono text-2xl font-bold text-[var(--color-ink)]">{latest.data.title}</h2>
+      <p class="mt-2 text-[var(--color-muted)]">{latest.data.description}</p>
+      <p class="mt-4 font-mono text-[11px] text-[var(--color-accent)]">Read the note →</p>
+    </a>
+  )}
+</Base>

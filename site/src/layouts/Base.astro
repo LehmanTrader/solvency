@@ -1,0 +1,44 @@
+---
+import '../styles/global.css';
+interface Props { title: string; description: string; og?: string; }
+const { title, description, og = '/og/divergence-og.png' } = Astro.props;
+const url = new URL(Astro.url.pathname, Astro.site).href;
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{title}</title>
+  <meta name="description" content={description} />
+  <link rel="canonical" href={url} />
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content={title} />
+  <meta property="og:description" content={description} />
+  <meta property="og:image" content={new URL(og, Astro.site).href} />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%230A0C0D'/><text y='23' x='6' font-family='monospace' font-size='20' font-weight='700' fill='%23FFB000'>S</text></svg>" />
+</head>
+<body>
+  <header class="border-b border-[var(--color-rule)]">
+    <div class="mx-auto max-w-3xl px-6 py-4 flex items-baseline justify-between gap-4">
+      <a href="/" class="font-mono font-bold tracking-[0.28em] text-[13px] text-[var(--color-accent)]">SOLVENCY</a>
+      <nav class="font-mono text-[11px] tracking-[0.14em] uppercase text-[var(--color-muted)] flex gap-5">
+        <a href="/reports" class="hover:text-[var(--color-ink)]">Reports</a>
+        <a href="/methodology" class="hover:text-[var(--color-ink)]">Methodology</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-3xl px-6 py-12"><slot /></main>
+
+  <footer class="border-t border-[var(--color-rule)] mt-20">
+    <div class="mx-auto max-w-3xl px-6 py-8 font-mono text-[11px] leading-relaxed text-[var(--color-muted)]">
+      <p>Every figure carries a source and a verification date. Where a number does not exist, it is reported as missing rather than estimated.</p>
+      <p class="mt-3">Benchmark data is third-party, cited and linked, and is not redistributed.
+        <a class="text-[var(--color-ink)] border-b border-[var(--color-accent)]/50" href="https://artificialanalysis.ai/agents/coding-agents">Source: Artificial Analysis (artificialanalysis.ai)</a>.
+      </p>
+    </div>
+  </footer>
+</body>
+</html>

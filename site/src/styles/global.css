@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+/* Solvency design system — dark ground, one accent, monospace numerals. */
+@theme {
+  --color-bg: #0A0C0D;
+  --color-panel: #101418;
+  --color-ink: #E8ECEF;
+  --color-body: #AEB7BE;
+  --color-muted: #78838A;
+  --color-rule: #1E252A;
+  --color-accent: #FFB000;
+  --font-mono: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+  --font-sans: -apple-system, "SF Pro Text", "Helvetica Neue", Inter, Arial, sans-serif;
+}
+
+@layer base {
+  html { background: var(--color-bg); color-scheme: dark; }
+  body { background: var(--color-bg); color: var(--color-body);
+         font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+  ::selection { background: var(--color-accent); color: #0A0C0D; }
+  a { color: inherit; }
+}
+
+/* Report prose. Hand-set rather than a plugin: this is the product surface. */
+@layer components {
+  .prose { font-size: 1rem; line-height: 1.72; color: var(--color-body); }
+  .prose > * + * { margin-top: 1rem; }
+
+  .prose h1 { display: none; }                 /* the page header carries the title */
+  .prose h2 { font-family: var(--font-sans); font-size: 1.5rem; font-weight: 700;
+              color: var(--color-ink); line-height: 1.25; letter-spacing: -0.01em;
+              margin-top: 3.5rem; padding-top: 1.25rem; border-top: 1px solid var(--color-rule); }
+  .prose h3 { font-family: var(--font-mono); font-size: 0.72rem; font-weight: 700;
+              text-transform: uppercase; letter-spacing: 0.16em; color: var(--color-accent);
+              margin-top: 2.25rem; }
+  .prose strong { color: var(--color-ink); font-weight: 600; }
+  .prose em { font-style: italic; }
+  .prose a { color: var(--color-ink); text-decoration: none;
+             border-bottom: 1px solid color-mix(in srgb, var(--color-accent) 55%, transparent); }
+  .prose a:hover { border-bottom-color: var(--color-accent); color: var(--color-accent); }
+  .prose hr { border: 0; border-top: 1px solid var(--color-rule); margin: 2.5rem 0; }
+  /* Section headings carry their own rule; a preceding --- would double it. */
+  .prose hr:has(+ h2) { display: none; }
+
+  .prose ul, .prose ol { padding-left: 1.15rem; }
+  .prose li { margin-top: .5rem; }
+  .prose li::marker { color: var(--color-accent); }
+
+  .prose code { font-family: var(--font-mono); font-size: .82em; color: var(--color-accent);
+                background: var(--color-panel); border: 1px solid var(--color-rule);
+                padding: .1em .35em; border-radius: 3px; }
+  .prose pre { background: var(--color-panel); border: 1px solid var(--color-rule);
+               border-radius: 6px; padding: 1rem 1.15rem; overflow-x: auto; }
+  .prose pre code { background: none; border: 0; padding: 0; color: var(--color-body); }
+
+  .prose blockquote { background: var(--color-panel); border: 1px solid var(--color-rule);
+                      border-left: 3px solid var(--color-accent); border-radius: 6px;
+                      padding: 1rem 1.25rem; color: var(--color-ink); }
+  .prose blockquote > * + * { margin-top: .75rem; }
+
+  /* Tables read as instrument panels: mono, tabular figures, hairline rules. */
+  .prose table { width: 100%; border-collapse: collapse; font-family: var(--font-mono);
+                 font-size: .8rem; font-variant-numeric: tabular-nums; display: block;
+                 overflow-x: auto; white-space: nowrap; }
+  .prose th { text-align: left; font-size: .64rem; font-weight: 700; letter-spacing: .14em;
+              text-transform: uppercase; color: var(--color-muted); padding: 0 .9rem .55rem;
+              border-bottom: 1px solid var(--color-accent); }
+  .prose td { padding: .55rem .9rem; border-bottom: 1px solid var(--color-rule); }
+  .prose tbody tr:last-child td { border-bottom: 0; }
+  .prose td strong { color: var(--color-accent); font-weight: 700; }
+
+  .prose figure, .prose p > img, .prose img {
+    display: block; width: 100%; height: auto; border: 1px solid var(--color-rule);
+    border-radius: 6px; background: var(--color-bg); margin-top: 1.5rem;
+  }
+}

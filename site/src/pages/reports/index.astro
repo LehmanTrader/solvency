@@ -1,0 +1,21 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+const reports = (await getCollection('reports')).sort((a, b) => b.data.date - a.data.date);
+---
+<Base title="Reports — Solvency" description="Research notes on the real cost of AI coding models.">
+  <h1 class="font-mono text-3xl font-bold text-[var(--color-ink)]">Reports</h1>
+  <ul class="mt-10 divide-y divide-[var(--color-rule)]">
+    {reports.map((r) => (
+      <li class="py-6">
+        <a href={`/reports/${r.id.replace(/^\d{4}-\d{2}-/, '')}`} class="group block">
+          <p class="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--color-accent)]">
+            Note {String(r.data.note).padStart(2, '0')} · {r.data.date.toISOString().slice(0, 10)}
+          </p>
+          <h2 class="mt-2 font-mono text-2xl font-bold text-[var(--color-ink)] group-hover:text-[var(--color-accent)]">{r.data.title}</h2>
+          <p class="mt-2 text-[var(--color-muted)]">{r.data.description}</p>
+        </a>
+      </li>
+    ))}
+  </ul>
+</Base>

@@ -4,3 +4,8 @@ dist/
 .DS_Store
 reports/charts/_preview.html
 reports/build/
+site/node_modules/
+site/dist/
+site/.astro/
+site/public/charts/
+site/public/og/

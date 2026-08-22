@@ -1,3 +1,10 @@
+---
+title: Cost Per Solved Task
+note: 1
+date: 2026-08-21
+description: Per-token pricing does not predict what a coding task actually costs. Measured across six current models, the gap widens from 38x to 146x.
+---
+
 # Cost Per Solved Task
 
 **AI coding models, August 2026.** Every price in this report was verified against the
