@@ -9,3 +9,5 @@ site/dist/
 site/.astro/
 site/public/charts/
 site/public/og/
+docs/
+purge-docs.sh
