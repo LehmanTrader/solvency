@@ -2,7 +2,7 @@
 import { getCollection, render } from 'astro:content';
 import Base from '../../layouts/Base.astro';
 import Share from '../../components/Share.astro';
-import { sources } from '../../lib/data.ts';
+import { sources, shortSourceName } from '../../lib/data.ts';
 
 export async function getStaticPaths() {
   const reports = await getCollection('reports');
@@ -18,8 +18,7 @@ const d = report.data;
 const stamp = d.date.toISOString().slice(0, 10);
 const url = new URL(Astro.url.pathname, Astro.site).href;
 const toc = headings.filter((h) => h.depth === 2);
-const SHORT = { 'aa-coding-agent-index': 'AA', 'seal-swe-bench-pro': 'SEAL', 'aider-polyglot': 'Aider' };
-const srcNames = sources.map((s) => SHORT[s.benchmark] ?? s.name.split(' ')[0]).join(' · ');
+const srcNames = sources.map((s) => shortSourceName(s.benchmark)).join(' · ');
 ---
 <Base title={`${d.title} — Solvency`} description={d.description} type="article">
   <article class="wrap pt-10">

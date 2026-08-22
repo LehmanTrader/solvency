@@ -16,6 +16,12 @@ export const SOURCE_PREFERENCE = ['aa-coding-agent-index', 'seal-swe-bench-pro',
 export const modelById = (id: string) => models.find((m) => m.model_id === id);
 export const sourceFor = (b: string) => sources.find((s) => s.benchmark === b);
 
+/** Short labels for tight table cells. Attribution strings elsewhere stay verbatim. */
+const SHORT_SOURCE: Record<string, string> = {
+  'aa-coding-agent-index': 'AA', 'seal-swe-bench-pro': 'SEAL', 'aider-polyglot': 'Aider',
+};
+export const shortSourceName = (b: string) => SHORT_SOURCE[b] ?? sourceFor(b)?.name ?? b;
+
 export function bestResultFor(modelId: string): BenchmarkResult | null {
   for (const b of SOURCE_PREFERENCE) {
     const c = results.filter((r) => r.model_id === modelId && r.benchmark === b);

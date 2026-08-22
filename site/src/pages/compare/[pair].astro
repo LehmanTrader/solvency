@@ -3,7 +3,7 @@ import Base from '../../layouts/Base.astro';
 import Badge from '../../components/Badge.astro';
 import BarChart from '../../components/BarChart.astro';
 import Provenance from '../../components/Provenance.astro';
-import { sourceFor } from '../../lib/data.ts';
+import { sourceFor, shortSourceName } from '../../lib/data.ts';
 import { solvedFor, money, ratio, fmtX } from '../../lib/headline.ts';
 
 export async function getStaticPaths() {
@@ -41,7 +41,7 @@ const rows = [
   ['Output $/Mtok', price(a.output_per_mtok), price(b.output_per_mtok)],
   ['Cached input $/Mtok', price(a.cached_input_per_mtok) ?? 'missing', price(b.cached_input_per_mtok) ?? 'missing'],
   ['Pass rate', sa ? `${Math.round(sa.r.pass_rate * 100)}%` : 'missing', sb ? `${Math.round(sb.r.pass_rate * 100)}%` : 'missing'],
-  ['Pass rate source', sa ? sourceFor(sa.r.benchmark)?.name?.split(' ')[0] : 'missing', sb ? sourceFor(sb.r.benchmark)?.name?.split(' ')[0] : 'missing'],
+  ['Pass rate source', sa ? shortSourceName(sa.r.benchmark) : 'missing', sb ? shortSourceName(sb.r.benchmark) : 'missing'],
   ['Cost basis', basisLabel(sa) ?? 'missing', basisLabel(sb) ?? 'missing'],
   ['Cost per solved task', sa ? money(sa.cost) : 'missing', sb ? money(sb.cost) : 'missing'],
 ];

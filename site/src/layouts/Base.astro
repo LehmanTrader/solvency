@@ -1,6 +1,7 @@
 ---
 import '../styles/global.css';
 import { CF_BEACON_TOKEN } from '../lib/site-config.ts';
+import { CLERK_ENABLED, CLERK_PUBLISHABLE_KEY, CLERK_FRONTEND_API } from '../lib/clerk.ts';
 import { models, sources } from '../lib/data.ts';
 interface Props {
   title: string;
@@ -52,6 +53,12 @@ const aa = sources.find((s) => s.benchmark === 'aa-coding-agent-index');
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" />
   <link rel="sitemap" href="/sitemap-index.xml" />
+  {CLERK_ENABLED && (
+    <script async crossorigin="anonymous"
+            data-clerk-publishable-key={CLERK_PUBLISHABLE_KEY}
+            src={`https://${CLERK_FRONTEND_API}/npm/@clerk/clerk-js@5/dist/clerk.browser.js`}
+            onload="window.Clerk.load().then(()=>document.dispatchEvent(new Event('clerk:ready')))"></script>
+  )}
   {CF_BEACON_TOKEN && (
     <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js"
             data-cf-beacon={`{"token": "${CF_BEACON_TOKEN}"}`}></script>

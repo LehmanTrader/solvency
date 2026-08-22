@@ -1,6 +1,7 @@
 ---
 import { TIER_NAMES } from '../lib/data.ts';
 import { DEFAULTS, compute, groupsHtml, calloutHtml, missingHtml } from '../lib/calc.ts';
+import { CLERK_ENABLED } from '../lib/clerk.ts';
 // Rendered at build time so the page is useful without JavaScript and the
 // island does not shift layout when it takes over.
 const { rows, missing } = compute(DEFAULTS);
@@ -8,7 +9,20 @@ const initialGroups = groupsHtml(rows, DEFAULTS.volume);
 const initialCallout = calloutHtml(rows, DEFAULTS.volume);
 const initialMissing = missingHtml(missing);
 ---
-<section id="calc" class="card overflow-hidden" aria-label="Cost calculator">
+<section id="calc" class="card overflow-hidden" aria-label="Cost calculator" data-gated={CLERK_ENABLED ? '1' : '0'}>
+  {CLERK_ENABLED && (
+    <div id="c-gate" class="px-5 py-4 border-b border-[var(--color-rule)] flex flex-wrap items-center justify-between gap-4 bg-[color-mix(in_srgb,var(--color-accent)_6%,transparent)]">
+      <div>
+        <p class="text-[var(--color-ink)] font-semibold">Sign in to run your own scenario</p>
+        <p class="small mt-1">Free account. Set your task tier, volume, cache rate and takeover cost; share the result by link.</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <span id="c-user" class="small hidden"></span>
+        <button id="c-signin" type="button" class="btn btn-accent">Sign in</button>
+        <button id="c-signout" type="button" class="btn hidden">Sign out</button>
+      </div>
+    </div>
+  )}
   <div class="border-b border-[var(--color-rule)] p-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
     <label class="block">
       <span class="label">Task tier</span>
@@ -95,6 +109,35 @@ const initialMissing = missingHtml(missing);
     const p = new URLSearchParams({ tier: s.tier, volume: String(s.volume), variant: s.variant,
       cache: CTRL.cache.value, residual: String(s.residual), frontier: s.frontier ? '1' : '0' });
     history.replaceState(null, '', `${location.pathname}?${p}`);
+  }
+
+  // --- sign-in gate -------------------------------------------------------
+  // Controls are disabled in the static HTML when a Clerk key is configured and
+  // re-enabled once Clerk reports a signed-in user. Reading the default table
+  // (and any shared scenario link) needs no account; changing the inputs does.
+  const gated = (document.getElementById('calc') as HTMLElement).dataset.gated === '1';
+  const setEnabled = (on: boolean) => Object.values(CTRL).forEach((el) => { el.disabled = !on; });
+  if (gated) {
+    setEnabled(false);
+    const signin = $('c-signin'), signout = $('c-signout'), who = $('c-user');
+    const openSignIn = () => (window as any).Clerk?.openSignIn({ afterSignInUrl: location.href, afterSignUpUrl: location.href });
+    signin.addEventListener('click', openSignIn);
+    signout.addEventListener('click', () => (window as any).Clerk?.signOut());
+    // clicking a disabled control does nothing, so catch it on the wrapper
+    signin.closest('section')!.addEventListener('pointerdown', (e) => {
+      const t = e.target as HTMLElement;
+      if (t.closest('label') && !(window as any).Clerk?.user) { e.preventDefault(); openSignIn(); }
+    });
+    const sync = () => {
+      const u = (window as any).Clerk?.user;
+      setEnabled(Boolean(u));
+      signin.classList.toggle('hidden', Boolean(u));
+      signout.classList.toggle('hidden', !u);
+      who.classList.toggle('hidden', !u);
+      who.textContent = u ? (u.primaryEmailAddress?.emailAddress ?? u.fullName ?? 'signed in') : '';
+    };
+    const onReady = () => { sync(); (window as any).Clerk.addListener(sync); };
+    if ((window as any).Clerk?.loaded) onReady(); else document.addEventListener('clerk:ready', onReady, { once: true });
   }
 
   Object.values(CTRL).forEach((el) => { el.addEventListener('input', render); el.addEventListener('change', render); });
