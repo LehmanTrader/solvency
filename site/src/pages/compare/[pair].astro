@@ -58,7 +58,9 @@ const statusNote = [a, b].filter((m) => m.status !== 'current').map((m) => `${m.
           <div class="px-5 py-3 border-t border-[var(--color-rule)] flex flex-wrap gap-2 items-center">
             <button id="k-share" type="button" class="btn btn-copy" aria-live="polite">Copy link</button>
             {CLERK_ENABLED && <button id="k-save" type="button" class="btn" data-analytics="save-scenario" aria-live="polite">Save scenario</button>}
-            <button id="k-download" type="button" class="btn" data-analytics="pro-download" aria-describedby="k-pro">Export table <span id="k-pro" class="pill pill-ink ml-1">Pro soon</span></button>
+            {CLERK_ENABLED
+              ? <button id="k-download" type="button" class="btn" data-analytics="pro-download" aria-describedby="k-pro">Export table <span id="k-pro" class="pill pill-ink ml-1">Pro soon</span></button>
+              : <span class="small">Table export is planned for Pro.</span>}
           </div>
         </div>
         <div class="card overflow-hidden"><div class="tbl-wrap"><table class="tbl tbl-compare">

@@ -3,7 +3,7 @@
  * basis, and how stale. Run before any report so gaps are stated, not discovered.
  *   node scripts/coverage.ts [asOfDate]
  */
-import { models, results, sources, benchmarksFile, bestResultFor, sourceFor, stalenessDays, SOURCE_PREFERENCE } from './load.ts';
+import { models, results, sources, benchmarksFile, bestResultFor, sourceFor, stalenessDays, SOURCE_PREFERENCE, HARNESS_BENCHMARKS } from './load.ts';
 
 const asOf = process.argv[2] ?? new Date().toISOString().slice(0, 10);
 const current = models.filter((m) => m.status === 'current');
@@ -24,6 +24,15 @@ for (const b of SOURCE_PREFERENCE) {
   console.log(`    redistributable: ${s.redistributable}  -- ${s.attribution}`);
 }
 
+console.log(`\n-- Harness-only sources (excluded from model ranking) --------`);
+for (const b of HARNESS_BENCHMARKS) {
+  const s = sourceFor(b)!;
+  const rows = results.filter((r) => r.benchmark === b);
+  console.log(`  ${s.name}`);
+  console.log(`    tasks=${s.tasks_n}  rows=${rows.length}  joined=${rows.filter((r) => r.model_id).length}  cost_basis=${rows[0]?.cost_basis ?? '--'}`);
+  console.log(`    scope=within-model harness comparison only  redistributable=${s.redistributable}`);
+}
+
 console.log(`\n-- Rejected sources ------------------------------------------`);
 for (const s of benchmarksFile.sources_evaluated_and_rejected) {
   console.log(`  ${s.name}\n    ${s.why_rejected}`);
@@ -33,8 +42,9 @@ const covered = models.map((m) => ({ m, r: bestResultFor(m.model_id) })).filter(
 const byBasis = (b: string) => covered.filter((x) => x.r!.cost_basis === b);
 
 console.log(`\n-- Coverage by cost basis ------------------------------------`);
-console.log(`  measured_by_source      ${byBasis('measured_by_source').length}  (no Solvency assumption in the cost)`);
-console.log(`  modelled_by_solvency ${byBasis('modelled_by_solvency').length}  (loop model applies -- ASSUMPTION)`);
+console.log(`  measured_by_source         ${byBasis('measured_by_source').length}  (no Solvency assumption in the cost)`);
+console.log(`  source_usage_repriced      ${results.filter((r) => r.cost_basis === 'source_usage_repriced').length}  (harness-only; source tokens × current prices)`);
+console.log(`  modelled_by_solvency       ${byBasis('modelled_by_solvency').length}  (loop model applies -- ASSUMPTION)`);
 console.log(`  historical_at_run_date  ${byBasis('historical_at_run_date').length}  (Aider; cost recomputed, pass rate stale)`);
 
 const currentCovered = current.filter((m) => bestResultFor(m.model_id));

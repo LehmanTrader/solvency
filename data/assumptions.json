@@ -52,7 +52,7 @@
     "applies_to_capability_class": "frontier",
     "kind": "assumption",
     "provenance": "Solvency house assumption. NOT MEASURED and NOT sourced from any published study.",
-    "provenance_note": "SUPERSEDED WHERE MEASURED DATA EXISTS. Artificial Analysis publishes an observed per-task cost (and observed token usage) for current models; those rows bypass the loop model and this multiplier entirely, so no efficiency assumption touches them. This multiplier now applies ONLY as a labelled fallback for models with a pass rate but no measured cost (currently the SEAL and Aider rows). It remains a house assumption with no published source and it materially advantages frontier models on the heavy tier. Set to 1.0 to see unadjusted results. Phase 3 replaces the fallback outright.",
+    "provenance_note": "SUPERSEDED WHERE OBSERVED COST OR COMPLETE SOURCE USAGE EXISTS. Artificial Analysis publishes an observed per-task cost for current models; OpenBench publishes complete proxy-measured token usage for the admitted harness slice. Both bypass the loop model and this multiplier entirely, so no efficiency assumption touches them. This multiplier applies ONLY as a labelled fallback for models with a pass rate but neither observed cost nor complete source usage (currently the SEAL and Aider rows). It remains a house assumption with no published source and materially advantages frontier models on the heavy tier. Set to 1.0 to see unadjusted results. Phase 3 replaces the fallback outright.",
     "status": "DEMOTED_TO_FALLBACK"
   },
   "retry_model": {
@@ -77,6 +77,6 @@
   },
   "loop_model_scope": {
     "kind": "scope_rule",
-    "text": "The task-tier loop model applies ONLY to rows with cost_basis=modelled_by_solvency. Rows with cost_basis=measured_by_source carry a cost the benchmark source actually observed, and no loop count, per-loop token figure, or frontier-efficiency multiplier is applied to them. The two bases are labelled separately everywhere and are never averaged together."
+    "text": "The task-tier loop model applies ONLY to rows with cost_basis=modelled_by_solvency. Rows with cost_basis=measured_by_source carry a cost the benchmark source actually observed. Rows with cost_basis=source_usage_repriced carry complete token usage observed by a source and apply current verified model prices. No loop count, per-loop token figure, cache-hit control or frontier-efficiency multiplier is applied to either observed-data basis. All bases are labelled separately and are never averaged together; source-usage-repriced rows are additionally isolated within the same model and benchmark."
   }
 }

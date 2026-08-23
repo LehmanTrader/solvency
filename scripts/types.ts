@@ -17,12 +17,22 @@ export interface Model {
   pricing_notes: string | null;
 }
 
+/** Aggregate usage observed by a benchmark source and safe to reprice. */
+export interface SourceUsage {
+  token_basis: 'proxy_measured';
+  attempts_n: number;
+  input_uncached_tokens_total: number;
+  cache_read_tokens_total: number;
+  cache_write_tokens_total: number;
+  output_tokens_total: number;
+}
+
 export interface BenchmarkResult {
   model_id: string | null;
   entry_label: string;
   benchmark: string;
   pass_rate: number;
-  cost_basis: 'measured_by_source' | 'modelled_by_solvency' | 'historical_at_run_date';
+  cost_basis: 'measured_by_source' | 'source_usage_repriced' | 'modelled_by_solvency' | 'historical_at_run_date';
   tasks_n: number;
   run_date: string;
   source_url: string;
@@ -33,6 +43,12 @@ export interface BenchmarkResult {
   harness_version: string | null;
   /** Source-published routing/turn/cache configuration, free text initially. */
   harness_config: string | null;
+  /** Exact aggregate behind a source_usage_repriced row. */
+  source_usage?: SourceUsage;
+  attempts_n?: number;
+  countable_attempts_n?: number;
+  solved_attempts_n?: number;
+  excluded_attempts_n?: number;
   variant?: string;
   index_score?: number;
   pass_rate_derivation?: string;

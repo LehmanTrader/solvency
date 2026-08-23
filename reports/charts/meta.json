@@ -30,5 +30,16 @@
       "Aider verified against its raw leaderboard YAML.",
       "SEAL publishes no update date, so its staleness is unknown, not zero."
     ]
+  },
+  "harness": {
+    "title": "Same model, four harness bills",
+    "subtitle": [
+      "GPT-5.6 Sol on the same OpenBench task set; ranked by cost per solved task.",
+      "Bars are point estimates from 44–45 countable attempts per arm."
+    ],
+    "source": [
+      "Source: OpenBench harness benchmark (MIT) — OpenBench GPT-5.6 Sol harness comparison.",
+      "Proxy-measured token usage × GPT-5.6 Sol prices verified 2026-08-21."
+    ]
   }
 }

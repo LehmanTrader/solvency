@@ -72,10 +72,14 @@ export function compute(s: Settings): { rows: Row[]; missing: string[] } {
 const harnessOf = (r: any) => r.cost_basis === 'measured_by_source' ? String(r.entry_label ?? '').split(' - ')[0] : undefined;
 
 /** /compare/[a]-vs-[b] pages exist in models.json order only; keep that order. */
-export function pairHref(aId: string, bId: string, s: Pick<Settings, 'tier' | 'volume'>): string {
+export function pairPath(aId: string, bId: string): string {
   const ia = models.findIndex((m) => m.model_id === aId), ib = models.findIndex((m) => m.model_id === bId);
   const [x, y] = ia <= ib ? [aId, bId] : [bId, aId];
-  return `/compare/${x}-vs-${y}?tier=${s.tier}&volume=${s.volume}`;
+  return `/compare/${x}-vs-${y}`;
+}
+
+export function pairHref(aId: string, bId: string, s: Pick<Settings, 'tier' | 'volume'>): string {
+  return `${pairPath(aId, bId)}?tier=${s.tier}&volume=${s.volume}`;
 }
 
 /** Rows of one cost basis, as the chart module wants them, each with a Compare link to the group lead. */

@@ -37,7 +37,7 @@ describe('harness comparison', () => {
     }
   });
 
-  test('the current dataset has zero model+benchmark groups with multiple harnesses', () => {
+  test('the current dataset has one isolated model+benchmark group with multiple harnesses', () => {
     const grouped = new Map<string, Set<string>>();
     for (const r of results) {
       if (!r.model_id || !r.harness) continue;
@@ -45,6 +45,9 @@ describe('harness comparison', () => {
       if (!grouped.has(key)) grouped.set(key, new Set());
       grouped.get(key)!.add(r.harness);
     }
-    assert.equal([...grouped.values()].filter((h) => h.size >= 2).length, 0);
+    const comparable = [...grouped.entries()].filter(([, harnesses]) => harnesses.size >= 2);
+    assert.equal(comparable.length, 1);
+    assert.equal(comparable[0][0], 'gpt-5.6-sol\u0000openbench-gpt56-harness');
+    assert.deepEqual([...comparable[0][1]].sort(), ['Claude Code', 'Codex', 'Grok Build', 'Pi']);
   });
 });

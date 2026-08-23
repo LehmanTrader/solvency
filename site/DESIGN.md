@@ -20,8 +20,8 @@ One question, two controls, the ranked answer. Nothing else above the fold.
   never interleaved), the gate card slot, `Stale` and `Not shown` behind `<details>`, the AA
   attribution string verbatim + verified date, a one-line `Pro (soon): export CSV/JSON ·
   price-change alerts · your own prices → Notify me` (`data-analytics="pro-notify"`), `Copy
-  link`, `Save scenario` with its reason line (*Permalink with your name, re-priced when prices
-  change.*), and an `Assumptions (4)` disclosure (retry model, cache rate, takeover cost,
+  link`, `Save scenario` with its reason line (*Keeps this scenario URL in your free account.*),
+  and an `Assumptions (4)` disclosure (retry model, cache rate, takeover cost,
   frontier toggle; one 36px control row, labels on one baseline). Below the fold: one proof line from `headline()`, the
   cost-vs-pass-rate scatter with the measured-only Pareto frontier, and a three-tile "how it
   is computed" strip. Every row links to its model page and carries a `compare ›` action to
@@ -62,11 +62,12 @@ free account` is the only filled rectangle on the page.
 export const GATE_MODE: GateMode = 'spec';   // 'free' | 'spec' | 'hard'
 ```
 
-That line is the whole policy. `'spec'` is the table in the landing spec §3: tier, volume,
-retry, compare and copy-link are free; the three assumption controls soft-gate; `Save scenario`,
-`Download table` (compare) and `Notify me` hard-gate. **Set it to `'hard'` to require sign-in
-for every control**, `'free'` to gate nothing. With no `PUBLIC_CLERK_PUBLISHABLE_KEY` at build
-time the site is ungated regardless.
+That line controls the implemented calculator policy: tier, volume, retry, compare and copy-link
+are free; the three assumption controls soft-gate; `Save scenario` hard-gates. **Set it to
+`'hard'` to require sign-in for those calculator controls**, `'free'` to gate none of them. With
+no `PUBLIC_CLERK_PUBLISHABLE_KEY` at build time the calculator is ungated regardless. The
+pre-launch `Download table` and `Notify me` affordances are separate signup-intent buttons, not
+implemented product controls; they do not claim protection from `GATE_MODE`.
 
 The soft gate demos before it asks (conversion judge #1). The first assumption touch in a
 session is *applied*: modelled rows move, then the gate card renders beneath them with the
@@ -79,7 +80,7 @@ directly. Gates call `Clerk.openSignUp` (not sign-in: a first-time visitor shoul
 "welcome back"), themed from the live CSS tokens (`clerkAppearance()` in `src/lib/clerk-client.ts`)
 so the modal matches light or dark, with the title *Create your free Solvency account*. The
 header `Sign in` uses `openSignIn` with the same appearance. Each of the four entry points —
-soft gate, `Save scenario`, `Notify me`, compare's `Download table` — passes its own one-line
+soft gate, `Save scenario`, the pre-launch `Notify me`, and compare's pre-launch `Download table` — passes its own one-line
 context and an `unsafeMetadata.intent` (`gate` / `save` / `pro-notify` / `pro-download`) plus
 the scenario URL, so intents are countable in Clerk's user list. The context is OUR element
 (`.auth-context`), measured against Clerk's card at open time and placed above it when the

@@ -13,6 +13,13 @@ const reports = defineCollection({
     note: z.number(),
     date: z.coerce.date(),
     description: z.string(),
+    price_verified: z.coerce.date().optional(),
+    pdf_verified: z.coerce.string().optional(),
+    pdf_sources: z.string().optional(),
+    pdf_method: z.string().optional(),
+    pdf_status: z.string().optional(),
+    pdf_tagline: z.string().optional(),
+    pdf_hero: z.string().optional(),
   }),
 });
 

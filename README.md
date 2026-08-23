@@ -14,7 +14,7 @@ deploys via GitHub Actions to Cloudflare Pages. Phase 3 (Solvency's own measured
 started.
 
 ```
-npm test          # 62 tests; the report tests re-derive every published table
+npm test          # regression, integrity and report tests re-derive every published table
 npm run coverage  # source, coverage and staleness audit
 npm run table     # headline table
 npm run watch     # checks each recorded price still appears on its source page; never writes
@@ -27,17 +27,21 @@ npm run site      # builds the Astro site in site/
 cost_per_solved_task = cost_per_attempt / pass_rate
 ```
 
-Solvency needs only `pass_rate` from a benchmark. Cost comes from one of two clearly
-separated bases, which are labeled everywhere and **never averaged together**:
+Solvency needs only `pass_rate` from a benchmark. Cost comes from clearly separated
+bases, which are labeled everywhere and **never averaged together**:
 
 | Basis | Cost comes from | Assumptions applied |
 |---|---|---|
 | `measured_by_source` | A per-task cost the benchmark source actually observed | **None** |
+| `source_usage_repriced` | Complete token usage observed by a source × current verified model prices | **None of the loop-model assumptions** |
 | `modelled_by_solvency` | Loop model x current verified prices | Loop count, per-loop tokens, frontier-efficiency |
 
 Where a source publishes measured cost, the loop model is bypassed outright — no loop count,
 no per-loop token figure, and no frontier-efficiency multiplier touches the number. Tests
 assert that changing those assumptions cannot move a measured row.
+
+Usage-repriced rows are not labelled measured because the source did not publish a dollar bill.
+They are isolated within the same model and benchmark, and never enter the general model ranking.
 
 Three retry variants are computed:
 
@@ -55,11 +59,13 @@ Two proven results:
 
 ## Sources
 
-In preference order — fewest Solvency assumptions first, then freshness.
+General model-ranking sources follow preference order — fewest Solvency assumptions first, then
+freshness. OpenBench is listed alongside them but is harness-only and excluded from that ranking.
 
 | Source | Tasks | Covers 2026 models | Publishes cost | Basis |
 |---|---|---|---|---|
 | [Artificial Analysis Coding Agent Index v1.4](https://artificialanalysis.ai/agents/coding-agents) | 326 | **Yes** | Yes, measured | `measured_by_source` |
+| [OpenBench GPT-5.6 Sol harness comparison](https://openbench.run/openbench/releases/2026-07-21-gpt56/) | 15 | **Yes** | Token usage | `source_usage_repriced` (harness-only) |
 | [Scale SEAL — SWE-bench Pro](https://labs.scale.com/leaderboard/swe_bench_pro_public) | 1,865 | **Yes** | Not captured | `modelled_by_solvency` |
 | [Aider polyglot](https://aider.chat/docs/leaderboards/) | 225 | No | Yes, historical | `historical_at_run_date` |
 

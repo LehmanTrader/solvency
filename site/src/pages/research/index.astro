@@ -6,6 +6,7 @@ import { headline, fmtX, money } from '../../lib/headline.ts';
 const reports = (await getCollection('reports')).sort((a, b) => b.data.date - a.data.date);
 const href = (r) => `/research/${r.id.replace(/^\d{4}-\d{2}-/, '')}`;
 const h = headline();
+const noteOne = reports.find((report) => report.data.note === 1);
 ---
 <Base title="Research notes — Solvency" description="Research notes on the real cost of AI coding models. Every figure sourced, dated, and re-derived by test.">
   <div class="wrap pt-10">
@@ -17,12 +18,12 @@ const h = headline();
       <div class="max-w-xl">
         <p class="label">Headline finding</p>
         <p class="mt-2 text-[var(--color-ink)] leading-relaxed">
-          <strong>{h.cheap.m.display_name}</strong> is {fmtX(h.inX)} cheaper than {h.dear.m.display_name} per input token and
+          <strong>{h.cheap.m.display_name}</strong> is {fmtX(h.inX)} cheaper than {h.dear.m.display_name} per input token and{' '}
           {fmtX(h.outX)} per output token — but <strong class="t-better">▼ {fmtX(h.solvedX)}</strong> cheaper per solved task
           ({money(h.cheap.cost)} vs {money(h.dear.cost)}).
         </p>
       </div>
-      <Share url={new URL(href(reports[0]), Astro.site).href} compact />
+      {noteOne && <Share url={new URL(href(noteOne), Astro.site).href} compact />}
     </div>
 
     <ul class="mt-10 grid gap-4">
@@ -37,6 +38,10 @@ const h = headline();
             <p class="mt-2 text-[var(--color-muted)] max-w-3xl leading-relaxed">{r.data.description}</p>
             <p class="mt-4 small text-[var(--color-ink)]">Read the note →</p>
           </a>
+          <div class="card-head border-t" data-note-share>
+            <p class="small">Share Note {String(r.data.note).padStart(2, '0')}</p>
+            <Share url={new URL(href(r), Astro.site).href} text={`${r.data.title}: ${r.data.description}`} compact />
+          </div>
         </li>
       ))}
     </ul>

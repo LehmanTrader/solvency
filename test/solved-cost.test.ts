@@ -227,12 +227,20 @@ describe('data integrity', () => {
   });
 
   test('every row declares a cost basis, and measured rows carry a measured cost', () => {
-    const valid = ['measured_by_source', 'modelled_by_solvency', 'historical_at_run_date'];
+    const valid = ['measured_by_source', 'source_usage_repriced', 'modelled_by_solvency', 'historical_at_run_date'];
     for (const r of results) {
       assert.ok(valid.includes(r.cost_basis), `${r.entry_label}: ${r.cost_basis}`);
       if (r.cost_basis === 'measured_by_source') {
         assert.equal(typeof r.measured_cost_per_task_usd, 'number', r.entry_label);
         assert.ok(r.measured_cost_per_task_usd! > 0, r.entry_label);
+      }
+      if (r.cost_basis === 'source_usage_repriced') {
+        assert.ok(r.source_usage, `${r.entry_label}: missing source usage`);
+        assert.equal(r.source_usage!.attempts_n, r.countable_attempts_n, r.entry_label);
+        assert.equal(r.measured_cost_per_task_usd, undefined, r.entry_label);
+        assert.ok(r.source_usage!.input_uncached_tokens_total >= 0, r.entry_label);
+        assert.ok(r.source_usage!.cache_read_tokens_total >= 0, r.entry_label);
+        assert.ok(r.source_usage!.output_tokens_total >= 0, r.entry_label);
       }
     }
   });

@@ -6,6 +6,7 @@ import { models, assumptions, tiers, TIER_NAMES, allResultsFor, bestResultFor, e
 import { costPerSolvedTask, defaultOptions } from '../../lib/engine.ts';
 import { solvedFor, leaderboard, money } from '../../lib/headline.ts';
 import { rankedBars, BASIS_OF, type ChartRow } from '../../lib/charts.ts';
+import { pairHref, pairPath } from '../../lib/calc.ts';
 
 export async function getStaticPaths() {
   const { models } = await import('../../lib/data.ts');
@@ -14,6 +15,12 @@ export async function getStaticPaths() {
 const { model } = Astro.props;
 const opts = defaultOptions(assumptions);
 const rows = allResultsFor(model.model_id);
+const attemptCostFor = (r) => {
+  if (r.cost_basis === 'measured_by_source') return r.measured_cost_per_task_usd ?? null;
+  if (r.cost_basis !== 'source_usage_repriced') return null;
+  return costPerSolvedTask(model, 'heavy', tiers.heavy, r.pass_rate, opts, extrasFor(r)).value?.attempt.costUsd ?? null;
+};
+const harnessRows = rows.filter((r) => r.cost_basis === 'source_usage_repriced');
 const best = bestResultFor(model.model_id);
 const tierCosts = TIER_NAMES.map((t) => {
   const out = best ? costPerSolvedTask(model, t, tiers[t], best.pass_rate, opts, extrasFor(best)) : null;
@@ -35,7 +42,7 @@ const harnessOf = (r) => r.harness ?? undefined;
 const peerRows: ChartRow[] = pool.map((x) => ({
   id: x.m.model_id, name: x.m.display_name, href: `/models/${x.m.model_id}`, cost: x.cost, pass: x.r.pass_rate,
   basis: BASIS_OF[x.basisKey] ?? 'modelled', harness: harnessOf(x.r), attempt: x.perTask ?? undefined,
-  compare: x.m.model_id === model.model_id ? undefined : `/compare/${models.findIndex((m) => m.model_id === model.model_id) <= models.findIndex((m) => m.model_id === x.m.model_id) ? `${model.model_id}-vs-${x.m.model_id}` : `${x.m.model_id}-vs-${model.model_id}`}?tier=${PEER_TIER}&volume=${PEER_VOLUME}`,
+  compare: x.m.model_id === model.model_id ? undefined : pairHref(model.model_id, x.m.model_id, { tier: PEER_TIER, volume: PEER_VOLUME }),
 }));
 const peerBasis = peerRows[0]?.basis ?? 'modelled';
 const peersWide = peerRows.length > 1 ? rankedBars(peerRows, { width: 1046, volume: PEER_VOLUME, basis: peerBasis, compact: false, highlight: model.model_id }) : '';
@@ -107,19 +114,21 @@ const peers = models.filter((m) => m.model_id !== model.model_id && m.status ===
 
     <Section id="benchmarks" eyebrow="Benchmark rows" title="Where the pass rate comes from"
       caption="Every row that names this model, with its harness and cost basis. Rows are harness + model combinations, not properties of the bare model.">
+      {harnessRows.length > 1 && <div slot="aside"><a class="btn" href="/harness">Compare harness costs</a></div>}
       {rows.length ? (
         <div class="card overflow-hidden"><div class="tbl-wrap"><table class="tbl">
-          <caption>Benchmark rows naming {model.display_name}: benchmark, entry, pass rate, measured cost per task, cost basis and run date</caption>
-          <thead><tr><th scope="col">Benchmark</th><th scope="col">Entry</th><th scope="col" class="r">Pass</th><th scope="col" class="r">$ / task</th><th scope="col">Basis</th><th scope="col">Run / read</th></tr></thead>
-          <tbody>{rows.map((r) => (
-            <tr>
+          <caption>Benchmark rows naming {model.display_name}: benchmark, entry, pass rate, observed or usage-repriced attempt cost, cost basis and run date</caption>
+          <thead><tr><th scope="col">Benchmark</th><th scope="col">Entry</th><th scope="col" class="r">Pass</th><th scope="col" class="r">$ / attempt</th><th scope="col">Basis</th><th scope="col">Run / read</th></tr></thead>
+          <tbody>{rows.map((r) => {
+            const attempt = attemptCostFor(r);
+            return <tr>
               <td class="ink"><a href={r.source_url} rel="noopener">{sourceFor(r.benchmark)?.name ?? r.benchmark}</a></td>
               <td class="muted">{r.entry_label}</td>
               <td class="r">{(r.pass_rate * 100).toFixed(1)}%</td>
-              <td class={`r ${r.measured_cost_per_task_usd == null ? 'missing' : ''}`}>{r.measured_cost_per_task_usd == null ? 'not published' : money(r.measured_cost_per_task_usd)}</td>
-              <td class="muted">{r.cost_basis.replace(/_/g, ' ')}</td>
+              <td class={`r ${attempt == null ? 'missing' : ''}`}>{attempt == null ? 'not published' : money(attempt)}</td>
+              <td class={r.cost_basis === 'source_usage_repriced' ? 'ink' : 'muted'}>{r.cost_basis.replace(/_/g, ' ')}</td>
               <td class="muted">{r.run_date}</td>
-            </tr>))}</tbody>
+            </tr>})}</tbody>
         </table></div></div>
       ) : <p class="text-[var(--color-muted)]">No benchmark covers this model. Reported as missing rather than estimated.</p>}
     </Section>
@@ -140,7 +149,7 @@ const peers = models.filter((m) => m.model_id !== model.model_id && m.status ===
 
     <Section id="compare" eyebrow="Compare" title="Head to head" caption="Side-by-side pricing and cost per solved task with another current model.">
       <div class="flex flex-wrap gap-2">
-        {peers.map((p) => <a class="btn" href={`/compare/${model.model_id}-vs-${p.model_id}`}>vs {p.display_name}</a>)}
+        {peers.map((p) => <a class="btn" href={pairPath(model.model_id, p.model_id)}>vs {p.display_name}</a>)}
       </div>
     </Section>
   </div>

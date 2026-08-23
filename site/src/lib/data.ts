@@ -12,6 +12,8 @@ export const TIER_NAMES = ['light', 'moderate', 'heavy'] as const;
 
 /** Same source-preference policy as the repo loader. */
 export const SOURCE_PREFERENCE = ['aa-coding-agent-index', 'seal-swe-bench-pro', 'aider-polyglot'];
+/** Harness-only sources are isolated from the general model leaderboard. */
+export const HARNESS_BENCHMARKS = ['openbench-gpt56-harness'];
 
 export const modelById = (id: string) => models.find((m) => m.model_id === id);
 export const sourceFor = (b: string) => sources.find((s) => s.benchmark === b);
@@ -31,11 +33,13 @@ export function bestResultFor(modelId: string): BenchmarkResult | null {
 }
 
 export const allResultsFor = (id: string) => results.filter((r) => r.model_id === id);
+export const harnessResultsFor = (id: string) => results.filter((r) => r.model_id === id && HARNESS_BENCHMARKS.includes(r.benchmark));
 
 export function extrasFor(r: BenchmarkResult) {
   return {
     passRateProvenance: { source_url: r.source_url, last_verified: sourceFor(r.benchmark)?.last_verified ?? r.run_date },
     measuredAttemptCostUsd: r.cost_basis === 'measured_by_source' ? (r as any).measured_cost_per_task_usd : undefined,
+    sourceUsage: r.cost_basis === 'source_usage_repriced' ? r.source_usage : undefined,
   };
 }
 

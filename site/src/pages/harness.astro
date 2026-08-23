@@ -1,0 +1,106 @@
+---
+import Base from '../layouts/Base.astro';
+import Section from '../components/Section.astro';
+import Provenance from '../components/Provenance.astro';
+import { modelById } from '../lib/data.ts';
+import { harnessCostsFor, harnessSource } from '../lib/harness.ts';
+
+const modelId = 'gpt-5.6-sol';
+const model = modelById(modelId)!;
+const rows = harnessCostsFor(modelId);
+const source = harnessSource(modelId)!;
+const pi = rows.find((r) => r.harness === 'Pi')!;
+const codex = rows.find((r) => r.harness === 'Codex')!;
+const money = (n: number) => `$${n.toFixed(n < 1 ? 3 : 2)}`;
+const ratio = codex.solvedCost / pi.solvedCost;
+---
+<Base title="GPT-5.6 Sol harness economics — Solvency"
+      description="Four coding harnesses ran the same GPT-5.6 Sol model on the same OpenBench tasks. Compare source-observed token usage repriced at current verified API rates.">
+  <div class="wrap pt-8 md:pt-12">
+    <p class="eyebrow">Harness economics · OpenBench</p>
+    <h1 class="h-page mt-3">Same model. Different harness bill.</h1>
+    <p class="mt-4 text-lg text-[var(--color-body)] max-w-3xl leading-relaxed">
+      Four coding harnesses ran {model.display_name} on the same 15-task benchmark.
+      Solvency reprices each harness’s proxy-measured token usage at the model’s current verified API rates.
+    </p>
+    <p class="mt-3 small"><span class="text-[var(--color-ink)]">OpenBench-only basis</span> · never mixed with the general model leaderboard</p>
+
+    <div class="mt-10 grid gap-4 lg:grid-cols-[1.25fr_.75fr]">
+      <div class="card card-pad flex flex-col justify-between min-h-48">
+        <p class="label">Matched pass rate · different usage</p>
+        <p class="mt-5 font-[var(--font-display)] text-2xl sm:text-3xl leading-tight text-[var(--color-ink)]">
+          Codex costs <span class="font-bold">{ratio.toFixed(2)}×</span> Pi per solved task at the same {(pi.passRate * 100).toFixed(1)}% pass rate.
+        </p>
+        <p class="small mt-5">{money(codex.solvedCost)} vs {money(pi.solvedCost)} per solved task · point estimates, not a claim of statistical superiority</p>
+      </div>
+      <div class="tile-grid grid-cols-2 lg:grid-cols-1">
+        <div class="tile">
+          <p class="label">Lowest point estimate</p>
+          <p class="tile-v">{pi.harness}</p>
+          <p class="tile-n">{money(pi.attemptCost)} / attempt · {money(pi.solvedCost)} / solved</p>
+        </div>
+        <div class="tile">
+          <p class="label">Price basis</p>
+          <p class="tile-v">Current API</p>
+          <p class="tile-n">$5 input · $0.50 cache read · $30 output per million tokens</p>
+        </div>
+      </div>
+    </div>
+    <Provenance source={source.attribution} href={source.attribution_url} verified={source.last_verified}
+      note={`${model.display_name} prices verified ${model.last_verified}; source usage repriced, not an observed dollar bill`} />
+
+    <Section id="ranking" eyebrow="One model · one benchmark" title="Harness cost comparison"
+      caption="Ranked by cost per solved task. Only the harness changes; lower is better. Infrastructure and rate-limited failures are excluded exactly as OpenBench specifies.">
+      <div class="card overflow-hidden"><div class="tbl-wrap"><table class="tbl">
+        <caption>GPT-5.6 Sol harness comparison: version, outcomes, pass rate, source-usage-repriced cost per attempt and per solved task</caption>
+        <thead><tr><th scope="col" class="rank">#</th><th scope="col">Harness</th><th scope="col">Version</th><th scope="col" class="r">Solved</th><th scope="col" class="r">Pass</th><th scope="col" class="r">$ / attempt</th><th scope="col" class="r">$ / solved</th><th scope="col" class="r">vs lowest</th></tr></thead>
+        <tbody>{rows.map((row, i) => (
+          <tr class={i === 0 ? 'lead' : undefined}>
+            <td class="rank">{i + 1}</td>
+            <td class="ink">{row.harness}</td>
+            <td class="muted">{row.version}</td>
+            <td class="r">{row.solved}/{row.countable}</td>
+            <td class="r">{(row.passRate * 100).toFixed(1)}%</td>
+            <td class="r">{money(row.attemptCost)}</td>
+            <td class="r ink"><strong>{money(row.solvedCost)}</strong></td>
+            <td class="r">{row.versusLowest.toFixed(2)}×</td>
+          </tr>
+        ))}</tbody>
+      </table></div></div>
+      <Provenance source={source.attribution} href={source.attribution_url} verified={source.last_verified}
+        note="source usage repriced: measured tokens × current verified model prices; no Solvency loop or tier assumption" />
+    </Section>
+
+    <Section id="method" eyebrow="Cost basis" title="What this comparison means"
+      caption="This is neither a provider invoice nor Solvency’s modelled task tier. It is an independently reproducible reprice of source-observed usage.">
+      <div class="grid gap-4 lg:grid-cols-2">
+        <div class="card card-pad prose measure min-w-0">
+          <h3 class="!mt-0">Calculation</h3>
+          <pre><code>cost_per_attempt =
+  mean_uncached_input × current_input_price
+  + mean_cache_read × current_cached_input_price
+  + mean_output × current_output_price
+
+cost_per_solved = cost_per_attempt / solve_rate</code></pre>
+          <p>Task tier, assumed loops, cache-hit controls, retry cap and frontier-efficiency assumptions cannot move these rows. Tests enforce that invariant.</p>
+        </div>
+        <div class="card card-pad prose measure min-w-0">
+          <h3 class="!mt-0">Read with care</h3>
+          <ul>
+            <li>Each arm has only 44 or 45 countable attempts, so the correctness intervals are wide.</li>
+            <li>OpenBench reports subscription-backed access; Solvency applies current API token rates for comparability, not the subscription fee.</li>
+            <li>Cursor and OpenCode are excluded because their usage is CLI-self-reported; Devin is excluded because its split usage is incomplete.</li>
+            <li>The source flags Pi for a rerun after a surprising per-task swing. Treat the point estimate as provisional.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="mt-5 flex flex-wrap gap-2">
+        <a class="btn btn-accent" href="/build-planner">Price your own harness →</a>
+        <a class="btn" href={source.source_url} rel="noopener">Read the OpenBench release ↗</a>
+        <a class="btn" href={source.raw_data_url} rel="noopener">Inspect sealed results ↗</a>
+        <a class="btn" href="/methodology#bases">Read Solvency methodology</a>
+        <a class="btn" href={`/models/${modelId}`}>View {model.display_name}</a>
+      </div>
+    </Section>
+  </div>
+</Base>

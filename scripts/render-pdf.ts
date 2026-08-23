@@ -23,9 +23,15 @@ const markSvg = (pt: string, bars: string) =>
 
 
 const src = resolve(process.argv[2] ?? 'reports/2026-08-cost-per-solved-task.md');
-/** Frontmatter feeds the website; the PDF builds its cover from the body below it. */
+/** Frontmatter feeds both the website and the report-specific PDF furniture. */
 const rawFile = readFileSync(resolve(process.argv[2] ?? 'reports/2026-08-cost-per-solved-task.md'), 'utf8');
-const raw = rawFile.replace(/^---\n[\s\S]*?\n---\n\s*/, '');
+const frontmatterMatch = rawFile.match(/^---\n([\s\S]*?)\n---\n\s*/);
+const fm: Record<string, string> = {};
+for (const line of (frontmatterMatch?.[1] ?? '').split('\n')) {
+  const match = line.match(/^([a-z_]+):\s*(.*)$/);
+  if (match) fm[match[1]] = match[2].trim();
+}
+const raw = frontmatterMatch ? rawFile.slice(frontmatterMatch[0].length) : rawFile;
 const outDir = resolve(process.argv[3] ?? join(dirname(src), 'build'));
 
 const srcDir = dirname(src);
@@ -64,7 +70,8 @@ function inlineSvg(rel: string, alt: string): string {
   const title = m?.title ?? alt;
   const notes = [...(m?.subtitle ?? [])];
   const sources: string[] = [];
-  for (const line of m?.source ?? []) (line.startsWith('Data:') ? sources : notes).push(line);
+  for (const line of m?.source ?? [])
+    (line.startsWith('Data:') || line.startsWith('Source:') ? sources : notes).push(line);
 
   return `<figure class="chart">
   <div class="chart-head">
@@ -86,6 +93,20 @@ const bodyMd = splitAt > -1 ? raw.slice(splitAt + 5) : raw;
 
 const coverTitle = (coverMd.match(/^#\s+(.+)$/m) ?? [, 'Report'])[1];
 const coverLead = coverMd.replace(/^#\s+.+$/m, '').trim().replace(/\s*\n\s*/g, ' ');
+const noteNo = String(fm.note ?? '1').padStart(2, '0');
+const reportDate = fm.date ?? '2026-08-21';
+const formatDate = (value: string) => new Intl.DateTimeFormat('en-GB', {
+  day: '2-digit', month: 'long', year: 'numeric', timeZone: 'UTC',
+}).format(new Date(`${value}T12:00:00Z`));
+const monthYear = new Intl.DateTimeFormat('en-US', {
+  month: 'long', year: 'numeric', timeZone: 'UTC',
+}).format(new Date(`${reportDate}T12:00:00Z`)).toUpperCase();
+const heroTitle = (fm.pdf_hero ?? coverTitle.toUpperCase()).split('|').map(esc).join('<br>');
+const verified = fm.pdf_verified ?? '2026-08-21';
+const coverSources = fm.pdf_sources ?? 'AA · SEAL · Aider';
+const coverMethod = fm.pdf_method ?? 'cost ÷ pass rate';
+const coverStatus = fm.pdf_status ?? 'Phase 0 — validation';
+const coverTagline = fm.pdf_tagline ?? 'The denominator is the whole story.';
 
 function mdToHtml(md: string): string {
   const lines = md.split('\n');
@@ -239,7 +260,7 @@ const CSS = `
 
   /* ---- chart cards ---------------------------------------------------- */
   figure.chart { background: var(--card); border:.75pt solid var(--rule); border-radius: 7pt;
-                 margin: 12pt -0.34in 15pt; padding: 14pt 16pt 0; overflow:hidden;
+                 margin: 12pt 0 15pt; padding: 14pt 16pt 0; overflow:hidden;
                  break-inside: avoid; }
   .chart-title { font-family: var(--mono); font-size: 9.8pt; color: var(--ink); line-height:1.38; }
   .chart-title b { font-weight: 700; }
@@ -263,25 +284,25 @@ ${FONTS}<style>${CSS}</style></head><body>
   <div>
     <h1>${esc(coverTitle)}</h1>
     <p class="deck">${inline(esc(coverLead))}</p>
-    <p class="date">21 August 2026</p>
+    <p class="date">${esc(formatDate(reportDate))}</p>
   </div>
   <div class="hero">
     <div class="hero-top">
       <span class="hero-mark">${markSvg('11pt', 'var(--ink)')}<span><b>S</b>OLVENCY</span></span>
-      <span class="hero-no">RESEARCH<br>NOTE&#8202;&#8211;&#8202;01</span>
+      <span class="hero-no">RESEARCH<br>NOTE&#8202;&#8211;&#8202;${noteNo}</span>
     </div>
-    <div class="hero-mid"><div class="hero-title">COST PER<br>SOLVED TASK</div></div>
+    <div class="hero-mid"><div class="hero-title">${heroTitle}</div></div>
     <div class="hero-bar"></div>
   </div>
   <div class="tagline">
-    <span>The denominator is the whole story.</span>
+    <span>${esc(coverTagline)}</span>
     <span class="mark">${markSvg('8pt', 'var(--muted)')}<span><b>S</b>OLVENCY</span></span>
   </div>
   <dl class="cover-foot">
-    <div><dt>Verified</dt><dd>2026-08-21</dd></div>
-    <div><dt>Sources</dt><dd>AA · SEAL · Aider</dd></div>
-    <div><dt>Method</dt><dd>cost ÷ pass rate</dd></div>
-    <div><dt>Status</dt><dd>Phase 0 — validation</dd></div>
+    <div><dt>Verified</dt><dd>${esc(verified)}</dd></div>
+    <div><dt>Sources</dt><dd>${esc(coverSources)}</dd></div>
+    <div><dt>Method</dt><dd>${esc(coverMethod)}</dd></div>
+    <div><dt>Status</dt><dd>${esc(coverStatus)}</dd></div>
   </dl>
 </section>
 ${mdToHtml(bodyMd)}
@@ -295,13 +316,13 @@ writeFileSync(htmlPath, html);
 const FOOTER = `<div style="width:100%;font-family:'JetBrains Mono','SFMono-Regular',Menlo,monospace;font-size:7px;
   color:#6E747B;padding:0 1.02in;display:flex;justify-content:space-between;letter-spacing:.08em;
   -webkit-print-color-adjust:exact;">
-  <span>SOLVENCY &nbsp;·&nbsp; RESEARCH NOTE 01 &nbsp;·&nbsp; COST PER SOLVED TASK &nbsp;·&nbsp; AUGUST 2026</span>
+  <span>SOLVENCY &nbsp;·&nbsp; RESEARCH NOTE ${noteNo} &nbsp;·&nbsp; ${esc(coverTitle.toUpperCase())} &nbsp;·&nbsp; ${monthYear}</span>
   <span class="pageNumber"></span></div>`;
 
 const PRINT_OPTS = {
   printBackground: true, preferCSSPageSize: false,
   paperWidth: 8.27, paperHeight: 11.69,
-  marginTop: 0.85, marginBottom: 0.72, marginLeft: 1.02, marginRight: 1.02,
+  marginTop: 0.85, marginBottom: 0.84, marginLeft: 1.02, marginRight: 1.02,
   displayHeaderFooter: true, headerTemplate: '<div></div>', footerTemplate: FOOTER,
 };
 

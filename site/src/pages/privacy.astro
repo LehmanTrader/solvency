@@ -1,6 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
-const updated = '2026-08-22';
+const updated = '2026-08-23';
 ---
 <Base title="Privacy — Solvency" description="What Solvency collects, why, and who processes it. Plain English, no tracking cookies.">
   <div class="wrap pt-10">
@@ -25,9 +25,11 @@ const updated = '2026-08-22';
       <li>your name and avatar if you sign in with Google or GitHub, as provided by that service;</li>
       <li>a session cookie so you stay signed in;</li>
       <li>sign-in timestamps and IP addresses, for account security.</li>
+      <li>the page and account feature that prompted sign-up, so Solvency can understand which free or planned feature was useful;</li>
+      <li>the current scenario URL at sign-up and up to 20 scenario URLs you choose to save.</li>
     </ul>
     <p>When you sign in with Google or GitHub, Solvency asks only for your basic profile and email. It never sees your password, and it cannot read your repositories, mail or files.</p>
-    <p>Your email is used to sign you in and to tell you about material changes to Solvency's data or terms. It is not sold, rented or shared with advertisers. If a newsletter is introduced it will be opt-in.</p>
+    <p>Signup intent and scenario URLs are stored in Clerk's client-writable account metadata. They are used for product research and the free save-link feature; they are never trusted as authorization for a paid feature. Your email is used to sign you in and to tell you about material changes to Solvency's data or terms. It is not sold, rented or shared with advertisers. If a newsletter is introduced it will be opt-in.</p>
 
     <h3>Shared scenario links</h3>
     <p>A calculator link encodes the scenario's settings (task tier, volume, retry model, cache rate, takeover cost) in the URL. It contains nothing about you. Anyone you send it to sees only those settings.</p>
@@ -37,7 +39,7 @@ const updated = '2026-08-22';
       <thead><tr><th>Service</th><th>Role</th><th>Data</th></tr></thead>
       <tbody>
         <tr><td>Cloudflare</td><td>Hosting, CDN, cookieless analytics</td><td>Request logs, aggregate page views</td></tr>
-        <tr><td>Clerk</td><td>Authentication</td><td>Email, name, OAuth profile, session, sign-in security logs</td></tr>
+        <tr><td>Clerk</td><td>Authentication and free-account metadata</td><td>Email, name, OAuth profile, session, sign-in security logs, signup intent, scenario URLs</td></tr>
         <tr><td>Google, GitHub</td><td>Optional sign-in providers</td><td>Share your basic profile with Clerk when you choose them</td></tr>
       </tbody>
     </table>

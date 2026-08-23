@@ -6,7 +6,7 @@
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { models, tiers, assumptions, results, sources, benchmarksFile, bestResultFor, extrasFor, modelById, stalenessDays } from './load.ts';
+import { models, tiers, assumptions, results, sources, benchmarksFile, bestResultFor, extrasFor, modelById, harnessResultsFor, stalenessDays } from './load.ts';
 import { costPerSolvedTask, defaultOptions } from './solved-cost.ts';
 
 /**
@@ -254,6 +254,58 @@ function chartStaleness() {
 }
 
 const d1 = chartDivergence(); chartPareto(); chartStaleness();
+
+// ---------------------------------------------------------------- chart 4
+// A matched-model harness comparison for Research Note 02. These rows carry
+// complete source-observed token usage, repriced at the model's current rates;
+// the task-tier loop model is deliberately absent.
+function chartHarness() {
+  const W = 900, H = 500, L = 250, R = 790, T = 142, ROW = 72;
+  const model = modelById('gpt-5.6-sol')!;
+  const rows = harnessResultsFor(model.model_id)
+    .map((r) => {
+      const out = costPerSolvedTask(model, 'heavy', tiers.heavy, r.pass_rate, opts, extrasFor(r)).value!;
+      return { r, attempt: out.attempt.costUsd, solved: out.naive };
+    })
+    .sort((a, b) => a.solved - b.solved);
+  const max = Math.max(...rows.map((x) => x.solved));
+  const X = (v: number) => L + (v / max) * (R - L);
+  let b = '';
+
+  for (const g of [0, 0.25, 0.5, 0.75, 1, 1.25]) {
+    if (g > max) continue;
+    b += `<line x1="${X(g)}" y1="${T - 24}" x2="${X(g)}" y2="${T + ROW * (rows.length - 1) + 25}" stroke="${GRID}"/>`;
+    b += txt(X(g), T - 34, `$${g.toFixed(2)}`, { fill: MUTED, size: 10, anchor: 'middle' });
+  }
+
+  rows.forEach(({ r, attempt, solved }, i) => {
+    const y = T + i * ROW;
+    const version = r.harness_version ?? '';
+    b += txt(L - 18, y - 2, r.harness!, { size: 12, weight: 700, anchor: 'end' });
+    b += txt(L - 18, y + 15, version, { size: 9, fill: MUTED, anchor: 'end' });
+    b += `<rect x="${L}" y="${y - 14}" width="${Math.max(2, X(solved) - L)}" height="22" rx="3" fill="${ACCENT}" opacity="${i === 0 ? 1 : 0.78}"/>`;
+    b += `<line x1="${X(attempt)}" y1="${y - 18}" x2="${X(attempt)}" y2="${y + 12}" stroke="${TEXT}" stroke-width="2"/>`;
+    b += txt(Math.min(X(solved) + 10, W - 82), y + 3, `$${solved.toFixed(3)}`, { size: 11, fill: TEXT, weight: 700 });
+    b += txt(Math.min(X(solved) + 10, W - 82), y + 19, `${(r.pass_rate * 100).toFixed(1)}% pass`, { size: 9, fill: MUTED });
+  });
+
+  b += `<rect x="${L}" y="${H - 56}" width="18" height="9" rx="2" fill="${ACCENT}"/>`;
+  b += txt(L + 25, H - 48, 'cost per solved task', { size: 9, fill: MUTED });
+  b += `<line x1="${L + 175}" y1="${H - 60}" x2="${L + 175}" y2="${H - 42}" stroke="${TEXT}" stroke-width="2"/>`;
+  b += txt(L + 185, H - 48, 'cost per attempt', { size: 9, fill: MUTED });
+
+  const source = sources.find((s) => s.benchmark === 'openbench-gpt56-harness')!;
+  writeFileSync(join(OUT, 'harness.svg'), frame('harness', W, H,
+    'Same model, four harness bills',
+    ['GPT-5.6 Sol on the same OpenBench task set; ranked by cost per solved task.',
+     'Bars are point estimates from 44–45 countable attempts per arm.'],
+    b, [`${source.attribution} — ${source.name}.`,
+        `Proxy-measured token usage × GPT-5.6 Sol prices verified ${model.last_verified}.`],
+    { y0: 92, y1: H - 26 }));
+  return rows;
+}
+
+chartHarness();
 
 writeFileSync(join(OUT, 'meta.json'), JSON.stringify(META, null, 2) + '\n');
 console.log(`wrote ${THEME} charts + meta.json\n`);

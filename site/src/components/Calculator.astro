@@ -88,7 +88,7 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
             <button id="c-share" type="button" class="btn btn-copy" aria-live="polite">Copy link</button>
             {CLERK_ENABLED && <button id="c-save" type="button" class="btn" data-ctl="save" data-analytics="save-scenario" aria-live="polite" aria-describedby="c-save-why">Save scenario</button>}
           </div>
-          {CLERK_ENABLED && <p id="c-save-why" class="small">Permalink with your name, re-priced when prices change.</p>}
+          {CLERK_ENABLED && <p id="c-save-why" class="small">Keeps this scenario URL in your free account.</p>}
         </div>
       </div>
       <p class="small mt-3 pt-3 border-t border-[var(--color-rule)]">

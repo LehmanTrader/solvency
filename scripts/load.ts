@@ -25,6 +25,8 @@ export const TIER_NAMES: TierName[] = ['light', 'moderate', 'heavy'];
  *   3. Aider -- pass rate only AND stale (nothing newer than 2025-10-03).
  */
 export const SOURCE_PREFERENCE = ['aa-coding-agent-index', 'seal-swe-bench-pro', 'aider-polyglot'];
+/** Harness-only sources are isolated from the general model leaderboard. */
+export const HARNESS_BENCHMARKS = ['openbench-gpt56-harness'];
 
 export function modelById(id: string): Model | undefined {
   return models.find((m) => m.model_id === id);
@@ -52,6 +54,10 @@ export function allResultsFor(modelId: string): BenchmarkResult[] {
   return results.filter((r) => r.model_id === modelId);
 }
 
+export function harnessResultsFor(modelId: string): BenchmarkResult[] {
+  return results.filter((r) => r.model_id === modelId && HARNESS_BENCHMARKS.includes(r.benchmark));
+}
+
 export function provenanceFor(r: BenchmarkResult): Provenance {
   return { source_url: r.source_url, last_verified: sourceFor(r.benchmark)?.last_verified ?? r.run_date };
 }
@@ -63,6 +69,7 @@ export function extrasFor(r: BenchmarkResult) {
     measuredAttemptCostUsd: r.cost_basis === 'measured_by_source'
       ? (r as any).measured_cost_per_task_usd
       : undefined,
+    sourceUsage: r.cost_basis === 'source_usage_repriced' ? r.source_usage : undefined,
   };
 }
 

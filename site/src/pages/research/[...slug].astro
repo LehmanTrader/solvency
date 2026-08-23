@@ -16,9 +16,12 @@ const { report } = Astro.props;
 const { Content, headings } = await render(report);
 const d = report.data;
 const stamp = d.date.toISOString().slice(0, 10);
+const priceStamp = d.price_verified?.toISOString().slice(0, 10) ?? stamp;
 const url = new URL(Astro.url.pathname, Astro.site).href;
 const toc = headings.filter((h) => h.depth === 2);
-const srcNames = sources.map((s) => shortSourceName(s.benchmark)).join(' · ');
+const srcNames = d.pdf_sources ?? sources.map((s) => shortSourceName(s.benchmark)).join(' · ');
+const reportMethod = d.pdf_method ?? 'cost ÷ pass rate';
+const shareText = `${d.title}: ${d.description}`;
 ---
 <Base title={`${d.title} — Solvency`} description={d.description} type="article">
   <article class="wrap pt-10">
@@ -31,13 +34,13 @@ const srcNames = sources.map((s) => shortSourceName(s.benchmark)).join(' · ');
     <div class="mt-8 card overflow-hidden">
       <dl class="grid grid-cols-2 sm:grid-cols-4 font-mono text-[11px] divide-x divide-[var(--color-rule)]">
         <div class="px-4 py-3"><dt class="label">Published</dt><dd class="mt-1 text-[var(--color-ink)]">{stamp}</dd></div>
-        <div class="px-4 py-3"><dt class="label">Prices verified</dt><dd class="mt-1 text-[var(--color-ink)]">{stamp}</dd></div>
+        <div class="px-4 py-3"><dt class="label">Prices verified</dt><dd class="mt-1 text-[var(--color-ink)]">{priceStamp}</dd></div>
         <div class="px-4 py-3"><dt class="label">Sources</dt><dd class="mt-1 text-[var(--color-ink)]">{srcNames}</dd></div>
-        <div class="px-4 py-3"><dt class="label">Method</dt><dd class="mt-1 text-[var(--color-ink)]">cost ÷ pass rate</dd></div>
+        <div class="px-4 py-3"><dt class="label">Method</dt><dd class="mt-1 text-[var(--color-ink)]">{reportMethod}</dd></div>
       </dl>
       <div class="card-head border-t border-b-0">
         <p class="small">Every table in this note is re-derived from the datasets by the test suite.</p>
-        <Share url={url} compact />
+        <Share url={url} text={shareText} compact />
       </div>
     </div>
 
@@ -54,8 +57,8 @@ const srcNames = sources.map((s) => shortSourceName(s.benchmark)).join(' · ');
 
     <section id="share" class="mt-16 measure lg:ml-[calc(14rem+2.5rem)] card card-pad" aria-label="Share this note">
       <p class="eyebrow">Share this note</p>
-      <p class="mt-1 text-sm text-[var(--color-muted)]">The tweet text is generated from the data, so it matches the tables above.</p>
-      <Share url={url} class="mt-4" />
+      <p class="mt-1 text-sm text-[var(--color-muted)]">The share text comes from this note's published title and description.</p>
+      <Share url={url} text={shareText} class="mt-4" />
     </section>
   </article>
 </Base>

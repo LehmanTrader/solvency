@@ -8,7 +8,7 @@
  * A missing input yields `value: null` plus the reason -- never a substituted number.
  */
 import type {
-  Model, TaskTier, TierName, Computed, Provenance,
+  Model, TaskTier, TierName, Computed, Provenance, SourceUsage,
 } from './types.ts';
 
 export interface FrontierEfficiency {
@@ -89,7 +89,7 @@ export function costPerAttempt(
 }
 
 /** Which cost basis produced the attempt cost. Never conflated in output. */
-export type CostBasis = 'measured_by_source' | 'modelled_by_solvency';
+export type CostBasis = 'measured_by_source' | 'source_usage_repriced' | 'modelled_by_solvency';
 
 export interface SolvedCost {
   /** Where the attempt cost came from. `measured_by_source` uses NO loop assumption. */
@@ -126,6 +126,46 @@ export interface SolvedCostExtras {
    * This is the preferred basis wherever a source publishes it.
    */
   measuredAttemptCostUsd?: number;
+  /**
+   * Token usage observed by the benchmark source. The engine prices the mean
+   * attempt at this model's currently verified token prices and applies no
+   * loop, tier, cache-hit or frontier-efficiency assumption.
+   */
+  sourceUsage?: SourceUsage;
+}
+
+/** Price source-observed aggregate usage at the model's current list prices. */
+export function costPerSourceUsageAttempt(model: Model, usage: SourceUsage): Computed<AttemptCost> {
+  const provenance: Provenance[] = [{ source_url: model.source_url, last_verified: model.last_verified }];
+  const missing: string[] = [];
+  const totals = [
+    usage.input_uncached_tokens_total,
+    usage.cache_read_tokens_total,
+    usage.cache_write_tokens_total,
+    usage.output_tokens_total,
+  ];
+  if (usage.token_basis !== 'proxy_measured') missing.push(`${model.model_id}: source usage is not proxy-measured`);
+  if (!Number.isInteger(usage.attempts_n) || usage.attempts_n <= 0) missing.push(`${model.model_id}: source usage attempts_n must be a positive integer`);
+  if (totals.some((n) => !Number.isFinite(n) || n < 0)) missing.push(`${model.model_id}: source usage token totals must be finite and non-negative`);
+  if (usage.cache_read_tokens_total > 0 && model.cached_input_per_mtok === null) missing.push(`${model.model_id}: source usage has cache reads but no verified cached-input price`);
+  // The current price schema has no separate cache-write tariff. The admitted
+  // OpenBench slice has zero cache writes, so reject rather than guess.
+  if (usage.cache_write_tokens_total > 0) missing.push(`${model.model_id}: source usage has cache writes but no separate cache-write price`);
+  if (missing.length) return { value: null, missing, provenance };
+
+  const n = usage.attempts_n;
+  const inputTokens = usage.input_uncached_tokens_total / n;
+  const cachedInputTokens = usage.cache_read_tokens_total / n;
+  const outputTokens = usage.output_tokens_total / n;
+  const costUsd =
+    (inputTokens / MTOK) * model.input_per_mtok +
+    (cachedInputTokens / MTOK) * (model.cached_input_per_mtok ?? 0) +
+    (outputTokens / MTOK) * model.output_per_mtok;
+  return {
+    value: { loops: NaN, inputTokens, cachedInputTokens, outputTokens, costUsd },
+    missing,
+    provenance,
+  };
 }
 
 export function costPerSolvedTask(
@@ -138,17 +178,25 @@ export function costPerSolvedTask(
 ): Computed<SolvedCost> {
   const measured = extras.measuredAttemptCostUsd;
   const useMeasured = typeof measured === 'number';
+  const useSourceUsage = extras.sourceUsage !== undefined;
 
-  // A measured cost still needs an attempt shape for reporting, but its dollar
-  // figure must not be contaminated by the loop model.
-  const modelled = costPerAttempt(model, tierName, tier, opts);
+  if (useMeasured && useSourceUsage) {
+    return {
+      value: null,
+      missing: [`${model.model_id}: measured dollar cost and source usage cannot both define one attempt`],
+      provenance: extras.passRateProvenance ? [extras.passRateProvenance] : [],
+    };
+  }
+
   const attempt: Computed<AttemptCost> = useMeasured
     ? {
         value: { loops: NaN, inputTokens: NaN, cachedInputTokens: NaN, outputTokens: NaN, costUsd: measured },
         missing: [],
         provenance: [],
       }
-    : modelled;
+    : useSourceUsage
+      ? costPerSourceUsageAttempt(model, extras.sourceUsage!)
+      : costPerAttempt(model, tierName, tier, opts);
 
   const provenance = [...attempt.provenance];
   if (extras.passRateProvenance) provenance.push(extras.passRateProvenance);
@@ -178,7 +226,7 @@ export function costPerSolvedTask(
 
   return {
     value: {
-      costBasis: useMeasured ? 'measured_by_source' : 'modelled_by_solvency',
+      costBasis: useMeasured ? 'measured_by_source' : useSourceUsage ? 'source_usage_repriced' : 'modelled_by_solvency',
       naive: cost / p,
       capped: expectedAttemptsCapped * cost + residual * pFailAll,
       truncatedGeometric: pSolved === 0

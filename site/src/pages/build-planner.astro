@@ -1,0 +1,494 @@
+---
+import Base from '../layouts/Base.astro';
+import Section from '../components/Section.astro';
+import { models } from '../lib/data.ts';
+
+const currentModels = models.filter((model) => model.status === 'current');
+const harnessExamples = [
+  'Custom harness', 'Hermes Agent', 'Claude Code', 'Codex', 'Pi', 'Grok Build',
+  'Cursor', 'OpenCode', 'OpenHands', 'Goose',
+];
+---
+<Base title="Build Composer — budget any agent stack — Solvency"
+      description="Price any agent harness or custom orchestration: assign different models to orchestrator and worker roles, enter routing volume and token usage, and see cost per build and monthly spend.">
+  <div class="wrap pt-8 md:pt-12" id="build-planner">
+    <p class="eyebrow">Build Composer · preview</p>
+    <h1 class="h-page mt-3">Budget any agent stack.</h1>
+    <p class="mt-4 lede max-w-3xl">
+      Name any harness—or your own custom harness—then assign a model, expected calls and token
+      profile to every orchestrator, worker or fallback role. The quote prices the graph you enter.
+    </p>
+
+    <div class="mt-6 card card-pad grid gap-4 sm:grid-cols-[1fr_auto] items-start">
+      <div>
+        <p class="label">Paid workflow build-out</p>
+        <p class="mt-2 text-sm leading-relaxed text-[var(--color-body)] max-w-3xl">
+          All Composer controls are open during this preview. Billing and entitlement are intentionally
+          not connected yet; we are finishing and validating the paid workflow first.
+        </p>
+      </div>
+      <span class="pill pill-ink">No checkout yet</span>
+    </div>
+
+    <form class="mt-8 grid gap-6" id="composer-form" novalidate>
+      <section class="card overflow-hidden" aria-labelledby="harness-title">
+        <div class="card-head">
+          <div><p class="label">Step 1</p><h2 class="h-card mt-1" id="harness-title">Harness and workload</h2></div>
+          <p class="small">Free-form: presets are suggestions, not restrictions.</p>
+        </div>
+        <div class="card-pad grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <label class="block sm:col-span-2">
+            <span class="label">Plan name</span>
+            <input class="ctl ctl-row mt-2 w-full" id="b-name" value="Fable orchestrator + lower-cost workers" />
+          </label>
+          <label class="block sm:col-span-2">
+            <span class="label">Harness name</span>
+            <input class="ctl ctl-row mt-2 w-full" id="b-harness" list="harness-examples" value="Custom harness" autocomplete="off" />
+            <datalist id="harness-examples">{harnessExamples.map((name) => <option value={name} />)}</datalist>
+            <span class="small block mt-1">Type any public, internal or custom harness.</span>
+          </label>
+          <label class="block">
+            <span class="label">Harness version</span>
+            <input class="ctl ctl-row mt-2 w-full" id="b-version" placeholder="optional" />
+          </label>
+          <label class="block">
+            <span class="label">Configuration basis</span>
+            <select class="ctl ctl-row mt-2 w-full" id="b-harness-basis">
+              <option value="user_supplied">User supplied</option>
+              <option value="solvency_template">Solvency template</option>
+              <option value="published">Published measurement</option>
+            </select>
+          </label>
+          <label class="block">
+            <span class="label">Build volume / month</span>
+            <input class="ctl ctl-row mt-2 w-full" id="b-volume" type="number" min="1" step="1" value="100" />
+          </label>
+          <label class="block">
+            <span class="label">Volume means</span>
+            <select class="ctl ctl-row mt-2 w-full" id="b-volume-basis">
+              <option value="attempted_builds">Attempted builds</option>
+              <option value="successful_builds">Successful builds</option>
+            </select>
+          </label>
+          <label class="block">
+            <span class="label">Harness overhead / attempt</span>
+            <span class="money-input mt-2"><span>$</span><input class="ctl ctl-row w-full" id="b-overhead" type="number" min="0" step="0.01" value="0" /></span>
+          </label>
+          <label class="block">
+            <span class="label">Fixed harness cost / month</span>
+            <span class="money-input mt-2"><span>$</span><input class="ctl ctl-row w-full" id="b-fixed" type="number" min="0" step="1" value="0" /></span>
+          </label>
+          <label class="block lg:col-span-2">
+            <span class="label">End-to-end system success</span>
+            <span class="percent-input mt-2"><input class="ctl ctl-row w-full" id="b-success" type="number" min="0.01" max="100" step="0.1" placeholder="Not supplied" /><span>%</span></span>
+            <span class="small block mt-1">Optional. Must describe the whole configured system—not individual model benchmarks.</span>
+          </label>
+          <label class="block lg:col-span-2">
+            <span class="label">Success-rate basis</span>
+            <select class="ctl ctl-row mt-2 w-full" id="b-success-basis">
+              <option value="user_assumption">User assumption</option>
+              <option value="measured_by_user">Measured by you</option>
+              <option value="published_system_run">Published system run</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section aria-labelledby="roles-title">
+        <div class="flex flex-wrap items-end justify-between gap-3">
+          <div><p class="label">Step 2</p><h2 class="h-section mt-1" id="roles-title">Model roles and routing volume</h2></div>
+          <button type="button" class="btn" id="b-add-role" data-analytics="build-add-role">Add model role +</button>
+        </div>
+        <p class="small mt-2 max-w-3xl">Expected calls can be fractional: eight worker tasks routed 75% to one pool become 6 expected calls per build attempt.</p>
+        <div class="mt-4 grid gap-4" id="b-roles"></div>
+      </section>
+
+      <section class="grid gap-4 lg:grid-cols-[.9fr_1.1fr] items-start" aria-labelledby="quote-title">
+        <div class="card overflow-hidden lg:sticky lg:top-20">
+          <div class="card-head"><div><p class="label">Step 3</p><h2 class="h-card mt-1" id="quote-title">Build quote</h2></div><span class="pill pill-ink" id="b-role-count">0 roles</span></div>
+          <div class="tile-grid grid-cols-2" aria-live="polite" aria-atomic="false">
+            <div class="tile"><p class="label">Per build attempt</p><p class="tile-v" id="b-attempt">—</p><p class="tile-n">Harness overhead + every expected role call</p></div>
+            <div class="tile"><p class="label">Per completed build</p><p class="tile-v" id="b-solved">Missing</p><p class="tile-n" id="b-solved-note">Supply a whole-system success rate</p></div>
+            <div class="tile"><p class="label">Monthly spend</p><p class="tile-v" id="b-month">—</p><p class="tile-n" id="b-month-note">At the workload above</p></div>
+            <div class="tile"><p class="label">Attempted builds / month</p><p class="tile-v" id="b-attempts">—</p><p class="tile-n">Derived only when inputs permit</p></div>
+          </div>
+          <div class="card-pad border-t border-[var(--color-rule)]" id="b-messages" aria-live="polite"></div>
+          <div class="px-5 py-3 border-t border-[var(--color-rule)] flex flex-wrap gap-2">
+            <button type="button" class="btn" id="b-export" data-analytics="build-export-json">Export quote JSON</button>
+            <button type="button" class="btn" id="b-save-version" data-analytics="build-save-version">Save version</button>
+            <button type="button" class="btn" id="b-duplicate" data-analytics="build-duplicate">Duplicate plan</button>
+          </div>
+        </div>
+
+        <div class="grid gap-4">
+          <div class="card overflow-hidden">
+            <div class="card-head"><h3 class="h-card">Cost contribution by role</h3><p class="small">Per attempted build</p></div>
+            <p class="small px-5 pt-3 sm:hidden">Swipe the table to see every cost column →</p>
+            <div class="tbl-wrap"><table class="tbl">
+              <caption>Model role, expected calls, cost per call and contribution to each attempted build</caption>
+              <thead><tr><th scope="col">Role</th><th scope="col">Model</th><th scope="col" class="r">Calls</th><th scope="col" class="r">$ / call</th><th scope="col" class="r">$ / build</th></tr></thead>
+              <tbody id="b-breakdown"></tbody>
+            </table></div>
+          </div>
+          <div class="card card-pad">
+            <h3 class="h-card">Assumption and provenance ledger</h3>
+            <ul class="mt-3 ledger" id="b-ledger"></ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="card overflow-hidden" aria-labelledby="workspace-title">
+        <div class="card-head">
+          <div><p class="label">Step 4 · preview</p><h2 class="h-card mt-1" id="workspace-title">Plan versions and scenario delta</h2></div>
+          <span class="pill pill-ink" id="b-version-count">0 saved</span>
+        </div>
+        <div class="card-pad grid gap-5 lg:grid-cols-[.8fr_1.2fr]">
+          <div>
+            <p class="text-sm leading-relaxed text-[var(--color-body)]">Save an immutable quote, duplicate the current architecture, then edit the copy to see its cost delta against a baseline.</p>
+            <p class="small mt-2">Preview storage is limited to this open tab. Nothing is uploaded or synced; authenticated D1 persistence comes before billing.</p>
+            <div class="mt-4 grid grid-cols-3 gap-2" aria-label="Delta from selected baseline">
+              <div class="delta-tile"><p class="label">Attempt</p><p class="delta-v" id="b-delta-attempt">No baseline</p></div>
+              <div class="delta-tile"><p class="label">Solved</p><p class="delta-v" id="b-delta-solved">No baseline</p></div>
+              <div class="delta-tile"><p class="label">Monthly</p><p class="delta-v" id="b-delta-month">No baseline</p></div>
+            </div>
+            <p class="small mt-3" id="b-baseline-label">Save a version to establish a baseline.</p>
+            <p class="small mt-2" id="b-workspace-message" aria-live="polite"></p>
+          </div>
+          <div>
+            <h3 class="label">Versions saved in this tab</h3>
+            <div class="mt-3 grid gap-2" id="b-snapshots"><p class="small">No versions yet.</p></div>
+          </div>
+        </div>
+      </section>
+    </form>
+
+    <Section id="packaging" eyebrow="Packaging" title="What becomes Pro" class="mt-20"
+      caption="The full workflow is being built before checkout. Limits are not enforced during the preview.">
+      <div class="grid gap-4 md:grid-cols-2">
+        <div class="card card-pad"><p class="label">Free</p><h3 class="h-card mt-2">Experience the answer</h3><ul class="mt-3 text-sm leading-relaxed text-[var(--color-body)] list-disc pl-5"><li>Any harness name</li><li>Two model roles at list prices</li><li>One editable on-screen scenario</li><li>Public research and verified catalog</li></ul></div>
+        <div class="card card-pad"><p class="label">Pro · planned $19/month</p><h3 class="h-card mt-2">Operate the budget</h3><ul class="mt-3 text-sm leading-relaxed text-[var(--color-body)] list-disc pl-5"><li>Unlimited role mixes and plan versions</li><li>Custom/contract prices and observed usage</li><li>Scenario deltas, sensitivity and break-even views</li><li>Private links, exports and price/budget alerts</li></ul></div>
+      </div>
+      <p class="small mt-3">The price is a validation hypothesis. Checkout will be added only after the workflow, persistence and server entitlement boundary are ready.</p>
+    </Section>
+  </div>
+
+  <template id="b-role-template">
+    <article class="card role-editor" data-role>
+      <div class="card-head">
+        <div class="flex flex-wrap items-center gap-3 min-w-0">
+          <span class="role-index label">Role</span>
+          <input class="ctl ctl-row role-label" data-field="label" aria-label="Role label" value="Worker pool" />
+        </div>
+        <button type="button" class="btn btn-quiet role-remove" aria-label="Remove model role">Remove</button>
+      </div>
+      <div class="card-pad grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <label class="block"><span class="label">Role type</span><select class="ctl ctl-row mt-2 w-full" data-field="kind"><option value="orchestrator">Orchestrator</option><option value="worker">Worker / subagent</option><option value="other">Other / fallback</option></select></label>
+        <label class="block sm:col-span-2"><span class="label">Model</span><select class="ctl ctl-row mt-2 w-full" data-field="model">{currentModels.map((model) => <option value={model.model_id} data-input={model.input_per_mtok} data-cache={model.cached_input_per_mtok ?? ''} data-output={model.output_per_mtok}>{model.display_name} · {model.provider}</option>)}</select></label>
+        <label class="block"><span class="label">Expected calls / build</span><input class="ctl ctl-row mt-2 w-full" data-field="calls" type="number" min="0.01" step="0.25" value="1" /></label>
+        <label class="block"><span class="label">Usage basis</span><select class="ctl ctl-row mt-2 w-full" data-field="usage-basis"><option value="template_assumption">Template assumption</option><option value="user_supplied">User supplied</option><option value="measured">Measured</option></select></label>
+        <label class="block"><span class="label">Fresh input / call</span><input class="ctl ctl-row mt-2 w-full" data-field="fresh" type="number" min="0" step="100" value="20000" /></label>
+        <label class="block"><span class="label">Cache read / call</span><input class="ctl ctl-row mt-2 w-full" data-field="cache" type="number" min="0" step="100" value="0" /></label>
+        <label class="block"><span class="label">Output / call</span><input class="ctl ctl-row mt-2 w-full" data-field="output" type="number" min="0" step="100" value="2000" /></label>
+        <label class="sm:col-span-2 lg:col-span-4 inline-flex items-center gap-2 min-h-11 text-sm text-[var(--color-ink)] cursor-pointer"><input type="checkbox" class="chk" data-field="custom-toggle" /> Use custom or contracted token prices for this role</label>
+        <div class="custom-prices sm:col-span-2 lg:col-span-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-4" hidden>
+          <label class="block"><span class="label">Custom rate basis</span><select class="ctl ctl-row mt-2 w-full" data-field="custom-basis"><option value="user_supplied">User supplied</option><option value="contract">Contract</option></select></label>
+          <label class="block"><span class="label">Custom input / M</span><span class="money-input mt-2"><span>$</span><input class="ctl ctl-row w-full" data-field="custom-input" type="number" min="0" step="0.001" /></span></label>
+          <label class="block"><span class="label">Custom cache read / M</span><span class="money-input mt-2"><span>$</span><input class="ctl ctl-row w-full" data-field="custom-cache" type="number" min="0" step="0.001" /></span></label>
+          <label class="block"><span class="label">Custom output / M</span><span class="money-input mt-2"><span>$</span><input class="ctl ctl-row w-full" data-field="custom-output" type="number" min="0" step="0.001" /></span></label>
+        </div>
+      </div>
+    </article>
+  </template>
+</Base>
+
+<script>
+  import { models } from '../lib/data.ts';
+  import { quoteBuildPlan, type BuildPlanV1, type BuildRoleV1 } from '../lib/build-cost.ts';
+  import { compareBuildQuotes, createBuildSnapshot, duplicateBuildSnapshot, type BuildSnapshotV1 } from '../lib/build-workspace.ts';
+  import { track } from '../lib/clerk-client.ts';
+
+  const form = document.getElementById('composer-form') as HTMLFormElement;
+  const rolesEl = document.getElementById('b-roles')!;
+  const template = document.getElementById('b-role-template') as HTMLTemplateElement;
+  let lastPlan: BuildPlanV1;
+  let lastQuote: ReturnType<typeof quoteBuildPlan>;
+  let currentPlanId = crypto.randomUUID();
+  let baselineSnapshotId: string | null = null;
+  const snapshots: BuildSnapshotV1[] = [];
+  const byId = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+  const value = (id: string) => (byId<HTMLInputElement>(id).value ?? '').trim();
+  const number = (id: string) => Number(byId<HTMLInputElement>(id).value);
+  const field = <T extends HTMLInputElement | HTMLSelectElement>(role: Element, name: string) => role.querySelector<T>(`[data-field="${name}"]`)!;
+  const money = (n: number | null) => n === null ? 'Missing' : `$${n.toLocaleString(undefined, { minimumFractionDigits: n < 1 ? 3 : 2, maximumFractionDigits: n < 1 ? 4 : 2 })}`;
+
+  function renumber() {
+    [...rolesEl.querySelectorAll<HTMLElement>('[data-role]')].forEach((role, index) => {
+      role.querySelector('.role-index')!.textContent = `Role ${index + 1}`;
+      const remove = role.querySelector('.role-remove') as HTMLButtonElement;
+      remove.disabled = rolesEl.children.length <= 1;
+      remove.setAttribute('aria-label', `Remove role ${index + 1}: ${field<HTMLInputElement>(role, 'label').value || 'unnamed role'}`);
+    });
+  }
+
+  function seedCustomPrices(role: Element) {
+    const selected = field<HTMLSelectElement>(role, 'model').selectedOptions[0];
+    const mapping = [['custom-input', 'input'], ['custom-cache', 'cache'], ['custom-output', 'output']] as const;
+    for (const [target, source] of mapping) {
+      const input = field<HTMLInputElement>(role, target);
+      if (!input.value) input.value = selected.dataset[source] ?? '';
+    }
+  }
+
+  function addRole(seed: Partial<BuildRoleV1> = {}) {
+    const fragment = template.content.cloneNode(true) as DocumentFragment;
+    const role = fragment.querySelector<HTMLElement>('[data-role]')!;
+    role.dataset.roleId = seed.roleId ?? `role-${crypto.randomUUID()}`;
+    field<HTMLInputElement>(role, 'label').value = seed.label ?? 'Worker pool';
+    field<HTMLSelectElement>(role, 'kind').value = seed.kind ?? 'worker';
+    field<HTMLSelectElement>(role, 'model').value = seed.modelId ?? 'gpt-5.6-luna';
+    field<HTMLInputElement>(role, 'calls').value = String(seed.expectedInvocationsPerBuildAttempt ?? 1);
+    if (seed.usagePerInvocation) {
+      field<HTMLSelectElement>(role, 'usage-basis').value = seed.usagePerInvocation.basis;
+      field<HTMLInputElement>(role, 'fresh').value = String(seed.usagePerInvocation.uncachedInputTokens);
+      field<HTMLInputElement>(role, 'cache').value = String(seed.usagePerInvocation.cacheReadTokens);
+      field<HTMLInputElement>(role, 'output').value = String(seed.usagePerInvocation.outputTokens);
+    }
+    if (seed.priceOverride) {
+      field<HTMLInputElement>(role, 'custom-toggle').checked = true;
+      (role.querySelector('.custom-prices') as HTMLElement).hidden = false;
+      field<HTMLSelectElement>(role, 'custom-basis').value = seed.priceOverride.basis;
+      field<HTMLInputElement>(role, 'custom-input').value = String(seed.priceOverride.inputPerMtok);
+      field<HTMLInputElement>(role, 'custom-cache').value = seed.priceOverride.cacheReadPerMtok === undefined ? '' : String(seed.priceOverride.cacheReadPerMtok);
+      field<HTMLInputElement>(role, 'custom-output').value = String(seed.priceOverride.outputPerMtok);
+    }
+    role.querySelector('.role-remove')!.addEventListener('click', () => { role.remove(); renumber(); render(); });
+    rolesEl.appendChild(fragment);
+    renumber();
+    render();
+  }
+
+  function readRole(role: HTMLElement): BuildRoleV1 {
+    const custom = field<HTMLInputElement>(role, 'custom-toggle').checked;
+    return {
+      roleId: role.dataset.roleId!,
+      kind: field<HTMLSelectElement>(role, 'kind').value as BuildRoleV1['kind'],
+      label: field<HTMLInputElement>(role, 'label').value,
+      modelId: field<HTMLSelectElement>(role, 'model').value,
+      expectedInvocationsPerBuildAttempt: Number(field<HTMLInputElement>(role, 'calls').value),
+      usagePerInvocation: {
+        uncachedInputTokens: Number(field<HTMLInputElement>(role, 'fresh').value),
+        cacheReadTokens: Number(field<HTMLInputElement>(role, 'cache').value),
+        cacheWriteTokens: 0,
+        outputTokens: Number(field<HTMLInputElement>(role, 'output').value),
+        basis: field<HTMLSelectElement>(role, 'usage-basis').value as BuildRoleV1['usagePerInvocation']['basis'],
+      },
+      priceOverride: custom ? {
+        inputPerMtok: field<HTMLInputElement>(role, 'custom-input').value === '' ? Number.NaN : Number(field<HTMLInputElement>(role, 'custom-input').value),
+        cacheReadPerMtok: field<HTMLInputElement>(role, 'custom-cache').value === '' ? undefined : Number(field<HTMLInputElement>(role, 'custom-cache').value),
+        outputPerMtok: field<HTMLInputElement>(role, 'custom-output').value === '' ? Number.NaN : Number(field<HTMLInputElement>(role, 'custom-output').value),
+        basis: field<HTMLSelectElement>(role, 'custom-basis').value as NonNullable<BuildRoleV1['priceOverride']>['basis'],
+      } : undefined,
+    };
+  }
+
+  function readPlan(): BuildPlanV1 {
+    const successText = value('b-success');
+    return {
+      schemaVersion: 1,
+      name: value('b-name'),
+      workload: { buildsPerMonth: number('b-volume'), volumeBasis: value('b-volume-basis') as BuildPlanV1['workload']['volumeBasis'] },
+      harness: {
+        name: value('b-harness'), version: value('b-version') || null,
+        configBasis: value('b-harness-basis') as BuildPlanV1['harness']['configBasis'],
+        fixedCostPerBuildAttemptUsd: number('b-overhead'), fixedMonthlyCostUsd: number('b-fixed'),
+      },
+      roles: [...rolesEl.querySelectorAll<HTMLElement>('[data-role]')].map(readRole),
+      endToEndSuccess: successText ? { rate: Number(successText) / 100, basis: value('b-success-basis') as NonNullable<BuildPlanV1['endToEndSuccess']>['basis'] } : undefined,
+    };
+  }
+
+  const cell = (text: string, right = false) => { const td = document.createElement('td'); td.textContent = text; if (right) td.className = 'r'; return td; };
+  const signedMoney = (value: number | null) => {
+    if (value === null) return 'Missing';
+    if (Math.abs(value) < 1e-12) return '$0 · same';
+    return `${value < 0 ? '−' : '+'}${money(Math.abs(value))}`;
+  };
+
+  function renderWorkspace() {
+    byId('b-version-count').textContent = `${snapshots.length} saved`;
+    const list = byId('b-snapshots'); list.replaceChildren();
+    if (!snapshots.length) {
+      const empty = document.createElement('p'); empty.className = 'small'; empty.textContent = 'No versions yet.'; list.appendChild(empty);
+    }
+    for (const snapshot of [...snapshots].reverse()) {
+      const row = document.createElement('article'); row.className = 'snapshot-row';
+      const copy = document.createElement('div'); copy.className = 'min-w-0';
+      const title = document.createElement('p'); title.className = 'text-sm font-semibold text-[var(--color-ink)] truncate'; title.textContent = `${snapshot.plan.name} · v${snapshot.version}`;
+      const meta = document.createElement('p'); meta.className = 'small mt-1'; meta.textContent = `${snapshot.plan.harness.name} · ${money(snapshot.quote.buildAttemptCostUsd)}/attempt · ${new Date(snapshot.savedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+      copy.append(title, meta);
+      const actions = document.createElement('div'); actions.className = 'flex flex-wrap gap-2';
+      const baseline = document.createElement('button'); baseline.type = 'button'; baseline.className = 'btn btn-quiet'; baseline.textContent = snapshot.snapshotId === baselineSnapshotId ? 'Baseline' : 'Use baseline'; baseline.disabled = snapshot.snapshotId === baselineSnapshotId;
+      baseline.setAttribute('aria-label', `Use ${snapshot.plan.name} version ${snapshot.version} as baseline`);
+      baseline.addEventListener('click', () => { baselineSnapshotId = snapshot.snapshotId; renderWorkspace(); track('build-set-baseline', { path: location.pathname }); });
+      const restore = document.createElement('button'); restore.type = 'button'; restore.className = 'btn btn-quiet'; restore.textContent = 'Restore'; restore.setAttribute('aria-label', `Restore ${snapshot.plan.name} version ${snapshot.version}`);
+      restore.addEventListener('click', () => { currentPlanId = snapshot.planId; applyPlan(snapshot.plan); byId('b-workspace-message').textContent = `Restored ${snapshot.plan.name} version ${snapshot.version}.`; track('build-restore-version', { path: location.pathname }); });
+      actions.append(baseline, restore); row.append(copy, actions); list.appendChild(row);
+    }
+
+    const baseline = snapshots.find((item) => item.snapshotId === baselineSnapshotId);
+    const cells = [byId('b-delta-attempt'), byId('b-delta-solved'), byId('b-delta-month')];
+    if (!baseline || !lastQuote.valid) {
+      for (const item of cells) { item.textContent = baseline ? 'Invalid current' : 'No baseline'; item.removeAttribute('data-direction'); }
+      byId('b-baseline-label').textContent = baseline ? `Baseline: ${baseline.plan.name} · v${baseline.version}` : 'Save a version to establish a baseline.';
+      return;
+    }
+    const delta = compareBuildQuotes(lastQuote, baseline.quote);
+    const metrics = [delta.buildAttemptCostUsd, delta.variableCostPerSuccessfulBuildUsd, delta.monthlyCostUsd];
+    metrics.forEach((metric, index) => {
+      cells[index].textContent = signedMoney(metric.absolute);
+      if (metric.absolute !== null && Math.abs(metric.absolute) >= 1e-12) cells[index].dataset.direction = metric.absolute < 0 ? 'lower' : 'higher';
+      else cells[index].removeAttribute('data-direction');
+    });
+    byId('b-baseline-label').textContent = `Compared with ${baseline.plan.name} · v${baseline.version}. Negative means lower cost.`;
+  }
+
+  function applyPlan(plan: BuildPlanV1) {
+    byId<HTMLInputElement>('b-name').value = plan.name;
+    byId<HTMLInputElement>('b-harness').value = plan.harness.name;
+    byId<HTMLInputElement>('b-version').value = plan.harness.version ?? '';
+    byId<HTMLSelectElement>('b-harness-basis').value = plan.harness.configBasis;
+    byId<HTMLInputElement>('b-volume').value = String(plan.workload.buildsPerMonth);
+    byId<HTMLSelectElement>('b-volume-basis').value = plan.workload.volumeBasis;
+    byId<HTMLInputElement>('b-overhead').value = String(plan.harness.fixedCostPerBuildAttemptUsd);
+    byId<HTMLInputElement>('b-fixed').value = String(plan.harness.fixedMonthlyCostUsd);
+    byId<HTMLInputElement>('b-success').value = plan.endToEndSuccess ? String(plan.endToEndSuccess.rate * 100) : '';
+    byId<HTMLSelectElement>('b-success-basis').value = plan.endToEndSuccess?.basis ?? 'user_assumption';
+    rolesEl.replaceChildren();
+    for (const role of plan.roles) addRole(role);
+    render();
+  }
+
+  function render() {
+    if (!rolesEl.children.length) return;
+    lastPlan = readPlan();
+    lastQuote = quoteBuildPlan(lastPlan, models);
+    byId('b-role-count').textContent = `${lastPlan.roles.length} role${lastPlan.roles.length === 1 ? '' : 's'}`;
+    byId('b-attempt').textContent = money(lastQuote.buildAttemptCostUsd);
+    byId('b-solved').textContent = money(lastQuote.variableCostPerSuccessfulBuildUsd);
+    byId('b-solved').classList.toggle('missing', lastQuote.variableCostPerSuccessfulBuildUsd === null);
+    byId('b-solved-note').textContent = lastQuote.variableCostPerSuccessfulBuildUsd === null ? 'Success rate not supplied' : 'Variable spend ÷ whole-system success';
+    byId('b-month').textContent = money(lastQuote.monthlyCostUsd);
+    byId('b-month-note').textContent = lastQuote.monthlyCostUsd === null ? 'Successful-build volume needs a success rate' : 'Variable + fixed harness spend';
+    byId('b-attempts').textContent = lastQuote.attemptedBuildsPerMonth === null ? 'Missing' : lastQuote.attemptedBuildsPerMonth.toLocaleString(undefined, { maximumFractionDigits: 1 });
+
+    const messages = byId('b-messages'); messages.replaceChildren();
+    const lines = lastQuote.errors.length ? lastQuote.errors : lastQuote.warnings;
+    if (!lines.length) {
+      const p = document.createElement('p'); p.className = 'small'; p.textContent = lastQuote.missing.includes('endToEndSuccess.rate')
+        ? 'Quote valid. Cost per completed build remains missing until you supply a whole-system success rate.'
+        : 'Quote valid. Every role uses its own model rate and token profile.'; messages.appendChild(p);
+    } else {
+      const ul = document.createElement('ul'); ul.className = `small list-disc pl-5 ${lastQuote.errors.length ? 'text-[var(--color-worse)]' : ''}`;
+      for (const line of lines) { const li = document.createElement('li'); li.textContent = line; ul.appendChild(li); }
+      messages.appendChild(ul);
+    }
+
+    const breakdown = byId('b-breakdown'); breakdown.replaceChildren();
+    for (const role of lastQuote.roles) {
+      const tr = document.createElement('tr');
+      tr.append(cell(role.label), cell(role.modelName), cell(role.expectedInvocations.toLocaleString(undefined, { maximumFractionDigits: 2 }), true), cell(money(role.costPerInvocationUsd), true), cell(money(role.costPerBuildAttemptUsd), true));
+      breakdown.appendChild(tr);
+    }
+    if (lastPlan.harness.fixedCostPerBuildAttemptUsd > 0) {
+      const tr = document.createElement('tr'); tr.append(cell('Harness overhead'), cell(lastPlan.harness.name), cell('1', true), cell(money(lastPlan.harness.fixedCostPerBuildAttemptUsd), true), cell(money(lastPlan.harness.fixedCostPerBuildAttemptUsd), true)); breakdown.appendChild(tr);
+    }
+
+    const ledger = byId('b-ledger'); ledger.replaceChildren();
+    const harnessLi = document.createElement('li'); harnessLi.textContent = `${lastPlan.harness.name}${lastPlan.harness.version ? ` ${lastPlan.harness.version}` : ''} · ${lastPlan.harness.configBasis.replaceAll('_', ' ')}`; ledger.appendChild(harnessLi);
+    for (const role of lastQuote.roles) {
+      const li = document.createElement('li');
+      li.textContent = `${role.label}: ${role.modelName} · ${role.priceBasis.replaceAll('_', ' ')}${role.priceLastVerified ? ` · price verified ${role.priceLastVerified}` : ''} · usage ${role.usageBasis.replaceAll('_', ' ')}`;
+      ledger.appendChild(li);
+    }
+    const successLi = document.createElement('li'); successLi.textContent = lastPlan.endToEndSuccess
+      ? `Whole-system success: ${(lastPlan.endToEndSuccess.rate * 100).toFixed(1)}% · ${lastPlan.endToEndSuccess.basis.replaceAll('_', ' ')}`
+      : 'Whole-system success: not supplied; solved-build cost is intentionally missing.'; ledger.appendChild(successLi);
+    byId<HTMLButtonElement>('b-export').disabled = !lastQuote.valid;
+    byId<HTMLButtonElement>('b-save-version').disabled = !lastQuote.valid;
+    byId<HTMLButtonElement>('b-duplicate').disabled = !lastQuote.valid;
+    renderWorkspace();
+  }
+
+  form.addEventListener('input', (event) => {
+    const target = event.target as HTMLInputElement | HTMLSelectElement;
+    const role = target.closest('[data-role]');
+    if (role && target.matches('[data-field="label"]')) renumber();
+    if (role && target.matches('[data-field="custom-toggle"]')) {
+      const on = (target as HTMLInputElement).checked;
+      (role.querySelector('.custom-prices') as HTMLElement).hidden = !on;
+      if (on) seedCustomPrices(role);
+    }
+    if (role && target.matches('[data-field="model"]') && field<HTMLInputElement>(role, 'custom-toggle').checked) {
+      for (const name of ['custom-input', 'custom-cache', 'custom-output']) field<HTMLInputElement>(role, name).value = '';
+      seedCustomPrices(role);
+    }
+    render();
+  });
+  byId('b-add-role').addEventListener('click', () => { addRole(); track('build-add-role', { path: location.pathname }); });
+  byId('b-export').addEventListener('click', () => {
+    if (!lastQuote.valid) return;
+    const blob = new Blob([JSON.stringify({ plan: lastPlan, quote: lastQuote }, null, 2) + '\n'], { type: 'application/json' });
+    const href = URL.createObjectURL(blob); const a = document.createElement('a');
+    a.href = href; a.download = `${lastPlan.name.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() || 'build-plan'}-quote.json`;
+    a.click(); URL.revokeObjectURL(href); track('build-export-json', { path: location.pathname });
+  });
+  byId('b-save-version').addEventListener('click', () => {
+    if (!lastQuote.valid) return;
+    const snapshot = createBuildSnapshot(snapshots, currentPlanId, crypto.randomUUID(), lastPlan, models);
+    snapshots.push(snapshot);
+    baselineSnapshotId ??= snapshot.snapshotId;
+    byId('b-workspace-message').textContent = `Saved ${snapshot.plan.name} version ${snapshot.version} in this tab.`;
+    renderWorkspace(); track('build-save-version', { path: location.pathname });
+  });
+  byId('b-duplicate').addEventListener('click', () => {
+    if (!lastQuote.valid) return;
+    const source = createBuildSnapshot(snapshots, currentPlanId, crypto.randomUUID(), lastPlan, models);
+    snapshots.push(source);
+    const newPlanId = crypto.randomUUID();
+    const duplicate = duplicateBuildSnapshot(source, newPlanId, crypto.randomUUID(), `${lastPlan.name} copy`, models);
+    snapshots.push(duplicate);
+    baselineSnapshotId = source.snapshotId;
+    currentPlanId = newPlanId;
+    applyPlan(duplicate.plan);
+    byId('b-workspace-message').textContent = `Duplicated ${source.plan.name}; the original is now the comparison baseline.`;
+    renderWorkspace(); track('build-duplicate', { path: location.pathname });
+  });
+
+  addRole({
+    roleId: 'orchestrator', kind: 'orchestrator', label: 'Orchestrator', modelId: 'claude-fable-5', expectedInvocationsPerBuildAttempt: 1,
+    usagePerInvocation: { uncachedInputTokens: 100000, cacheReadTokens: 0, cacheWriteTokens: 0, outputTokens: 10000, basis: 'template_assumption' },
+  });
+  addRole({
+    roleId: 'worker-pool', kind: 'worker', label: 'Worker pool', modelId: 'gpt-5.6-luna', expectedInvocationsPerBuildAttempt: 6,
+    usagePerInvocation: { uncachedInputTokens: 20000, cacheReadTokens: 30000, cacheWriteTokens: 0, outputTokens: 2000, basis: 'template_assumption' },
+  });
+</script>
+
+<style is:global>
+  .money-input, .percent-input { display: flex; align-items: center; gap: .45rem; font-family: var(--font-mono); color: var(--color-muted); }
+  .money-input .ctl, .percent-input .ctl { min-width: 0; }
+  .role-editor .role-label { width: min(18rem, 58vw); }
+  .role-editor button:disabled { opacity: .35; cursor: not-allowed; }
+  .ledger { display: grid; gap: .5rem; padding-left: 1rem; list-style: square; font-family: var(--font-mono); font-size: .72rem; line-height: 1.6; color: var(--color-muted); }
+  .delta-tile { min-width: 0; padding: .8rem; border: 1px solid var(--color-rule); background: var(--color-panel-2); }
+  .delta-v { margin-top: .35rem; overflow-wrap: anywhere; font-family: var(--font-mono); font-size: clamp(.75rem, 2.4vw, 1rem); color: var(--color-muted); }
+  .delta-v[data-direction='lower'] { color: var(--color-better); }
+  .delta-v[data-direction='higher'] { color: var(--color-worse); }
+  .snapshot-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .8rem; border: 1px solid var(--color-rule); background: var(--color-panel-2); }
+  @media (max-width: 639px) {
+    .role-editor .card-head { align-items: stretch; }
+    .role-editor .role-label { width: 100%; }
+    #b-breakdown td, #b-breakdown th { white-space: nowrap; }
+    .snapshot-row { align-items: flex-start; flex-direction: column; }
+  }
+</style>
