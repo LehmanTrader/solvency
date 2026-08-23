@@ -55,8 +55,12 @@
   src: url("/fonts/source-serif-4-latin.woff2") format("woff2");
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
 
-/* Light mode is a peer (brand review §4.1). System preference by default;
-   data-theme on <html> (set from localStorage in an inline head script) wins. */
+/* Dark is the default: the site is designed dark first and that is how it should
+   greet a first-time visitor, whatever their OS is set to. Light is a full peer
+   (brand review §4.1) but opt-in — it applies only when the visitor picks it,
+   which sets data-theme on <html> and is restored from localStorage by an inline
+   head script before first paint. There is deliberately no prefers-color-scheme
+   fallback; adding one back would make the first impression vary by OS. */
 @layer base {
   :root[data-theme="light"] {
     --color-bg: #FBFAF8; --color-panel: #FFFFFF; --color-panel-2: #F4F3F1; --color-panel-3: #E6E4DF;
@@ -67,18 +71,6 @@
     --color-better: #1B7F4F; --color-worse: #A8331B; --color-fresh: #1B7F4F;
     --color-s1: #9A6410; --color-s2: #0E6E9E; --color-s3: #1B7F4F; --color-s4: #A8331B; --color-s5: #7A3FC0; --color-s6: #5F6B73;
     color-scheme: light;
-  }
-  @media (prefers-color-scheme: light) {
-    :root:not([data-theme="dark"]) {
-      --color-bg: #FBFAF8; --color-panel: #FFFFFF; --color-panel-2: #F4F3F1; --color-panel-3: #E6E4DF;
-      --color-ink: #1A1D20; --color-body: #3E464C; --color-muted: #5F6B73;
-      --color-rule: #E2E0DC; --color-rule-strong: #CFCCC6; --color-control-border: #858B91;
-      --color-accent: #9A6410; --color-accent-hover: #82530D; --color-accent-dim: #B08A45; --color-on-accent: #FFFFFF;
-      --color-measured: #9A6410; --color-modelled: #3A4FA8; --color-stale: #A8451B; --color-missing: #5F6B73;
-      --color-better: #1B7F4F; --color-worse: #A8331B; --color-fresh: #1B7F4F;
-      --color-s1: #9A6410; --color-s2: #0E6E9E; --color-s3: #1B7F4F; --color-s4: #A8331B; --color-s5: #7A3FC0; --color-s6: #5F6B73;
-      color-scheme: light;
-    }
   }
   /* Instant anchor jumps. Smooth scrolling was observed never starting in
      Chrome for in-page links, so it is deliberately not set. */
@@ -178,7 +170,7 @@
   .btn-quiet:hover { color: var(--color-ink); border-color: transparent; }
   .btn[aria-busy="true"] { color: var(--color-muted); cursor: progress; }
   .btn-copy { min-width: 8.6rem; }  /* "Link copied ✓" fits without reflow */
-  /* One filled amber button per viewport: the header's Sign up — free, except
+  /* One filled amber button per viewport: the header's Sign up, except
      while the gate card is open, when it yields to the card's Create free account. */
   body[data-gate-open] #auth-signup { background: transparent; color: var(--color-ink); border-color: var(--color-control-border); font-weight: 400; }
   /* The sign-up modal's one-line context, rendered by the page beside Clerk's
@@ -337,7 +329,6 @@
   .chart .bar { transition: width .22s ease; }
   .chart .bar[data-dim] { opacity: .55; }
   :root[data-theme="light"] .chart .bar[data-dim] { opacity: 1; fill: color-mix(in srgb, var(--color-measured) 55%, var(--color-muted)); }
-  @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) .chart .bar[data-dim] { opacity: 1; fill: color-mix(in srgb, var(--color-measured) 55%, var(--color-muted)); } }
   .chart .row.lead .name { font-weight: 700; }
   .chart .cmp { opacity: 0; transition: opacity .12s; }
   .chart .row:hover .cmp, .chart .row:focus-within .cmp, .chart.compact .cmp { opacity: 1; }
@@ -381,10 +372,6 @@
   .chart-light { display: none; }
   :root[data-theme="light"] .chart-dark { display: none; }
   :root[data-theme="light"] .chart-light { display: block; }
-  @media (prefers-color-scheme: light) {
-    :root:not([data-theme="dark"]) .chart-dark { display: none; }
-    :root:not([data-theme="dark"]) .chart-light { display: block; }
-  }
   .theme-btn { display: inline-flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem;
                border: 1px solid var(--color-control-border); border-radius: 6px; color: var(--color-muted); background: transparent; cursor: pointer;
                transition: color .12s, border-color .12s, background .12s; }
@@ -392,10 +379,6 @@
   .theme-btn .i-sun { display: none; }
   :root[data-theme="light"] .theme-btn .i-sun { display: block; }
   :root[data-theme="light"] .theme-btn .i-moon { display: none; }
-  @media (prefers-color-scheme: light) {
-    :root:not([data-theme="dark"]) .theme-btn .i-sun { display: block; }
-    :root:not([data-theme="dark"]) .theme-btn .i-moon { display: none; }
-  }
   @media (max-width: 639px) { .theme-btn { width: 2.75rem; height: 2.75rem; } }
 
   /* ---- nav: the active underline sits on the header's bottom rule -------- */
