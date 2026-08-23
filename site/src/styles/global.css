@@ -78,10 +78,15 @@
   }
   /* Instant anchor jumps. Smooth scrolling was observed never starting in
      Chrome for in-page links, so it is deliberately not set. */
-  html { background: var(--color-bg); color-scheme: dark; }
-  body { background: var(--color-bg); color: var(--color-body);
+  /* Only :root paints the page. Painting the same token on <body> as well left
+     a stale layer over the canvas when the theme was toggled at runtime — the
+     tokens are declared on :root, so body kept its first-paint colour while the
+     text switched, which made a toggled page unreadable. */
+  html { background: var(--color-bg); }
+  :root { color-scheme: dark; }
+  body { color: var(--color-body);
          font-family: var(--font-sans); -webkit-font-smoothing: antialiased;
-         transition: background-color .12s, color .12s; }
+         transition: color .12s; }
   /* neutral selection everywhere except running prose, where amber is fine */
   ::selection { background: color-mix(in srgb, var(--color-ink) 18%, transparent); color: inherit; }
   .prose ::selection { background: var(--color-accent); color: var(--color-on-accent); }
