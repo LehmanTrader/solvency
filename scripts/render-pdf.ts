@@ -160,7 +160,7 @@ const CSS = `
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; box-sizing: border-box; }
   :root {
     --page:#F4F3F1; --card:#FFFFFF; --ink:#1B1B20; --body:#3A3D42; --muted:#5C6165;
-    --rule:#E4E2DE; --rule-soft:#EDEBE7; --accent:#8F5214; --amber:#FFB000;
+    --rule:#E4E2DE; --rule-soft:#EDEBE7; --accent:#8B5A10; --amber:#E0A02E;
     --sans: "IBM Plex Sans", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     --display: "Source Serif 4", ui-serif, "New York", "Iowan Old Style", Charter, Georgia, serif;
     --mono: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;

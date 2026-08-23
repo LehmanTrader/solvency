@@ -24,8 +24,8 @@ const ASOF = '2026-08-21';
 const AA_ATTRIB = 'Source: Artificial Analysis (artificialanalysis.ai)';
 
 const PALETTE = THEME === 'light'
-  ? { BG: '#FFFFFF', GRID: '#E7E4DE', TEXT: '#14171A', MUTED: '#6E747B', ACCENT: '#A35F00', ACCENT_DIM: '#B08A45' }
-  : { BG: '#0A0C0D', GRID: '#1C2226', TEXT: '#E6EAED', MUTED: '#78838A', ACCENT: '#FFB000', ACCENT_DIM: '#8A6210' };
+  ? { BG: '#FFFFFF', GRID: '#E7E4DE', TEXT: '#14171A', MUTED: '#6E747B', ACCENT: '#9A6410', ACCENT_DIM: '#B08A45' }
+  : { BG: '#0A0C0D', GRID: '#1C2226', TEXT: '#E6EAED', MUTED: '#78838A', ACCENT: '#E0A02E', ACCENT_DIM: '#9D7020' };
 const { BG, GRID, TEXT, MUTED, ACCENT, ACCENT_DIM } = PALETTE;
 const MONO = "JetBrains Mono, SFMono-Regular, Menlo, Consolas, monospace";
 /** Print figures scale to ~0.75x in the PDF; set type larger so it stays legible. */

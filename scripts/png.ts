@@ -16,7 +16,7 @@ const TMP = join(ROOT, 'reports', 'build', '_png');
 const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const META = JSON.parse(readFileSync(join(ROOT, 'reports', 'charts-light', 'meta.json'), 'utf8'));
 
-const BG = '#0A0C0D', INK = '#E6EAED', MUTED = '#78838A', ACCENT = '#FFB000';
+const BG = '#0A0C0D', INK = '#E6EAED', MUTED = '#78838A', ACCENT = '#E0A02E';
 const BRAND_AMBER = '#E0A02E';
 /** The Solvency mark, inline. `bars` lets a light card reuse it unchanged. */
 const markSvg = (px: number, bars: string) =>

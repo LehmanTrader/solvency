@@ -18,13 +18,17 @@
   --color-rule: #232B31;
   --color-rule-strong: #333D45;  /* axes, section dividers */
   --color-control-border: #5A6670; /* form-control boundaries: 3.1:1 on panel (WCAG 1.4.11) */
-  --color-accent: #FFB000;       /* assertion: CTA fill, measured data */
-  --color-accent-hover: #FFC23A;
-  --color-accent-dim: #A67C22;   /* frontier line */
+  /* The brand amber (brand/mark.svg) carries the accent on dark grounds at
+     8.6:1. On white it is 2.2:1 — far under the 4.5:1 the measured figures
+     need — so the light theme uses the same hue darkened to 4.8:1 rather than
+     a different colour. Both sit at hue ~37 with the mark's 38. */
+  --color-accent: #E0A02E;       /* assertion: CTA fill, measured data */
+  --color-accent-hover: #E7B55C;
+  --color-accent-dim: #9D7020;   /* frontier line */
   --color-on-accent: #0A0C0D;
   /* Provenance and diff semantics (brand review §4.2). Color never travels alone:
      every colored figure sits next to the word measured / modelled / stale / missing. */
-  --color-measured: #FFB000;
+  --color-measured: #E0A02E;
   --color-modelled: #8FA0D8;
   --color-stale: #E8895A;
   --color-missing: #7B858C;
@@ -32,7 +36,7 @@
   --color-worse: #FF6B4A;
   --color-fresh: #45C08A;
   /* Categorical ramp, brand review §4.3. Six is the ceiling; dash carries basis. */
-  --color-s1: #FFB000; --color-s2: #4CC9F0; --color-s3: #45C08A;
+  --color-s1: #E0A02E; --color-s2: #4CC9F0; --color-s3: #45C08A;
   --color-s4: #FF6B4A; --color-s5: #B98CFF; --color-s6: #A9B4BC;
   --font-mono: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
   --font-sans: "IBM Plex Sans", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -58,10 +62,10 @@
     --color-bg: #FBFAF8; --color-panel: #FFFFFF; --color-panel-2: #F4F3F1; --color-panel-3: #E6E4DF;
     --color-ink: #1A1D20; --color-body: #3E464C; --color-muted: #5F6B73;
     --color-rule: #E2E0DC; --color-rule-strong: #CFCCC6; --color-control-border: #858B91;
-    --color-accent: #A35F00; --color-accent-hover: #8A5000; --color-accent-dim: #B08A45; --color-on-accent: #FFFFFF;
-    --color-measured: #A35F00; --color-modelled: #3A4FA8; --color-stale: #A8451B; --color-missing: #5F6B73;
+    --color-accent: #9A6410; --color-accent-hover: #82530D; --color-accent-dim: #B08A45; --color-on-accent: #FFFFFF;
+    --color-measured: #9A6410; --color-modelled: #3A4FA8; --color-stale: #A8451B; --color-missing: #5F6B73;
     --color-better: #1B7F4F; --color-worse: #A8331B; --color-fresh: #1B7F4F;
-    --color-s1: #A35F00; --color-s2: #0E6E9E; --color-s3: #1B7F4F; --color-s4: #A8331B; --color-s5: #7A3FC0; --color-s6: #5F6B73;
+    --color-s1: #9A6410; --color-s2: #0E6E9E; --color-s3: #1B7F4F; --color-s4: #A8331B; --color-s5: #7A3FC0; --color-s6: #5F6B73;
     color-scheme: light;
   }
   @media (prefers-color-scheme: light) {
@@ -69,10 +73,10 @@
       --color-bg: #FBFAF8; --color-panel: #FFFFFF; --color-panel-2: #F4F3F1; --color-panel-3: #E6E4DF;
       --color-ink: #1A1D20; --color-body: #3E464C; --color-muted: #5F6B73;
       --color-rule: #E2E0DC; --color-rule-strong: #CFCCC6; --color-control-border: #858B91;
-      --color-accent: #A35F00; --color-accent-hover: #8A5000; --color-accent-dim: #B08A45; --color-on-accent: #FFFFFF;
-      --color-measured: #A35F00; --color-modelled: #3A4FA8; --color-stale: #A8451B; --color-missing: #5F6B73;
+      --color-accent: #9A6410; --color-accent-hover: #82530D; --color-accent-dim: #B08A45; --color-on-accent: #FFFFFF;
+      --color-measured: #9A6410; --color-modelled: #3A4FA8; --color-stale: #A8451B; --color-missing: #5F6B73;
       --color-better: #1B7F4F; --color-worse: #A8331B; --color-fresh: #1B7F4F;
-      --color-s1: #A35F00; --color-s2: #0E6E9E; --color-s3: #1B7F4F; --color-s4: #A8331B; --color-s5: #7A3FC0; --color-s6: #5F6B73;
+      --color-s1: #9A6410; --color-s2: #0E6E9E; --color-s3: #1B7F4F; --color-s4: #A8331B; --color-s5: #7A3FC0; --color-s6: #5F6B73;
       color-scheme: light;
     }
   }
