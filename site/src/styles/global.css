@@ -169,9 +169,11 @@
   .bars { display: flex; flex-direction: column; gap: .45rem; font-family: var(--font-mono); font-size: .74rem; }
   .bars .br { display: grid; grid-template-columns: minmax(7rem, 14rem) 1fr auto; gap: .75rem; align-items: center; }
   .bars .bl { color: var(--color-body); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .bars .bt { height: .7rem; background: var(--color-rule); border-radius: 2px; overflow: hidden; }
-  .bars .bf { height: 100%; background: var(--color-accent); border-radius: 2px; min-width: 2px; }
-  .bars .bf.ink { background: var(--color-muted); }
+  /* The track must read as empty space, not as a bar: keep it faint so the
+     fill width carries the comparison ($0.12 vs $17.46 is 1% vs 100%). */
+  .bars .bt { height: .7rem; background: color-mix(in srgb, var(--color-rule) 35%, transparent); border-radius: 2px; overflow: hidden; }
+  .bars .bf { display: block; height: 100%; background: var(--color-accent); border-radius: 2px; min-width: 3px; }
+  .bars .bf.ink { background: var(--color-body); }
   .bars .bv { color: var(--color-ink); font-variant-numeric: tabular-nums; text-align: right; }
   .bars .lead .bl, .bars .lead .bv { color: var(--color-measured); font-weight: 700; }
   .bars.modelled .bf { background: var(--color-modelled); }
