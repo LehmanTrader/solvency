@@ -5,70 +5,100 @@
  * so the page is complete without JavaScript and nothing shifts when the
  * island takes over. The island re-renders from compute() on every input.
  */
-import { TIER_NAMES, sources } from '../lib/data.ts';
+import { TIER_NAMES, sources, models } from '../lib/data.ts';
 import { DEFAULTS, compute, groupsHtml, calloutHtml, missingHtml, TIER_HELP } from '../lib/calc.ts';
 import { CLERK_ENABLED } from '../lib/clerk.ts';
 import { GATE_MODE } from '../lib/gate.ts';
 const { rows, missing } = compute(DEFAULTS);
-const WIDE = 846, NARROW = 350;
+// the result card's inner width at the site's one container width (72rem − padding − card padding)
+const WIDE = 1046, NARROW = 350;
 const wide = groupsHtml(rows, DEFAULTS, { width: WIDE, compact: false });
 const narrow = groupsHtml(rows, DEFAULTS, { width: NARROW, compact: true });
 const callout = calloutHtml(rows, DEFAULTS.volume);
 const aa = sources.find((s) => s.benchmark === 'aa-coding-agent-index');
 const verified = aa?.last_verified;
+const fresh = verified ? (Date.now() - Date.parse(verified)) / 86_400_000 <= 30 : false;
+const names = models.slice().sort((a, b) => a.display_name.localeCompare(b.display_name));
 ---
 <section id="calc" aria-labelledby="q-h" data-gated={CLERK_ENABLED ? '1' : '0'} data-gate-mode={GATE_MODE}>
-  <h1 id="q-h" class="h-display max-w-[26ch] text-balance">Which model is cheapest for what you actually ship?</h1>
-  <p class="lede mt-3 max-w-[58ch] text-pretty">Cost per solved task — what it takes to get a task finished, not the token price. Every number carries a source and a verified date.</p>
+  <h1 id="q-h" class="h-display max-w-[30ch] text-balance">Which model is cheapest for what you actually ship?</h1>
+  <p class="lede mt-4 max-w-[52ch] text-pretty">Cost per solved task — what it takes to get a task finished, not the token price. Every number carries a source and a verified date.</p>
 
-  <p class="sentence mt-5 font-[family-name:var(--font-display)] text-[var(--color-ink)] text-[clamp(1.3rem,2.6vw,1.9rem)] leading-[1.6]">
+  <p class="sentence mt-6">
     I build
     <select id="c-tier" class="ctl ctl-inline" aria-label="Task tier: what you build" aria-describedby="c-tier-help" data-ctl="tier">
       {TIER_NAMES.map((t) => <option value={t} selected={t === DEFAULTS.tier}>{t}</option>)}
     </select>
-    tasks, about
+    tasks,<br class="sm:hidden" /> about
     <input id="c-volume" class="ctl ctl-inline" type="number" inputmode="numeric" min="1" max="10000000" step="1" value={DEFAULTS.volume}
       aria-label="Tasks per month" data-ctl="volume" />
     a month.
   </p>
-  <div class="mt-3 grid gap-x-8 gap-y-2 sm:grid-cols-[minmax(0,26rem)_minmax(0,20rem)] items-center">
+  <div class="mt-3 grid gap-x-8 gap-y-3 sm:grid-cols-[minmax(0,26rem)_minmax(0,20rem)] items-center">
     <p id="c-tier-help" class="small" aria-live="polite">{TIER_HELP[DEFAULTS.tier]}</p>
     <div>
       <input id="c-volume-range" class="ctl-range" type="range" min="0" max="1000" step="1" value="325"
         aria-label="Tasks per month, slider" aria-valuetext={`${DEFAULTS.volume} tasks a month`} data-ctl="volume" />
-      <div class="flex justify-between small -mt-1" aria-hidden="true"><span>10</span><span>1k</span><span>10k</span><span>100k</span></div>
+      <div class="ticks small" aria-hidden="true"><span>10</span><span>1k</span><span>10k</span><span>100k</span></div>
     </div>
   </div>
 
-  <div class="card mt-5 overflow-hidden" id="c-result" aria-label="Result">
-    <p id="c-callout" class="px-5 py-4 sm:py-5 text-[var(--color-ink)] text-[1rem] sm:text-[1.1rem] leading-relaxed border-b border-[var(--color-rule)]" set:html={callout}></p>
-    <div id="c-groups" data-wide={WIDE} data-narrow={NARROW}>
+  <div class="card mt-6 overflow-hidden" id="c-result" role="region" aria-label="Result">
+    <p id="c-callout" class="px-5 py-4 sm:py-5 text-[var(--color-ink)] text-[1rem] sm:text-[1.1rem] leading-relaxed border-b border-[var(--color-rule)]" aria-live="polite" aria-atomic="true" set:html={callout}></p>
+    <a href="#c-actions" class="sr-only focus:not-sr-only focus:block focus:m-3 btn">Skip the ranked rows</a>
+    <div id="c-groups" class="relative" data-wide={WIDE} data-narrow={NARROW}>
+      <form id="c-find" class="find" role="search" autocomplete="off">
+        <label for="c-find-q" class="sr-only">Find a model</label>
+        <input id="c-find-q" class="ctl find-q" type="search" list="c-find-list" placeholder="Find a model" aria-describedby="c-find-msg" enterkeyhint="search" />
+        <datalist id="c-find-list">{names.map((m) => <option value={m.display_name} />)}</datalist>
+        <p id="c-find-msg" class="small find-msg" aria-live="polite"></p>
+      </form>
       <div class="hidden sm:block" data-layout="wide" set:html={wide}></div>
       <div class="sm:hidden" data-layout="narrow" set:html={narrow}></div>
     </div>
+
+    <div id="c-gate" class="gate px-5 py-4 border-t border-[var(--color-rule)] hidden" role="region" aria-labelledby="c-gate-h" aria-live="polite" tabindex="-1">
+      <p id="c-gate-h" class="h-card">Keep these assumptions.</p>
+      <p class="mt-1 text-[0.875rem] leading-relaxed text-[var(--color-body)] max-w-[70ch]"><span id="c-gate-delta"></span> Sign in to keep assumptions and save this scenario — free.</p>
+      <p class="small mt-1 max-w-[70ch]">GitHub, Google or email. Assumptions move modelled rows only; measured rows never change.</p>
+      <div class="mt-3 flex flex-wrap gap-2 items-center">
+        <button id="c-gate-signin" type="button" class="btn btn-accent" data-analytics="gate-signup">Sign in — it's free</button>
+        <button id="c-gate-skip" type="button" class="btn btn-quiet">Keep exploring without it →</button>
+      </div>
+    </div>
+
     <details class="disc px-5 py-3 border-t border-[var(--color-rule)]" id="c-missing-d">
       <summary>Not shown (<span data-count>{missing.length}</span>) · no published pass rate, reported as missing, never estimated</summary>
       <p id="c-missing" class="small mt-2 max-w-3xl">{missingHtml(missing)}</p>
     </details>
 
-    <div class="px-5 py-3 border-t border-[var(--color-rule)] flex flex-wrap gap-x-5 gap-y-3 items-center justify-between">
-      <p class="small">
-        <a class="link" href={aa?.attribution_url} rel="noopener">{aa?.attribution}</a>{' '}
-        · verified <span class="text-[var(--color-ink)]">{verified}</span>{' '}
-        · <a class="link" href="/methodology#sources">Sources</a>
-      </p>
-      <div class="flex flex-wrap gap-2 items-center">
-        <button id="c-share" type="button" class="btn" aria-live="polite">Copy link</button>
-        {CLERK_ENABLED && <button id="c-save" type="button" class="btn btn-accent" data-ctl="save" aria-live="polite">Save scenario</button>}
+    <div id="c-actions" class="px-5 py-3 border-t border-[var(--color-rule)] flex flex-wrap gap-x-6 gap-y-3 items-start justify-between">
+      <div class="min-w-0">
+        <p class="small">
+          <a class="link" href={aa?.attribution_url} rel="noopener">{aa?.attribution}</a>{' '}
+          · verified <span class={fresh ? 't-fresh' : 'text-[var(--color-ink)]'}>{verified}</span>{' '}
+          · <a class="link" href="/methodology#sources">Sources</a>
+        </p>
+        <p class="small mt-1">
+          <span class="text-[var(--color-ink)]">Pro (soon):</span> export CSV/JSON · price-change alerts · your own prices
+          {CLERK_ENABLED && <>{' '}→ <button id="c-notify" type="button" class="link-btn" data-analytics="pro-notify">Notify me</button></>}
+        </p>
+      </div>
+      <div class="flex flex-col gap-1 items-start sm:items-end">
+        <div class="flex flex-wrap gap-2 items-center">
+          <button id="c-share" type="button" class="btn" aria-live="polite">Copy link</button>
+          {CLERK_ENABLED && <button id="c-save" type="button" class="btn btn-accent" data-ctl="save" data-analytics="save-scenario" aria-live="polite" aria-describedby="c-save-why">Save scenario</button>}
+        </div>
+        {CLERK_ENABLED && <p id="c-save-why" class="small">Permalink with your name, re-priced when prices change.</p>}
       </div>
     </div>
 
     <details class="disc px-5 py-3 border-t border-[var(--color-rule)]" id="c-assume">
       <summary>Assumptions (4) · move modelled rows only</summary>
-      <div class="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="assume mt-4 grid gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-4">
         <label class="block">
           <span class="label">Retry model</span>
-          <select id="c-variant" class="ctl mt-2 w-full text-sm" data-ctl="variant">
+          <select id="c-variant" class="ctl ctl-row mt-2 w-full" data-ctl="variant">
             <option value="naive">naive — cost ÷ pass rate</option>
             <option value="capped">capped — max 3 attempts</option>
             <option value="truncatedGeometric">truncated geometric</option>
@@ -76,35 +106,29 @@ const verified = aa?.last_verified;
         </label>
         <label class="block">
           <span class="label">Cache hit rate <span id="c-cache-v" class="text-[var(--color-ink)]">0%</span></span>
-          <input id="c-cache" type="range" min="0" max="90" step="10" value="0" class="ctl-range mt-3" data-ctl="cache" aria-label="Cache hit rate, percent" />
+          <input id="c-cache" type="range" min="0" max="90" step="10" value="0" class="ctl-range ctl-row mt-2" data-ctl="cache" aria-label="Cache hit rate, percent" />
         </label>
         <label class="block">
           <span class="label">Human takeover cost, $</span>
-          <input id="c-residual" type="number" inputmode="numeric" min="0" max="1000000" step="10" value="0" class="ctl mt-2 w-full text-sm" data-ctl="residual" />
+          <input id="c-residual" type="number" inputmode="numeric" min="0" max="1000000" step="10" value="0" class="ctl ctl-row mt-2 w-full" data-ctl="residual" />
         </label>
-        <label class="flex items-center gap-3 sm:pt-6">
-          <input id="c-frontier" type="checkbox" checked class="size-4 accent-[var(--color-ink)]" data-ctl="frontier" />
+        <label class="block">
           <span class="label">Frontier efficiency</span>
+          <span class="ctl-row mt-2 flex items-center gap-3"><input id="c-frontier" type="checkbox" checked class="chk" data-ctl="frontier" /><span class="text-[0.875rem] text-[var(--color-body)]">0.6× loops on heavy, frontier-class models</span></span>
         </label>
       </div>
-      <p class="small mt-4 max-w-3xl">These move modelled rows only. Measured rows carry a cost the benchmark observed and cannot be changed by any assumption. Frontier efficiency (0.6× loops on heavy tasks for frontier-class models) has no published source and is applied only to modelled rows — untick it to see unadjusted results. <a class="link" href="/methodology">Methodology</a>.</p>
-
-      <div id="c-gate" class="card card-pad mt-4 hidden" role="region" aria-labelledby="c-gate-h" aria-live="polite">
-        <p id="c-gate-h" class="h-card">Sign in to tune assumptions and keep this scenario.</p>
-        <p class="small mt-1 max-w-2xl">Free account — GitHub, Google or an email code. These controls move modelled rows only; measured rows never change.</p>
-        <div class="mt-3 flex flex-wrap gap-2 items-center">
-          <button id="c-gate-signin" type="button" class="btn btn-accent">Sign in to save this scenario</button>
-          <button id="c-gate-skip" type="button" class="btn btn-quiet">Keep exploring without it →</button>
-        </div>
-      </div>
+      <p class="mt-4 text-[0.8rem] leading-relaxed text-[var(--color-muted)] max-w-[70ch]">These move modelled rows only. Measured rows carry a cost the benchmark observed and cannot be changed by any assumption. Frontier efficiency has no published source and is applied only to modelled rows — untick it to see unadjusted results. <a class="link" href="/methodology">Methodology</a>.</p>
     </details>
   </div>
 </section>
 
 <script>
-  import { compute, groupsHtml, calloutHtml, missingHtml, TIER_HELP, validModelId, allChartRows, type Settings } from '../lib/calc.ts';
+  import { compute, groupsHtml, calloutHtml, missingHtml, gateDelta, TIER_HELP, validModelId, allChartRows, type Settings, type Row } from '../lib/calc.ts';
   import { patchRanked, scatterPareto, VOL_MIN, VOL_MAX } from '../lib/charts.ts';
-  import { gateFor, GATE_SEEN_KEY, GATE_DECLINED_KEY, type Control, type GateMode } from '../lib/gate.ts';
+  import { gateFor, GATE_SEEN_KEY, type Control, type GateMode } from '../lib/gate.ts';
+  import { signedIn, onClerk, openSignUp, wireSave } from '../lib/clerk-client.ts';
+  import { wireCopy } from '../lib/copy.ts';
+  import { models } from '../lib/data.ts';
 
   const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T | null;
   const section = $('calc')!;
@@ -132,21 +156,30 @@ const verified = aa?.last_verified;
     const v = Number(CTRL.volume.value) || 1;
     CTRL.range.value = String(volumeToSlider(v));
     CTRL.range.setAttribute('aria-valuetext', `${v.toLocaleString()} tasks a month`);
+    CTRL.range.style.setProperty('--fill', `${volumeToSlider(v) / 10}%`);
+  };
+  // content-sized sentence controls where field-sizing is unsupported
+  const sizeInline = () => {
+    if (CSS.supports('field-sizing', 'content')) return;
+    CTRL.volume.style.width = `${Math.max(3, CTRL.volume.value.length) + 0.4}ch`;
+    const opt = CTRL.tier.selectedOptions[0]?.text ?? '';
+    CTRL.tier.style.width = `${opt.length * 0.62 + 1.2}em`;
   };
 
   // ---- URL state is the single source of truth ---------------------------
   // Every value is validated: a crafted link must not be able to throw inside
-  // the engine or leave a select with no option chosen.
+  // the engine or leave a select with no option chosen. Out-of-range values
+  // keep the default rather than clamping to a number nobody asked for.
   const q = new URLSearchParams(location.search);
-  const num = (v: string | null, lo: number, hi: number) => { const n = Number(v); return v !== null && v !== '' && Number.isFinite(n) ? Math.min(hi, Math.max(lo, Math.round(n))) : null; };
+  const num = (v: string | null, lo: number, hi: number) => { const n = Number(v); return v !== null && v !== '' && Number.isFinite(n) && n >= lo && n <= hi ? Math.round(n) : null; };
   if (TIERS.includes(q.get('tier') ?? '')) CTRL.tier.value = q.get('tier')!;
   if (VARIANTS.includes(q.get('variant') ?? '')) CTRL.variant.value = q.get('variant')!;
   const vol = num(q.get('volume'), 1, 10_000_000); if (vol) CTRL.volume.value = String(vol);
   const cache = num(q.get('cache'), 0, 90); if (cache !== null) CTRL.cache.value = String(Math.round(cache / 10) * 10);
   const res = num(q.get('residual'), 0, 1_000_000); if (res !== null) CTRL.residual.value = String(res);
   if (q.get('frontier') === '0' || q.get('frontier') === '1') CTRL.frontier.checked = q.get('frontier') === '1';
-  const highlight = validModelId(q.get('highlight'));
-  syncSlider();
+  let highlight = validModelId(q.get('highlight'));
+  syncSlider(); sizeInline();
 
   const settings = (): Settings => ({
     tier: CTRL.tier.value as Settings['tier'],
@@ -172,22 +205,26 @@ const verified = aa?.last_verified;
   }
 
   let last: Settings | null = null;
+  let lastRows: Row[] = [];
   function render(pushUrl = true) {
     const s = settings();
     last = s;
     $('c-cache-v')!.textContent = `${CTRL.cache.value}%`;
+    CTRL.cache.style.setProperty('--fill', `${(Number(CTRL.cache.value) / 90) * 100}%`);
     $('c-tier-help')!.textContent = TIER_HELP[s.tier];
     const { rows, missing } = compute(s);
+    lastRows = rows;
     $('c-callout')!.innerHTML = calloutHtml(rows, s.volume);
     const wideEl = groupsEl.querySelector<HTMLElement>('[data-layout="wide"]')!;
     const narrowEl = groupsEl.querySelector<HTMLElement>('[data-layout="narrow"]')!;
     const visible = wideEl.offsetParent ? wideEl : narrowEl;
-    const w = widthOf(visible.querySelector('[data-chart]') ?? visible) ;
+    const w = widthOf(visible.querySelector('[data-chart]') ?? visible);
     patchGroups(wideEl, groupsHtml(rows, s, { width: visible === wideEl ? w : Number(groupsEl.dataset.wide), compact: false, highlight }));
     patchGroups(narrowEl, groupsHtml(rows, s, { width: visible === narrowEl ? w : Number(groupsEl.dataset.narrow), compact: true, highlight }));
     $('c-missing')!.textContent = missingHtml(missing);
     $('c-missing-d')!.querySelector('[data-count]')!.textContent = String(missing.length);
     renderScatter(rows, s);
+    sizeInline();
     if (pushUrl) {
       const p = new URLSearchParams({ tier: s.tier, volume: String(s.volume), variant: s.variant,
         cache: CTRL.cache.value, residual: String(s.residual), frontier: s.frontier ? '1' : '0' });
@@ -198,7 +235,7 @@ const verified = aa?.last_verified;
 
   // the below-fold scatter (index.astro) follows the same settings
   const scatter = document.querySelector<HTMLElement>('#scatter');
-  function renderScatter(rows: any[], s: Settings) {
+  function renderScatter(rows: Row[], s: Settings) {
     if (!scatter) return;
     const showStale = (scatter.querySelector<HTMLInputElement>('#scatter-stale')?.checked) ?? false;
     const all = allChartRows(rows, s);
@@ -211,15 +248,55 @@ const verified = aa?.last_verified;
   }
   scatter?.querySelector('#scatter-stale')?.addEventListener('change', () => render(false));
 
+  // ---- find a model: expands the right group and pins the row -------------
+  const findQ = $<HTMLInputElement>('c-find-q')!, findMsg = $('c-find-msg')!;
+  const byName = (query: string) => {
+    const s = query.trim().toLowerCase(); if (!s) return null;
+    return models.find((m) => m.display_name.toLowerCase() === s) ?? models.find((m) => m.display_name.toLowerCase().startsWith(s)) ?? models.find((m) => m.display_name.toLowerCase().includes(s)) ?? null;
+  };
+  function pin(query: string) {
+    const m = byName(query);
+    if (!m) { if (query.trim()) findMsg.textContent = `No tracked model called “${query.trim()}”.`; else { findMsg.textContent = ''; highlight = undefined; render(); } return; }
+    highlight = m.model_id; render();
+    const visible = groupsEl.querySelector<HTMLElement>('[data-layout="wide"]')!.offsetParent ? 'wide' : 'narrow';
+    const row = groupsEl.querySelector<SVGGElement>(`[data-layout="${visible}"] .row.hl`);
+    if (row) {
+      const d = row.closest('details'); if (d) d.open = true;
+      findMsg.textContent = `${m.display_name} is pinned in the ${row.closest<HTMLElement>('[data-group]')!.dataset.group} group.`;
+      row.scrollIntoView({ block: 'center' });
+    } else {
+      const missingD = $<HTMLDetailsElement>('c-missing-d')!; missingD.open = true;
+      findMsg.textContent = `${m.display_name} has no published pass rate — listed under Not shown.`;
+      missingD.scrollIntoView({ block: 'center' });
+    }
+  }
+  $('c-find')!.addEventListener('submit', (e) => { e.preventDefault(); pin(findQ.value); });
+  findQ.addEventListener('input', () => { const m = byName(findQ.value); if (!findQ.value.trim() || (m && m.display_name.toLowerCase() === findQ.value.trim().toLowerCase())) pin(findQ.value); });
+
   // ---- gate (docs/landing-spec.md §3; one switch in src/lib/gate.ts) ------
+  // Soft gate, demo first: the first assumption change is applied so the
+  // visitor sees the rows move, then the card beneath them names the concrete
+  // delta. "Keep exploring" reverts to the values before the touch. Once per
+  // session; after that an assumption touch opens the sign-up modal directly.
   const gated = section.dataset.gated === '1';
   const MODE = section.dataset.gateMode as GateMode;
-  const clerk = () => (window as any).Clerk;
-  const signedIn = () => Boolean(clerk()?.user);
   const ss = { get: (k: string) => { try { return sessionStorage.getItem(k) === '1'; } catch { return false; } },
                set: (k: string) => { try { sessionStorage.setItem(k, '1'); } catch {} } };
-  const openSignIn = () => clerk()?.openSignIn?.({ afterSignInUrl: location.href, afterSignUpUrl: location.href });
-  const gateCard = $('c-gate'), assume = $<HTMLDetailsElement>('c-assume');
+  const gateCard = $('c-gate')!;
+  let demo: { before: Settings; beforeRows: Row[]; trigger: HTMLElement } | null = null;
+  const CONTROL_LABEL = (el: HTMLInputElement | HTMLSelectElement): string => {
+    switch (el.dataset.ctl as Control) {
+      case 'cache': return `Cache ${CTRL.cache.value}%`;
+      case 'residual': return `Takeover $${Number(CTRL.residual.value || 0).toLocaleString()}`;
+      case 'frontier': return `Frontier efficiency ${CTRL.frontier.checked ? 'on' : 'off'}`;
+      default: return 'That change';
+    }
+  };
+  const applySettings = (s: Settings) => {
+    CTRL.tier.value = s.tier; CTRL.volume.value = String(s.volume); syncSlider();
+    CTRL.variant.value = s.variant; CTRL.cache.value = String(Math.round(s.cache * 100));
+    CTRL.residual.value = String(s.residual); CTRL.frontier.checked = s.frontier;
+  };
   const restore = (el: HTMLInputElement | HTMLSelectElement) => {
     if (!last) return;
     switch (el.dataset.ctl as Control) {
@@ -231,61 +308,55 @@ const verified = aa?.last_verified;
       case 'frontier': (el as HTMLInputElement).checked = last.frontier; break;
     }
   };
-  /** true = let the change through */
+  /** true = let the change through; sets up the demo card on a first soft touch */
   function allow(el: HTMLInputElement | HTMLSelectElement, ev: Event): boolean {
     if (!gated || signedIn()) return true;
     const cls = gateFor(el.dataset.ctl as Control, MODE);
     if (cls === 'free') return true;
-    if (cls === 'soft' && ss.get(GATE_DECLINED_KEY)) return true;
-    ev.stopImmediatePropagation();
-    restore(el);
-    if (cls === 'hard' || ss.get(GATE_SEEN_KEY)) { openSignIn(); return false; }
+    if (demo) return true;                         // the demo is running: keep showing the effect
+    if (cls === 'hard' || ss.get(GATE_SEEN_KEY)) { // seen this session: the modal, directly
+      ev.stopImmediatePropagation(); restore(el); openSignUp(); return false;
+    }
     ss.set(GATE_SEEN_KEY);
-    if (assume && !assume.open) assume.open = true;
-    gateCard?.classList.remove('hidden');
-    gateCard?.querySelector<HTMLElement>('#c-gate-signin')?.focus();
-    return false;
+    demo = { before: last ?? settings(), beforeRows: lastRows, trigger: el };
+    return true;
   }
-  $('c-gate-signin')?.addEventListener('click', openSignIn);
-  $('c-gate-skip')?.addEventListener('click', () => { ss.set(GATE_DECLINED_KEY); gateCard?.classList.add('hidden'); CTRL.cache.focus(); });
-
-  const save = $<HTMLButtonElement>('c-save');
-  save?.addEventListener('click', async () => {
-    if (!signedIn()) { openSignIn(); return; }
-    try {
-      const u = clerk().user;
-      const prev: string[] = Array.isArray(u.unsafeMetadata?.scenarios) ? u.unsafeMetadata.scenarios : [];
-      const list = [location.href, ...prev.filter((x) => x !== location.href)].slice(0, 20);
-      await u.update({ unsafeMetadata: { ...u.unsafeMetadata, scenarios: list } });
-      save.textContent = 'Saved ✓';
-    } catch { save.textContent = 'Could not save'; }
-    setTimeout(() => (save.textContent = 'Save scenario'), 1800);
-  });
-  const onClerk = () => {
-    const sync = () => { if (signedIn()) gateCard?.classList.add('hidden'); };
-    sync(); clerk()?.addListener?.(sync);
-  };
-  if (clerk()?.loaded) onClerk(); else document.addEventListener('clerk:ready', onClerk, { once: true });
+  function afterRender(el: HTMLInputElement | HTMLSelectElement) {
+    if (!demo || gateFor(el.dataset.ctl as Control, MODE) === 'free') return;
+    $('c-gate-delta')!.textContent = gateDelta(demo.beforeRows, lastRows, CONTROL_LABEL(el));
+    if (gateCard.classList.contains('hidden')) {
+      gateCard.classList.remove('hidden');
+      gateCard.scrollIntoView({ block: 'nearest' });
+      $('c-gate-signin')?.focus({ preventScroll: true });
+    }
+  }
+  function closeGate(revert: boolean) {
+    const d = demo; demo = null;
+    gateCard.classList.add('hidden');
+    if (d && revert) { applySettings(d.before); render(); }
+    d?.trigger.focus();
+  }
+  $('c-gate-signin')?.addEventListener('click', openSignUp);
+  $('c-gate-skip')?.addEventListener('click', () => closeGate(true));
+  gateCard.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); closeGate(true); } });
+  $('c-notify')?.addEventListener('click', openSignUp);
+  wireSave($<HTMLButtonElement>('c-save'));
+  onClerk(() => { if (signedIn()) { demo = null; gateCard.classList.add('hidden'); } });
 
   // ---- wiring -------------------------------------------------------------
   const inputs = [CTRL.tier, CTRL.volume, CTRL.variant, CTRL.cache, CTRL.residual, CTRL.frontier];
   for (const el of inputs) {
-    el.addEventListener('input', (ev) => { if (!allow(el, ev)) return; if (el === CTRL.volume) syncSlider(); render(); });
+    el.addEventListener('input', (ev) => { if (!allow(el, ev)) return; if (el === CTRL.volume) syncSlider(); render(); afterRender(el); });
     el.addEventListener('change', (ev) => { if (!allow(el, ev)) return; });
   }
   CTRL.range.addEventListener('input', (ev) => {
     if (!allow(CTRL.range, ev)) return;
     const v = sliderToVolume(Number(CTRL.range.value));
     CTRL.volume.value = String(v);
-    CTRL.range.setAttribute('aria-valuetext', `${v.toLocaleString()} tasks a month`);
+    syncSlider();
     render();
   });
-  const share = $<HTMLButtonElement>('c-share')!;
-  share.addEventListener('click', async () => {
-    try { await navigator.clipboard.writeText(location.href); share.textContent = 'Link copied ✓'; }
-    catch { share.textContent = 'Copy failed — use the address bar'; }
-    setTimeout(() => (share.textContent = 'Copy link'), 1600);
-  });
+  wireCopy($<HTMLButtonElement>('c-share')!, () => location.href);
 
   // re-layout on resize (width changes only; row heights are fixed)
   let raf = 0, lastW = 0;
@@ -295,5 +366,9 @@ const verified = aa?.last_verified;
     cancelAnimationFrame(raf); raf = requestAnimationFrame(() => render(false));
   }).observe(groupsEl);
   render(false);
-  if (highlight) document.querySelector('.row.hl')?.scrollIntoView({ block: 'center' });
+  if (highlight) {
+    const row = document.querySelector('.row.hl');
+    const d = row?.closest('details'); if (d) d.open = true;
+    row?.scrollIntoView({ block: 'center' });
+  }
 </script>

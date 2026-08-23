@@ -94,7 +94,7 @@ export function groupsHtml(rows: Row[], s: Settings, o: GroupOpts): string {
     const cr = chartRows(rows, g.key, s);
     const svg = cr.length ? rankedBars(cr, { width: o.width, volume: s.volume, basis: g.basis, compact: o.compact, highlight: o.highlight }) : '';
     const empty = `<p class="small py-2">No ${g.basis} row has both a verified price and a published pass rate under these settings.</p>`;
-    const head = `<p class="eyebrow"><span class="t-${g.basis}">${g.title}</span> <span class="font-normal normal-case tracking-normal">· ${g.note}</span></p>`;
+    const head = `<p class="ghead"><span class="gword t-${g.basis}">${g.title}</span> · ${g.note}</p>`;
     if (g.basis === 'stale') {
       return `<details class="disc group-${g.basis} px-5 py-3 border-t border-[var(--color-rule)]" data-group="${g.basis}">
         <summary><span class="t-stale">Stale pass rates</span> (<span data-count>${cr.length}</span>) · ${g.note}</summary>
@@ -108,22 +108,51 @@ export function groupsHtml(rows: Row[], s: Settings, o: GroupOpts): string {
   }).join('');
 }
 
-/** Compares only within one cost basis; ranking measured against modelled is invalid. */
+/**
+ * The result headline. Compares only within one cost basis; ranking measured
+ * against modelled is invalid. Names are neutral bold — the verdict is carried
+ * by the "▼ Nx cheaper" figure in the better/worse color, the same treatment
+ * the compare page uses.
+ */
 export function calloutHtml(rows: Row[], volume: number): string {
   const g = GROUPS.map((g) => ({ g, rows: rows.filter((x) => x.basisKey === g.key) })).find((p) => p.rows.length > 1);
   const pool = g?.rows ?? [];
-  const tone = g ? `t-${g.g.basis}` : '';
   const cheapest = pool[0];
   const best = pool.slice().sort((a, b) => b.r.pass_rate - a.r.pass_rate)[0];
   if (!cheapest || !best) return '<span class="text-[var(--color-muted)]">No model has both a verified price and a published pass rate under these settings.</span>';
-  const name = (x: Row) => `<strong class="${tone}">${x.m.display_name}</strong>`;
+  const name = (x: Row) => `<strong>${x.m.display_name}</strong>`;
   if (cheapest.m.model_id === best.m.model_id)
     return `${name(cheapest)} is both the cheapest per solved task and the highest pass rate here — ${money(cheapest.cost)} per solved task, ${moneyMonth(cheapest.cost * volume)} a month.`;
   const x = best.cost / cheapest.cost;
+  const pts = Math.round((best.r.pass_rate - cheapest.r.pass_rate) * 100);
+  const forWhat = pts > 0 ? `for ${pts} fewer point${pts === 1 ? '' : 's'} of pass rate` : 'at the same pass rate';
   return `${name(cheapest)} costs <strong>${money(cheapest.cost)}</strong> per solved task against
-    <strong>${best.m.display_name}</strong> at ${money(best.cost)} — <strong>${x >= 10 ? x.toFixed(0) : x.toFixed(1)}x</strong> more
-    for ${((best.r.pass_rate - cheapest.r.pass_rate) * 100).toFixed(0)} more points of pass rate.
+    ${name(best)} at ${money(best.cost)} — <strong class="t-better">▼ ${x >= 10 ? x.toFixed(0) : x.toFixed(1)}x cheaper</strong> ${forWhat}.
     Over ${volume.toLocaleString()} tasks that is <strong>${moneyMonth((best.cost - cheapest.cost) * volume)}</strong> a month.`;
+}
+
+/**
+ * The sentence the soft gate uses after it has let an assumption change
+ * through: which modelled row moved the most, from what to what. Measured
+ * rows are never in this list — no assumption can move them.
+ */
+export function gateDelta(before: Row[], after: Row[], control: string): string {
+  const prev = new Map(before.filter((r) => r.basisKey !== 'measured_by_source').map((r) => [r.m.model_id, r.cost]));
+  // the visible modelled group first; stale rows (behind a disclosure) only if nothing else moved
+  const pickFrom = (key: string) => {
+    let pick: { name: string; a: number; b: number } | null = null;
+    for (const r of after) {
+      if (r.basisKey !== key) continue;
+      const a = prev.get(r.m.model_id);
+      if (a === undefined || Math.abs(a - r.cost) < 0.005) continue;
+      if (!pick || Math.abs(a - r.cost) > Math.abs(pick.a - pick.b)) pick = { name: r.m.display_name, a, b: r.cost };
+    }
+    return pick;
+  };
+  const pick = pickFrom('modelled_by_solvency') ?? pickFrom('historical_at_run_date');
+  return pick
+    ? `${control} moves ${pick.name} from ${money(pick.a)} to ${money(pick.b)} a task.`
+    : `${control} leaves every modelled row where it is at this tier.`;
 }
 
 export const missingHtml = (missing: string[]) =>

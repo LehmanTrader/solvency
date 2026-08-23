@@ -32,15 +32,17 @@ export function verdictHtml(a: Side, b: Side, volume: number): string {
   const flips = tokenCheap.m.model_id !== cheap.m.model_id;
   return `<p class="label">Verdict · <span class="t-${cheap.basis}">${cheap.basis}</span> basis</p>
     <p class="mt-2 text-[1.1rem] leading-relaxed text-[var(--color-ink)]">
-      <strong class="t-${cheap.basis}">${cheap.m.display_name}</strong> costs <strong>${money(cheap.cost!)}</strong> per solved task against
-      <strong>${dear.m.display_name}</strong> at ${money(dear.cost!)} — <strong class="text-[var(--color-better)]">▼ ${fmtX(x)} cheaper</strong>.
+      <strong>${cheap.m.display_name}</strong> costs <strong>${money(cheap.cost!)}</strong> per solved task against
+      <strong>${dear.m.display_name}</strong> at ${money(dear.cost!)} — <strong class="t-better">▼ ${fmtX(x)} cheaper</strong>.
       Over ${volume.toLocaleString()} tasks that is <strong>${moneyMonth(saving)}</strong> a month.
     </p>
     <p class="mt-3 text-sm text-[var(--color-muted)] leading-relaxed">On output token price alone ${tokenCheap.m.display_name} looks ${fmtX(ratio(a.m.output_per_mtok, b.m.output_per_mtok))} cheaper.${flips ? ' The ranking reverses once you divide by pass rate — the cheaper tokens do not win the task.' : ' The ranking holds, but the margin changes.'}</p>`;
 }
 
+/** Cheaper first, so the chart's amber line is the verdict winner. */
 export function seriesFor(sides: Side[]): Series[] {
-  return sides.filter((s) => s.cost !== null).map((s) => ({ id: s.m.model_id, name: s.m.display_name, basis: s.basis!, perTask: s.cost! }));
+  return sides.filter((s) => s.cost !== null).sort((a, b) => a.cost! - b.cost!)
+    .map((s) => ({ id: s.m.model_id, name: s.m.display_name, basis: s.basis!, perTask: s.cost! }));
 }
 
 export const sourceOf = (s: Side) => (s.r ? sourceFor(s.r.benchmark) : null);

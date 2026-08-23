@@ -4,9 +4,11 @@
  * Three classes of control:
  *   free  — the question itself: tier, volume, retry model, compare, copy link.
  *   soft  — the assumption controls (cache, takeover, frontier). They move
- *           modelled rows only. First touch shows an inline sign-in card with a
- *           "keep exploring" escape; decline and they stay usable, but the
- *           scenario cannot be saved.
+ *           modelled rows only. The first touch is let through so the visitor
+ *           sees the rows move, then an inline card beneath them names the
+ *           concrete delta and asks for the free account. "Keep exploring
+ *           without it" reverts the change; from then on (once per session)
+ *           touching an assumption opens the sign-up modal directly.
  *   hard  — Save scenario (later: export, alerts). Opens Clerk directly.
  *
  * GATE_MODE is the one switch. 'spec' is the table above; 'hard' gates every
@@ -32,6 +34,5 @@ export function gateFor(control: Control, mode: GateMode = GATE_MODE): GateClass
   return SPEC[control];
 }
 
-/** sessionStorage keys: the card is shown once per session; a decline is remembered. */
+/** sessionStorage key: the demo card is shown once per session; after that the modal opens directly. */
 export const GATE_SEEN_KEY = 'solvency.gate.seen';
-export const GATE_DECLINED_KEY = 'solvency.gate.declined';

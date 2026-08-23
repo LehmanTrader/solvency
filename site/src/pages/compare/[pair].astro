@@ -1,8 +1,8 @@
 ---
 import Base from '../../layouts/Base.astro';
-import Badge from '../../components/Badge.astro';
 import Provenance from '../../components/Provenance.astro';
 import { TIER_NAMES } from '../../lib/data.ts';
+import { CLERK_ENABLED } from '../../lib/clerk.ts';
 import { side, verdictHtml, seriesFor, sourceOf } from '../../lib/compare.ts';
 import { volumeLines, money, moneyMonth } from '../../lib/charts.ts';
 import { fmtX, ratio } from '../../lib/headline.ts';
@@ -22,7 +22,7 @@ const TIER = 'moderate', VOLUME = 200;
 const sa = side(a.model_id, TIER), sb = side(b.model_id, TIER);
 const verdict = verdictHtml(sa, sb, VOLUME);
 const series = seriesFor([sa, sb]);
-const linesWide = series.length ? volumeLines(series, { width: 640, volume: VOLUME, compact: false }) : '';
+const linesWide = series.length ? volumeLines(series, { width: 600, volume: VOLUME, compact: false }) : '';
 const linesNarrow = series.length ? volumeLines(series, { width: 350, volume: VOLUME, compact: true }) : '';
 const price = (n) => n === null || n === undefined ? null : `$${n.toFixed(3).replace(/0+$/, '').replace(/\.$/, '')}`;
 const cell = (s, f) => s.cost === null ? 'missing' : f(s.cost);
@@ -31,7 +31,6 @@ const rows = [
   ['Output $/Mtok', price(a.output_per_mtok), price(b.output_per_mtok), ''],
   ['Cached input $/Mtok', price(a.cached_input_per_mtok) ?? 'missing', price(b.cached_input_per_mtok) ?? 'missing', ''],
   ['Pass rate', sa.r ? `${Math.round(sa.r.pass_rate * 100)}%` : 'missing', sb.r ? `${Math.round(sb.r.pass_rate * 100)}%` : 'missing', ''],
-  ['Cost basis', sa.basis ?? 'missing', sb.basis ?? 'missing', 'basis'],
   ['Cost per solved task', cell(sa, money), cell(sb, money), 'solved'],
   ['Cost per month', cell(sa, (c) => moneyMonth(c * VOLUME)), cell(sb, (c) => moneyMonth(c * VOLUME)), 'month'],
 ];
@@ -40,17 +39,15 @@ const desc = both && sa.basis === sb.basis
   ? `${(sa.cost <= sb.cost ? a : b).display_name} costs ${fmtX(ratio(sa.cost, sb.cost))} less per solved task (${sa.basis}). Token price alone would tell you ${(a.output_per_mtok <= b.output_per_mtok ? a : b).display_name} is ${fmtX(ratio(a.output_per_mtok, b.output_per_mtok))} cheaper.`
   : `Verified API pricing for ${a.display_name} and ${b.display_name}. Cost per solved task requires a published pass rate for both, on the same cost basis.`;
 const src = sourceOf(sa) ?? sourceOf(sb);
+const statusNote = [a, b].filter((m) => m.status !== 'current').map((m) => `${m.display_name} is ${m.status}`).join('; ');
 ---
 <Base title={`${a.display_name} vs ${b.display_name} — cost per solved task — Solvency`} description={desc}>
-  <div class="wrap pt-8 md:pt-12 max-w-6xl" id="cmp" data-a={a.model_id} data-b={b.model_id}>
+  <div class="wrap pt-8 md:pt-12" id="cmp" data-a={a.model_id} data-b={b.model_id}>
     <p class="eyebrow">Head to head</p>
     <h1 class="h-page mt-3">{a.display_name} <span class="text-[var(--color-muted)]">vs</span> {b.display_name}</h1>
-    <div class="mt-3 flex flex-wrap gap-2">
-      <Badge status={a.status}>{a.display_name}: {a.status}</Badge>
-      <Badge status={b.status}>{b.display_name}: {b.status}</Badge>
-    </div>
+    {statusNote && <p class="small mt-2">{statusNote}.</p>}
 
-    <p class="mt-6 font-[family-name:var(--font-display)] text-[var(--color-ink)] text-[clamp(1.2rem,2.2vw,1.5rem)] leading-[1.7]">
+    <p class="sentence mt-6 !text-[clamp(1.2rem,2.2vw,1.5rem)]">
       For
       <select id="k-tier" class="ctl ctl-inline" aria-label="Task tier">
         {TIER_NAMES.map((t) => <option value={t} selected={t === TIER}>{t}</option>)}
@@ -60,32 +57,40 @@ const src = sourceOf(sa) ?? sourceOf(sb);
       a month.
     </p>
 
-    <div class="mt-6 grid gap-4 lg:grid-cols-[1fr_1.2fr] items-start">
-      <div class="card card-pad" id="k-verdict" set:html={verdict}></div>
+    <div class="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] items-start">
+      <div class="grid gap-4">
+        <div class="card">
+          <div class="card-pad" id="k-verdict" aria-live="polite" aria-atomic="true" set:html={verdict}></div>
+          <div class="px-5 py-3 border-t border-[var(--color-rule)] flex flex-wrap gap-2 items-center">
+            <button id="k-share" type="button" class="btn" aria-live="polite">Copy link</button>
+            {CLERK_ENABLED && <button id="k-save" type="button" class="btn btn-accent" data-analytics="save-scenario" aria-live="polite">Save scenario</button>}
+            <button id="k-download" type="button" class="btn" data-analytics="pro-download" aria-describedby="k-pro">Download table <span id="k-pro" class="pill pill-ink ml-1">Pro</span></button>
+          </div>
+        </div>
+        <div class="card overflow-hidden"><div class="tbl-wrap"><table class="tbl">
+          <caption>Verified pricing, pass rate and cost per solved task for {a.display_name} and {b.display_name}</caption>
+          <thead><tr><th scope="col"><span class="sr-only">Figure</span></th><th scope="col" class="r"><a class="py-2 inline-block" href={`/models/${a.model_id}`}>{a.display_name}</a></th><th scope="col" class="r"><a class="py-2 inline-block" href={`/models/${b.model_id}`}>{b.display_name}</a></th></tr></thead>
+          <tbody>{rows.map(([k, x, y, f]) => (
+            <tr>
+              <th scope="row">{k}</th>
+              <td class={`r ${x === 'missing' ? 'missing' : f === 'solved' ? sa.basis : 'ink'}`}><span data-f={f ? `${f}-a` : undefined}>{x}</span>{f === 'solved' && x !== 'missing' && <span class="basis">{sa.basis}</span>}</td>
+              <td class={`r ${y === 'missing' ? 'missing' : f === 'solved' ? sb.basis : 'ink'}`}><span data-f={f ? `${f}-b` : undefined}>{y}</span>{f === 'solved' && y !== 'missing' && <span class="basis">{sb.basis}</span>}</td>
+            </tr>))}</tbody>
+        </table></div></div>
+      </div>
       <div class="card card-pad" id="k-chart">
-        <p class="label">Cost per month against volume · drag the marker</p>
+        <p class="label">Cost per month against tasks per month · drag the marker</p>
         {series.length ? (
           <>
-            <div class="mt-3 hidden sm:block" data-chart data-layout="wide" data-w="640" set:html={linesWide}></div>
+            <div class="mt-3 hidden sm:block" data-chart data-layout="wide" data-w="600" set:html={linesWide}></div>
             <div class="mt-3 sm:hidden" data-chart data-layout="narrow" data-w="350" set:html={linesNarrow}></div>
             <p class="small mt-2">Solid line: measured. Dashed: modelled. Dotted: stale. Per-task cost is constant, so on log axes every line has the same slope; the gap is the verdict.</p>
           </>
         ) : <p class="small mt-3">No line to draw: neither model has a published pass rate.</p>}
       </div>
     </div>
-
-    <div class="mt-6 card overflow-hidden"><div class="tbl-wrap"><table class="tbl">
-      <thead><tr><th></th><th class="r"><a href={`/models/${a.model_id}`}>{a.display_name}</a></th><th class="r"><a href={`/models/${b.model_id}`}>{b.display_name}</a></th></tr></thead>
-      <tbody>{rows.map(([k, x, y, f]) => (
-        <tr>
-          <td class="muted">{k}</td>
-          <td class={`r ${x === 'missing' ? 'missing' : f === 'solved' ? sa.basis : 'ink'}`} data-f={f ? `${f}-a` : undefined}>{x}</td>
-          <td class={`r ${y === 'missing' ? 'missing' : f === 'solved' ? sb.basis : 'ink'}`} data-f={f ? `${f}-b` : undefined}>{y}</td>
-        </tr>))}</tbody>
-    </table></div></div>
     <Provenance source={src?.attribution} href={src?.attribution_url ?? src?.source_url} verified={a.last_verified} note="prices from each provider's pricing page; measured rows ignore the tier">
-      · <a class="link" href="/methodology">Methodology</a>
-      · <a class="link" href={`/?tier=${TIER}&volume=${VOLUME}`} id="k-all">All models at these settings</a>
+      {' '}· <a class="link" href="/methodology">Methodology</a>{' '}· <a class="link" href={`/?tier=${TIER}&volume=${VOLUME}`} id="k-all">All models at these settings</a>
     </Provenance>
   </div>
 </Base>
@@ -93,6 +98,8 @@ const src = sourceOf(sa) ?? sourceOf(sb);
 <script>
   import { side, verdictHtml, seriesFor } from '../../lib/compare.ts';
   import { volumeLines, money, moneyMonth, VOL_MIN, VOL_MAX } from '../../lib/charts.ts';
+  import { openSignUp, wireSave } from '../../lib/clerk-client.ts';
+  import { wireCopy } from '../../lib/copy.ts';
   const root = document.getElementById('cmp')!;
   const A = root.dataset.a!, B = root.dataset.b!;
   const tierEl = document.getElementById('k-tier') as HTMLSelectElement;
@@ -100,7 +107,9 @@ const src = sourceOf(sa) ?? sourceOf(sb);
   const TIERS = ['light', 'moderate', 'heavy'];
   const q = new URLSearchParams(location.search);
   if (TIERS.includes(q.get('tier') ?? '')) tierEl.value = q.get('tier')!;
-  const v = Number(q.get('volume')); if (q.get('volume') !== null && Number.isFinite(v)) volEl.value = String(Math.min(10_000_000, Math.max(1, Math.round(v))));
+  // out-of-range volume keeps the default rather than clamping
+  const v = Number(q.get('volume')); if (q.get('volume') !== null && Number.isFinite(v) && v >= 1 && v <= 10_000_000) volEl.value = String(Math.round(v));
+  const sizeInline = () => { if (!CSS.supports('field-sizing', 'content')) volEl.style.width = `${Math.max(3, volEl.value.length) + 0.4}ch`; };
 
   function render() {
     const tier = tierEl.value as 'light' | 'moderate' | 'heavy';
@@ -122,9 +131,15 @@ const src = sourceOf(sa) ?? sourceOf(sb);
     set('month-a', sa, (c) => moneyMonth(c * volume)); set('month-b', sb, (c) => moneyMonth(c * volume));
     (document.getElementById('k-all') as HTMLAnchorElement).href = `/?tier=${tier}&volume=${volume}`;
     history.replaceState(null, '', `${location.pathname}?tier=${tier}&volume=${volume}`);
+    sizeInline();
   }
   tierEl.addEventListener('input', render);
   volEl.addEventListener('input', render);
+
+  // share and save (docs/landing-spec.md §3: copy is free, save and export hard-gate)
+  wireCopy(document.getElementById('k-share') as HTMLButtonElement, () => location.href);
+  wireSave(document.getElementById('k-save') as HTMLButtonElement | null);
+  document.getElementById('k-download')?.addEventListener('click', openSignUp);
 
   // drag the volume marker: pointer x → log volume
   let dragging = false;
@@ -143,5 +158,6 @@ const src = sourceOf(sa) ?? sourceOf(sb);
   chart.addEventListener('pointermove', (e) => { if (!dragging) return; const svg = (e.target as Element).closest('svg'); if (!svg) return; volEl.value = String(toVolume(svg as SVGSVGElement, e.clientX)); render(); });
   addEventListener('pointerup', () => { dragging = false; });
   new ResizeObserver(() => render()).observe(chart);
+  sizeInline();
   if ([...q.keys()].length) render();
 </script>
