@@ -328,9 +328,12 @@
   .chart a:hover .name, .chart a:focus .name { text-decoration: underline; }
   .chart .row:hover .track { fill: color-mix(in srgb, var(--color-ink) 6%, var(--color-panel-3)); }
   .chart .row.hl .track { fill: color-mix(in srgb, var(--color-ink) 10%, var(--color-panel-3)); }
-  .chart .row.hl .name { text-decoration: underline; text-underline-offset: 3px; }
+  /* Find a model emphasises the matched row at the destination: bold, ink, underlined */
+  .chart .row.hl .name { font-weight: 700; fill: var(--color-ink); text-decoration: underline; text-underline-offset: 3px; }
   .chart .frontier { stroke: var(--color-accent-dim); fill: none; stroke-width: 1.5; }
   .chart.scatter text.lbl { paint-order: stroke; stroke: var(--color-panel); stroke-width: 3px; stroke-linejoin: round; }
+  /* the volume marker's figures sit over the lines: same halo as the scatter labels */
+  .chart.lines text[data-f] { paint-order: stroke; stroke: var(--color-panel); stroke-width: 3.5px; stroke-linejoin: round; }
   .chart .marker { stroke: var(--color-ink); stroke-dasharray: 3 3; }
   .chart .pt-measured { fill: var(--color-measured); transition: stroke-width .12s; }
   .chart .pt-modelled { fill: transparent; stroke: var(--color-modelled); stroke-width: 2; transition: stroke-width .12s; }

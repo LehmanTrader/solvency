@@ -232,7 +232,9 @@ export function scatterPareto(rows: ChartRow[], o: ScatterOpts): string {
   const pts = rows.filter((r) => r.basis !== 'stale' || o.showStale);
   // legend and the y caption live above the frame, never over a gridline;
   // no rotated axis title, so the ticks sit tight against the plot
-  const ml = 44, mr = compact ? 20 : 24, mt = 34, mb = 30;
+  // compact keeps a taller bottom band so the tick row and the axis title
+  // never share space at the right-hand corner
+  const ml = 44, mr = compact ? 20 : 24, mt = 34, mb = compact ? 38 : 30;
   const pw = w - ml - mr, ph = h - mt - mb;
   const passes = pts.map((p) => p.pass), costs = pts.map((p) => p.cost);
   const xmin = Math.max(0, Math.floor((Math.min(...passes) - 0.04) * 10) / 10);
@@ -367,6 +369,23 @@ export interface LinesOpts { width: number; height?: number; volume: number; com
 export const VOL_MIN = 10, VOL_MAX = 100_000;
 
 /**
+ * Baselines for a column of labels, pushed apart to `gap` and kept between
+ * `lo` and `hi`. Order is preserved, so a label never crosses its neighbour.
+ */
+function declutter(desired: number[], gap: number, lo: number, hi: number): number[] {
+  if (desired.length < 2) return desired.map((y) => Math.min(hi, Math.max(lo, y)));
+  const order = desired.map((_, i) => i).sort((a, b) => desired[a] - desired[b]);
+  const out = desired.slice();
+  let prev = -Infinity;
+  for (const i of order) { out[i] = Math.max(desired[i], prev + gap); prev = out[i]; }
+  const over = Math.max(...out) - hi;
+  if (over > 0) for (let i = 0; i < out.length; i++) out[i] -= over;
+  const under = lo - Math.min(...out);
+  if (under > 0) for (let i = 0; i < out.length; i++) out[i] += under;
+  return out;
+}
+
+/**
  * Series color: with one or two lines the lead is amber (the verdict) and the
  * other is ink, so the categorical ramp never competes with the provenance
  * rule; three to six lines use the validated ramp. Dash always carries basis.
@@ -376,7 +395,7 @@ export function volumeLines(seriesIn: Series[], o: LinesOpts): string {
   const compact = o.compact ?? o.width < 560;
   const w = Math.max(300, Math.round(o.width));
   const h = o.height ?? (compact ? Math.round(w * 0.75) : Math.round(w * 0.56));
-  const ml = 52, mr = compact ? 14 : 150, mt = 22, mb = 30;
+  const ml = 52, mr = compact ? 14 : 150, mt = 22, mb = compact ? 38 : 30;
   const pw = w - ml - mr, ph = h - mt - mb;
   const lx0 = Math.log10(VOL_MIN), lx1 = Math.log10(VOL_MAX);
   const costs = series.map((s) => s.perTask);
@@ -404,19 +423,25 @@ export function volumeLines(seriesIn: Series[], o: LinesOpts): string {
   const vol = Math.min(VOL_MAX, Math.max(VOL_MIN, o.volume));
   const vx = r1(X(vol));
   const right = vx > ml + pw * 0.7;
+  // Two models can cost almost the same: their labels would print on top of
+  // each other. Push the baselines apart to a minimum gap, keeping the order
+  // and the block inside the frame, so the pair always reads as two rows.
+  const rightY = declutter(series.map((s) => Y(s.perTask * VOL_MAX) + 4), 26, mt + 10, mt + ph - 12);
+  const atY = declutter(series.map((s) => Y(s.perTask * vol) - 7), 19, mt + 14, mt + ph - 2);
   const lines = series.map((s, i) => {
     const k = cls(i);
     const y0 = r1(Y(s.perTask * VOL_MIN)), y1 = r1(Y(s.perTask * VOL_MAX));
     const at = s.perTask * vol;
-    const label = compact ? '' : `<text class="${k}" x="${ml + pw + 8}" y="${y1 + 4}" font-size="${FS_S}">${esc(trunc(s.name, mr - 12, FS_S))}</text>` +
-      `<text class="t3" x="${ml + pw + 8}" y="${y1 + 16}" font-size="${FS_S}">${BASIS_WORD[s.basis]}</text>`;
+    const ly = r1(rightY[i]);
+    const label = compact ? '' : `<text class="${k}" x="${ml + pw + 8}" y="${ly}" font-size="${FS_S}">${esc(trunc(s.name, mr - 12, FS_S))}</text>` +
+      `<text class="t3" x="${ml + pw + 8}" y="${ly + 12}" font-size="${FS_S}">${BASIS_WORD[s.basis]}</text>`;
     return `<g aria-label="${esc(`${s.name}, ${s.basis}: ${moneyMonth(at)} a month at ${vol.toLocaleString()} tasks`)}"><title>${esc(`${s.name} · ${BASIS_WORD[s.basis]} · ${money(s.perTask)} per solved task`)}</title>` +
       `<path class="line ${s.basis} ${k}" d="M${r1(X(VOL_MIN))} ${y0} L${r1(X(VOL_MAX))} ${y1}"/>` +
       `<circle class="${k}" cx="${vx}" cy="${r1(Y(at))}" r="4" fill="var(--color-bg)" stroke-width="2"/>` +
-      `<text class="${k}" data-f="at-${i}" x="${vx + (right ? -8 : 8)}" y="${r1(Y(at)) - 7}" text-anchor="${right ? 'end' : 'start'}" font-size="${FS_M}" font-weight="700">${moneyMonth(at)}</text>${label}</g>`;
+      `<text class="${k}" data-f="at-${i}" x="${vx + (right ? -8 : 8)}" y="${r1(atY[i])}" text-anchor="${right ? 'end' : 'start'}" font-size="${FS_M}" font-weight="700">${moneyMonth(at)}</text>${label}</g>`;
   }).join('');
 
-  const legend = !compact ? '' : `<g font-size="${FS_S}">${series.map((s, i) => `<text class="${cls(i)}" x="${ml + 4}" y="${mt + 12 + i * 13}">— ${esc(trunc(s.name, pw - 60, FS_S))} · ${BASIS_WORD[s.basis]}</text>`).join('')}</g>`;
+  const legend = !compact ? '' : `<g font-size="${FS_S}">${series.map((s, i) => `<text class="${cls(i)}" x="${ml + 4}" y="${mt + 12 + i * 15}">— ${esc(trunc(s.name, pw - 60, FS_S))} · ${BASIS_WORD[s.basis]}</text>`).join('')}</g>`;
   const title = 'Monthly cost against tasks per month';
   const desc = `Log-log lines for ${series.map((s) => `${s.name} (${s.basis}, ${money(s.perTask)} per solved task)`).join(', ')} from ${VOL_MIN} to ${VOL_MAX.toLocaleString()} tasks a month. Marker at ${vol.toLocaleString()} tasks.`;
   // the volume marker's label sits above the frame so it can never collide with the x ticks or the axis title
