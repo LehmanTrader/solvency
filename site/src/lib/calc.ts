@@ -35,7 +35,11 @@ export const GROUPS: { key: string; basis: Basis; title: string; note: string }[
     note: 'Pass rates published before 2026. Cost recomputed at current prices; the pass rate is old.' },
 ];
 
-export interface Row { m: any; r: any; cost: number; basis: string; basisKey: string; attempt: number; }
+export interface Row {
+  m: any; r: any; cost: number; basis: string; basisKey: string; attempt: number;
+  /** Set when a cache rate was asked for but the provider publishes no cached-input price: the row is computed uncached and says so. Group membership never changes with an assumption. */
+  uncached?: boolean;
+}
 
 export function compute(s: Settings): { rows: Row[]; missing: string[] } {
   const base = defaultOptions(assumptions);
@@ -51,9 +55,14 @@ export function compute(s: Settings): { rows: Row[]; missing: string[] } {
   for (const m of models) {
     const r = bestResultFor(m.model_id);
     if (!r) { if (m.status === 'current') missing.push(m.display_name); continue; }
-    const out = costPerSolvedTask(m as any, s.tier, tiers[s.tier], r.pass_rate, opts, extrasFor(r));
+    // An assumption may move a modelled row; it may never move it out of its
+    // group. A model with no published cached-input price is computed at the
+    // uncached price and annotated, rather than dropping into "Not shown".
+    const uncached = s.cache > 0 && m.cached_input_per_mtok === null;
+    const o = uncached ? { ...opts, cacheHitFraction: 0 } : opts;
+    const out = costPerSolvedTask(m as any, s.tier, tiers[s.tier], r.pass_rate, o, extrasFor(r));
     if (out.value === null) { missing.push(`${m.display_name} (${out.missing[0] ?? 'missing input'})`); continue; }
-    rows.push({ m, r, cost: out.value[s.variant], basis: out.value.costBasis, basisKey: r.cost_basis, attempt: out.value.attempt.costUsd });
+    rows.push({ m, r, cost: out.value[s.variant], basis: out.value.costBasis, basisKey: r.cost_basis, attempt: out.value.attempt.costUsd, uncached });
   }
   rows.sort((a, b) => a.cost - b.cost);
   return { rows, missing };
@@ -76,6 +85,7 @@ export function chartRows(rows: Row[], key: string, s: Settings): ChartRow[] {
     id: x.m.model_id, name: x.m.display_name, href: `/models/${x.m.model_id}`,
     cost: x.cost, pass: x.r.pass_rate, basis: BASIS_OF[key] ?? 'modelled',
     harness: harnessOf(x.r), attempt: x.attempt,
+    note: x.uncached && x.basisKey !== 'measured_by_source' ? 'no cached-input price published — computed uncached' : undefined,
     compare: g.length > 1 ? pairHref(x === lead ? second.m.model_id : lead.m.model_id, x.m.model_id, s) : undefined,
   }));
 }
@@ -131,32 +141,43 @@ export function calloutHtml(rows: Row[], volume: number): string {
     Over ${volume.toLocaleString()} tasks that is <strong>${moneyMonth((best.cost - cheapest.cost) * volume)}</strong> a month.`;
 }
 
+export interface GateDelta { moved: boolean; text: string; }
+
 /**
  * The sentence the soft gate uses after it has let an assumption change
- * through: which modelled row moved the most, from what to what. Measured
- * rows are never in this list — no assumption can move them.
+ * through. It names the visitor's pinned model if that moved, otherwise the
+ * top modelled row (the one the eye is on), otherwise the largest mover.
+ * Measured rows are never in this list — no assumption can move them.
+ * `moved: false` means no row changed: the caller must not gate a no-op.
  */
-export function gateDelta(before: Row[], after: Row[], control: string): string {
+export function gateDelta(before: Row[], after: Row[], control: string, highlight?: string): GateDelta {
   const prev = new Map(before.filter((r) => r.basisKey !== 'measured_by_source').map((r) => [r.m.model_id, r.cost]));
-  // the visible modelled group first; stale rows (behind a disclosure) only if nothing else moved
-  const pickFrom = (key: string) => {
-    let pick: { name: string; a: number; b: number } | null = null;
-    for (const r of after) {
-      if (r.basisKey !== key) continue;
-      const a = prev.get(r.m.model_id);
-      if (a === undefined || Math.abs(a - r.cost) < 0.005) continue;
-      if (!pick || Math.abs(a - r.cost) > Math.abs(pick.a - pick.b)) pick = { name: r.m.display_name, a, b: r.cost };
+  const movedOf = (r: Row) => { const a = prev.get(r.m.model_id); return a !== undefined && Math.abs(a - r.cost) >= 0.005 ? { name: r.m.display_name, a, b: r.cost } : null; };
+  const modelled = after.filter((r) => r.basisKey === 'modelled_by_solvency');
+  const pinned = highlight ? after.find((r) => r.m.model_id === highlight && r.basisKey !== 'measured_by_source') : undefined;
+  let pick = (pinned && movedOf(pinned)) || (modelled[0] && movedOf(modelled[0])) || null;
+  if (!pick) {
+    // the visible modelled group first; stale rows (behind a disclosure) only if nothing else moved
+    for (const key of ['modelled_by_solvency', 'historical_at_run_date']) {
+      for (const r of after) {
+        if (r.basisKey !== key) continue;
+        const d = movedOf(r); if (!d) continue;
+        if (!pick || Math.abs(d.a - d.b) > Math.abs(pick.a - pick.b)) pick = d;
+      }
+      if (pick) break;
     }
-    return pick;
-  };
-  const pick = pickFrom('modelled_by_solvency') ?? pickFrom('historical_at_run_date');
+  }
   return pick
-    ? `${control} moves ${pick.name} from ${money(pick.a)} to ${money(pick.b)} a task.`
-    : `${control} leaves every modelled row where it is at this tier.`;
+    ? { moved: true, text: `${control} moves ${pick.name} from ${money(pick.a)} to ${money(pick.b)} a task.` }
+    : { moved: false, text: `${control} leaves every modelled row where it is at this tier.` };
 }
 
-export const missingHtml = (missing: string[]) =>
-  missing.length ? `No published pass rate, so reported as missing rather than estimated: ${missing.join(', ')}.` : 'Every tracked current model has a published pass rate under these settings.';
+const escText = (t: string) => t.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!));
+/** The "Not shown" sentence; the pinned model's name (from Find a model) is emphasised at the destination. */
+export const missingHtml = (missing: string[], emphasise?: string) =>
+  missing.length
+    ? `No published pass rate, so reported as missing rather than estimated: ${missing.map((n) => emphasise && n.replace(/ \(.*$/, '') === emphasise ? `<strong class="text-[var(--color-ink)]">${escText(n)}</strong>` : escText(n)).join(', ')}.`
+    : 'Every tracked current model has a published pass rate under these settings.';
 
 /** Validated model id for ?highlight= */
 export const validModelId = (id: string | null) => (id && models.some((m) => m.model_id === id)) ? id : undefined;

@@ -1,6 +1,6 @@
-import modelsFile from '../data/models.json';
-import benchmarksFile from '../data/benchmarks.json';
-import assumptions from '../data/assumptions.json';
+import modelsFile from '../data/models.json' with { type: 'json' };
+import benchmarksFile from '../data/benchmarks.json' with { type: 'json' };
+import assumptions from '../data/assumptions.json' with { type: 'json' };
 import type { Model, BenchmarkResult } from './engine.ts';
 
 export { modelsFile, benchmarksFile, assumptions };

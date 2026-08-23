@@ -54,6 +54,7 @@ const aa = sources.find((s) => s.benchmark === 'aa-coding-agent-index');
   <!-- self-hosted fonts (site/public/fonts); the two above-the-fold faces are preloaded -->
   <link rel="preload" href="/fonts/source-serif-4-latin.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="preload" href="/fonts/jetbrains-mono-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="/fonts/ibm-plex-sans-latin.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="sitemap" href="/sitemap-index.xml" />
   {CLERK_ENABLED && (
     <script async crossorigin="anonymous"
@@ -87,19 +88,22 @@ const aa = sources.find((s) => s.benchmark === 'aa-coding-agent-index');
       var n=document.getElementById('nav-list');function more(){if(n.scrollLeft+n.clientWidth<n.scrollWidth-1)n.setAttribute('data-more','1');else n.removeAttribute('data-more');}n.addEventListener('scroll',more,{passive:true});addEventListener('resize',more);more();})();</script>
       {CLERK_ENABLED && (
         <div class="shrink-0 flex items-center">
-          <button type="button" id="auth-signin" class="btn btn-accent">Sign in</button>
+          <a href="#" id="auth-signin" class="small mr-3 hidden sm:inline text-[var(--color-ink)] hover:underline">Sign in</a>
+          <button type="button" id="auth-signup" class="btn btn-accent" data-analytics="nav-signup">Sign up — free</button>
           <div id="auth-user" class="hidden min-h-8" aria-label="Account"></div>
         </div>
       )}
       <script>
-        import { onClerk, openSignIn, clerkAppearance } from '../lib/clerk-client.ts';
-        const b = document.getElementById('auth-signin'), u = document.getElementById('auth-user');
-        if (b && u) {
-          b.addEventListener('click', openSignIn);
+        import { onClerk, openSignIn, openSignUp, clerkAppearance, wireAnalytics } from '../lib/clerk-client.ts';
+        wireAnalytics();
+        const b = document.getElementById('auth-signup'), s = document.getElementById('auth-signin'), u = document.getElementById('auth-user');
+        if (b && s && u) {
+          s.addEventListener('click', (e) => { e.preventDefault(); openSignIn(); });
+          b.addEventListener('click', () => openSignUp('gate', 'Create your free account: keep assumptions, save scenarios, get a permalink with your name.'));
           onClerk(() => {
             const c = (window as any).Clerk; if (!c) return;
             const on = !!c.user;
-            b.classList.toggle('hidden', on); u.classList.toggle('hidden', !on);
+            b.classList.toggle('hidden', on); s.style.display = on ? 'none' : ''; u.classList.toggle('hidden', !on);
             if (on && !u.hasChildNodes()) c.mountUserButton(u, { appearance: clerkAppearance() });
             if (!on && u.hasChildNodes()) { c.unmountUserButton(u); u.innerHTML = ''; }
           });
@@ -116,7 +120,7 @@ const aa = sources.find((s) => s.benchmark === 'aa-coding-agent-index');
         <p class="wordmark"><b>S</b>OLVENCY</p>
         <p class="mt-3 text-sm max-w-md leading-relaxed">Cost per solved task for AI coding models. Every figure carries a source and a verification date. Where a number does not exist, it is reported as missing rather than estimated.</p>
         <p class="mt-4 small">Benchmark data is third-party, cited and linked, and is not redistributed.</p>
-        <p class="small"><a class="link" href={aa?.attribution_url}>{aa?.attribution}</a>.</p>
+        <p class="small"><a class="link small-sans" href={aa?.attribution_url}>{aa?.attribution}</a>.</p>
       </div>
       <div>
         <p class="label">Site</p>

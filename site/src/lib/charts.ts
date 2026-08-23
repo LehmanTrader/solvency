@@ -30,6 +30,8 @@ export interface ChartRow {
   attempt?: number;
   /** link to /compare/… for this row */
   compare?: string;
+  /** a caveat printed in the row's detail (e.g. computed uncached) */
+  note?: string;
 }
 
 export const BASIS_OF: Record<string, Basis> = {
@@ -120,7 +122,7 @@ export function rankedBars(rowsIn: ChartRow[], o: RankedOpts): string {
     const y = headH + i * rowH;
     const bw = max > 0 ? Math.max(3, Math.round((r.cost / max) * barMax)) : 3;
     const month = moneyMonth(r.cost * o.volume);
-    const detail = [r.harness ? `harness ${r.harness}` : '', `pass rate ${pct(r.pass)}`, r.attempt != null ? `${money(r.attempt)} per attempt` : ''].filter(Boolean).join(' · ');
+    const detail = [r.harness ? `harness ${r.harness}` : '', `pass rate ${pct(r.pass)}`, r.attempt != null ? `${money(r.attempt)} per attempt` : '', r.note ?? ''].filter(Boolean).join(' · ');
     const label = `${i + 1}. ${r.name}, ${basis}, ${money(r.cost)} per solved task, ${month} a month at ${o.volume.toLocaleString()} tasks. ${detail}.`;
     const cls = `row${i === 0 ? ' lead' : ''}${o.highlight === r.id ? ' hl' : ''}`;
     // full-row-height hit rects so every link is a ≥ 44 px target on small screens
@@ -258,11 +260,19 @@ export function scatterPareto(rows: ChartRow[], o: ScatterOpts): string {
 
   const front = paretoFrontier(pts);
   let path = '';
+  // the frontier's axis-aligned segments are obstacles for label placement
+  const segs: { x0: number; y0: number; x1: number; y1: number }[] = [];
   front.forEach((p, i) => {
     const x = r1(X(p.pass)), y = r1(Y(p.cost));
     if (i === 0) path += `M${x} ${y}`;
-    else { const prev = front[i - 1]; path += ` L${x} ${r1(Y(prev.cost))} L${x} ${y}`; }
+    else {
+      const prev = front[i - 1], px = r1(X(prev.pass)), py = r1(Y(prev.cost));
+      path += ` L${x} ${py} L${x} ${y}`;
+      segs.push({ x0: Math.min(px, x), y0: py, x1: Math.max(px, x), y1: py }, { x0: x, y0: Math.min(py, y), x1: x, y1: Math.max(py, y) });
+    }
   });
+  const crossesLine = (x0: number, y0: number, x1: number, y1: number) =>
+    segs.some((g) => x0 < g.x1 + 1 && x1 > g.x0 - 1 && y0 < g.y1 + 1 && y1 > g.y0 - 1);
   const onFront = new Set(front.map((p) => p.id));
   const cheapest = pts.slice().sort((a, b) => a.cost - b.cost)[0]?.id;
   const dearest = pts.slice().sort((a, b) => b.cost - a.cost)[0]?.id;
@@ -288,16 +298,30 @@ export function scatterPareto(rows: ChartRow[], o: ScatterOpts): string {
       { x: x - d, y: y + 4, anchor: 'end' },
       { x: x - d, y: y - 6, anchor: 'end' }, { x: x - d, y: y + 14, anchor: 'end' },
       { x: x - d, y: y - 17, anchor: 'end' }, { x: x - d, y: y + 25, anchor: 'end' },
+      { x: x + d, y: y - 28, anchor: 'start' }, { x: x + d, y: y + 36, anchor: 'start' },
+      { x: x - d, y: y - 28, anchor: 'end' }, { x: x - d, y: y + 36, anchor: 'end' },
+      { x, y: y - 22, anchor: 'middle' }, { x, y: y + 31, anchor: 'middle' },
     ];
+    const box = (t: typeof tries[number]) => {
+      const x0 = t.anchor === 'start' ? t.x : t.anchor === 'end' ? t.x - lw : t.x - lw / 2;
+      return { x0, x1: x0 + lw, y0: t.y - LH + 2, y1: t.y + 3 };
+    };
+    const inFrame = (b: { x0: number; x1: number; y0: number; y1: number }) => b.x0 >= ml - 6 && b.x1 <= w - 2 && b.y0 >= mt - 2 && b.y1 <= mt + ph + 2;
+    const overlap = (b: { x0: number; x1: number; y0: number; y1: number }) => placed.reduce((n, o2) => n + Math.max(0, Math.min(b.x1, o2.x1) - Math.max(b.x0, o2.x0)) * Math.max(0, Math.min(b.y1, o2.y1) - Math.max(b.y0, o2.y0)), 0);
     let pick: typeof tries[number] | null = null;
     for (const t of tries) {
-      const x0 = t.anchor === 'start' ? t.x : t.anchor === 'end' ? t.x - lw : t.x - lw / 2, x1 = x0 + lw, y0 = t.y - LH + 2, y1 = t.y + 3;
-      if (x0 < ml - 6 || x1 > w - 2 || y0 < mt - 2 || y1 > mt + ph + 2) continue;
-      if (placed.some((b) => x0 < b.x1 && x1 > b.x0 && y0 < b.y1 && y1 > b.y0)) continue;
-      pick = t; placed.push({ x0, y0, x1, y1 }); break;
+      const b = box(t);
+      if (!inFrame(b) || crossesLine(b.x0, b.y0, b.x1, b.y1) || overlap(b) > 0) continue;
+      pick = t; placed.push(b); break;
     }
-    // a frontier/lead label is never dropped: fall back to the first slot that fits the frame
-    if (!pick && (onFront.has(p.id) || p.id === o.lead)) pick = tries.find((t) => (t.anchor === 'start' ? t.x + lw : t.x) <= w - 2) ?? tries[7];
+    // a frontier/lead label is never dropped: fall back to the in-frame slot
+    // that overlaps least, never one the frontier line crosses
+    if (!pick && (onFront.has(p.id) || p.id === o.lead)) {
+      const ranked = tries.map((t) => ({ t, b: box(t) })).filter(({ b }) => inFrame(b) && !crossesLine(b.x0, b.y0, b.x1, b.y1))
+        .sort((a, c) => overlap(a.b) - overlap(c.b));
+      const best = ranked[0] ?? { t: tries[7], b: box(tries[7]) };
+      pick = best.t; placed.push(best.b);
+    }
     label.set(p.id, pick);
   }
   const marks = pts.slice().sort((a, b) => (a.basis === 'measured' ? 1 : 0) - (b.basis === 'measured' ? 1 : 0)).map((p) => {
@@ -309,7 +333,7 @@ export function scatterPareto(rows: ChartRow[], o: ScatterOpts): string {
         ? `<circle class="pt-modelled" cx="${x}" cy="${y}" r="${R}"/>`
         : `<circle class="pt-stale" cx="${x}" cy="${y}" r="${R}"/>`;
     const l = label.get(p.id);
-    const text = l ? `<text class="${p.basis === 'measured' ? '' : 't2'}" x="${r1(l.x)}" y="${r1(l.y)}" text-anchor="${l.anchor}" font-size="${FS}"${p.id === o.lead ? ' font-weight="700"' : ''}>${esc(p.name)}</text>` : '';
+    const text = l ? `<text class="lbl${p.basis === 'measured' ? '' : ' t2'}" x="${r1(l.x)}" y="${r1(l.y)}" text-anchor="${l.anchor}" font-size="${FS}"${p.id === o.lead ? ' font-weight="700"' : ''}>${esc(p.name)}</text>` : '';
     // the designed tooltip (index.astro) reads these; aria-label carries the same sentence
     const data = `data-name="${esc(p.name)}" data-basis="${BASIS_WORD[p.basis]}" data-cost="${money(p.cost)}" data-pass="${pct(p.pass)}"${p.harness ? ` data-harness="${esc(p.harness)}"` : ''}`;
     return `<a class="pt" href="${esc(p.href)}" aria-label="${esc(tip)}" ${data}><circle class="hit" cx="${x}" cy="${y}" r="${compact ? 22 : 14}" fill="transparent"/>${mark}${text}</a>`;
@@ -356,10 +380,11 @@ export function volumeLines(seriesIn: Series[], o: LinesOpts): string {
   const pw = w - ml - mr, ph = h - mt - mb;
   const lx0 = Math.log10(VOL_MIN), lx1 = Math.log10(VOL_MAX);
   const costs = series.map((s) => s.perTask);
-  const ymin = Math.pow(10, Math.floor(Math.log10(Math.min(...costs) * VOL_MIN)));
-  const ymax = Math.pow(10, Math.ceil(Math.log10(Math.max(...costs) * VOL_MAX)));
+  // y-domain fitted to the drawn lines (a quarter decade of padding), not to whole decades
+  const ly0 = Math.log10(Math.min(...costs) * VOL_MIN) - 0.25, ly1 = Math.log10(Math.max(...costs) * VOL_MAX) + 0.25;
+  const ymin = Math.pow(10, Math.ceil(ly0)), ymax = Math.pow(10, Math.floor(ly1));
   const X = (v: number) => ml + ((Math.log10(v) - lx0) / (lx1 - lx0)) * pw;
-  const Y = (c: number) => mt + ph - ((Math.log10(c) - Math.log10(ymin)) / (Math.log10(ymax) - Math.log10(ymin))) * ph;
+  const Y = (c: number) => mt + ph - ((Math.log10(c) - ly0) / (ly1 - ly0)) * ph;
   const kfmt = (n: number) => n >= 1000 ? `${n / 1000}k` : String(n);
   const mfmt = (n: number) => n >= 1e6 ? `$${n / 1e6}M` : n >= 1000 ? `$${n / 1000}k` : `$${n}`;
   const cls = (i: number) => series.length <= 2 && i === 1 ? 's-ink' : `s${i + 1}`;

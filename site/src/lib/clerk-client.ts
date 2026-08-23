@@ -44,9 +44,67 @@ export function clerkAppearance() {
 
 const urls = () => ({ afterSignInUrl: location.href, afterSignUpUrl: location.href });
 
-/** Gates open sign-UP: a first-time visitor is asked to create the free account, not to "welcome back". */
-export const openSignUp = () => clerk()?.openSignUp?.({ ...urls(), appearance: clerkAppearance() });
+/** Why the modal opened. Stored on the user as unsafeMetadata.intent so intents are countable in Clerk's user list. */
+export type Intent = 'gate' | 'save' | 'pro-notify' | 'pro-download';
+
+/**
+ * One line of OUR copy above Clerk's modal. clerk-js takes its own copy only
+ * at load(), so the entry point's context is rendered by the page: a fixed
+ * strip themed like the card, shown while the modal is in the DOM.
+ */
+function showContext(text: string): void {
+  let el = document.getElementById('auth-context');
+  if (!el) {
+    el = document.createElement('p');
+    el.id = 'auth-context';
+    el.className = 'auth-context';
+    el.setAttribute('role', 'status');
+    document.body.appendChild(el);
+  }
+  el.textContent = text;
+  el.setAttribute('data-show', '1');
+  // hide when Clerk's modal leaves the DOM (close, Escape, or sign-up completes)
+  let seen = false;
+  const mo = new MutationObserver(() => {
+    const open = document.querySelector('.cl-modalBackdrop, .cl-modalContent');
+    if (open) { seen = true; return; }
+    if (!seen) return;
+    el!.removeAttribute('data-show'); mo.disconnect();
+  });
+  mo.observe(document.body, { childList: true, subtree: true });
+  setTimeout(() => { if (!seen) { el!.removeAttribute('data-show'); mo.disconnect(); } }, 4000);
+}
+
+/**
+ * Gates open sign-UP: a first-time visitor is asked to create the free
+ * account, not to "welcome back". `intent` tags the trigger in the user's
+ * unsafeMetadata (with the scenario URL) and `context` is the strip's text.
+ */
+export const openSignUp = (intent: Intent = 'gate', context?: string) => {
+  const c = clerk(); if (!c?.openSignUp) return;
+  if (context) showContext(context);
+  c.openSignUp({ ...urls(), appearance: clerkAppearance(), unsafeMetadata: { intent, scenario: location.href } });
+};
 export const openSignIn = () => clerk()?.openSignIn?.({ ...urls(), appearance: clerkAppearance() });
+
+/**
+ * Counts a data-analytics click as a custom event if an analytics beacon is
+ * present (Cloudflare Zaraz `zaraz.track`, or a beacon exposing trackEvent).
+ * Silent when neither is loaded.
+ */
+export function track(name: string, data?: Record<string, string>): void {
+  const w = window as any;
+  try {
+    if (typeof w.zaraz?.track === 'function') w.zaraz.track(name, data);
+    else if (typeof w.__cfBeacon?.trackEvent === 'function') w.__cfBeacon.trackEvent(name, data);
+  } catch { /* analytics must never break the page */ }
+}
+export function wireAnalytics(): void {
+  document.addEventListener('click', (e) => {
+    const el = (e.target as Element).closest<HTMLElement>('[data-analytics]');
+    if (el) track(el.dataset.analytics!, { path: location.pathname });
+  });
+}
 
 /** Stores the current scenario URL on the user; returns false if not signed in. */
 export async function saveScenario(url: string): Promise<boolean> {
@@ -62,10 +120,10 @@ export async function saveScenario(url: string): Promise<boolean> {
  * Wires a hard-gated Save button: signed out → sign-up modal; signed in →
  * save the current URL and confirm on the button itself.
  */
-export function wireSave(btn: HTMLButtonElement | null, idle = 'Save scenario'): void {
+export function wireSave(btn: HTMLButtonElement | null, idle = 'Save scenario', scenario?: () => string): void {
   if (!btn) return;
   btn.addEventListener('click', async () => {
-    if (!signedIn()) { openSignUp(); return; }
+    if (!signedIn()) { openSignUp('save', `Save ${scenario ? `“${scenario()}”` : 'this scenario'} to your account — free.`); return; }
     btn.setAttribute('aria-busy', 'true');
     btn.textContent = 'Saving…';
     try { await saveScenario(location.href); btn.textContent = 'Saved ✓'; }

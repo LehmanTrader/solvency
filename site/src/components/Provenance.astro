@@ -5,7 +5,7 @@ const { source, href, verified, note, class: cls = '' } = Astro.props;
 const fresh = verified ? (Date.now() - Date.parse(verified)) / 86_400_000 <= 30 : false;
 ---
 <p class={`small mt-3 ${cls}`}>
-  {source && (href ? <a class="link" href={href}>{source}</a> : source)}
+  {source && (href ? <a class="link small-sans" href={href}>{source}</a> : <span class="small-sans">{source}</span>)}
   {source && verified && ' · '}
   {verified && <>verified <span class={fresh ? 't-fresh' : 'text-[var(--color-ink)]'}>{verified}</span></>}
   {note && <>{' '}· {note}</>}

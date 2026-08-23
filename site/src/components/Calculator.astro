@@ -19,23 +19,17 @@ const aa = sources.find((s) => s.benchmark === 'aa-coding-agent-index');
 const verified = aa?.last_verified;
 const fresh = verified ? (Date.now() - Date.parse(verified)) / 86_400_000 <= 30 : false;
 const names = models.slice().sort((a, b) => a.display_name.localeCompare(b.display_name));
+const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Tier: ${t} — measured rows unchanged.`;
 ---
 <section id="calc" aria-labelledby="q-h" data-gated={CLERK_ENABLED ? '1' : '0'} data-gate-mode={GATE_MODE}>
   <h1 id="q-h" class="h-display max-w-[30ch] text-balance">Which model is cheapest for what you actually ship?</h1>
   <p class="lede mt-4 max-w-[52ch] text-pretty">Cost per solved task — what it takes to get a task finished, not the token price. Every number carries a source and a verified date.</p>
 
   <p class="sentence mt-6">
-    I build
-    <select id="c-tier" class="ctl ctl-inline" aria-label="Task tier: what you build" aria-describedby="c-tier-help" data-ctl="tier">
-      {TIER_NAMES.map((t) => <option value={t} selected={t === DEFAULTS.tier}>{t}</option>)}
-    </select>
-    tasks,<br class="sm:hidden" /> about
-    <input id="c-volume" class="ctl ctl-inline" type="number" inputmode="numeric" min="1" max="10000000" step="1" value={DEFAULTS.volume}
-      aria-label="Tasks per month" data-ctl="volume" />
-    a month.
+    I build{' '}<select id="c-tier" class="ctl ctl-inline" aria-label="Task tier: what you build" aria-describedby="c-tier-help" data-ctl="tier">{TIER_NAMES.map((t) => <option value={t} selected={t === DEFAULTS.tier}>{t}</option>)}</select>{' '}tasks,<br class="sm:hidden" /> about{' '}<input id="c-volume" class="ctl ctl-inline" type="number" inputmode="numeric" min="1" max="10000000" step="1" value={DEFAULTS.volume} aria-label="Tasks per month" data-ctl="volume" />{' '}a month.
   </p>
   <div class="mt-3 grid gap-x-8 gap-y-3 sm:grid-cols-[minmax(0,26rem)_minmax(0,20rem)] items-center">
-    <p id="c-tier-help" class="small" aria-live="polite">{TIER_HELP[DEFAULTS.tier]}</p>
+    <p id="c-tier-help" class="small" aria-live="polite">{tierHelp(DEFAULTS.tier)}</p>
     <div>
       <input id="c-volume-range" class="ctl-range" type="range" min="0" max="1000" step="1" value="325"
         aria-label="Tasks per month, slider" aria-valuetext={`${DEFAULTS.volume} tasks a month`} data-ctl="volume" />
@@ -51,46 +45,51 @@ const names = models.slice().sort((a, b) => a.display_name.localeCompare(b.displ
         <label for="c-find-q" class="sr-only">Find a model</label>
         <input id="c-find-q" class="ctl find-q" type="search" list="c-find-list" placeholder="Find a model" aria-describedby="c-find-msg" enterkeyhint="search" />
         <datalist id="c-find-list">{names.map((m) => <option value={m.display_name} />)}</datalist>
-        <p id="c-find-msg" class="small find-msg" aria-live="polite"></p>
+        <p id="c-find-msg" class="small find-msg" role="status"></p>
       </form>
       <div class="hidden sm:block" data-layout="wide" set:html={wide}></div>
       <div class="sm:hidden" data-layout="narrow" set:html={narrow}></div>
     </div>
 
     <div id="c-gate" class="gate px-5 py-4 border-t border-[var(--color-rule)] hidden" role="region" aria-labelledby="c-gate-h" aria-live="polite" tabindex="-1">
-      <p id="c-gate-h" class="h-card">Keep these assumptions.</p>
-      <p class="mt-1 text-[0.875rem] leading-relaxed text-[var(--color-body)] max-w-[70ch]"><span id="c-gate-delta"></span> Sign in to keep assumptions and save this scenario — free.</p>
-      <p class="small mt-1 max-w-[70ch]">GitHub, Google or email. Assumptions move modelled rows only; measured rows never change.</p>
-      <div class="mt-3 flex flex-wrap gap-2 items-center">
-        <button id="c-gate-signin" type="button" class="btn btn-accent" data-analytics="gate-signup">Sign in — it's free</button>
-        <button id="c-gate-skip" type="button" class="btn btn-quiet">Keep exploring without it →</button>
+      <div class="grid gap-x-8 gap-y-3 md:grid-cols-[minmax(0,1fr)_auto] items-center">
+        <div class="min-w-0">
+          <p id="c-gate-h" class="h-card">Keep these assumptions.</p>
+          <p class="mt-1 text-[0.875rem] leading-relaxed text-[var(--color-body)]"><span id="c-gate-delta"></span> Create a free account to keep assumptions and save this scenario.</p>
+          <p class="small mt-1">GitHub, Google or email. Assumptions move modelled rows only; measured rows never change.</p>
+        </div>
+        <div class="flex flex-wrap gap-2 items-center md:flex-col md:items-stretch">
+          <button id="c-gate-signin" type="button" class="btn btn-accent" data-analytics="gate-signup">Create free account</button>
+          <button id="c-gate-skip" type="button" class="btn btn-quiet">Keep exploring without it →</button>
+        </div>
       </div>
     </div>
 
     <details class="disc px-5 py-3 border-t border-[var(--color-rule)]" id="c-missing-d">
       <summary>Not shown (<span data-count>{missing.length}</span>) · no published pass rate, reported as missing, never estimated</summary>
-      <p id="c-missing" class="small mt-2 max-w-3xl">{missingHtml(missing)}</p>
+      <p id="c-missing-find" class="small mt-2 text-[var(--color-ink)]" role="status"></p>
+      <p id="c-missing" class="small mt-2 max-w-3xl" set:html={missingHtml(missing)}></p>
     </details>
 
-    <div id="c-actions" class="px-5 py-3 border-t border-[var(--color-rule)] flex flex-wrap gap-x-6 gap-y-3 items-start justify-between">
-      <div class="min-w-0">
-        <p class="small">
-          <a class="link" href={aa?.attribution_url} rel="noopener">{aa?.attribution}</a>{' '}
+    <div id="c-actions" class="px-5 py-3 border-t border-[var(--color-rule)]">
+      <div class="flex flex-wrap gap-x-6 gap-y-3 items-start justify-between">
+        <p class="small min-w-0">
+          <a class="link small-sans" href={aa?.attribution_url} rel="noopener">{aa?.attribution}</a>{' '}
           · verified <span class={fresh ? 't-fresh' : 'text-[var(--color-ink)]'}>{verified}</span>{' '}
           · <a class="link" href="/methodology#sources">Sources</a>
         </p>
-        <p class="small mt-1">
-          <span class="text-[var(--color-ink)]">Pro (soon):</span> export CSV/JSON · price-change alerts · your own prices
-          {CLERK_ENABLED && <>{' '}→ <button id="c-notify" type="button" class="link-btn" data-analytics="pro-notify">Notify me</button></>}
-        </p>
-      </div>
-      <div class="flex flex-col gap-1 items-start sm:items-end">
-        <div class="flex flex-wrap gap-2 items-center">
-          <button id="c-share" type="button" class="btn" aria-live="polite">Copy link</button>
-          {CLERK_ENABLED && <button id="c-save" type="button" class="btn btn-accent" data-ctl="save" data-analytics="save-scenario" aria-live="polite" aria-describedby="c-save-why">Save scenario</button>}
+        <div class="flex flex-col gap-1 items-start sm:items-end">
+          <div class="flex flex-wrap gap-2 items-center">
+            <button id="c-share" type="button" class="btn btn-copy" aria-live="polite">Copy link</button>
+            {CLERK_ENABLED && <button id="c-save" type="button" class="btn" data-ctl="save" data-analytics="save-scenario" aria-live="polite" aria-describedby="c-save-why">Save scenario</button>}
+          </div>
+          {CLERK_ENABLED && <p id="c-save-why" class="small">Permalink with your name, re-priced when prices change.</p>}
         </div>
-        {CLERK_ENABLED && <p id="c-save-why" class="small">Permalink with your name, re-priced when prices change.</p>}
       </div>
+      <p class="small mt-3 pt-3 border-t border-[var(--color-rule)]">
+        <span class="text-[var(--color-ink)]">Pro (soon):</span> export CSV/JSON · price-change alerts · your own prices
+        {CLERK_ENABLED && <>{' '}→ <button id="c-notify" type="button" class="link-btn" data-analytics="pro-notify">Notify me</button></>}
+      </p>
     </div>
 
     <details class="disc px-5 py-3 border-t border-[var(--color-rule)]" id="c-assume">
@@ -117,7 +116,8 @@ const names = models.slice().sort((a, b) => a.display_name.localeCompare(b.displ
           <span class="ctl-row mt-2 flex items-center gap-3"><input id="c-frontier" type="checkbox" checked class="chk" data-ctl="frontier" /><span class="text-[0.875rem] text-[var(--color-body)]">0.6× loops on heavy, frontier-class models</span></span>
         </label>
       </div>
-      <p class="mt-4 text-[0.8rem] leading-relaxed text-[var(--color-muted)] max-w-[70ch]">These move modelled rows only. Measured rows carry a cost the benchmark observed and cannot be changed by any assumption. Frontier efficiency has no published source and is applied only to modelled rows — untick it to see unadjusted results. <a class="link" href="/methodology">Methodology</a>.</p>
+      <p id="c-assume-note" class="small mt-3 text-[var(--color-ink)]" role="status"></p>
+      <p class="mt-4 text-[0.8rem] leading-relaxed text-[var(--color-muted)] max-w-[70ch]">These move modelled rows only. A model with no published cached-input price is computed uncached and says so in its row, rather than dropping out of its group. Measured rows carry a cost the benchmark observed and cannot be changed by any assumption. Frontier efficiency has no published source and is applied only to modelled rows — untick it to see unadjusted results. <a class="link" href="/methodology">Methodology</a>.</p>
     </details>
   </div>
 </section>
@@ -127,6 +127,7 @@ const names = models.slice().sort((a, b) => a.display_name.localeCompare(b.displ
   import { patchRanked, scatterPareto, VOL_MIN, VOL_MAX } from '../lib/charts.ts';
   import { gateFor, GATE_SEEN_KEY, type Control, type GateMode } from '../lib/gate.ts';
   import { signedIn, onClerk, openSignUp, wireSave } from '../lib/clerk-client.ts';
+  const scenarioName = () => `${CTRL.tier.value} · ${Number(CTRL.volume.value).toLocaleString()}/mo`;
   import { wireCopy } from '../lib/copy.ts';
   import { models } from '../lib/data.ts';
 
@@ -211,7 +212,7 @@ const names = models.slice().sort((a, b) => a.display_name.localeCompare(b.displ
     last = s;
     $('c-cache-v')!.textContent = `${CTRL.cache.value}%`;
     CTRL.cache.style.setProperty('--fill', `${(Number(CTRL.cache.value) / 90) * 100}%`);
-    $('c-tier-help')!.textContent = TIER_HELP[s.tier];
+    $('c-tier-help')!.textContent = `${TIER_HELP[s.tier]} · Tier: ${s.tier} — measured rows unchanged.`;
     const { rows, missing } = compute(s);
     lastRows = rows;
     $('c-callout')!.innerHTML = calloutHtml(rows, s.volume);
@@ -221,7 +222,7 @@ const names = models.slice().sort((a, b) => a.display_name.localeCompare(b.displ
     const w = widthOf(visible.querySelector('[data-chart]') ?? visible);
     patchGroups(wideEl, groupsHtml(rows, s, { width: visible === wideEl ? w : Number(groupsEl.dataset.wide), compact: false, highlight }));
     patchGroups(narrowEl, groupsHtml(rows, s, { width: visible === narrowEl ? w : Number(groupsEl.dataset.narrow), compact: true, highlight }));
-    $('c-missing')!.textContent = missingHtml(missing);
+    $('c-missing')!.innerHTML = missingHtml(missing, highlight ? models.find((m) => m.model_id === highlight)?.display_name : undefined);
     $('c-missing-d')!.querySelector('[data-count]')!.textContent = String(missing.length);
     renderScatter(rows, s);
     sizeInline();
@@ -254,8 +255,10 @@ const names = models.slice().sort((a, b) => a.display_name.localeCompare(b.displ
     const s = query.trim().toLowerCase(); if (!s) return null;
     return models.find((m) => m.display_name.toLowerCase() === s) ?? models.find((m) => m.display_name.toLowerCase().startsWith(s)) ?? models.find((m) => m.display_name.toLowerCase().includes(s)) ?? null;
   };
+  const missingFind = $('c-missing-find')!;
   function pin(query: string) {
     const m = byName(query);
+    missingFind.textContent = '';
     if (!m) { if (query.trim()) findMsg.textContent = `No tracked model called “${query.trim()}”.`; else { findMsg.textContent = ''; highlight = undefined; render(); } return; }
     highlight = m.model_id; render();
     const visible = groupsEl.querySelector<HTMLElement>('[data-layout="wide"]')!.offsetParent ? 'wide' : 'narrow';
@@ -265,13 +268,23 @@ const names = models.slice().sort((a, b) => a.display_name.localeCompare(b.displ
       findMsg.textContent = `${m.display_name} is pinned in the ${row.closest<HTMLElement>('[data-group]')!.dataset.group} group.`;
       row.scrollIntoView({ block: 'center' });
     } else {
+      // the message is rendered at the destination, not beside the input
       const missingD = $<HTMLDetailsElement>('c-missing-d')!; missingD.open = true;
-      findMsg.textContent = `${m.display_name} has no published pass rate — listed under Not shown.`;
+      findMsg.textContent = '';
+      missingFind.textContent = `${m.display_name} has no published pass rate — listed here under Not shown, never estimated.`;
       missingD.scrollIntoView({ block: 'center' });
     }
   }
   $('c-find')!.addEventListener('submit', (e) => { e.preventDefault(); pin(findQ.value); });
-  findQ.addEventListener('input', () => { const m = byName(findQ.value); if (!findQ.value.trim() || (m && m.display_name.toLowerCase() === findQ.value.trim().toLowerCase())) pin(findQ.value); });
+  // fires on a datalist pick (an input event with no inputType) and, debounced, while typing
+  let findTimer = 0;
+  findQ.addEventListener('input', (e) => {
+    clearTimeout(findTimer);
+    const picked = !(e as InputEvent).inputType;
+    if (picked || !findQ.value.trim()) { pin(findQ.value); return; }
+    findTimer = window.setTimeout(() => pin(findQ.value), 300);
+  });
+  findQ.addEventListener('change', () => { clearTimeout(findTimer); pin(findQ.value); });
 
   // ---- gate (docs/landing-spec.md §3; one switch in src/lib/gate.ts) ------
   // Soft gate, demo first: the first assumption change is applied so the
@@ -315,17 +328,30 @@ const names = models.slice().sort((a, b) => a.display_name.localeCompare(b.displ
     if (cls === 'free') return true;
     if (demo) return true;                         // the demo is running: keep showing the effect
     if (cls === 'hard' || ss.get(GATE_SEEN_KEY)) { // seen this session: the modal, directly
-      ev.stopImmediatePropagation(); restore(el); openSignUp(); return false;
+      ev.stopImmediatePropagation(); restore(el); gateSignUp(); return false;
     }
-    ss.set(GATE_SEEN_KEY);
     demo = { before: last ?? settings(), beforeRows: lastRows, trigger: el };
     return true;
   }
+  const assumeNote = $('c-assume-note')!;
+  const NOOP_NOTE = (el: HTMLInputElement | HTMLSelectElement, text: string) =>
+    el.dataset.ctl === 'frontier' ? 'Frontier efficiency only applies on the heavy tier; nothing moves here.' : text;
   function afterRender(el: HTMLInputElement | HTMLSelectElement) {
-    if (!demo || gateFor(el.dataset.ctl as Control, MODE) === 'free') return;
-    $('c-gate-delta')!.textContent = gateDelta(demo.beforeRows, lastRows, CONTROL_LABEL(el));
+    if (gateFor(el.dataset.ctl as Control, MODE) === 'free') return;
+    if (!demo) { assumeNote.textContent = ''; return; }
+    const d = gateDelta(demo.beforeRows, lastRows, CONTROL_LABEL(el), highlight);
+    if (!d.moved && gateCard.classList.contains('hidden')) {
+      // a change that moves no row is not gated: a quiet note, the control stays free
+      demo = null;
+      assumeNote.textContent = NOOP_NOTE(el, d.text);
+      return;
+    }
+    assumeNote.textContent = '';
+    $('c-gate-delta')!.textContent = d.text;
     if (gateCard.classList.contains('hidden')) {
+      ss.set(GATE_SEEN_KEY);
       gateCard.classList.remove('hidden');
+      document.body.setAttribute('data-gate-open', '1');
       gateCard.scrollIntoView({ block: 'nearest' });
       $('c-gate-signin')?.focus({ preventScroll: true });
     }
@@ -333,15 +359,17 @@ const names = models.slice().sort((a, b) => a.display_name.localeCompare(b.displ
   function closeGate(revert: boolean) {
     const d = demo; demo = null;
     gateCard.classList.add('hidden');
+    document.body.removeAttribute('data-gate-open');
     if (d && revert) { applySettings(d.before); render(); }
     d?.trigger.focus();
   }
-  $('c-gate-signin')?.addEventListener('click', openSignUp);
+  const gateSignUp = () => openSignUp('gate', `Keep these assumptions — save “${scenarioName()}” to your free account.`);
+  $('c-gate-signin')?.addEventListener('click', gateSignUp);
   $('c-gate-skip')?.addEventListener('click', () => closeGate(true));
   gateCard.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); closeGate(true); } });
-  $('c-notify')?.addEventListener('click', openSignUp);
-  wireSave($<HTMLButtonElement>('c-save'));
-  onClerk(() => { if (signedIn()) { demo = null; gateCard.classList.add('hidden'); } });
+  $('c-notify')?.addEventListener('click', () => openSignUp('pro-notify', 'Get notified when Pro ships: export, alerts, your own prices.'));
+  wireSave($<HTMLButtonElement>('c-save'), 'Save scenario', scenarioName);
+  onClerk(() => { if (signedIn()) { demo = null; gateCard.classList.add('hidden'); document.body.removeAttribute('data-gate-open'); } });
 
   // ---- wiring -------------------------------------------------------------
   const inputs = [CTRL.tier, CTRL.volume, CTRL.variant, CTRL.cache, CTRL.residual, CTRL.frontier];

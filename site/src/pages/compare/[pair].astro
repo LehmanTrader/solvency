@@ -47,14 +47,8 @@ const statusNote = [a, b].filter((m) => m.status !== 'current').map((m) => `${m.
     <h1 class="h-page mt-3">{a.display_name} <span class="text-[var(--color-muted)]">vs</span> {b.display_name}</h1>
     {statusNote && <p class="small mt-2">{statusNote}.</p>}
 
-    <p class="sentence mt-6 !text-[clamp(1.2rem,2.2vw,1.5rem)]">
-      For
-      <select id="k-tier" class="ctl ctl-inline" aria-label="Task tier">
-        {TIER_NAMES.map((t) => <option value={t} selected={t === TIER}>{t}</option>)}
-      </select>
-      tasks, about
-      <input id="k-volume" class="ctl ctl-inline" type="number" inputmode="numeric" min="1" max="10000000" step="1" value={VOLUME} aria-label="Tasks per month" />
-      a month.
+    <p class="sentence mt-6">
+      For{' '}<select id="k-tier" class="ctl ctl-inline" aria-label="Task tier">{TIER_NAMES.map((t) => <option value={t} selected={t === TIER}>{t}</option>)}</select>{' '}tasks, about{' '}<input id="k-volume" class="ctl ctl-inline" type="number" inputmode="numeric" min="1" max="10000000" step="1" value={VOLUME} aria-label="Tasks per month" />{' '}a month.
     </p>
 
     <div class="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] items-start">
@@ -62,8 +56,8 @@ const statusNote = [a, b].filter((m) => m.status !== 'current').map((m) => `${m.
         <div class="card">
           <div class="card-pad" id="k-verdict" aria-live="polite" aria-atomic="true" set:html={verdict}></div>
           <div class="px-5 py-3 border-t border-[var(--color-rule)] flex flex-wrap gap-2 items-center">
-            <button id="k-share" type="button" class="btn" aria-live="polite">Copy link</button>
-            {CLERK_ENABLED && <button id="k-save" type="button" class="btn btn-accent" data-analytics="save-scenario" aria-live="polite">Save scenario</button>}
+            <button id="k-share" type="button" class="btn btn-copy" aria-live="polite">Copy link</button>
+            {CLERK_ENABLED && <button id="k-save" type="button" class="btn" data-analytics="save-scenario" aria-live="polite">Save scenario</button>}
             <button id="k-download" type="button" class="btn" data-analytics="pro-download" aria-describedby="k-pro">Download table <span id="k-pro" class="pill pill-ink ml-1">Pro</span></button>
           </div>
         </div>
@@ -84,7 +78,7 @@ const statusNote = [a, b].filter((m) => m.status !== 'current').map((m) => `${m.
           <>
             <div class="mt-3 hidden sm:block" data-chart data-layout="wide" data-w="600" set:html={linesWide}></div>
             <div class="mt-3 sm:hidden" data-chart data-layout="narrow" data-w="350" set:html={linesNarrow}></div>
-            <p class="small mt-2">Solid line: measured. Dashed: modelled. Dotted: stale. Per-task cost is constant, so on log axes every line has the same slope; the gap is the verdict.</p>
+            <p class="small mt-2">Solid measured · dashed modelled · dotted stale. Same slope on log axes; the gap is the verdict.</p>
           </>
         ) : <p class="small mt-3">No line to draw: neither model has a published pass rate.</p>}
       </div>
@@ -138,8 +132,8 @@ const statusNote = [a, b].filter((m) => m.status !== 'current').map((m) => `${m.
 
   // share and save (docs/landing-spec.md §3: copy is free, save and export hard-gate)
   wireCopy(document.getElementById('k-share') as HTMLButtonElement, () => location.href);
-  wireSave(document.getElementById('k-save') as HTMLButtonElement | null);
-  document.getElementById('k-download')?.addEventListener('click', openSignUp);
+  wireSave(document.getElementById('k-save') as HTMLButtonElement | null, 'Save scenario', () => `${tierEl.value} · ${Number(volEl.value).toLocaleString()}/mo`);
+  document.getElementById('k-download')?.addEventListener('click', () => openSignUp('pro-download', 'Download this table — Pro. Create a free account and be first when it ships.'));
 
   // drag the volume marker: pointer x → log volume
   let dragging = false;
