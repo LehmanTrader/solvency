@@ -1,0 +1,62 @@
+---
+import Base from '../layouts/Base.astro';
+const updated = '2026-08-22';
+---
+<Base title="Privacy — Solvency" description="What Solvency collects, why, and who processes it. Plain English, no tracking cookies.">
+  <div class="wrap pt-10">
+  <p class="eyebrow">Last updated {updated}</p>
+  <h1 class="h-page mt-3">Privacy policy</h1>
+  <p class="lede mt-4 max-w-2xl">Solvency collects as little as it can. This page lists everything it does collect, why, and which services handle it.</p>
+
+  <div class="prose measure mt-10">
+    <h2>Who runs Solvency</h2>
+    <p>Solvency (solvency.dev) is operated by Roy Dhanda. Questions about this policy or your data: <a href="mailto:robertdhanda@gmail.com">robertdhanda@gmail.com</a>.</p>
+
+    <h2>What is collected, and why</h2>
+    <h3>Reading the site</h3>
+    <p>Nothing that identifies you. Pages are static files served by Cloudflare. Cloudflare Web Analytics records aggregate page views (page URL, referrer, browser type, country) without cookies, without fingerprinting and without storing IP addresses against visits. Cloudflare's own network logs, which may include your IP address, are governed by <a href="https://www.cloudflare.com/privacypolicy/" rel="noopener">Cloudflare's privacy policy</a>.</p>
+    <p>Your light/dark theme choice is stored in your browser's local storage and never sent anywhere.</p>
+    <p>Fonts are loaded from Google Fonts, which means your browser requests font files from Google and Google receives your IP address in that request. See <a href="https://developers.google.com/fonts/faq/privacy" rel="noopener">Google Fonts privacy</a>.</p>
+
+    <h3>Creating an account</h3>
+    <p>The calculator's custom scenarios require a free account. Sign-in is handled by <a href="https://clerk.com/legal/privacy" rel="noopener">Clerk</a>, which stores:</p>
+    <ul>
+      <li>your email address;</li>
+      <li>your name and avatar if you sign in with Google or GitHub, as provided by that service;</li>
+      <li>a session cookie so you stay signed in;</li>
+      <li>sign-in timestamps and IP addresses, for account security.</li>
+    </ul>
+    <p>When you sign in with Google or GitHub, Solvency asks only for your basic profile and email. It never sees your password, and it cannot read your repositories, mail or files.</p>
+    <p>Your email is used to sign you in and to tell you about material changes to Solvency's data or terms. It is not sold, rented or shared with advertisers. If a newsletter is introduced it will be opt-in.</p>
+
+    <h3>Shared scenario links</h3>
+    <p>A calculator link encodes the scenario's settings (task tier, volume, retry model, cache rate, takeover cost) in the URL. It contains nothing about you. Anyone you send it to sees only those settings.</p>
+
+    <h2>Who processes data</h2>
+    <table>
+      <thead><tr><th>Service</th><th>Role</th><th>Data</th></tr></thead>
+      <tbody>
+        <tr><td>Cloudflare</td><td>Hosting, CDN, cookieless analytics</td><td>Request logs, aggregate page views</td></tr>
+        <tr><td>Clerk</td><td>Authentication</td><td>Email, name, OAuth profile, session, sign-in security logs</td></tr>
+        <tr><td>Google, GitHub</td><td>Optional sign-in providers</td><td>Share your basic profile with Clerk when you choose them</td></tr>
+        <tr><td>Google Fonts</td><td>Font delivery</td><td>IP address in font requests</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Cookies</h2>
+    <p>The site sets no cookies for reading. Signing in sets Clerk's session cookie, which is strictly necessary for the account to work. There are no advertising or cross-site tracking cookies, so no consent banner is shown.</p>
+
+    <h2>Your rights</h2>
+    <p>You can see, correct or delete your account data at any time. Email <a href="mailto:robertdhanda@gmail.com">robertdhanda@gmail.com</a> from the address on the account and it will be deleted within 30 days, including from Clerk. Residents of the EU, UK, California and other jurisdictions with data-protection law have the rights those laws grant, including access, correction, deletion and portability; the same email address handles all of them.</p>
+
+    <h2>Retention</h2>
+    <p>Account data is kept while the account exists and deleted on request. Aggregate analytics are kept indefinitely; they contain nothing that identifies you.</p>
+
+    <h2>Children</h2>
+    <p>Solvency is not directed at children under 16 and does not knowingly collect their data.</p>
+
+    <h2>Changes</h2>
+    <p>Material changes to this policy are dated at the top of this page and, for account holders, announced by email.</p>
+  </div>
+  </div>
+</Base>
