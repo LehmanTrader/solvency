@@ -31,12 +31,32 @@
   --font-sans: -apple-system, "SF Pro Text", "Helvetica Neue", Inter, Arial, sans-serif;
 }
 
+/* Light mode is a peer (brand review §4.1). System preference by default;
+   data-theme on <html> (set from localStorage in an inline head script) wins. */
 @layer base {
+  :root[data-theme="light"] {
+    --color-bg: #FBFAF8; --color-panel: #FFFFFF; --color-panel-2: #F4F3F1;
+    --color-ink: #1A1D20; --color-body: #3E464C; --color-muted: #5F6B73; --color-rule: #E2E0DC;
+    --color-accent: #A35F00; --color-accent-hover: #8A5000; --color-on-accent: #FFFFFF;
+    --color-measured: #A35F00; --color-modelled: #3A4FA8; --color-stale: #A8451B; --color-missing: #5F6B73;
+    --color-better: #1B7F4F; --color-worse: #A8331B;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+    --color-bg: #FBFAF8; --color-panel: #FFFFFF; --color-panel-2: #F4F3F1;
+      --color-ink: #1A1D20; --color-body: #3E464C; --color-muted: #5F6B73; --color-rule: #E2E0DC;
+      --color-accent: #A35F00; --color-accent-hover: #8A5000; --color-on-accent: #FFFFFF;
+      --color-measured: #A35F00; --color-modelled: #3A4FA8; --color-stale: #A8451B; --color-missing: #5F6B73;
+      --color-better: #1B7F4F; --color-worse: #A8331B;
+      color-scheme: light;
+    }
+  }
   html { background: var(--color-bg); color-scheme: dark; scroll-behavior: smooth; }
   @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
   body { background: var(--color-bg); color: var(--color-body);
          font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
-  ::selection { background: var(--color-accent); color: #0A0C0D; }
+  ::selection { background: var(--color-accent); color: var(--color-on-accent); }
   a { color: inherit; }
   :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; border-radius: 2px; }
   [id] { scroll-margin-top: 5rem; }
@@ -153,6 +173,25 @@
   .bars .lead .bl, .bars .lead .bv { color: var(--color-measured); font-weight: 700; }
   .bars.modelled .bf { background: var(--color-modelled); }
   .bars.modelled .lead .bl, .bars.modelled .lead .bv { color: var(--color-modelled); }
+
+  /* ---- theme-paired chart images ---------------------------------------- */
+  .chart-light { display: none; }
+  :root[data-theme="light"] .chart-dark { display: none; }
+  :root[data-theme="light"] .chart-light { display: block; }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) .chart-dark { display: none; }
+    :root:not([data-theme="dark"]) .chart-light { display: block; }
+  }
+  .theme-btn { display: inline-flex; align-items: center; justify-content: center; width: 2rem; height: 2rem;
+               border: 1px solid var(--color-rule); border-radius: 6px; color: var(--color-muted); background: transparent; cursor: pointer; }
+  .theme-btn:hover { color: var(--color-ink); border-color: var(--color-muted); }
+  .theme-btn .i-sun { display: none; }
+  :root[data-theme="light"] .theme-btn .i-sun { display: block; }
+  :root[data-theme="light"] .theme-btn .i-moon { display: none; }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) .theme-btn .i-sun { display: block; }
+    :root:not([data-theme="dark"]) .theme-btn .i-moon { display: none; }
+  }
 
   /* ---- nav --------------------------------------------------------------- */
   .nav-a { font-family: var(--font-mono); font-size: .7rem; letter-spacing: .1em; text-transform: uppercase;

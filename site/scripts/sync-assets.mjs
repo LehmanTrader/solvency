@@ -8,6 +8,7 @@ const repo = join(here, '..', '..');
 
 const jobs = [
   { from: join(repo, 'reports', 'charts'), to: join(here, '..', 'public', 'charts'), ext: '.svg' },
+  { from: join(repo, 'reports', 'charts-light'), to: join(here, '..', 'public', 'charts-light'), ext: '.svg' },
   { from: join(repo, 'reports', 'png'), to: join(here, '..', 'public', 'og'), ext: '.png' },
   // datasets are copied in so the client bundle can import them; the repo's
   // /data remains canonical and is the only place they are edited

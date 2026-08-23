@@ -11,7 +11,12 @@ function absoluteChartPaths() {
   return (tree) => {
     const walk = (n) => {
       if (n.type === 'image' && typeof n.url === 'string' && n.url.startsWith('charts/')) {
-        n.url = '/' + n.url;
+        // dark and light renders of the same figure; CSS shows the one for the active theme
+        const file = n.url.slice('charts/'.length);
+        const alt = String(n.alt ?? '').replace(/"/g, '&quot;');
+        n.type = 'html';
+        n.value = `<img src="/charts/${file}" alt="${alt}" width="900" height="600" class="chart-dark" loading="lazy" />` +
+                  `<img src="/charts-light/${file}" alt="${alt}" width="900" height="600" class="chart-light" loading="lazy" />`;
       }
       (n.children || []).forEach(walk);
     };

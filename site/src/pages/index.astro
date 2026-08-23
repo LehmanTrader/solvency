@@ -149,7 +149,8 @@ const toc = [['#leaderboard', 'Leaderboard'], ['#highlights', 'Highlights'], ['#
       <Section id={f.id} eyebrow={f.eyebrow} title={f.title} caption={f.subtitle.join(' ')}>
         <a slot="aside" href={`${latestHref}#${f.id}`} class="btn">Read in the note</a>
         <figure class="card overflow-hidden">
-          <img src={`/charts/${f.file}.svg`} alt={f.title} width="900" height="600" class="w-full h-auto block" loading="lazy" />
+          <img src={`/charts/${f.file}.svg`} alt={f.title} width="900" height="600" class="chart-dark w-full h-auto block" loading="lazy" />
+          <img src={`/charts-light/${f.file}.svg`} alt={f.title} width="900" height="600" class="chart-light w-full h-auto" loading="lazy" />
         </figure>
         <Provenance>{f.source.join(' ')}</Provenance>
       </Section>
