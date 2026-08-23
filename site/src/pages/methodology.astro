@@ -8,6 +8,7 @@ import { sources } from '../lib/data.ts';
   <p class="eyebrow">How the numbers are made</p>
   <h1 class="h-page mt-3">Methodology</h1>
   <div class="prose mt-8 measure">
+    <h2 id="number" class="!mt-0 !pt-0 !border-0">How the number is made</h2>
     <p>Solvency publishes one number that does not appear on any pricing page:
       what it costs to get a task <em>finished</em>.</p>
     <pre><code>cost_per_attempt     = loops × (tokens_in × input_price + tokens_out × output_price)
@@ -65,12 +66,13 @@ cost_per_solved_task = cost_per_attempt / pass_rate</code></pre>
       productivity measure, and the two must not be conflated.</p>
   </div>
 
-  <section id="sources" class="mt-16 max-w-6xl" aria-labelledby="sources-h">
+  <section id="sources" class="mt-16" aria-labelledby="sources-h">
     <h2 id="sources-h" class="h-section">Where every number comes from</h2>
     <p class="mt-2 text-sm text-[var(--color-muted)] max-w-2xl">In preference order: fewest Solvency assumptions first, then freshness. Benchmark data is cited and linked, never redistributed.</p>
     <div class="card overflow-hidden mt-6">
       <div class="tbl-wrap"><table class="tbl">
-        <thead><tr><th>Source</th><th class="r">Tasks</th><th>Covers 2026 models</th><th>Publishes cost</th><th>Basis</th><th>Newest entry</th><th>Verified</th></tr></thead>
+        <caption>Benchmark sources in preference order, with task count, coverage, whether cost is published, cost basis and verification date</caption>
+        <thead><tr><th scope="col">Source</th><th scope="col" class="r">Tasks</th><th scope="col">Covers 2026 models</th><th scope="col">Publishes cost</th><th scope="col">Basis</th><th scope="col">Newest entry</th><th scope="col">Verified</th></tr></thead>
         <tbody>
           {sources.map((s) => (
             <tr>
@@ -87,7 +89,7 @@ cost_per_solved_task = cost_per_attempt / pass_rate</code></pre>
       </table></div>
     </div>
     <Provenance note="Prices are verified against each provider's own pricing page; recalled prices are never used. Missing is printed as missing.">
-      {sources.filter((s) => s.attribution_url).map((s) => <> · <a class="link" href={s.attribution_url}>{s.attribution}</a></>)}
+      {sources.filter((s) => s.attribution_url).map((s) => <>{' '}· <a class="link" href={s.attribution_url}>{s.attribution}</a></>)}
     </Provenance>
   </section>
   </div>
