@@ -152,9 +152,9 @@ const CSS = `
   :root {
     --page:#F4F3F1; --card:#FFFFFF; --ink:#1B1B20; --body:#3A3D42; --muted:#5C6165;
     --rule:#E4E2DE; --rule-soft:#EDEBE7; --accent:#8F5214; --amber:#FFB000;
-    --sans: -apple-system, "SF Pro Text", "Helvetica Neue", Inter, Arial, sans-serif;
-    --display: ui-serif, "New York", "Iowan Old Style", Charter, Georgia, serif;
-    --mono: "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: "IBM Plex Sans", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --display: "Source Serif 4", ui-serif, "New York", "Iowan Old Style", Charter, Georgia, serif;
+    --mono: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
   }
   html, body { background: var(--page); }
   body { margin:0; color: var(--body); font-family: var(--sans); font-size: 9.6pt;
@@ -240,8 +240,10 @@ const CSS = `
 
 `;
 
+const FONTS = '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
+  '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Source+Serif+4:wght@600&family=IBM+Plex+Sans:wght@400;600;700&display=swap">';
 const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(coverTitle)}</title>
-<style>${CSS}</style></head><body>
+${FONTS}<style>${CSS}</style></head><body>
 <section class="cover">
   <div>
     <h1>${esc(coverTitle)}</h1>
@@ -275,7 +277,7 @@ const htmlPath = join(outDir, basename(src).replace(/\.md$/, '.html'));
 const pdfPath = join(outDir, basename(src).replace(/\.md$/, '.pdf'));
 writeFileSync(htmlPath, html);
 
-const FOOTER = `<div style="width:100%;font-family:'SFMono-Regular',Menlo,monospace;font-size:7px;
+const FOOTER = `<div style="width:100%;font-family:'JetBrains Mono','SFMono-Regular',Menlo,monospace;font-size:7px;
   color:#6E747B;padding:0 1.02in;display:flex;justify-content:space-between;letter-spacing:.08em;
   -webkit-print-color-adjust:exact;">
   <span>SOLVENCY &nbsp;·&nbsp; RESEARCH NOTE 01 &nbsp;·&nbsp; COST PER SOLVED TASK &nbsp;·&nbsp; AUGUST 2026</span>

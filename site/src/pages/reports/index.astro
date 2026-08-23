@@ -33,7 +33,7 @@ const h = headline();
               <p class="eyebrow">Note {String(r.data.note).padStart(2, '0')}</p>
               <p class="small">published {r.data.date.toISOString().slice(0, 10)}</p>
             </div>
-            <h2 class="mt-2 font-mono text-2xl font-bold tracking-tight text-[var(--color-ink)] group-hover:text-[var(--color-accent)]">{r.data.title}</h2>
+            <h2 class="mt-2 font-[family-name:var(--font-display)] text-2xl font-semibold tracking-tight text-[var(--color-ink)] group-hover:text-[var(--color-accent)]">{r.data.title}</h2>
             <p class="mt-2 text-[var(--color-muted)] max-w-3xl leading-relaxed">{r.data.description}</p>
             <p class="mt-4 small text-[var(--color-accent)]">Read the note →</p>
           </a>
