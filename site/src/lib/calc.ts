@@ -5,6 +5,9 @@
  */
 import { models, assumptions, tiers, bestResultFor, extrasFor } from './data.ts';
 import { costPerSolvedTask, defaultOptions } from './engine.ts';
+import { rankedBars, BASIS_OF, money, moneyMonth, type ChartRow, type Basis } from './charts.ts';
+
+export { money, moneyMonth };
 
 export interface Settings {
   tier: 'light' | 'moderate' | 'heavy';
@@ -19,19 +22,22 @@ export const DEFAULTS: Settings = {
   tier: 'moderate', volume: 200, variant: 'naive', cache: 0, residual: 0, frontier: true,
 };
 
-export const money = (n: number) =>
-  n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : n >= 100 ? `$${n.toFixed(0)}` : `$${n.toFixed(2)}`;
+export const TIER_HELP: Record<Settings['tier'], string> = {
+  light: tiers.light.examples, moderate: tiers.moderate.examples, heavy: tiers.heavy.examples,
+};
 
-const GROUPS = [
-  { key: 'measured_by_source', title: 'Measured',
+export const GROUPS: { key: string; basis: Basis; title: string; note: string }[] = [
+  { key: 'measured_by_source', basis: 'measured', title: 'Measured',
     note: 'The benchmark ran the model and observed this cost. No Solvency assumption is inside these figures.' },
-  { key: 'modelled_by_solvency', title: 'Modelled',
-    note: "Pass rate published, cost estimated by Solvency's loop model — an assumption." },
-  { key: 'historical_at_run_date', title: 'Modelled from stale pass rates',
+  { key: 'modelled_by_solvency', basis: 'modelled', title: 'Modelled',
+    note: "Pass rate published; cost is Solvency's loop model at verified prices." },
+  { key: 'historical_at_run_date', basis: 'stale', title: 'Stale',
     note: 'Pass rates published before 2026. Cost recomputed at current prices; the pass rate is old.' },
 ];
 
-export function compute(s: Settings) {
+export interface Row { m: any; r: any; cost: number; basis: string; basisKey: string; attempt: number; }
+
+export function compute(s: Settings): { rows: Row[]; missing: string[] } {
   const base = defaultOptions(assumptions);
   const opts = {
     ...base,
@@ -40,66 +46,88 @@ export function compute(s: Settings) {
     frontierEfficiency: s.frontier ? base.frontierEfficiency
       : { ...base.frontierEfficiency, multipliers_by_tier: { light: 1, moderate: 1, heavy: 1 } },
   };
-  const rows: any[] = [];
+  const rows: Row[] = [];
   const missing: string[] = [];
   for (const m of models) {
     const r = bestResultFor(m.model_id);
     if (!r) { if (m.status === 'current') missing.push(m.display_name); continue; }
     const out = costPerSolvedTask(m as any, s.tier, tiers[s.tier], r.pass_rate, opts, extrasFor(r));
     if (out.value === null) { missing.push(`${m.display_name} (${out.missing[0] ?? 'missing input'})`); continue; }
-    rows.push({ m, r, cost: out.value[s.variant], basis: out.value.costBasis, basisKey: r.cost_basis });
+    rows.push({ m, r, cost: out.value[s.variant], basis: out.value.costBasis, basisKey: r.cost_basis, attempt: out.value.attempt.costUsd });
   }
   rows.sort((a, b) => a.cost - b.cost);
   return { rows, missing };
 }
 
-const TONE: Record<string, string> = { measured_by_source: 'measured', modelled_by_solvency: 'modelled', historical_at_run_date: 'stale' };
-const rowHtml = ({ m, r, cost, basis, basisKey }: any, volume: number, i: number) => `
-  <tr class="${i === 0 ? 'lead' : ''}">
-    <td class="rank">${i + 1}</td>
-    <td class="ink">
-      <a href="/models/${m.model_id}">${m.display_name}</a>
-      <span class="ml-2 text-[9px] uppercase tracking-[0.14em] t-${TONE[basisKey] ?? 'modelled'}">${TONE[basisKey] ?? 'modelled'}</span>
-    </td>
-    <td class="r">${(r.pass_rate * 100).toFixed(0)}%</td>
-    <td class="r ${TONE[basisKey] ?? 'modelled'}">${money(cost)}</td>
-    <td class="r ink">${money(cost * volume)}</td>
-  </tr>`;
+const harnessOf = (r: any) => r.cost_basis === 'measured_by_source' ? String(r.entry_label ?? '').split(' - ')[0] : undefined;
 
-export function groupsHtml(rows: any[], volume: number) {
+/** /compare/[a]-vs-[b] pages exist in models.json order only; keep that order. */
+export function pairHref(aId: string, bId: string, s: Pick<Settings, 'tier' | 'volume'>): string {
+  const ia = models.findIndex((m) => m.model_id === aId), ib = models.findIndex((m) => m.model_id === bId);
+  const [x, y] = ia <= ib ? [aId, bId] : [bId, aId];
+  return `/compare/${x}-vs-${y}?tier=${s.tier}&volume=${s.volume}`;
+}
+
+/** Rows of one cost basis, as the chart module wants them, each with a Compare link to the group lead. */
+export function chartRows(rows: Row[], key: string, s: Settings): ChartRow[] {
+  const g = rows.filter((x) => x.basisKey === key);
+  const lead = g[0], second = g[1];
+  return g.map((x) => ({
+    id: x.m.model_id, name: x.m.display_name, href: `/models/${x.m.model_id}`,
+    cost: x.cost, pass: x.r.pass_rate, basis: BASIS_OF[key] ?? 'modelled',
+    harness: harnessOf(x.r), attempt: x.attempt,
+    compare: g.length > 1 ? pairHref(x === lead ? second.m.model_id : lead.m.model_id, x.m.model_id, s) : undefined,
+  }));
+}
+
+/** Every computable row as a chart row (for the scatter). */
+export const allChartRows = (rows: Row[], s: Settings) => GROUPS.flatMap((g) => chartRows(rows, g.key, s));
+
+export interface GroupOpts { width: number; compact?: boolean; highlight?: string; }
+
+/**
+ * The grouped result: measured, then modelled, each with its own header and
+ * its own scale; stale rows behind a disclosure. Never interleaved.
+ */
+export function groupsHtml(rows: Row[], s: Settings, o: GroupOpts): string {
   return GROUPS.map((g) => {
-    const inGroup = rows.filter((x) => x.basisKey === g.key);
-    if (!inGroup.length) return '';
-    return `
-      <div class="border-b border-[var(--color-rule)] last:border-b-0">
-        <div class="px-5 pt-4 pb-2">
-          <p class="eyebrow t-${TONE[g.key] ?? 'modelled'}">${g.title}</p>
-          <p class="mt-1 small">${g.note}</p>
-        </div>
-        <div class="tbl-wrap"><table class="tbl tone-${TONE[g.key] ?? 'modelled'}">
-          <thead><tr>
-            <th class="rank">#</th><th>Model</th><th class="r">Pass</th>
-            <th class="r">$ / solved task</th><th class="r">$ / month</th>
-          </tr></thead>
-          <tbody>${inGroup.map((x, i) => rowHtml(x, volume, i)).join('')}</tbody>
-        </table></div>
-      </div>`;
+    const cr = chartRows(rows, g.key, s);
+    const svg = cr.length ? rankedBars(cr, { width: o.width, volume: s.volume, basis: g.basis, compact: o.compact, highlight: o.highlight }) : '';
+    const empty = `<p class="small py-2">No ${g.basis} row has both a verified price and a published pass rate under these settings.</p>`;
+    const head = `<p class="eyebrow"><span class="t-${g.basis}">${g.title}</span> <span class="font-normal normal-case tracking-normal">· ${g.note}</span></p>`;
+    if (g.basis === 'stale') {
+      return `<details class="disc group-${g.basis} px-5 py-3 border-t border-[var(--color-rule)]" data-group="${g.basis}">
+        <summary><span class="t-stale">Stale pass rates</span> (<span data-count>${cr.length}</span>) · ${g.note}</summary>
+        <div class="chart-slot mt-3" data-chart>${svg || empty}</div>
+      </details>`;
+    }
+    return `<div class="group-${g.basis} px-5 pt-4 pb-2${g.basis === 'modelled' ? ' border-t border-[var(--color-rule)]' : ''}" data-group="${g.basis}">
+      ${head}
+      <div class="chart-slot mt-2" data-chart>${svg || empty}</div>
+    </div>`;
   }).join('');
 }
 
 /** Compares only within one cost basis; ranking measured against modelled is invalid. */
-export function calloutHtml(rows: any[], volume: number) {
-  const pool = GROUPS.map((g) => rows.filter((x) => x.basisKey === g.key)).find((g) => g.length > 1) ?? [];
+export function calloutHtml(rows: Row[], volume: number): string {
+  const g = GROUPS.map((g) => ({ g, rows: rows.filter((x) => x.basisKey === g.key) })).find((p) => p.rows.length > 1);
+  const pool = g?.rows ?? [];
+  const tone = g ? `t-${g.g.basis}` : '';
   const cheapest = pool[0];
   const best = pool.slice().sort((a, b) => b.r.pass_rate - a.r.pass_rate)[0];
   if (!cheapest || !best) return '<span class="text-[var(--color-muted)]">No model has both a verified price and a published pass rate under these settings.</span>';
+  const name = (x: Row) => `<strong class="${tone}">${x.m.display_name}</strong>`;
   if (cheapest.m.model_id === best.m.model_id)
-    return `<strong class="text-[var(--color-accent)]">${cheapest.m.display_name}</strong> is both the cheapest per solved task and the highest pass rate here.`;
-  return `<strong class="text-[var(--color-accent)]">${cheapest.m.display_name}</strong> costs ${money(cheapest.cost)} per solved task against
-    <strong>${best.m.display_name}</strong> at ${money(best.cost)} — <strong class="text-[var(--color-accent)]">${(best.cost / cheapest.cost).toFixed(1)}x</strong> more
+    return `${name(cheapest)} is both the cheapest per solved task and the highest pass rate here — ${money(cheapest.cost)} per solved task, ${moneyMonth(cheapest.cost * volume)} a month.`;
+  const x = best.cost / cheapest.cost;
+  return `${name(cheapest)} costs <strong>${money(cheapest.cost)}</strong> per solved task against
+    <strong>${best.m.display_name}</strong> at ${money(best.cost)} — <strong>${x >= 10 ? x.toFixed(0) : x.toFixed(1)}x</strong> more
     for ${((best.r.pass_rate - cheapest.r.pass_rate) * 100).toFixed(0)} more points of pass rate.
-    Over ${volume.toLocaleString()} tasks that difference is <strong class="text-[var(--color-accent)]">${money((best.cost - cheapest.cost) * volume)}</strong> a month.`;
+    Over ${volume.toLocaleString()} tasks that is <strong>${moneyMonth((best.cost - cheapest.cost) * volume)}</strong> a month.`;
 }
 
 export const missingHtml = (missing: string[]) =>
-  missing.length ? `Not shown — no published pass rate, reported as missing rather than estimated: ${missing.join(', ')}.` : '';
+  missing.length ? `No published pass rate, so reported as missing rather than estimated: ${missing.join(', ')}.` : 'Every tracked current model has a published pass rate under these settings.';
+
+/** Validated model id for ?highlight= */
+export const validModelId = (id: string | null) => (id && models.some((m) => m.model_id === id)) ? id : undefined;
