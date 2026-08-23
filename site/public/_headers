@@ -1,0 +1,14 @@
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+  Cross-Origin-Opener-Policy: same-origin-allow-popups
+
+# The embed widget exists to be framed by third-party pages.
+/embed/table
+  ! X-Frame-Options
+  ! Cross-Origin-Opener-Policy
+/embed/table/*
+  ! X-Frame-Options
+  ! Cross-Origin-Opener-Policy
