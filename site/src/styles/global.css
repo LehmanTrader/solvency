@@ -44,8 +44,12 @@
 
 @layer components {
   /* ---- page shell ------------------------------------------------------- */
-  .wrap { margin-inline: auto; max-width: 80rem; padding-inline: 1.25rem; }
-  @media (min-width: 640px) { .wrap { padding-inline: 2rem; } }
+  /* Full-bleed shell: content spans the viewport with AA-style side padding.
+     Long-form prose sets its own measure (.measure) inside the full-width shell. */
+  .wrap { width: 100%; padding-inline: 1.25rem; }
+  @media (min-width: 640px) { .wrap { padding-inline: 1.5rem; } }
+  @media (min-width: 1280px) { .wrap { padding-inline: 2rem; } }
+  .measure { max-width: 72ch; }
 
   /* ---- type roles -------------------------------------------------------- */
   .eyebrow { font-family: var(--font-mono); font-size: .66rem; font-weight: 700;
@@ -140,7 +144,7 @@
 
   /* ---- bar charts -------------------------------------------------------- */
   .bars { display: flex; flex-direction: column; gap: .45rem; font-family: var(--font-mono); font-size: .74rem; }
-  .bars .br { display: grid; grid-template-columns: minmax(7rem, 11rem) 1fr auto; gap: .75rem; align-items: center; }
+  .bars .br { display: grid; grid-template-columns: minmax(7rem, 14rem) 1fr auto; gap: .75rem; align-items: center; }
   .bars .bl { color: var(--color-body); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .bars .bt { height: .7rem; background: var(--color-rule); border-radius: 2px; overflow: hidden; }
   .bars .bf { height: 100%; background: var(--color-accent); border-radius: 2px; min-width: 2px; }

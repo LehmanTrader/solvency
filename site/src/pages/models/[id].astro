@@ -111,7 +111,7 @@ const peers = models.filter((m) => m.model_id !== model.model_id && m.status ===
     {peerBars.length > 1 && (
       <Section id="peers" eyebrow={mine.basisKey === 'measured_by_source' ? 'Measured peers' : 'Modelled peers'} title="Cost per solved task against its peers"
         caption={mine.basisKey === 'measured_by_source' ? 'Measured rows only. Lower is better.' : 'Modelled rows only, heavy tier. Lower is better. These are Solvency estimates, not observed costs.'}>
-        <div class="card card-pad max-w-3xl"><BarChart items={peerBars} tone={mine.basisKey === 'measured_by_source' ? 'measured' : 'modelled'} /></div>
+        <div class="card card-pad max-w-5xl"><BarChart items={peerBars} tone={mine.basisKey === 'measured_by_source' ? 'measured' : 'modelled'} /></div>
         <Provenance source={bestSrc?.attribution} href={bestSrc?.attribution_url ?? best.source_url} verified={bestSrc?.last_verified ?? best.run_date} />
       </Section>
     )}

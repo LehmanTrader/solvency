@@ -22,7 +22,7 @@ const srcNames = sources.map((s) => shortSourceName(s.benchmark)).join(' · ');
 ---
 <Base title={`${d.title} — Solvency`} description={d.description} type="article">
   <article class="wrap pt-10">
-    <header class="max-w-3xl">
+    <header class="measure">
       <p class="eyebrow">Research note {String(d.note).padStart(2, '0')}</p>
       <h1 class="h-display mt-3">{d.title}</h1>
       <p class="lede mt-5 text-[var(--color-muted)]">{d.description}</p>
@@ -49,10 +49,10 @@ const srcNames = sources.map((s) => shortSourceName(s.benchmark)).join(' · ');
           <a href="#share" class="mt-4 text-[var(--color-accent)]">Share this note</a>
         </div>
       </nav>
-      <div class="prose max-w-3xl min-w-0"><Content /></div>
+      <div class="prose measure min-w-0"><Content /></div>
     </div>
 
-    <section id="share" class="mt-16 max-w-3xl lg:ml-[calc(14rem+2.5rem)] card card-pad" aria-label="Share this note">
+    <section id="share" class="mt-16 measure lg:ml-[calc(14rem+2.5rem)] card card-pad" aria-label="Share this note">
       <p class="eyebrow">Share this note</p>
       <p class="mt-1 text-sm text-[var(--color-muted)]">The tweet text is generated from the data, so it matches the tables above.</p>
       <Share url={url} class="mt-4" />

@@ -16,7 +16,7 @@ const schema = {
 ---
 <Base title="Data — Solvency" description="Verified AI model pricing, free under CC-BY. Every row carries a source URL and a verification date.">
   <script type="application/ld+json" set:html={JSON.stringify(schema)} />
-  <div class="wrap pt-10 max-w-4xl">
+  <div class="wrap pt-10">
   <p class="eyebrow">Open data</p>
   <h1 class="h-page mt-3">Data</h1>
   <p class="lede mt-4 max-w-2xl">Verified API list pricing for {models.length} models. Every row carries the provider pricing page it was checked against and the date it was checked.</p>
@@ -26,7 +26,7 @@ const schema = {
     <a href="/data/models.csv" class="font-mono text-[13px] border border-[var(--color-rule)] rounded px-4 py-2 hover:border-[var(--color-accent)]/60">models.csv ↓</a>
   </div>
 
-  <div class="prose mt-12">
+  <div class="prose mt-12 measure">
     <h3>Licence</h3>
     <p>The pricing dataset is published under <a href="https://creativecommons.org/licenses/by/4.0/">CC-BY 4.0</a>.
       Use it commercially, modify it, redistribute it — attribute it as <code>Source: Solvency (solvency.dev)</code> with a link.</p>
