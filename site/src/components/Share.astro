@@ -1,0 +1,25 @@
+---
+/** Share on X + copy link. The tweet text is derived from the data at build time. */
+import { tweetText, shareUrl } from '../lib/headline.ts';
+interface Props { url: string; text?: string; compact?: boolean; class?: string; }
+const { url, text = tweetText(), compact = false, class: cls = '' } = Astro.props;
+const href = shareUrl(text, url);
+---
+<div class={`flex flex-wrap items-center gap-2 ${cls}`} data-share>
+  <a class="btn btn-accent" href={href} target="_blank" rel="noopener noreferrer">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.2 2h3.4l-7.4 8.5L23 22h-6.8l-5.3-7-6.1 7H1.4l7.9-9.1L1 2h7l4.8 6.4L18.2 2zm-1.2 18h1.9L7.1 3.9H5.1L17 20z"/></svg>
+    Share on X
+  </a>
+  <button type="button" class="btn" data-copy={url}>Copy link</button>
+  {!compact && <p class="small basis-full sm:basis-auto sm:ml-2 max-w-lg">{text}</p>}
+</div>
+<script>
+  document.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach((b) => {
+    b.addEventListener('click', async () => {
+      const orig = b.textContent;
+      try { await navigator.clipboard.writeText(b.dataset.copy!); b.textContent = 'Copied'; }
+      catch { b.textContent = 'Copy failed — use the address bar'; }
+      setTimeout(() => (b.textContent = orig), 1600);
+    });
+  });
+</script>

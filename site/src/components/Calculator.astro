@@ -1,6 +1,7 @@
 ---
 import { TIER_NAMES } from '../lib/data.ts';
 import { DEFAULTS, compute, groupsHtml, calloutHtml, missingHtml } from '../lib/calc.ts';
+import { CLERK_ENABLED } from '../lib/clerk.ts';
 // Rendered at build time so the page is useful without JavaScript and the
 // island does not shift layout when it takes over.
 const { rows, missing } = compute(DEFAULTS);
@@ -8,51 +9,64 @@ const initialGroups = groupsHtml(rows, DEFAULTS.volume);
 const initialCallout = calloutHtml(rows, DEFAULTS.volume);
 const initialMissing = missingHtml(missing);
 ---
-<section id="calc" class="mt-14 border border-[var(--color-rule)] rounded-md overflow-hidden">
+<section id="calc" class="card overflow-hidden" aria-label="Cost calculator" data-gated={CLERK_ENABLED ? '1' : '0'}>
+  {CLERK_ENABLED && (
+    <div id="c-gate" class="px-5 py-4 border-b border-[var(--color-rule)] flex flex-wrap items-center justify-between gap-4 bg-[color-mix(in_srgb,var(--color-accent)_6%,transparent)]">
+      <div>
+        <p class="text-[var(--color-ink)] font-semibold">Sign in to run your own scenario</p>
+        <p class="small mt-1">Free account. Set your task tier, volume, cache rate and takeover cost; share the result by link.</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <span id="c-user" class="small hidden"></span>
+        <button id="c-signin" type="button" class="btn btn-accent">Sign in</button>
+        <button id="c-signout" type="button" class="btn hidden">Sign out</button>
+      </div>
+    </div>
+  )}
   <div class="border-b border-[var(--color-rule)] p-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
     <label class="block">
-      <span class="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted)]">Task tier</span>
-      <select id="c-tier" class="mt-2 w-full bg-[var(--color-panel)] border border-[var(--color-rule)] rounded px-3 py-2 font-mono text-sm text-[var(--color-ink)]">
+      <span class="label">Task tier</span>
+      <select id="c-tier" class="mt-2 w-full bg-[var(--color-bg)] border border-[var(--color-rule)] rounded-md px-3 py-2 font-mono text-sm text-[var(--color-ink)]">
         {TIER_NAMES.map((t) => <option value={t} selected={t === 'moderate'}>{t}</option>)}
       </select>
     </label>
     <label class="block">
-      <span class="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted)]">Tasks per month</span>
+      <span class="label">Tasks per month</span>
       <input id="c-volume" type="number" min="1" step="1" value="200"
-        class="mt-2 w-full bg-[var(--color-panel)] border border-[var(--color-rule)] rounded px-3 py-2 font-mono text-sm text-[var(--color-ink)] tabular-nums" />
+        class="mt-2 w-full bg-[var(--color-bg)] border border-[var(--color-rule)] rounded-md px-3 py-2 font-mono text-sm text-[var(--color-ink)] tabular-nums" />
     </label>
     <label class="block">
-      <span class="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted)]">Retry model</span>
-      <select id="c-variant" class="mt-2 w-full bg-[var(--color-panel)] border border-[var(--color-rule)] rounded px-3 py-2 font-mono text-sm text-[var(--color-ink)]">
+      <span class="label">Retry model</span>
+      <select id="c-variant" class="mt-2 w-full bg-[var(--color-bg)] border border-[var(--color-rule)] rounded-md px-3 py-2 font-mono text-sm text-[var(--color-ink)]">
         <option value="naive">naive — cost ÷ pass rate</option>
         <option value="capped">capped — max 3 attempts</option>
         <option value="truncatedGeometric">truncated geometric</option>
       </select>
     </label>
     <label class="block">
-      <span class="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted)]">Cache hit rate <span id="c-cache-v" class="text-[var(--color-accent)]">0%</span></span>
+      <span class="label">Cache hit rate <span id="c-cache-v" class="text-[var(--color-accent)]">0%</span></span>
       <input id="c-cache" type="range" min="0" max="90" step="10" value="0" class="mt-3 w-full accent-[var(--color-accent)]" />
     </label>
     <label class="block">
-      <span class="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted)]">Human takeover cost $</span>
+      <span class="label">Human takeover cost $</span>
       <input id="c-residual" type="number" min="0" step="10" value="0"
-        class="mt-2 w-full bg-[var(--color-panel)] border border-[var(--color-rule)] rounded px-3 py-2 font-mono text-sm text-[var(--color-ink)] tabular-nums" />
+        class="mt-2 w-full bg-[var(--color-bg)] border border-[var(--color-rule)] rounded-md px-3 py-2 font-mono text-sm text-[var(--color-ink)] tabular-nums" />
     </label>
     <label class="flex items-end gap-3 pb-2">
       <input id="c-frontier" type="checkbox" checked class="accent-[var(--color-accent)] size-4" />
-      <span class="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted)]">Frontier efficiency <span class="text-[#E8895A]">assumption</span></span>
+      <span class="label">Frontier efficiency <span class="t-modelled">assumption</span></span>
     </label>
   </div>
 
   <div id="c-callout" class="px-5 py-4 border-b border-[var(--color-rule)] text-[var(--color-ink)]" set:html={initialCallout}></div>
 
   <div id="c-groups" set:html={initialGroups}></div>
-  <div id="c-missing" class="px-5 py-4 border-t border-[var(--color-rule)] font-mono text-[11px] text-[var(--color-muted)]" set:html={initialMissing}></div>
+  <div id="c-missing" class="px-5 py-4 border-t border-[var(--color-rule)] small" set:html={initialMissing}></div>
   <div class="px-5 py-3 border-t border-[var(--color-rule)] flex flex-wrap gap-4 items-center justify-between">
-    <p class="font-mono text-[10px] text-[var(--color-muted)] max-w-lg">
+    <p class="small max-w-lg">
       Measured rows carry a cost the benchmark observed, so the tier, cache and efficiency controls cannot move them. Modelled rows are priced by an assumed loop model.
     </p>
-    <button id="c-share" class="font-mono text-[11px] border border-[var(--color-rule)] rounded px-3 py-1.5 hover:border-[var(--color-accent)]/60 hover:text-[var(--color-accent)]">Copy link to this scenario</button>
+    <button id="c-share" type="button" class="btn">Copy link to this scenario</button>
   </div>
 </section>
 
@@ -70,18 +84,22 @@ const initialMissing = missingHtml(missing);
   };
 
   // hydrate from the URL so a shared link reproduces the scenario exactly
+  // Every value is validated: a crafted link must not be able to throw inside
+  // the engine or leave a select with no option chosen.
   const q = new URLSearchParams(location.search);
-  if (q.get('tier')) CTRL.tier.value = q.get('tier')!;
-  if (q.get('volume')) CTRL.volume.value = q.get('volume')!;
-  if (q.get('variant')) CTRL.variant.value = q.get('variant')!;
-  if (q.get('cache')) CTRL.cache.value = q.get('cache')!;
-  if (q.get('residual')) CTRL.residual.value = q.get('residual')!;
-  if (q.get('frontier')) CTRL.frontier.checked = q.get('frontier') === '1';
+  const TIERS = ['light', 'moderate', 'heavy'], VARIANTS = ['naive', 'capped', 'truncatedGeometric'];
+  const num = (v: string | null, lo: number, hi: number) => { const n = Number(v); return v !== null && Number.isFinite(n) ? String(Math.min(hi, Math.max(lo, Math.round(n)))) : null; };
+  if (TIERS.includes(q.get('tier') ?? '')) CTRL.tier.value = q.get('tier')!;
+  if (VARIANTS.includes(q.get('variant') ?? '')) CTRL.variant.value = q.get('variant')!;
+  const vol = num(q.get('volume'), 1, 10_000_000); if (vol) CTRL.volume.value = vol;
+  const cache = num(q.get('cache'), 0, 90); if (cache) CTRL.cache.value = String(Math.round(Number(cache) / 10) * 10);
+  const res = num(q.get('residual'), 0, 1_000_000); if (res) CTRL.residual.value = res;
+  if (q.get('frontier') === '0' || q.get('frontier') === '1') CTRL.frontier.checked = q.get('frontier') === '1';
 
   function render() {
     const s = {
       tier: CTRL.tier.value as 'light' | 'moderate' | 'heavy',
-      volume: Math.max(1, Number(CTRL.volume.value) || 1),
+      volume: Math.min(10_000_000, Math.max(1, Number(CTRL.volume.value) || 1)),
       variant: CTRL.variant.value as 'naive' | 'capped' | 'truncatedGeometric',
       cache: Number(CTRL.cache.value) / 100,
       residual: Math.max(0, Number(CTRL.residual.value) || 0),
@@ -95,6 +113,35 @@ const initialMissing = missingHtml(missing);
     const p = new URLSearchParams({ tier: s.tier, volume: String(s.volume), variant: s.variant,
       cache: CTRL.cache.value, residual: String(s.residual), frontier: s.frontier ? '1' : '0' });
     history.replaceState(null, '', `${location.pathname}?${p}`);
+  }
+
+  // --- sign-in gate -------------------------------------------------------
+  // Controls are disabled in the static HTML when a Clerk key is configured and
+  // re-enabled once Clerk reports a signed-in user. Reading the default table
+  // (and any shared scenario link) needs no account; changing the inputs does.
+  const gated = (document.getElementById('calc') as HTMLElement).dataset.gated === '1';
+  const setEnabled = (on: boolean) => Object.values(CTRL).forEach((el) => { el.disabled = !on; });
+  if (gated) {
+    setEnabled(false);
+    const signin = $('c-signin'), signout = $('c-signout'), who = $('c-user');
+    const openSignIn = () => (window as any).Clerk?.openSignIn({ afterSignInUrl: location.href, afterSignUpUrl: location.href });
+    signin.addEventListener('click', openSignIn);
+    signout.addEventListener('click', () => (window as any).Clerk?.signOut());
+    // clicking a disabled control does nothing, so catch it on the wrapper
+    signin.closest('section')!.addEventListener('pointerdown', (e) => {
+      const t = e.target as HTMLElement;
+      if (t.closest('label') && !(window as any).Clerk?.user) { e.preventDefault(); openSignIn(); }
+    });
+    const sync = () => {
+      const u = (window as any).Clerk?.user;
+      setEnabled(Boolean(u));
+      signin.classList.toggle('hidden', Boolean(u));
+      signout.classList.toggle('hidden', !u);
+      who.classList.toggle('hidden', !u);
+      who.textContent = u ? (u.primaryEmailAddress?.emailAddress ?? u.fullName ?? 'signed in') : '';
+    };
+    const onReady = () => { sync(); (window as any).Clerk.addListener(sync); };
+    if ((window as any).Clerk?.loaded) onReady(); else document.addEventListener('clerk:ready', onReady, { once: true });
   }
 
   Object.values(CTRL).forEach((el) => { el.addEventListener('input', render); el.addEventListener('change', render); });

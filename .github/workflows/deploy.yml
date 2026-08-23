@@ -35,8 +35,13 @@ jobs:
         working-directory: site
         run: npm install --no-audit --no-fund
 
+      # Public by design (ships in page source). Set as a repository VARIABLE,
+      # not a secret: Settings -> Secrets and variables -> Actions -> Variables.
+      # When unset the calculator builds ungated.
       - name: Build site
         working-directory: site
+        env:
+          PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.PUBLIC_CLERK_PUBLISHABLE_KEY }}
         run: npm run build
 
       - name: Publish to Cloudflare Pages

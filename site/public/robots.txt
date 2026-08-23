@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /embed/table
+
+Sitemap: https://solvency.dev/sitemap-index.xml

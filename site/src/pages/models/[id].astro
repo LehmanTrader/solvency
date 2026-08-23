@@ -1,8 +1,12 @@
 ---
 import Base from '../../layouts/Base.astro';
 import Badge from '../../components/Badge.astro';
+import Section from '../../components/Section.astro';
+import BarChart from '../../components/BarChart.astro';
+import Provenance from '../../components/Provenance.astro';
 import { models, assumptions, tiers, TIER_NAMES, allResultsFor, bestResultFor, extrasFor, sourceFor } from '../../lib/data.ts';
 import { costPerSolvedTask, defaultOptions } from '../../lib/engine.ts';
+import { solvedFor, leaderboard, money } from '../../lib/headline.ts';
 
 export async function getStaticPaths() {
   const { models } = await import('../../lib/data.ts');
@@ -14,78 +18,108 @@ const rows = allResultsFor(model.model_id);
 const best = bestResultFor(model.model_id);
 const tierCosts = TIER_NAMES.map((t) => {
   const out = best ? costPerSolvedTask(model, t, tiers[t], best.pass_rate, opts, extrasFor(best)) : null;
-  return { tier: t, value: out?.value?.naive ?? null, basis: out?.value?.costBasis };
+  return { tier: t, value: out?.value?.naive ?? null };
 });
-const peers = models.filter((m) => m.model_id !== model.model_id && m.status === 'current').slice(0, 6);
-const money = (n) => n >= 100 ? `$${n.toFixed(0)}` : `$${n.toFixed(2)}`;
+const measured = best?.cost_basis === 'measured_by_source';
+const bestSrc = best ? sourceFor(best.benchmark) : null;
+const price = (n) => n === null || n === undefined ? null : `$${n.toFixed(3).replace(/0+$/, '').replace(/\.$/, '')}`;
+const mine = solvedFor(model.model_id, 'heavy');
+// peers: same cost basis only, so the chart never ranks measured against modelled
+const lb = leaderboard('heavy');
+const pool = mine ? (mine.basisKey === 'measured_by_source' ? lb.measured : [...lb.modelled, ...lb.historical]) : [];
+const peerBars = pool.map((x) => ({ label: x.m.display_name, value: x.cost, display: money(x.cost), href: `/models/${x.m.model_id}`, lead: x.m.model_id === model.model_id }));
+const peers = models.filter((m) => m.model_id !== model.model_id && m.status === 'current').slice(0, 8);
 ---
 <Base title={`${model.display_name} — pricing and cost per solved task — Solvency`}
-      description={`${model.display_name} API pricing verified ${model.last_verified}: $${model.input_per_mtok}/M input, $${model.output_per_mtok}/M output, and cost per solved task where a pass rate exists.`}>
-  <p class="font-mono text-[11px] tracking-[0.18em] uppercase text-[var(--color-accent)]">{model.provider}</p>
-  <h1 class="mt-3 font-mono text-4xl font-bold tracking-tight text-[var(--color-ink)]">{model.display_name}</h1>
-  <div class="mt-4 flex flex-wrap gap-2">
-    <Badge tone={model.status === 'current' ? 'accent' : 'warn'}>{model.status}</Badge>
-    <Badge>{model.capability_class}</Badge>
-    <Badge>verified {model.last_verified}</Badge>
-  </div>
-
-  <h2 class="mt-12 font-mono text-[11px] uppercase tracking-[0.16em] text-[var(--color-accent)]">Pricing</h2>
-  <div class="mt-4 grid grid-cols-2 sm:grid-cols-4 border border-[var(--color-rule)] rounded-md overflow-hidden">
-    {[['Input','input_per_mtok'],['Output','output_per_mtok'],['Cached in','cached_input_per_mtok']].map(([label,key]) => (
-      <div class="p-4 border-r border-b border-[var(--color-rule)]">
-        <p class="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted)]">{label} $/Mtok</p>
-        <p class="mt-2 font-mono text-2xl font-bold text-[var(--color-ink)]">
-          {model[key] === null ? <span class="text-[var(--color-muted)] text-lg">missing</span> : `$${model[key].toFixed(3).replace(/0+$/,'').replace(/\.$/,'')}`}
-        </p>
-      </div>))}
-    <div class="p-4 border-b border-[var(--color-rule)]">
-      <p class="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted)]">Context</p>
-      <p class="mt-2 font-mono text-2xl font-bold text-[var(--color-ink)]">
-        {model.context_window ? `${(model.context_window/1000).toFixed(0)}k` : <span class="text-[var(--color-muted)] text-lg">missing</span>}
-      </p>
+      description={`${model.display_name} API pricing verified ${model.last_verified}: $${model.input_per_mtok}/M input, $${model.output_per_mtok}/M output${mine ? `, ${money(mine.cost)} per solved task (${measured ? 'measured' : 'modelled'})` : ', no published pass rate'}.`}>
+  <div class="wrap pt-10">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <p class="eyebrow">{model.provider}</p>
+        <h1 class="h-page mt-3">{model.display_name}</h1>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <Badge status={model.status}>{model.status}</Badge>
+          <Badge>{model.capability_class}</Badge>
+          {best && <Badge provenance={measured ? 'measured' : best.cost_basis === 'historical_at_run_date' ? 'stale' : 'modelled'}>{measured ? 'measured cost' : best.cost_basis === 'historical_at_run_date' ? 'modelled cost · stale pass rate' : 'modelled cost'}</Badge>}
+          <Badge>verified {model.last_verified}</Badge>
+        </div>
+      </div>
+      <a href={model.source_url} rel="noopener" class="btn">Provider pricing page ↗</a>
     </div>
-  </div>
-  <p class="mt-3 font-mono text-[11px] text-[var(--color-muted)]">
-    <a class="border-b border-[var(--color-accent)]/50 text-[var(--color-ink)]" href={model.source_url}>Provider pricing page</a> · verified {model.last_verified}
-  </p>
-  {model.pricing_notes && <p class="mt-4 text-sm text-[var(--color-muted)] border-l-2 border-[var(--color-accent)] pl-4">{model.pricing_notes}</p>}
 
-  <h2 class="mt-12 font-mono text-[11px] uppercase tracking-[0.16em] text-[var(--color-accent)]">Cost per solved task</h2>
-  {best ? (
-    <div class="mt-4 grid grid-cols-3 border border-[var(--color-rule)] rounded-md overflow-hidden">
-      {tierCosts.map((t) => (
-        <div class="p-4 border-r border-[var(--color-rule)] last:border-r-0">
-          <p class="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted)]">{t.tier}</p>
-          <p class="mt-2 font-mono text-2xl font-bold text-[var(--color-accent)]">{t.value === null ? '—' : money(t.value)}</p>
-        </div>))}
+    <div class="mt-8 grid gap-4 lg:grid-cols-[1fr_1fr]">
+      <div>
+        <p class="label">List price · USD per million tokens</p>
+        <div class="tile-grid mt-2 grid-cols-2 sm:grid-cols-4">
+          {[['Input', model.input_per_mtok], ['Output', model.output_per_mtok], ['Cached input', model.cached_input_per_mtok]].map(([label, v]) => (
+            <div class="tile">
+              <p class="label">{label}</p>
+              <p class={`tile-v ${v === null ? 'missing' : ''}`}>{price(v) ?? 'missing'}</p>
+            </div>))}
+          <div class="tile">
+            <p class="label">Context</p>
+            <p class={`tile-v ${model.context_window ? '' : 'missing'}`}>{model.context_window ? `${(model.context_window / 1000).toFixed(0)}k` : 'missing'}</p>
+          </div>
+        </div>
+        <Provenance source="Provider pricing page" href={model.source_url} verified={model.last_verified} />
+      </div>
+      <div>
+        <p class="label">Cost per solved task · by task tier</p>
+        {best ? (
+          <div class="tile-grid mt-2 grid-cols-3">
+            {tierCosts.map((t) => (
+              <div class="tile">
+                <p class="label">{t.tier}</p>
+                <p class={`tile-v ${t.value === null ? 'missing' : measured ? 'measured' : 'modelled'}`}>{t.value === null ? 'missing' : money(t.value)}</p>
+              </div>))}
+          </div>
+        ) : (
+          <div class="tile-grid mt-2 grid-cols-1"><div class="tile">
+            <p class="tile-v missing">missing</p>
+            <p class="tile-n">No published pass rate, so cost per solved task cannot be derived. Reported as missing rather than estimated.</p>
+          </div></div>
+        )}
+        {best && (
+          <Provenance source={bestSrc?.attribution} href={bestSrc?.attribution_url ?? best.source_url} verified={bestSrc?.last_verified ?? best.run_date}
+            note={measured ? 'measured basis: the benchmark observed this cost, so no tier assumption touches it and the three tiers are identical' : 'modelled basis: pass rate published, cost from Solvency\'s loop model at current prices'} />
+        )}
+      </div>
     </div>
-  ) : (
-    <p class="mt-4 text-[var(--color-muted)]">No published pass rate for this model, so cost per solved task cannot be derived. Reported as missing rather than estimated.</p>
-  )}
-  {best?.cost_basis === 'measured_by_source' && (
-    <p class="mt-3 font-mono text-[11px] text-[var(--color-muted)]">Measured basis: the benchmark observed this cost. No Solvency assumption is inside it, so the three tiers are identical.</p>
-  )}
 
-  <h2 class="mt-12 font-mono text-[11px] uppercase tracking-[0.16em] text-[var(--color-accent)]">Benchmark rows</h2>
-  {rows.length ? (
-    <div class="mt-4 overflow-x-auto"><table class="w-full font-mono text-[12px] tabular-nums">
-      <thead><tr class="text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted)] border-b border-[var(--color-accent)]">
-        <th class="text-left py-2 pr-4">Benchmark</th><th class="text-left px-4">Entry</th><th class="text-right px-4">Pass</th><th class="text-left pl-4">Basis</th>
-      </tr></thead>
-      <tbody>{rows.map((r) => (
-        <tr class="border-b border-[var(--color-rule)]">
-          <td class="py-2 pr-4"><a class="text-[var(--color-ink)] border-b border-[var(--color-accent)]/40" href={r.source_url}>{sourceFor(r.benchmark)?.name ?? r.benchmark}</a></td>
-          <td class="px-4 text-[var(--color-muted)]">{r.entry_label}</td>
-          <td class="px-4 text-right">{(r.pass_rate * 100).toFixed(1)}%</td>
-          <td class="pl-4 text-[var(--color-muted)]">{r.cost_basis.replace(/_/g,' ')}</td>
-        </tr>))}</tbody>
-    </table></div>
-  ) : <p class="mt-4 text-[var(--color-muted)]">No benchmark covers this model.</p>}
+    {model.pricing_notes && (
+      <p class="mt-6 text-sm text-[var(--color-body)] border-l-2 border-[var(--color-accent)] pl-4 max-w-3xl">{model.pricing_notes}</p>
+    )}
 
-  <h2 class="mt-12 font-mono text-[11px] uppercase tracking-[0.16em] text-[var(--color-accent)]">Compare</h2>
-  <div class="mt-4 flex flex-wrap gap-2">
-    {peers.map((p) => (
-      <a class="font-mono text-[12px] border border-[var(--color-rule)] rounded px-3 py-1.5 hover:border-[var(--color-accent)]/60 hover:text-[var(--color-accent)]"
-         href={`/compare/${model.model_id}-vs-${p.model_id}`}>vs {p.display_name}</a>))}
+    <Section id="benchmarks" eyebrow="Benchmark rows" title="Where the pass rate comes from"
+      caption="Every row that names this model, with its harness and cost basis. Rows are harness + model combinations, not properties of the bare model.">
+      {rows.length ? (
+        <div class="card overflow-hidden"><div class="tbl-wrap"><table class="tbl">
+          <thead><tr><th>Benchmark</th><th>Entry</th><th class="r">Pass</th><th class="r">$ / task</th><th>Basis</th><th>Run / read</th></tr></thead>
+          <tbody>{rows.map((r) => (
+            <tr>
+              <td class="ink"><a href={r.source_url} rel="noopener">{sourceFor(r.benchmark)?.name ?? r.benchmark}</a></td>
+              <td class="muted">{r.entry_label}</td>
+              <td class="r">{(r.pass_rate * 100).toFixed(1)}%</td>
+              <td class={`r ${r.measured_cost_per_task_usd == null ? 'missing' : ''}`}>{r.measured_cost_per_task_usd == null ? 'not published' : money(r.measured_cost_per_task_usd)}</td>
+              <td class="muted">{r.cost_basis.replace(/_/g, ' ')}</td>
+              <td class="muted">{r.run_date}</td>
+            </tr>))}</tbody>
+        </table></div></div>
+      ) : <p class="text-[var(--color-muted)]">No benchmark covers this model. Reported as missing rather than estimated.</p>}
+    </Section>
+
+    {peerBars.length > 1 && (
+      <Section id="peers" eyebrow={mine.basisKey === 'measured_by_source' ? 'Measured peers' : 'Modelled peers'} title="Cost per solved task against its peers"
+        caption={mine.basisKey === 'measured_by_source' ? 'Measured rows only. Lower is better.' : 'Modelled rows only, heavy tier. Lower is better. These are Solvency estimates, not observed costs.'}>
+        <div class="card card-pad max-w-5xl"><BarChart items={peerBars} tone={mine.basisKey === 'measured_by_source' ? 'measured' : 'modelled'} /></div>
+        <Provenance source={bestSrc?.attribution} href={bestSrc?.attribution_url ?? best.source_url} verified={bestSrc?.last_verified ?? best.run_date} />
+      </Section>
+    )}
+
+    <Section id="compare" eyebrow="Compare" title="Head to head" caption="Side-by-side pricing and cost per solved task with another current model.">
+      <div class="flex flex-wrap gap-2">
+        {peers.map((p) => <a class="btn" href={`/compare/${model.model_id}-vs-${p.model_id}`}>vs {p.display_name}</a>)}
+      </div>
+    </Section>
   </div>
 </Base>

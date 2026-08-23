@@ -1,9 +1,29 @@
 ---
 import '../styles/global.css';
 import { CF_BEACON_TOKEN } from '../lib/site-config.ts';
-interface Props { title: string; description: string; og?: string; }
-const { title, description, og = '/og/divergence-og.png' } = Astro.props;
-const url = new URL(Astro.url.pathname, Astro.site).href;
+import { CLERK_ENABLED, CLERK_PUBLISHABLE_KEY, CLERK_FRONTEND_API } from '../lib/clerk.ts';
+import { models, sources } from '../lib/data.ts';
+interface Props {
+  title: string;
+  description: string;
+  og?: string;
+  /** Open Graph type: "website" for index pages, "article" for notes. */
+  type?: 'website' | 'article';
+  /** Wider content container for data pages; default is the full shell. */
+  wide?: boolean;
+}
+const { title, description, og = '/og/divergence-og.png', type = 'website' } = Astro.props;
+const site = Astro.site!;
+const url = new URL(Astro.url.pathname, site).href;
+const image = new URL(og, site).href;
+const path = Astro.url.pathname;
+const NAV = [
+  ['/', 'Leaderboard'], ['/reports', 'Reports'], ['/models', 'Models'],
+  ['/methodology', 'Methodology'], ['/data', 'Data'], ['/embed', 'Embed'], ['/changelog', 'Changelog'],
+];
+const current = (href: string) => (href === '/' ? path === '/' : path.startsWith(href));
+const verified = models.reduce((a, m) => (m.last_verified > a ? m.last_verified : a), '');
+const aa = sources.find((s) => s.benchmark === 'aa-coding-agent-index');
 ---
 <!doctype html>
 <html lang="en">
@@ -13,38 +33,88 @@ const url = new URL(Astro.url.pathname, Astro.site).href;
   <title>{title}</title>
   <meta name="description" content={description} />
   <link rel="canonical" href={url} />
-  <meta property="og:type" content="article" />
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0A0C0D" />
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#FBFAF8" />
+  <script is:inline>(function(){try{var t=localStorage.getItem('theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+  <meta property="og:type" content={type} />
+  <meta property="og:site_name" content="Solvency" />
+  <meta property="og:url" content={url} />
   <meta property="og:title" content={title} />
   <meta property="og:description" content={description} />
-  <meta property="og:image" content={new URL(og, Astro.site).href} />
+  <meta property="og:image" content={image} />
+  <meta property="og:image:width" content="2400" />
+  <meta property="og:image:height" content="1260" />
+  <meta property="og:image:alt" content="Chart: cost per solved task for AI coding models" />
   <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content={title} />
+  <meta name="twitter:description" content={description} />
+  <meta name="twitter:image" content={image} />
+  <meta name="twitter:image:alt" content="Chart: cost per solved task for AI coding models" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%230A0C0D'/><text y='23' x='6' font-family='monospace' font-size='20' font-weight='700' fill='%23FFB000'>S</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Source+Serif+4:wght@600&family=IBM+Plex+Sans:wght@400;600;700&display=swap" />
+  <link rel="sitemap" href="/sitemap-index.xml" />
+  {CLERK_ENABLED && (
+    <script async crossorigin="anonymous"
+            data-clerk-publishable-key={CLERK_PUBLISHABLE_KEY}
+            src={`https://${CLERK_FRONTEND_API}/npm/@clerk/clerk-js@5/dist/clerk.browser.js`}
+            onload="window.Clerk.load().then(()=>document.dispatchEvent(new Event('clerk:ready')))"></script>
+  )}
   {CF_BEACON_TOKEN && (
     <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js"
             data-cf-beacon={`{"token": "${CF_BEACON_TOKEN}"}`}></script>
   )}
 </head>
-<body>
-  <header class="border-b border-[var(--color-rule)]">
-    <div class="mx-auto max-w-3xl px-6 py-4 flex items-baseline justify-between gap-4">
-      <a href="/" class="font-mono font-bold tracking-[0.28em] text-[13px] text-[var(--color-accent)]">SOLVENCY</a>
-      <nav class="font-mono text-[11px] tracking-[0.14em] uppercase text-[var(--color-muted)] flex gap-5">
-        <a href="/reports" class="hover:text-[var(--color-ink)]">Reports</a>
-        <a href="/models" class="hover:text-[var(--color-ink)]">Models</a>
-        <a href="/data" class="hover:text-[var(--color-ink)]">Data</a>
-        <a href="/methodology" class="hover:text-[var(--color-ink)]">Methodology</a>
+<body class="min-h-screen flex flex-col">
+  <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 btn btn-accent">Skip to content</a>
+  <header class="sticky top-0 z-40 border-b border-[var(--color-rule)] bg-[color-mix(in_srgb,var(--color-bg)_88%,transparent)] backdrop-blur">
+    <div class="wrap h-14 flex items-center gap-4">
+      <a href="/" class="font-mono font-bold tracking-[0.28em] text-[13px] text-[var(--color-accent)] shrink-0" aria-label="Solvency home">SOLVENCY</a>
+      <nav aria-label="Primary" class="flex-1 min-w-0">
+        <ul class="flex items-center gap-0.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-1 px-1">
+          {NAV.map(([href, name]) => (
+            <li><a href={href} class="nav-a" aria-current={current(href) ? 'page' : undefined}>{name}</a></li>
+          ))}
+        </ul>
       </nav>
+      <p class="hidden md:block small shrink-0">prices verified <span class="text-[var(--color-ink)]">{verified}</span></p>
+      <button type="button" id="theme-toggle" class="theme-btn shrink-0" aria-label="Toggle light or dark theme" title="Toggle theme">
+        <svg class="i-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        <svg class="i-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </button>
+      <script is:inline>document.getElementById('theme-toggle').addEventListener('click',function(){var r=document.documentElement;var cur=r.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark');var next=cur==='light'?'dark':'light';r.setAttribute('data-theme',next);try{localStorage.setItem('theme',next);}catch(e){}});</script>
     </div>
   </header>
 
-  <main class="mx-auto max-w-3xl px-6 py-12"><slot /></main>
+  <main id="main" class="flex-1"><slot /></main>
 
-  <footer class="border-t border-[var(--color-rule)] mt-20">
-    <div class="mx-auto max-w-3xl px-6 py-8 font-mono text-[11px] leading-relaxed text-[var(--color-muted)]">
-      <p>Every figure carries a source and a verification date. Where a number does not exist, it is reported as missing rather than estimated.</p>
-      <p class="mt-3">Benchmark data is third-party, cited and linked, and is not redistributed.
-        <a class="text-[var(--color-ink)] border-b border-[var(--color-accent)]/50" href="https://artificialanalysis.ai/agents/coding-agents">Source: Artificial Analysis (artificialanalysis.ai)</a>.
-      </p>
+  <footer class="border-t border-[var(--color-rule)] mt-24 bg-[var(--color-panel)]">
+    <div class="wrap py-10 grid gap-8 md:grid-cols-[1.4fr_1fr_1fr]">
+      <div>
+        <p class="font-mono font-bold tracking-[0.28em] text-[13px] text-[var(--color-accent)]">SOLVENCY</p>
+        <p class="mt-3 text-sm max-w-md leading-relaxed">Cost per solved task for AI coding models. Every figure carries a source and a verification date. Where a number does not exist, it is reported as missing rather than estimated.</p>
+        <p class="mt-4 small">Benchmark data is third-party, cited and linked, and is not redistributed.
+          <a class="link" href={aa?.attribution_url}>{aa?.attribution}</a>.
+        </p>
+      </div>
+      <div>
+        <p class="label">Site</p>
+        <ul class="mt-3 space-y-1.5 text-sm">
+          {NAV.map(([href, name]) => <li><a class="hover:text-[var(--color-accent)]" href={href}>{name}</a></li>)}
+        </ul>
+      </div>
+      <div>
+        <p class="label">Trust</p>
+        <ul class="mt-3 space-y-1.5 text-sm">
+          <li><a class="hover:text-[var(--color-accent)]" href="/methodology">How the numbers are made</a></li>
+          <li><a class="hover:text-[var(--color-accent)]" href="/changelog">Every change to a published figure</a></li>
+          <li><a class="hover:text-[var(--color-accent)]" href="/data">Pricing dataset, CC-BY</a></li>
+          <li><a class="hover:text-[var(--color-accent)]" href="https://github.com/LehmanTrader/solvency" rel="noopener">Source and tests</a></li>
+          <li><a class="hover:text-[var(--color-accent)]" href="/privacy">Privacy</a> · <a class="hover:text-[var(--color-accent)]" href="/terms">Terms</a></li>
+        </ul>
+        <p class="mt-4 small">Prices verified {verified}.</p>
+      </div>
     </div>
   </footer>
 </body>

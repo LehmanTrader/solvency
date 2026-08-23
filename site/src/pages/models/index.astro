@@ -1,30 +1,46 @@
 ---
 import Base from '../../layouts/Base.astro';
 import Badge from '../../components/Badge.astro';
-import { models, bestResultFor } from '../../lib/data.ts';
-const rows = models.slice().sort((a, b) => a.provider.localeCompare(b.provider) || a.display_name.localeCompare(b.display_name));
+import Provenance from '../../components/Provenance.astro';
+import { models, bestResultFor, sourceFor } from '../../lib/data.ts';
+import { solvedFor, money } from '../../lib/headline.ts';
+const order = { current: 0, legacy: 1, retired: 2 };
+const rows = models.slice().sort((a, b) => order[a.status] - order[b.status] || a.provider.localeCompare(b.provider) || a.display_name.localeCompare(b.display_name));
+const verified = models.reduce((a, m) => (m.last_verified > a ? m.last_verified : a), '');
+const price = (n) => n === null || n === undefined ? null : `$${n.toFixed(3).replace(/0+$/, '').replace(/\.$/, '')}`;
+const nCurrent = models.filter((m) => m.status === 'current').length;
+const nPass = models.filter((m) => bestResultFor(m.model_id)).length;
 ---
-<Base title="Models — Solvency" description="Verified API pricing and cost per solved task for every model Solvency tracks.">
-  <h1 class="font-mono text-3xl font-bold text-[var(--color-ink)]">Models</h1>
-  <p class="mt-4 max-w-2xl">{models.length} models, each price verified against the provider's own pricing page on the date shown.</p>
-  <div class="mt-10 overflow-x-auto">
-    <table class="w-full font-mono text-[13px] tabular-nums">
-      <thead><tr class="text-[10px] uppercase tracking-[0.14em] text-[var(--color-muted)] border-b border-[var(--color-accent)]">
-        <th class="text-left py-2 pr-4">Model</th><th class="text-left px-4">Provider</th>
-        <th class="text-right px-4">In $/M</th><th class="text-right px-4">Out $/M</th>
-        <th class="text-right px-4">Pass</th><th class="text-left pl-4">Verified</th>
-      </tr></thead>
-      <tbody>
-        {rows.map((m) => { const r = bestResultFor(m.model_id); return (
-          <tr class="border-b border-[var(--color-rule)]">
-            <td class="py-2.5 pr-4"><a class="text-[var(--color-ink)] hover:text-[var(--color-accent)]" href={`/models/${m.model_id}`}>{m.display_name}</a></td>
-            <td class="px-4 text-[var(--color-muted)]">{m.provider}</td>
-            <td class="px-4 text-right">${m.input_per_mtok.toFixed(2)}</td>
-            <td class="px-4 text-right">${m.output_per_mtok.toFixed(2)}</td>
-            <td class="px-4 text-right">{r ? `${(r.pass_rate * 100).toFixed(0)}%` : <span class="text-[var(--color-muted)]">missing</span>}</td>
-            <td class="pl-4 text-[var(--color-muted)]">{m.last_verified}</td>
-          </tr>); })}
-      </tbody>
-    </table>
+<Base title="Models — verified pricing and cost per solved task — Solvency" description={`Verified API pricing for ${models.length} AI coding models, with cost per solved task where a pass rate exists. Every row carries the provider pricing page and the date it was checked.`}>
+  <div class="wrap pt-10">
+    <p class="eyebrow">Models</p>
+    <h1 class="h-page mt-3">Every model Solvency tracks</h1>
+    <p class="lede mt-4 max-w-2xl">{models.length} models, {nCurrent} current. Each price is verified against the provider's own pricing page on the date shown. {nPass} have a published pass rate; the rest are shown as missing, never estimated.</p>
+
+    <div class="mt-8 card overflow-hidden">
+      <div class="tbl-wrap"><table class="tbl">
+        <thead><tr>
+          <th>Model</th><th>Provider</th><th>Status</th>
+          <th class="r">In $/M</th><th class="r">Out $/M</th><th class="r">Cached $/M</th>
+          <th class="r">Pass</th><th>Basis</th><th class="r">$ / solved (heavy)</th><th>Verified</th>
+        </tr></thead>
+        <tbody>
+          {rows.map((m) => { const r = bestResultFor(m.model_id); const s = solvedFor(m.model_id, 'heavy'); return (
+            <tr>
+              <td class="ink"><a href={`/models/${m.model_id}`}>{m.display_name}</a></td>
+              <td class="muted">{m.provider}</td>
+              <td><Badge status={m.status}>{m.status}</Badge></td>
+              <td class="r">{price(m.input_per_mtok)}</td>
+              <td class="r">{price(m.output_per_mtok)}</td>
+              <td class={`r ${m.cached_input_per_mtok === null ? 'missing' : ''}`}>{price(m.cached_input_per_mtok) ?? 'missing'}</td>
+              <td class={`r ${r ? '' : 'missing'}`}>{r ? `${Math.round(r.pass_rate * 100)}%` : 'missing'}</td>
+              <td class="muted">{r ? (r.cost_basis === 'measured_by_source' ? 'measured' : r.cost_basis === 'historical_at_run_date' ? 'modelled · stale' : 'modelled') : '—'}</td>
+              <td class={`r ${s ? (s.basisKey === 'measured_by_source' ? 'measured' : s.basisKey === 'historical_at_run_date' ? 'stale' : 'modelled') : 'missing'}`}>{s ? money(s.cost) : 'missing'}</td>
+              <td class="muted">{m.last_verified}</td>
+            </tr>); })}
+        </tbody>
+      </table></div>
+    </div>
+    <Provenance verified={verified} note="Measured and modelled figures in the last column are on different bases and must not be ranked against each other; see the leaderboard for the separated ranking." />
   </div>
 </Base>

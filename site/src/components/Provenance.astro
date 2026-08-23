@@ -1,0 +1,12 @@
+---
+/** The trust line under every table and chart: source link + last-verified date. */
+interface Props { source?: string; href?: string; verified?: string; note?: string; class?: string; }
+const { source, href, verified, note, class: cls = '' } = Astro.props;
+---
+<p class={`small mt-3 ${cls}`}>
+  {source && (href ? <a class="link" href={href}>{source}</a> : source)}
+  {source && verified && ' · '}
+  {verified && <>verified <span class="text-[var(--color-ink)]">{verified}</span></>}
+  {note && <> · {note}</>}
+  <slot />
+</p>

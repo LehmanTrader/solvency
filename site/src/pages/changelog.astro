@@ -4,9 +4,11 @@ import changelog from '../data/changelog.json';
 const entries = changelog.entries.slice().sort((a, b) => b.date.localeCompare(a.date));
 ---
 <Base title="Changelog — Solvency" description="Every change to published figures, dated and explained.">
-  <h1 class="font-mono text-3xl font-bold text-[var(--color-ink)]">Changelog</h1>
-  <p class="mt-4 max-w-2xl">Every change to a published figure, with the date it was verified. A price change is never applied automatically: the watcher flags, a human checks the provider's page, and the edit is recorded here.</p>
-  <ol class="mt-10 border-l border-[var(--color-rule)]">
+  <div class="wrap pt-10">
+  <p class="eyebrow">Every change to a published figure</p>
+  <h1 class="h-page mt-3">Changelog</h1>
+  <p class="lede mt-4 max-w-2xl">Every change to a published figure, with the date it was verified. A price change is never applied automatically: the watcher flags, a human checks the provider's page, and the edit is recorded here.</p>
+  <ol class="mt-10 measure border-l border-[var(--color-rule)]">
     {entries.map((e) => (
       <li class="relative pl-6 pb-10">
         <span class="absolute -left-[4.5px] top-2 size-2 rounded-full bg-[var(--color-accent)]"></span>
@@ -15,4 +17,5 @@ const entries = changelog.entries.slice().sort((a, b) => b.date.localeCompare(a.
         {e.detail && <p class="mt-2 text-sm text-[var(--color-muted)]">{e.detail}</p>}
       </li>))}
   </ol>
+  </div>
 </Base>

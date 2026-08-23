@@ -25,7 +25,8 @@ import '../../styles/global.css';
   import { costPerSolvedTask, defaultOptions } from '../../lib/engine.ts';
   const q = new URLSearchParams(location.search);
   const want = (q.get('models') ?? '').split(',').map((s) => s.trim()).filter(Boolean);
-  const tier = (q.get('tier') ?? 'heavy') as 'light' | 'moderate' | 'heavy';
+  const TIERS = ['light', 'moderate', 'heavy'] as const;
+  const tier = (TIERS as readonly string[]).includes(q.get('tier') ?? '') ? (q.get('tier') as typeof TIERS[number]) : 'heavy';
   const opts = defaultOptions(assumptions);
   const money = (n: number) => n >= 100 ? `$${n.toFixed(0)}` : `$${n.toFixed(2)}`;
 

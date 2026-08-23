@@ -1,0 +1,46 @@
+---
+import Base from '../layouts/Base.astro';
+const updated = '2026-08-22';
+---
+<Base title="Terms — Solvency" description="Terms of use for solvency.dev: what the data is, what it isn't, and how you may use it.">
+  <div class="wrap pt-10">
+  <p class="eyebrow">Last updated {updated}</p>
+  <h1 class="h-page mt-3">Terms of use</h1>
+  <p class="lede mt-4 max-w-2xl">By using solvency.dev you agree to these terms. They are short because the site is simple.</p>
+
+  <div class="prose measure mt-10">
+    <h2>What Solvency is</h2>
+    <p>Solvency publishes estimates of the cost to get a coding task solved by an AI model, computed from published prices and published benchmark pass rates. Every figure carries the date it was verified and a link to its source. The <a href="/methodology">methodology</a> explains every assumption.</p>
+
+    <h2>What the figures are not</h2>
+    <ul>
+      <li><strong>Not a guarantee.</strong> Figures are derived from third-party benchmarks run under specific harnesses and conditions. Your tasks, prompts and harness will produce different costs. A modelled figure rests on stated assumptions; a measured figure is what one benchmark observed on one day.</li>
+      <li><strong>Not advice.</strong> Nothing on this site is financial, procurement, legal or engineering advice. Decisions you make using it are yours.</li>
+      <li><strong>Not current by definition.</strong> Prices and benchmarks change. A figure is accurate as of its <code>verified</code> date and may be stale afterwards. Check the source before relying on it.</li>
+    </ul>
+    <p>Solvency is provided as is, without warranty of any kind. To the fullest extent permitted by law, the operator is not liable for any loss arising from use of the site or its data.</p>
+
+    <h2>Third-party data</h2>
+    <p>Benchmark results shown on this site belong to their publishers — among them Artificial Analysis, Scale AI and the Aider project — and are cited and linked under their own terms. They are not part of Solvency's open dataset and may not be taken from this site as if they were. Solvency's own pricing compilation is published under CC-BY 4.0 at <a href="/data">/data</a>, and only that.</p>
+
+    <h2>Using the site</h2>
+    <ul>
+      <li>You may read, link to, quote and screenshot the site with attribution to Solvency (solvency.dev).</li>
+      <li>You may embed the <a href="/embed">widget</a> on your own site as long as its attribution stays intact.</li>
+      <li>You may not scrape the site at a rate that degrades it, republish it wholesale, remove attribution, or present Solvency's figures as your own or as an endorsement by any model provider.</li>
+    </ul>
+
+    <h2>Accounts</h2>
+    <p>Some features require a free account. Keep your sign-in to yourself, and don't create accounts to evade limits or to abuse the service. Accounts that do may be closed. You can delete your account at any time by emailing <a href="mailto:robertdhanda@gmail.com">robertdhanda@gmail.com</a>. How account data is handled is in the <a href="/privacy">privacy policy</a>.</p>
+
+    <h2>Trademarks</h2>
+    <p>Model and company names are the trademarks of their owners and are used only to identify the products measured. Solvency is independent and is not affiliated with or endorsed by any model provider or benchmark publisher.</p>
+
+    <h2>Changes</h2>
+    <p>These terms may change; the date at the top is the current version. Continued use after a change means you accept it. Material changes are announced to account holders by email.</p>
+
+    <h2>Contact</h2>
+    <p><a href="mailto:robertdhanda@gmail.com">robertdhanda@gmail.com</a></p>
+  </div>
+  </div>
+</Base>
