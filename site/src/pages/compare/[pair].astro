@@ -78,7 +78,7 @@ const statusNote = [a, b].filter((m) => m.status !== 'current').map((m) => `${m.
           <>
             <div class="mt-3 hidden sm:block" data-chart data-layout="wide" data-w="600" set:html={linesWide}></div>
             <div class="mt-3 sm:hidden" data-chart data-layout="narrow" data-w="350" set:html={linesNarrow}></div>
-            <p class="small mt-2">Solid measured · dashed modelled · dotted stale. Same slope on log axes; the gap is the verdict.</p>
+            <p class="small mt-2">Solid measured · dashed modelled · dotted stale. The gap is the verdict.</p>
           </>
         ) : <p class="small mt-3">No line to draw: neither model has a published pass rate.</p>}
       </div>
