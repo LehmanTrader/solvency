@@ -137,6 +137,13 @@
   .lockup .logo-mark { flex: none; display: block; }
   .wordmark { font-family: var(--font-mono); font-weight: 400; letter-spacing: .2em; font-size: .8rem; color: var(--color-ink); }
   .wordmark b { font-weight: 700; color: inherit; }
+  /* At the one width where the brand, theme and both direct auth actions cannot
+     coexist, keep the recognizable mark and the accessible Solvency-home name.
+     This prevents an auth-only third header row without hiding either action. */
+  @media (max-width: 359px) {
+    .site-header-lockup { min-width: 2.75rem; min-height: 2.75rem; justify-content: center; padding-block: 0; }
+    .site-header-lockup .wordmark { display: none; }
+  }
 
   /* ---- surfaces ---------------------------------------------------------- */
   .card { background: var(--color-panel); border: 1px solid var(--color-rule); border-radius: 8px; }

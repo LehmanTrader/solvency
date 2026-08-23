@@ -26,9 +26,15 @@ test('desktop models table assigns every field a visible column', () => {
 
 test('mobile navigation reveals the current item and keeps direct sign-in', () => {
   const base = read('site/src/layouts/Base.astro');
+  const css = read('site/src/styles/global.css');
   assert.match(base, /querySelector\('\[aria-current="page"\]'\)/);
   assert.match(base, /scrollLeft\s*=/);
+  assert.match(base, /n\.scrollWidth\s*>\s*n\.clientWidth\s*\+\s*1/);
   assert.doesNotMatch(base, /id="auth-signin"[^>]*\bhidden\b/);
+  assert.match(base, /flex-wrap sm:flex-nowrap/);
+  assert.match(base, /basis-full sm:order-none sm:basis-0 flex-1 min-w-0/);
+  assert.doesNotMatch(base, /hidden lg:block small shrink-0[^>]*>prices verified/);
+  assert.match(css, /@media \(max-width: 359px\)[\s\S]*\.site-header-lockup\s*\{[^}]*min-width:\s*2\.75rem;[^}]*min-height:\s*2\.75rem;[\s\S]*\.site-header-lockup \.wordmark\s*\{\s*display:\s*none;/);
 });
 
 test('mobile auth does not render the fixed context strip', () => {
