@@ -1,0 +1,33 @@
+---
+/** Two pickers → the existing static /compare/[a]-vs-[b] page. */
+import Base from '../../layouts/Base.astro';
+import { models } from '../../lib/data.ts';
+const order = { current: 0, legacy: 1, retired: 2 };
+const list = models.slice().sort((a, b) => order[a.status] - order[b.status] || a.display_name.localeCompare(b.display_name));
+const label = (m) => `${m.display_name}${m.status !== 'current' ? ` (${m.status})` : ''}`;
+const ids = models.map((m) => m.model_id);
+---
+<Base title="Compare two models — cost per solved task — Solvency" description="Pick any two AI coding models and compare verified pricing and cost per solved task at your task tier and volume.">
+  <div class="wrap pt-8 md:pt-12">
+    <p class="eyebrow">Compare</p>
+    <h1 class="h-page mt-3">Two models, head to head</h1>
+    <p class="lede mt-4 max-w-[58ch]">Cost per solved task for both, on the same basis, with the monthly gap at your volume.</p>
+    <form id="pick" class="mt-8 card card-pad grid gap-4 sm:grid-cols-[1fr_auto_1fr_auto] items-end" action="/compare/" method="get">
+      <label class="block"><span class="label">Model A</span><select id="pa" name="a" class="ctl mt-2 w-full text-sm">{list.map((m, i) => <option value={m.model_id} selected={i === 0}>{label(m)}</option>)}</select></label>
+      <p class="hidden sm:block text-[var(--color-muted)] pb-2">vs</p>
+      <label class="block"><span class="label">Model B</span><select id="pb" name="b" class="ctl mt-2 w-full text-sm">{list.map((m, i) => <option value={m.model_id} selected={i === 1}>{label(m)}</option>)}</select></label>
+      <button type="submit" class="btn btn-accent">Compare</button>
+    </form>
+    <p class="small mt-3">Every pair has its own page; the pickers only choose which one. Tier and volume can be changed on the comparison itself.</p>
+  </div>
+</Base>
+<script define:vars={{ ids }}>
+  const form = document.getElementById('pick');
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const a = document.getElementById('pa').value, b = document.getElementById('pb').value;
+    if (a === b || !ids.includes(a) || !ids.includes(b)) return;
+    const [x, y] = ids.indexOf(a) < ids.indexOf(b) ? [a, b] : [b, a];
+    location.href = `/compare/${x}-vs-${y}`;
+  });
+</script>

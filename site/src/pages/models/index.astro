@@ -19,10 +19,11 @@ const nPass = models.filter((m) => bestResultFor(m.model_id)).length;
 
     <div class="mt-8 card overflow-hidden">
       <div class="tbl-wrap"><table class="tbl">
+        <caption>Every model Solvency tracks: verified pricing, pass rate, cost basis and cost per solved task at the heavy tier</caption>
         <thead><tr>
-          <th>Model</th><th>Provider</th><th>Status</th>
-          <th class="r">In $/M</th><th class="r">Out $/M</th><th class="r">Cached $/M</th>
-          <th class="r">Pass</th><th>Basis</th><th class="r">$ / solved (heavy)</th><th>Verified</th>
+          <th scope="col">Model</th><th scope="col">Provider</th><th scope="col">Status</th>
+          <th scope="col" class="r">In $/M</th><th scope="col" class="r">Out $/M</th><th scope="col" class="r">Cached $/M</th>
+          <th scope="col" class="r">Pass</th><th scope="col">Basis</th><th scope="col" class="r">$ / solved (heavy)</th><th scope="col">Verified</th>
         </tr></thead>
         <tbody>
           {rows.map((m) => { const r = bestResultFor(m.model_id); const s = solvedFor(m.model_id, 'heavy'); return (

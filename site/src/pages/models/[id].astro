@@ -1,12 +1,11 @@
 ---
 import Base from '../../layouts/Base.astro';
-import Badge from '../../components/Badge.astro';
 import Section from '../../components/Section.astro';
-import BarChart from '../../components/BarChart.astro';
 import Provenance from '../../components/Provenance.astro';
 import { models, assumptions, tiers, TIER_NAMES, allResultsFor, bestResultFor, extrasFor, sourceFor } from '../../lib/data.ts';
 import { costPerSolvedTask, defaultOptions } from '../../lib/engine.ts';
 import { solvedFor, leaderboard, money } from '../../lib/headline.ts';
+import { rankedBars, BASIS_OF, type ChartRow } from '../../lib/charts.ts';
 
 export async function getStaticPaths() {
   const { models } = await import('../../lib/data.ts');
@@ -21,33 +20,49 @@ const tierCosts = TIER_NAMES.map((t) => {
   return { tier: t, value: out?.value?.naive ?? null };
 });
 const measured = best?.cost_basis === 'measured_by_source';
+const basis = best ? (BASIS_OF[best.cost_basis] ?? 'modelled') : null;
+const basisWord = basis === 'measured' ? 'measured cost' : basis === 'stale' ? 'modelled cost · stale pass rate' : 'modelled cost';
 const bestSrc = best ? sourceFor(best.benchmark) : null;
 const price = (n) => n === null || n === undefined ? null : `$${n.toFixed(3).replace(/0+$/, '').replace(/\.$/, '')}`;
+const context = (n) => !n ? 'missing' : n >= 1_000_000 ? `${(n / 1_000_000).toFixed(n % 1_000_000 ? 1 : 0)}M` : `${(n / 1000).toFixed(0)}k`;
 const mine = solvedFor(model.model_id, 'heavy');
-// peers: same cost basis only, so the chart never ranks measured against modelled
-const lb = leaderboard('heavy');
-const pool = mine ? (mine.basisKey === 'measured_by_source' ? lb.measured : [...lb.modelled, ...lb.historical]) : [];
-const peerBars = pool.map((x) => ({ label: x.m.display_name, value: x.cost, display: money(x.cost), href: `/models/${x.m.model_id}`, lead: x.m.model_id === model.model_id }));
+// peers: same cost basis only, so the chart never ranks measured against modelled.
+// The same Chart A component as the calculator, pinned on this model.
+const PEER_TIER = 'heavy', PEER_VOLUME = 200;
+const lb = leaderboard(PEER_TIER);
+const pool = mine ? (mine.basisKey === 'measured_by_source' ? lb.measured : mine.basisKey === 'historical_at_run_date' ? lb.historical : lb.modelled) : [];
+const harnessOf = (r) => r.cost_basis === 'measured_by_source' ? String(r.entry_label ?? '').split(' - ')[0] : undefined;
+const peerRows: ChartRow[] = pool.map((x) => ({
+  id: x.m.model_id, name: x.m.display_name, href: `/models/${x.m.model_id}`, cost: x.cost, pass: x.r.pass_rate,
+  basis: BASIS_OF[x.basisKey] ?? 'modelled', harness: harnessOf(x.r), attempt: x.perTask ?? undefined,
+  compare: x.m.model_id === model.model_id ? undefined : `/compare/${models.findIndex((m) => m.model_id === model.model_id) <= models.findIndex((m) => m.model_id === x.m.model_id) ? `${model.model_id}-vs-${x.m.model_id}` : `${x.m.model_id}-vs-${model.model_id}`}?tier=${PEER_TIER}&volume=${PEER_VOLUME}`,
+}));
+const peerBasis = peerRows[0]?.basis ?? 'modelled';
+const peersWide = peerRows.length > 1 ? rankedBars(peerRows, { width: 1046, volume: PEER_VOLUME, basis: peerBasis, compact: false, highlight: model.model_id }) : '';
+const peersNarrow = peerRows.length > 1 ? rankedBars(peerRows, { width: 350, volume: PEER_VOLUME, basis: peerBasis, compact: true, highlight: model.model_id }) : '';
 const peers = models.filter((m) => m.model_id !== model.model_id && m.status === 'current').slice(0, 8);
 ---
 <Base title={`${model.display_name} — pricing and cost per solved task — Solvency`}
       description={`${model.display_name} API pricing verified ${model.last_verified}: $${model.input_per_mtok}/M input, $${model.output_per_mtok}/M output${mine ? `, ${money(mine.cost)} per solved task (${measured ? 'measured' : 'modelled'})` : ', no published pass rate'}.`}>
-  <div class="wrap pt-10">
-    <div class="flex flex-wrap items-end justify-between gap-4">
+  <div class="wrap pt-8 md:pt-12">
+    <div class="flex flex-wrap items-end justify-between gap-6">
       <div>
         <p class="eyebrow">{model.provider}</p>
         <h1 class="h-page mt-3">{model.display_name}</h1>
-        <div class="mt-4 flex flex-wrap gap-2">
-          <Badge status={model.status}>{model.status}</Badge>
-          <Badge>{model.capability_class}</Badge>
-          {best && <Badge provenance={measured ? 'measured' : best.cost_basis === 'historical_at_run_date' ? 'stale' : 'modelled'}>{measured ? 'measured cost' : best.cost_basis === 'historical_at_run_date' ? 'modelled cost · stale pass rate' : 'modelled cost'}</Badge>}
-          <Badge>verified {model.last_verified}</Badge>
-        </div>
+        <p class="small mt-4">
+          <span class={model.status === 'current' ? 'text-[var(--color-ink)]' : model.status === 'retired' ? 'line-through' : ''}>{model.status}</span>
+          {' '}· {model.capability_class}
+          {basis && <>{' '}· <span class={`t-${basis}`}>{basisWord}</span></>}
+          {' '}· verified <span class="text-[var(--color-ink)]">{model.last_verified}</span>
+        </p>
       </div>
-      <a href={model.source_url} rel="noopener" class="btn">Provider pricing page ↗</a>
+      <div class="flex flex-wrap gap-2">
+        <a href={`/?highlight=${model.model_id}`} class="btn">Run this model in the calculator</a>
+        <a href={model.source_url} rel="noopener" class="btn">Provider pricing page ↗</a>
+      </div>
     </div>
 
-    <div class="mt-8 grid gap-4 lg:grid-cols-[1fr_1fr]">
+    <div class="mt-10 grid gap-4 lg:grid-cols-[1fr_1fr]">
       <div>
         <p class="label">List price · USD per million tokens</p>
         <div class="tile-grid mt-2 grid-cols-2 sm:grid-cols-4">
@@ -58,7 +73,7 @@ const peers = models.filter((m) => m.model_id !== model.model_id && m.status ===
             </div>))}
           <div class="tile">
             <p class="label">Context</p>
-            <p class={`tile-v ${model.context_window ? '' : 'missing'}`}>{model.context_window ? `${(model.context_window / 1000).toFixed(0)}k` : 'missing'}</p>
+            <p class={`tile-v ${model.context_window ? '' : 'missing'}`}>{context(model.context_window)}</p>
           </div>
         </div>
         <Provenance source="Provider pricing page" href={model.source_url} verified={model.last_verified} />
@@ -70,7 +85,7 @@ const peers = models.filter((m) => m.model_id !== model.model_id && m.status ===
             {tierCosts.map((t) => (
               <div class="tile">
                 <p class="label">{t.tier}</p>
-                <p class={`tile-v ${t.value === null ? 'missing' : measured ? 'measured' : 'modelled'}`}>{t.value === null ? 'missing' : money(t.value)}</p>
+                <p class={`tile-v ${t.value === null ? 'missing' : basis}`}>{t.value === null ? 'missing' : money(t.value)}</p>
               </div>))}
           </div>
         ) : (
@@ -87,14 +102,15 @@ const peers = models.filter((m) => m.model_id !== model.model_id && m.status ===
     </div>
 
     {model.pricing_notes && (
-      <p class="mt-6 text-sm text-[var(--color-body)] border-l-2 border-[var(--color-accent)] pl-4 max-w-3xl">{model.pricing_notes}</p>
+      <p class="mt-6 text-sm text-[var(--color-body)] border-l-2 border-[var(--color-rule-strong)] pl-4 max-w-3xl">{model.pricing_notes}</p>
     )}
 
     <Section id="benchmarks" eyebrow="Benchmark rows" title="Where the pass rate comes from"
       caption="Every row that names this model, with its harness and cost basis. Rows are harness + model combinations, not properties of the bare model.">
       {rows.length ? (
         <div class="card overflow-hidden"><div class="tbl-wrap"><table class="tbl">
-          <thead><tr><th>Benchmark</th><th>Entry</th><th class="r">Pass</th><th class="r">$ / task</th><th>Basis</th><th>Run / read</th></tr></thead>
+          <caption>Benchmark rows naming {model.display_name}: benchmark, entry, pass rate, measured cost per task, cost basis and run date</caption>
+          <thead><tr><th scope="col">Benchmark</th><th scope="col">Entry</th><th scope="col" class="r">Pass</th><th scope="col" class="r">$ / task</th><th scope="col">Basis</th><th scope="col">Run / read</th></tr></thead>
           <tbody>{rows.map((r) => (
             <tr>
               <td class="ink"><a href={r.source_url} rel="noopener">{sourceFor(r.benchmark)?.name ?? r.benchmark}</a></td>
@@ -108,10 +124,16 @@ const peers = models.filter((m) => m.model_id !== model.model_id && m.status ===
       ) : <p class="text-[var(--color-muted)]">No benchmark covers this model. Reported as missing rather than estimated.</p>}
     </Section>
 
-    {peerBars.length > 1 && (
-      <Section id="peers" eyebrow={mine.basisKey === 'measured_by_source' ? 'Measured peers' : 'Modelled peers'} title="Cost per solved task against its peers"
-        caption={mine.basisKey === 'measured_by_source' ? 'Measured rows only. Lower is better.' : 'Modelled rows only, heavy tier. Lower is better. These are Solvency estimates, not observed costs.'}>
-        <div class="card card-pad max-w-5xl"><BarChart items={peerBars} tone={mine.basisKey === 'measured_by_source' ? 'measured' : 'modelled'} /></div>
+    {peerRows.length > 1 && (
+      <Section id="peers" eyebrow={`${peerBasis} peers`} title="Cost per solved task against its peers"
+        caption={peerBasis === 'measured' ? `Measured rows only, ranked as on the calculator. Monthly figures at ${PEER_VOLUME} tasks. Lower is better.` : `${peerBasis === 'stale' ? 'Stale' : 'Modelled'} rows only, heavy tier, ${PEER_VOLUME} tasks a month. Lower is better. These are Solvency estimates, not observed costs.`}>
+        <div class="card overflow-hidden">
+          <div class="px-5 pt-4 pb-2">
+            <p class="ghead"><span class={`gword t-${peerBasis}`}>{peerBasis}</span> · {peerBasis === 'measured' ? 'the benchmark ran the model and observed this cost' : 'pass rate published; cost is Solvency\'s loop model at verified prices'}</p>
+            <div class="chart-slot mt-2 hidden sm:block" set:html={peersWide}></div>
+            <div class="chart-slot mt-2 sm:hidden" set:html={peersNarrow}></div>
+          </div>
+        </div>
         <Provenance source={bestSrc?.attribution} href={bestSrc?.attribution_url ?? best.source_url} verified={bestSrc?.last_verified ?? best.run_date} />
       </Section>
     )}

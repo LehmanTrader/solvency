@@ -26,6 +26,12 @@ function absoluteChartPaths() {
 
 export default defineConfig({
   site: 'https://solvency.dev',
+  // "Reports" read as exports; the notes live at /research. public/_redirects
+  // gives Cloudflare real 301s; these keep the old URLs resolving anywhere.
+  redirects: {
+    '/reports': '/research',
+    '/reports/[...slug]': '/research/[...slug]',
+  },
   integrations: [sitemap()],
   vite: {
     plugins: [tailwind()],
