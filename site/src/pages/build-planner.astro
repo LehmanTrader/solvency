@@ -160,6 +160,53 @@ const harnessExamples = [
           </div>
         </div>
       </section>
+
+      <section class="card overflow-hidden" aria-labelledby="sensitivity-title">
+        <div class="card-head">
+          <div><p class="label">Step 5 · preview</p><h2 class="h-card mt-1" id="sensitivity-title">Sensitivity and break-even</h2></div>
+          <span class="pill pill-ink">Hypothetical</span>
+        </div>
+        <div class="card-pad grid gap-8">
+          <div>
+            <div class="flex flex-wrap items-end justify-between gap-4">
+              <div class="max-w-2xl">
+                <h3 class="h-card">Move one assumption</h3>
+                <p class="small mt-2">Low and high scenarios change only the selected input family across every model role. They are user-controlled hypotheticals, not measured forecasts.</p>
+              </div>
+              <div class="grid grid-cols-[minmax(0,1fr)_8rem] gap-3 w-full sm:w-auto sm:min-w-[28rem]">
+                <label class="block"><span class="label">Input family</span><select class="ctl ctl-row mt-2 w-full" id="b-sens-axis">
+                  <option value="role_calls">Role calls per build</option>
+                  <option value="tokens_per_call">Tokens per call</option>
+                  <option value="model_rates">Model token rates</option>
+                  <option value="system_success">Whole-system success</option>
+                </select></label>
+                <label class="block"><span class="label">Range</span><span class="percent-input mt-2"><input class="ctl ctl-row w-full" id="b-sens-range" type="number" min="5" max="90" step="5" value="25" /><span>%</span></span></label>
+              </div>
+            </div>
+            <div class="mt-4 grid gap-3 md:grid-cols-3" aria-label="Low, current and high sensitivity quotes">
+              <article class="analysis-card"><p class="label" id="b-sens-low-label">Low · −25%</p><dl class="analysis-metrics"><div><dt>Per attempt</dt><dd id="b-sens-low-attempt">—</dd></div><div><dt>Per completed</dt><dd id="b-sens-low-solved">—</dd></div><div><dt>Monthly</dt><dd id="b-sens-low-month">—</dd></div></dl></article>
+              <article class="analysis-card analysis-current"><p class="label">Current plan</p><dl class="analysis-metrics"><div><dt>Per attempt</dt><dd id="b-sens-base-attempt">—</dd></div><div><dt>Per completed</dt><dd id="b-sens-base-solved">—</dd></div><div><dt>Monthly</dt><dd id="b-sens-base-month">—</dd></div></dl></article>
+              <article class="analysis-card"><p class="label" id="b-sens-high-label">High · +25%</p><dl class="analysis-metrics"><div><dt>Per attempt</dt><dd id="b-sens-high-attempt">—</dd></div><div><dt>Per completed</dt><dd id="b-sens-high-solved">—</dd></div><div><dt>Monthly</dt><dd id="b-sens-high-month">—</dd></div></dl></article>
+            </div>
+            <p class="small mt-3" id="b-sens-status">Hypothetical one-variable sensitivity; all other plan inputs are held constant.</p>
+            <p class="sr-only" id="b-sens-announcement" aria-live="polite" aria-atomic="true"></p>
+          </div>
+
+          <div class="border-t border-[var(--color-rule)] pt-6 grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
+            <div aria-live="polite" aria-atomic="true">
+              <p class="label">Against selected baseline</p>
+              <h3 class="h-card mt-2" id="b-break-even">Save a version to calculate break-even.</h3>
+              <p class="small mt-2 max-w-3xl" id="b-break-even-detail">Break-even uses a common attempted-build volume: per-attempt role and harness cost × volume, plus each plan's fixed monthly cost. It does not infer success.</p>
+            </div>
+            <dl class="break-even-inputs" aria-label="Break-even inputs">
+              <div><dt>Current / attempt</dt><dd id="b-be-current-attempt">—</dd></div>
+              <div><dt>Baseline / attempt</dt><dd id="b-be-baseline-attempt">—</dd></div>
+              <div><dt>Current fixed / mo</dt><dd id="b-be-current-fixed">—</dd></div>
+              <div><dt>Baseline fixed / mo</dt><dd id="b-be-baseline-fixed">—</dd></div>
+            </dl>
+          </div>
+        </div>
+      </section>
     </form>
 
     <Section id="packaging" eyebrow="Packaging" title="What becomes Pro" class="mt-20"
@@ -205,6 +252,7 @@ const harnessExamples = [
   import { models } from '../lib/data.ts';
   import { quoteBuildPlan, type BuildPlanV1, type BuildRoleV1 } from '../lib/build-cost.ts';
   import { compareBuildQuotes, createBuildSnapshot, duplicateBuildSnapshot, type BuildSnapshotV1 } from '../lib/build-workspace.ts';
+  import { analyzeBuildSensitivity, breakEvenBuildPlans, type SensitivityAxis } from '../lib/build-sensitivity.ts';
   import { track } from '../lib/clerk-client.ts';
 
   const form = document.getElementById('composer-form') as HTMLFormElement;
@@ -216,6 +264,7 @@ const harnessExamples = [
   let baselineSnapshotId: string | null = null;
   const snapshots: BuildSnapshotV1[] = [];
   const byId = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+  const setText = (id: string, next: string) => { const target = byId(id); if (target.textContent !== next) target.textContent = next; };
   const value = (id: string) => (byId<HTMLInputElement>(id).value ?? '').trim();
   const number = (id: string) => Number(byId<HTMLInputElement>(id).value);
   const field = <T extends HTMLInputElement | HTMLSelectElement>(role: Element, name: string) => role.querySelector<T>(`[data-field="${name}"]`)!;
@@ -314,6 +363,91 @@ const harnessExamples = [
     return `${value < 0 ? '−' : '+'}${money(Math.abs(value))}`;
   };
 
+  const factorLabel = (factor: number) => {
+    const percent = (factor - 1) * 100;
+    if (Math.abs(percent) < 0.05) return 'same';
+    return `${percent < 0 ? '−' : '+'}${Math.abs(percent).toLocaleString(undefined, { maximumFractionDigits: 1 })}%`;
+  };
+
+  function renderAnalysis(baseline: BuildSnapshotV1 | undefined) {
+    const axis = value('b-sens-axis') as SensitivityAxis;
+    const requestedPercent = number('b-sens-range');
+    const metricIds = [
+      ['b-sens-low-attempt', 'b-sens-low-solved', 'b-sens-low-month'],
+      ['b-sens-base-attempt', 'b-sens-base-solved', 'b-sens-base-month'],
+      ['b-sens-high-attempt', 'b-sens-high-solved', 'b-sens-high-month'],
+    ];
+    try {
+      if (!Number.isFinite(requestedPercent) || requestedPercent < 5 || requestedPercent > 90) {
+        throw new RangeError('Sensitivity range must be between 5% and 90%.');
+      }
+      const requestedDelta = requestedPercent / 100;
+      const sensitivity = analyzeBuildSensitivity(lastPlan, models, axis, requestedDelta);
+      byId('b-sens-low-label').textContent = `Low · ${factorLabel(sensitivity.lowFactor)}`;
+      byId('b-sens-high-label').textContent = `High · ${factorLabel(sensitivity.highFactor)}`;
+      const quotes = [sensitivity.low, sensitivity.base, sensitivity.high];
+      quotes.forEach((quote, index) => {
+        const values = quote
+          ? [quote.buildAttemptCostUsd, quote.variableCostPerSuccessfulBuildUsd, quote.monthlyCostUsd]
+          : [null, null, null];
+        values.forEach((amount, metricIndex) => { byId(metricIds[index][metricIndex]).textContent = money(amount); });
+      });
+      const scopeNote = axis === 'system_success'
+        ? (lastPlan.workload.volumeBasis === 'attempted_builds'
+            ? ' With attempted-build volume, success changes completed-build cost but not monthly spend.'
+            : ' With completed-build volume, success also changes required attempts and monthly spend.')
+        : ' The selected family is perturbed across every model role.';
+      const status = sensitivity.available
+        ? `${sensitivity.assumption}${scopeNote}${axis === 'model_rates' ? ' Perturbed rates are intentionally unverified.' : ''}`
+        : sensitivity.missingReason ?? 'Sensitivity is unavailable for this plan.';
+      byId('b-sens-status').textContent = status;
+      byId('b-sens-announcement').textContent = sensitivity.available
+        ? `Sensitivity updated. Low: ${money(sensitivity.low!.buildAttemptCostUsd)} per attempt, ${money(sensitivity.low!.variableCostPerSuccessfulBuildUsd)} per completed build, ${money(sensitivity.low!.monthlyCostUsd)} monthly. Current: ${money(sensitivity.base.buildAttemptCostUsd)} per attempt, ${money(sensitivity.base.variableCostPerSuccessfulBuildUsd)} per completed build, ${money(sensitivity.base.monthlyCostUsd)} monthly. High: ${money(sensitivity.high!.buildAttemptCostUsd)} per attempt, ${money(sensitivity.high!.variableCostPerSuccessfulBuildUsd)} per completed build, ${money(sensitivity.high!.monthlyCostUsd)} monthly.`
+        : status;
+    } catch (error) {
+      for (const ids of metricIds) for (const id of ids) byId(id).textContent = 'Missing';
+      byId('b-sens-low-label').textContent = 'Low · —';
+      byId('b-sens-high-label').textContent = 'High · —';
+      const status = error instanceof Error ? error.message : 'Sensitivity inputs are invalid.';
+      byId('b-sens-status').textContent = status;
+      byId('b-sens-announcement').textContent = status;
+    }
+
+    const currentAttempt = lastQuote.buildAttemptCostUsd;
+    byId('b-be-current-attempt').textContent = money(currentAttempt);
+    byId('b-be-current-fixed').textContent = money(Number.isFinite(lastPlan.harness.fixedMonthlyCostUsd) ? lastPlan.harness.fixedMonthlyCostUsd : null);
+    if (!baseline) {
+      setText('b-break-even', 'Save a version to calculate break-even.');
+      byId('b-be-baseline-attempt').textContent = '—';
+      byId('b-be-baseline-fixed').textContent = '—';
+      return;
+    }
+    byId('b-be-baseline-attempt').textContent = money(baseline.quote.buildAttemptCostUsd);
+    byId('b-be-baseline-fixed').textContent = money(baseline.plan.harness.fixedMonthlyCostUsd);
+    const result = breakEvenBuildPlans(lastPlan, baseline.plan, models);
+    const currentName = 'Current edit';
+    const baselineName = `${baseline.plan.name} v${baseline.version}`;
+    if (result.kind === 'crosses') {
+      const volume = result.attemptedBuildsPerMonth!.toLocaleString(undefined, { maximumFractionDigits: 1 });
+      const below = result.lowerBelow === 'current' ? currentName : baselineName;
+      const above = result.lowerAbove === 'current' ? currentName : baselineName;
+      setText('b-break-even', `Monthly costs match at ${volume} attempted builds.`);
+      setText('b-break-even-detail', `Below that volume, ${below} costs less; above it, ${above} costs less. This compares per-attempt cost × a common attempted-build volume + fixed monthly cost.`);
+    } else if (result.kind === 'current_always_lower') {
+      setText('b-break-even', `${currentName} costs less at every positive attempted-build volume.`);
+      setText('b-break-even-detail', `No positive crossing exists against ${baselineName}. This comparison does not infer or use a success rate.`);
+    } else if (result.kind === 'baseline_always_lower') {
+      setText('b-break-even', `${baselineName} costs less at every positive attempted-build volume.`);
+      setText('b-break-even-detail', 'No positive crossing exists. This comparison does not infer or use a success rate.');
+    } else if (result.kind === 'equal_all_volumes') {
+      setText('b-break-even', 'Both plans have the same attempted-build cost curve.');
+      setText('b-break-even-detail', 'Their per-attempt and fixed monthly costs are equal, so every attempted-build volume ties.');
+    } else {
+      setText('b-break-even', 'Break-even is unavailable.');
+      setText('b-break-even-detail', result.reason ?? 'Both plans need valid per-attempt quotes.');
+    }
+  }
+
   function renderWorkspace() {
     byId('b-version-count').textContent = `${snapshots.length} saved`;
     const list = byId('b-snapshots'); list.replaceChildren();
@@ -340,6 +474,7 @@ const harnessExamples = [
     if (!baseline || !lastQuote.valid) {
       for (const item of cells) { item.textContent = baseline ? 'Invalid current' : 'No baseline'; item.removeAttribute('data-direction'); }
       byId('b-baseline-label').textContent = baseline ? `Baseline: ${baseline.plan.name} · v${baseline.version}` : 'Save a version to establish a baseline.';
+      renderAnalysis(baseline);
       return;
     }
     const delta = compareBuildQuotes(lastQuote, baseline.quote);
@@ -350,6 +485,7 @@ const harnessExamples = [
       else cells[index].removeAttribute('data-direction');
     });
     byId('b-baseline-label').textContent = `Compared with ${baseline.plan.name} · v${baseline.version}. Negative means lower cost.`;
+    renderAnalysis(baseline);
   }
 
   function applyPlan(plan: BuildPlanV1) {
@@ -485,6 +621,13 @@ const harnessExamples = [
   .delta-v[data-direction='lower'] { color: var(--color-better); }
   .delta-v[data-direction='higher'] { color: var(--color-worse); }
   .snapshot-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .8rem; border: 1px solid var(--color-rule); background: var(--color-panel-2); }
+  .analysis-card { min-width: 0; padding: 1rem; border: 1px solid var(--color-rule); background: var(--color-panel-2); }
+  .analysis-current { border-color: var(--color-rule-strong); background: var(--color-panel); }
+  .analysis-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; margin-top: .8rem; }
+  .analysis-metrics dt, .break-even-inputs dt { font-family: var(--font-mono); font-size: .62rem; line-height: 1.35; text-transform: uppercase; letter-spacing: .08em; color: var(--color-muted); }
+  .analysis-metrics dd, .break-even-inputs dd { margin-top: .3rem; overflow-wrap: anywhere; font-family: var(--font-mono); font-size: .9rem; color: var(--color-ink); }
+  .break-even-inputs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; min-width: min(100%, 25rem); padding: 1px; background: var(--color-rule); }
+  .break-even-inputs > div { padding: .75rem; background: var(--color-panel-2); }
   @media (max-width: 639px) {
     .role-editor .card-head { align-items: stretch; }
     .role-editor .role-label { width: 100%; }

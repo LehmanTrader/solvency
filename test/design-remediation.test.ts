@@ -74,6 +74,11 @@ test('build planner accepts a free-form harness and exposes the paid workflow be
   assert.match(page, /Save version/);
   assert.match(page, /Duplicate plan/);
   assert.match(page, /Preview storage is limited to this open tab/);
+  assert.match(page, /Sensitivity and break-even/);
+  assert.match(page, /Hypothetical one-variable sensitivity/);
+  assert.match(page, /common attempted-build volume/);
+  assert.match(page, /analyzeBuildSensitivity/);
+  assert.match(page, /breakEvenBuildPlans/);
 });
 
 test('every model pair uses the one generated canonical compare path', () => {
