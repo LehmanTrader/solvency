@@ -1,154 +1,299 @@
 ---
-import { TIER_NAMES } from '../lib/data.ts';
-import { DEFAULTS, compute, groupsHtml, calloutHtml, missingHtml } from '../lib/calc.ts';
+/**
+ * The product: one question, two controls, the ranked answer.
+ * Rendered at build with the defaults (wide and narrow layouts, CSS picks one)
+ * so the page is complete without JavaScript and nothing shifts when the
+ * island takes over. The island re-renders from compute() on every input.
+ */
+import { TIER_NAMES, sources } from '../lib/data.ts';
+import { DEFAULTS, compute, groupsHtml, calloutHtml, missingHtml, TIER_HELP } from '../lib/calc.ts';
 import { CLERK_ENABLED } from '../lib/clerk.ts';
-// Rendered at build time so the page is useful without JavaScript and the
-// island does not shift layout when it takes over.
+import { GATE_MODE } from '../lib/gate.ts';
 const { rows, missing } = compute(DEFAULTS);
-const initialGroups = groupsHtml(rows, DEFAULTS.volume);
-const initialCallout = calloutHtml(rows, DEFAULTS.volume);
-const initialMissing = missingHtml(missing);
+const WIDE = 846, NARROW = 350;
+const wide = groupsHtml(rows, DEFAULTS, { width: WIDE, compact: false });
+const narrow = groupsHtml(rows, DEFAULTS, { width: NARROW, compact: true });
+const callout = calloutHtml(rows, DEFAULTS.volume);
+const aa = sources.find((s) => s.benchmark === 'aa-coding-agent-index');
+const verified = aa?.last_verified;
 ---
-<section id="calc" class="card overflow-hidden" aria-label="Cost calculator" data-gated={CLERK_ENABLED ? '1' : '0'}>
-  {CLERK_ENABLED && (
-    <div id="c-gate" class="px-5 py-4 border-b border-[var(--color-rule)] flex flex-wrap items-center justify-between gap-4 bg-[color-mix(in_srgb,var(--color-accent)_6%,transparent)]">
-      <div>
-        <p class="text-[var(--color-ink)] font-semibold">Sign in to run your own scenario</p>
-        <p class="small mt-1">Free account. Set your task tier, volume, cache rate and takeover cost; share the result by link.</p>
-      </div>
-      <div class="flex items-center gap-3">
-        <span id="c-user" class="small hidden"></span>
-        <button id="c-signin" type="button" class="btn btn-accent">Sign in</button>
-        <button id="c-signout" type="button" class="btn hidden">Sign out</button>
-      </div>
+<section id="calc" aria-labelledby="q-h" data-gated={CLERK_ENABLED ? '1' : '0'} data-gate-mode={GATE_MODE}>
+  <h1 id="q-h" class="h-display max-w-[26ch] text-balance">Which model is cheapest for what you actually ship?</h1>
+  <p class="lede mt-3 max-w-[58ch] text-pretty">Cost per solved task — what it takes to get a task finished, not the token price. Every number carries a source and a verified date.</p>
+
+  <p class="sentence mt-5 font-[family-name:var(--font-display)] text-[var(--color-ink)] text-[clamp(1.3rem,2.6vw,1.9rem)] leading-[1.6]">
+    I build
+    <select id="c-tier" class="ctl ctl-inline" aria-label="Task tier: what you build" aria-describedby="c-tier-help" data-ctl="tier">
+      {TIER_NAMES.map((t) => <option value={t} selected={t === DEFAULTS.tier}>{t}</option>)}
+    </select>
+    tasks, about
+    <input id="c-volume" class="ctl ctl-inline" type="number" inputmode="numeric" min="1" max="10000000" step="1" value={DEFAULTS.volume}
+      aria-label="Tasks per month" data-ctl="volume" />
+    a month.
+  </p>
+  <div class="mt-3 grid gap-x-8 gap-y-2 sm:grid-cols-[minmax(0,26rem)_minmax(0,20rem)] items-center">
+    <p id="c-tier-help" class="small" aria-live="polite">{TIER_HELP[DEFAULTS.tier]}</p>
+    <div>
+      <input id="c-volume-range" class="ctl-range" type="range" min="0" max="1000" step="1" value="325"
+        aria-label="Tasks per month, slider" aria-valuetext={`${DEFAULTS.volume} tasks a month`} data-ctl="volume" />
+      <div class="flex justify-between small -mt-1" aria-hidden="true"><span>10</span><span>1k</span><span>10k</span><span>100k</span></div>
     </div>
-  )}
-  <div class="border-b border-[var(--color-rule)] p-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-    <label class="block">
-      <span class="label">Task tier</span>
-      <select id="c-tier" class="mt-2 w-full bg-[var(--color-bg)] border border-[var(--color-rule)] rounded-md px-3 py-2 font-mono text-sm text-[var(--color-ink)]">
-        {TIER_NAMES.map((t) => <option value={t} selected={t === 'moderate'}>{t}</option>)}
-      </select>
-    </label>
-    <label class="block">
-      <span class="label">Tasks per month</span>
-      <input id="c-volume" type="number" min="1" step="1" value="200"
-        class="mt-2 w-full bg-[var(--color-bg)] border border-[var(--color-rule)] rounded-md px-3 py-2 font-mono text-sm text-[var(--color-ink)] tabular-nums" />
-    </label>
-    <label class="block">
-      <span class="label">Retry model</span>
-      <select id="c-variant" class="mt-2 w-full bg-[var(--color-bg)] border border-[var(--color-rule)] rounded-md px-3 py-2 font-mono text-sm text-[var(--color-ink)]">
-        <option value="naive">naive — cost ÷ pass rate</option>
-        <option value="capped">capped — max 3 attempts</option>
-        <option value="truncatedGeometric">truncated geometric</option>
-      </select>
-    </label>
-    <label class="block">
-      <span class="label">Cache hit rate <span id="c-cache-v" class="text-[var(--color-accent)]">0%</span></span>
-      <input id="c-cache" type="range" min="0" max="90" step="10" value="0" class="mt-3 w-full accent-[var(--color-accent)]" />
-    </label>
-    <label class="block">
-      <span class="label">Human takeover cost $</span>
-      <input id="c-residual" type="number" min="0" step="10" value="0"
-        class="mt-2 w-full bg-[var(--color-bg)] border border-[var(--color-rule)] rounded-md px-3 py-2 font-mono text-sm text-[var(--color-ink)] tabular-nums" />
-    </label>
-    <label class="flex items-end gap-3 pb-2">
-      <input id="c-frontier" type="checkbox" checked class="accent-[var(--color-accent)] size-4" />
-      <span class="label">Frontier efficiency <span class="t-modelled">assumption</span></span>
-    </label>
   </div>
 
-  <div id="c-callout" class="px-5 py-4 border-b border-[var(--color-rule)] text-[var(--color-ink)]" set:html={initialCallout}></div>
+  <div class="card mt-5 overflow-hidden" id="c-result" aria-label="Result">
+    <p id="c-callout" class="px-5 py-4 sm:py-5 text-[var(--color-ink)] text-[1rem] sm:text-[1.1rem] leading-relaxed border-b border-[var(--color-rule)]" set:html={callout}></p>
+    <div id="c-groups" data-wide={WIDE} data-narrow={NARROW}>
+      <div class="hidden sm:block" data-layout="wide" set:html={wide}></div>
+      <div class="sm:hidden" data-layout="narrow" set:html={narrow}></div>
+    </div>
+    <details class="disc px-5 py-3 border-t border-[var(--color-rule)]" id="c-missing-d">
+      <summary>Not shown (<span data-count>{missing.length}</span>) · no published pass rate, reported as missing, never estimated</summary>
+      <p id="c-missing" class="small mt-2 max-w-3xl">{missingHtml(missing)}</p>
+    </details>
 
-  <div id="c-groups" set:html={initialGroups}></div>
-  <div id="c-missing" class="px-5 py-4 border-t border-[var(--color-rule)] small" set:html={initialMissing}></div>
-  <div class="px-5 py-3 border-t border-[var(--color-rule)] flex flex-wrap gap-4 items-center justify-between">
-    <p class="small max-w-lg">
-      Measured rows carry a cost the benchmark observed, so the tier, cache and efficiency controls cannot move them. Modelled rows are priced by an assumed loop model.
-    </p>
-    <button id="c-share" type="button" class="btn">Copy link to this scenario</button>
+    <div class="px-5 py-3 border-t border-[var(--color-rule)] flex flex-wrap gap-x-5 gap-y-3 items-center justify-between">
+      <p class="small">
+        <a class="link" href={aa?.attribution_url} rel="noopener">{aa?.attribution}</a>{' '}
+        · verified <span class="text-[var(--color-ink)]">{verified}</span>{' '}
+        · <a class="link" href="/methodology#sources">Sources</a>
+      </p>
+      <div class="flex flex-wrap gap-2 items-center">
+        <button id="c-share" type="button" class="btn" aria-live="polite">Copy link</button>
+        {CLERK_ENABLED && <button id="c-save" type="button" class="btn btn-accent" data-ctl="save" aria-live="polite">Save scenario</button>}
+      </div>
+    </div>
+
+    <details class="disc px-5 py-3 border-t border-[var(--color-rule)]" id="c-assume">
+      <summary>Assumptions (4) · move modelled rows only</summary>
+      <div class="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <label class="block">
+          <span class="label">Retry model</span>
+          <select id="c-variant" class="ctl mt-2 w-full text-sm" data-ctl="variant">
+            <option value="naive">naive — cost ÷ pass rate</option>
+            <option value="capped">capped — max 3 attempts</option>
+            <option value="truncatedGeometric">truncated geometric</option>
+          </select>
+        </label>
+        <label class="block">
+          <span class="label">Cache hit rate <span id="c-cache-v" class="text-[var(--color-ink)]">0%</span></span>
+          <input id="c-cache" type="range" min="0" max="90" step="10" value="0" class="ctl-range mt-3" data-ctl="cache" aria-label="Cache hit rate, percent" />
+        </label>
+        <label class="block">
+          <span class="label">Human takeover cost, $</span>
+          <input id="c-residual" type="number" inputmode="numeric" min="0" max="1000000" step="10" value="0" class="ctl mt-2 w-full text-sm" data-ctl="residual" />
+        </label>
+        <label class="flex items-center gap-3 sm:pt-6">
+          <input id="c-frontier" type="checkbox" checked class="size-4 accent-[var(--color-ink)]" data-ctl="frontier" />
+          <span class="label">Frontier efficiency</span>
+        </label>
+      </div>
+      <p class="small mt-4 max-w-3xl">These move modelled rows only. Measured rows carry a cost the benchmark observed and cannot be changed by any assumption. Frontier efficiency (0.6× loops on heavy tasks for frontier-class models) has no published source and is applied only to modelled rows — untick it to see unadjusted results. <a class="link" href="/methodology">Methodology</a>.</p>
+
+      <div id="c-gate" class="card card-pad mt-4 hidden" role="region" aria-labelledby="c-gate-h" aria-live="polite">
+        <p id="c-gate-h" class="h-card">Sign in to tune assumptions and keep this scenario.</p>
+        <p class="small mt-1 max-w-2xl">Free account — GitHub, Google or an email code. These controls move modelled rows only; measured rows never change.</p>
+        <div class="mt-3 flex flex-wrap gap-2 items-center">
+          <button id="c-gate-signin" type="button" class="btn btn-accent">Sign in to save this scenario</button>
+          <button id="c-gate-skip" type="button" class="btn btn-quiet">Keep exploring without it →</button>
+        </div>
+      </div>
+    </details>
   </div>
 </section>
 
 <script>
-  import { compute, groupsHtml, calloutHtml, missingHtml } from '../lib/calc.ts';
+  import { compute, groupsHtml, calloutHtml, missingHtml, TIER_HELP, validModelId, allChartRows, type Settings } from '../lib/calc.ts';
+  import { patchRanked, scatterPareto, VOL_MIN, VOL_MAX } from '../lib/charts.ts';
+  import { gateFor, GATE_SEEN_KEY, GATE_DECLINED_KEY, type Control, type GateMode } from '../lib/gate.ts';
 
-  const $ = (id: string) => document.getElementById(id)!;
+  const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T | null;
+  const section = $('calc')!;
   const CTRL = {
-    tier: $('c-tier') as HTMLSelectElement,
-    volume: $('c-volume') as HTMLInputElement,
-    variant: $('c-variant') as HTMLSelectElement,
-    cache: $('c-cache') as HTMLInputElement,
-    residual: $('c-residual') as HTMLInputElement,
-    frontier: $('c-frontier') as HTMLInputElement,
+    tier: $<HTMLSelectElement>('c-tier')!,
+    volume: $<HTMLInputElement>('c-volume')!,
+    range: $<HTMLInputElement>('c-volume-range')!,
+    variant: $<HTMLSelectElement>('c-variant')!,
+    cache: $<HTMLInputElement>('c-cache')!,
+    residual: $<HTMLInputElement>('c-residual')!,
+    frontier: $<HTMLInputElement>('c-frontier')!,
+  };
+  const groupsEl = $('c-groups')!;
+  const TIERS = ['light', 'moderate', 'heavy'], VARIANTS = ['naive', 'capped', 'truncatedGeometric'];
+
+  // ---- volume: number box and a log-scale slider, bound both ways --------
+  const L0 = Math.log10(VOL_MIN), L1 = Math.log10(VOL_MAX);
+  const sliderToVolume = (t: number) => {
+    const v = Math.pow(10, L0 + (t / 1000) * (L1 - L0));
+    const mag = Math.pow(10, Math.floor(Math.log10(v)) - 1);
+    return Math.max(VOL_MIN, Math.round(v / mag) * mag);
+  };
+  const volumeToSlider = (v: number) => Math.round(((Math.log10(Math.min(VOL_MAX, Math.max(VOL_MIN, v))) - L0) / (L1 - L0)) * 1000);
+  const syncSlider = () => {
+    const v = Number(CTRL.volume.value) || 1;
+    CTRL.range.value = String(volumeToSlider(v));
+    CTRL.range.setAttribute('aria-valuetext', `${v.toLocaleString()} tasks a month`);
   };
 
-  // hydrate from the URL so a shared link reproduces the scenario exactly
+  // ---- URL state is the single source of truth ---------------------------
   // Every value is validated: a crafted link must not be able to throw inside
   // the engine or leave a select with no option chosen.
   const q = new URLSearchParams(location.search);
-  const TIERS = ['light', 'moderate', 'heavy'], VARIANTS = ['naive', 'capped', 'truncatedGeometric'];
-  const num = (v: string | null, lo: number, hi: number) => { const n = Number(v); return v !== null && Number.isFinite(n) ? String(Math.min(hi, Math.max(lo, Math.round(n)))) : null; };
+  const num = (v: string | null, lo: number, hi: number) => { const n = Number(v); return v !== null && v !== '' && Number.isFinite(n) ? Math.min(hi, Math.max(lo, Math.round(n))) : null; };
   if (TIERS.includes(q.get('tier') ?? '')) CTRL.tier.value = q.get('tier')!;
   if (VARIANTS.includes(q.get('variant') ?? '')) CTRL.variant.value = q.get('variant')!;
-  const vol = num(q.get('volume'), 1, 10_000_000); if (vol) CTRL.volume.value = vol;
-  const cache = num(q.get('cache'), 0, 90); if (cache) CTRL.cache.value = String(Math.round(Number(cache) / 10) * 10);
-  const res = num(q.get('residual'), 0, 1_000_000); if (res) CTRL.residual.value = res;
+  const vol = num(q.get('volume'), 1, 10_000_000); if (vol) CTRL.volume.value = String(vol);
+  const cache = num(q.get('cache'), 0, 90); if (cache !== null) CTRL.cache.value = String(Math.round(cache / 10) * 10);
+  const res = num(q.get('residual'), 0, 1_000_000); if (res !== null) CTRL.residual.value = String(res);
   if (q.get('frontier') === '0' || q.get('frontier') === '1') CTRL.frontier.checked = q.get('frontier') === '1';
+  const highlight = validModelId(q.get('highlight'));
+  syncSlider();
 
-  function render() {
-    const s = {
-      tier: CTRL.tier.value as 'light' | 'moderate' | 'heavy',
-      volume: Math.min(10_000_000, Math.max(1, Number(CTRL.volume.value) || 1)),
-      variant: CTRL.variant.value as 'naive' | 'capped' | 'truncatedGeometric',
-      cache: Number(CTRL.cache.value) / 100,
-      residual: Math.max(0, Number(CTRL.residual.value) || 0),
-      frontier: CTRL.frontier.checked,
-    };
-    $('c-cache-v').textContent = `${CTRL.cache.value}%`;
-    const { rows, missing } = compute(s);
-    $('c-groups').innerHTML = groupsHtml(rows, s.volume);
-    $('c-callout').innerHTML = calloutHtml(rows, s.volume);
-    $('c-missing').textContent = missingHtml(missing);
-    const p = new URLSearchParams({ tier: s.tier, volume: String(s.volume), variant: s.variant,
-      cache: CTRL.cache.value, residual: String(s.residual), frontier: s.frontier ? '1' : '0' });
-    history.replaceState(null, '', `${location.pathname}?${p}`);
-  }
-
-  // --- sign-in gate -------------------------------------------------------
-  // Controls are disabled in the static HTML when a Clerk key is configured and
-  // re-enabled once Clerk reports a signed-in user. Reading the default table
-  // (and any shared scenario link) needs no account; changing the inputs does.
-  const gated = (document.getElementById('calc') as HTMLElement).dataset.gated === '1';
-  const setEnabled = (on: boolean) => Object.values(CTRL).forEach((el) => { el.disabled = !on; });
-  if (gated) {
-    setEnabled(false);
-    const signin = $('c-signin'), signout = $('c-signout'), who = $('c-user');
-    const openSignIn = () => (window as any).Clerk?.openSignIn({ afterSignInUrl: location.href, afterSignUpUrl: location.href });
-    signin.addEventListener('click', openSignIn);
-    signout.addEventListener('click', () => (window as any).Clerk?.signOut());
-    // clicking a disabled control does nothing, so catch it on the wrapper
-    signin.closest('section')!.addEventListener('pointerdown', (e) => {
-      const t = e.target as HTMLElement;
-      if (t.closest('label') && !(window as any).Clerk?.user) { e.preventDefault(); openSignIn(); }
-    });
-    const sync = () => {
-      const u = (window as any).Clerk?.user;
-      setEnabled(Boolean(u));
-      signin.classList.toggle('hidden', Boolean(u));
-      signout.classList.toggle('hidden', !u);
-      who.classList.toggle('hidden', !u);
-      who.textContent = u ? (u.primaryEmailAddress?.emailAddress ?? u.fullName ?? 'signed in') : '';
-    };
-    const onReady = () => { sync(); (window as any).Clerk.addListener(sync); };
-    if ((window as any).Clerk?.loaded) onReady(); else document.addEventListener('clerk:ready', onReady, { once: true });
-  }
-
-  Object.values(CTRL).forEach((el) => { el.addEventListener('input', render); el.addEventListener('change', render); });
-  $('c-share').addEventListener('click', async () => {
-    try { await navigator.clipboard.writeText(location.href); $('c-share').textContent = 'Copied'; setTimeout(() => ($('c-share').textContent = 'Copy link to this scenario'), 1600); }
-    catch { $('c-share').textContent = 'Copy failed — use the address bar'; }
+  const settings = (): Settings => ({
+    tier: CTRL.tier.value as Settings['tier'],
+    volume: Math.min(10_000_000, Math.max(1, Math.round(Number(CTRL.volume.value)) || 1)),
+    variant: CTRL.variant.value as Settings['variant'],
+    cache: Number(CTRL.cache.value) / 100,
+    residual: Math.max(0, Number(CTRL.residual.value) || 0),
+    frontier: CTRL.frontier.checked,
   });
-  // only re-render if the URL carried a non-default scenario
-  if ([...q.keys()].length) render();
+
+  // ---- render -------------------------------------------------------------
+  const widthOf = (el: Element) => Math.max(300, Math.round(el.getBoundingClientRect().width));
+  function patchGroups(layout: HTMLElement, html: string) {
+    const tpl = document.createElement('template'); tpl.innerHTML = html;
+    const next = Array.from(tpl.content.querySelectorAll<HTMLElement>('[data-group]'));
+    const cur = Array.from(layout.querySelectorAll<HTMLElement>('[data-group]'));
+    if (next.length !== cur.length || next.some((n, i) => n.dataset.group !== cur[i].dataset.group)) { layout.innerHTML = html; return; }
+    next.forEach((n, i) => {
+      patchRanked(cur[i].querySelector('[data-chart]')!, n.querySelector('[data-chart]')!.innerHTML);
+      const nc = n.querySelector('[data-count]'), cc = cur[i].querySelector('[data-count]');
+      if (nc && cc) cc.textContent = nc.textContent;
+    });
+  }
+
+  let last: Settings | null = null;
+  function render(pushUrl = true) {
+    const s = settings();
+    last = s;
+    $('c-cache-v')!.textContent = `${CTRL.cache.value}%`;
+    $('c-tier-help')!.textContent = TIER_HELP[s.tier];
+    const { rows, missing } = compute(s);
+    $('c-callout')!.innerHTML = calloutHtml(rows, s.volume);
+    const wideEl = groupsEl.querySelector<HTMLElement>('[data-layout="wide"]')!;
+    const narrowEl = groupsEl.querySelector<HTMLElement>('[data-layout="narrow"]')!;
+    const visible = wideEl.offsetParent ? wideEl : narrowEl;
+    const w = widthOf(visible.querySelector('[data-chart]') ?? visible) ;
+    patchGroups(wideEl, groupsHtml(rows, s, { width: visible === wideEl ? w : Number(groupsEl.dataset.wide), compact: false, highlight }));
+    patchGroups(narrowEl, groupsHtml(rows, s, { width: visible === narrowEl ? w : Number(groupsEl.dataset.narrow), compact: true, highlight }));
+    $('c-missing')!.textContent = missingHtml(missing);
+    $('c-missing-d')!.querySelector('[data-count]')!.textContent = String(missing.length);
+    renderScatter(rows, s);
+    if (pushUrl) {
+      const p = new URLSearchParams({ tier: s.tier, volume: String(s.volume), variant: s.variant,
+        cache: CTRL.cache.value, residual: String(s.residual), frontier: s.frontier ? '1' : '0' });
+      if (highlight) p.set('highlight', highlight);
+      history.replaceState(null, '', `${location.pathname}?${p}`);
+    }
+  }
+
+  // the below-fold scatter (index.astro) follows the same settings
+  const scatter = document.querySelector<HTMLElement>('#scatter');
+  function renderScatter(rows: any[], s: Settings) {
+    if (!scatter) return;
+    const showStale = (scatter.querySelector<HTMLInputElement>('#scatter-stale')?.checked) ?? false;
+    const all = allChartRows(rows, s);
+    const lead = all.find((r) => r.basis === 'measured')?.id;
+    scatter.querySelectorAll<HTMLElement>('[data-chart]').forEach((slot) => {
+      const compact = slot.dataset.layout === 'narrow';
+      const w = slot.offsetParent ? widthOf(slot) : Number(slot.dataset.w);
+      slot.innerHTML = scatterPareto(all, { width: w, height: compact ? w : undefined, compact, lead, showStale });
+    });
+  }
+  scatter?.querySelector('#scatter-stale')?.addEventListener('change', () => render(false));
+
+  // ---- gate (docs/landing-spec.md §3; one switch in src/lib/gate.ts) ------
+  const gated = section.dataset.gated === '1';
+  const MODE = section.dataset.gateMode as GateMode;
+  const clerk = () => (window as any).Clerk;
+  const signedIn = () => Boolean(clerk()?.user);
+  const ss = { get: (k: string) => { try { return sessionStorage.getItem(k) === '1'; } catch { return false; } },
+               set: (k: string) => { try { sessionStorage.setItem(k, '1'); } catch {} } };
+  const openSignIn = () => clerk()?.openSignIn?.({ afterSignInUrl: location.href, afterSignUpUrl: location.href });
+  const gateCard = $('c-gate'), assume = $<HTMLDetailsElement>('c-assume');
+  const restore = (el: HTMLInputElement | HTMLSelectElement) => {
+    if (!last) return;
+    switch (el.dataset.ctl as Control) {
+      case 'tier': el.value = last.tier; break;
+      case 'volume': CTRL.volume.value = String(last.volume); syncSlider(); break;
+      case 'variant': el.value = last.variant; break;
+      case 'cache': el.value = String(Math.round(last.cache * 100)); break;
+      case 'residual': el.value = String(last.residual); break;
+      case 'frontier': (el as HTMLInputElement).checked = last.frontier; break;
+    }
+  };
+  /** true = let the change through */
+  function allow(el: HTMLInputElement | HTMLSelectElement, ev: Event): boolean {
+    if (!gated || signedIn()) return true;
+    const cls = gateFor(el.dataset.ctl as Control, MODE);
+    if (cls === 'free') return true;
+    if (cls === 'soft' && ss.get(GATE_DECLINED_KEY)) return true;
+    ev.stopImmediatePropagation();
+    restore(el);
+    if (cls === 'hard' || ss.get(GATE_SEEN_KEY)) { openSignIn(); return false; }
+    ss.set(GATE_SEEN_KEY);
+    if (assume && !assume.open) assume.open = true;
+    gateCard?.classList.remove('hidden');
+    gateCard?.querySelector<HTMLElement>('#c-gate-signin')?.focus();
+    return false;
+  }
+  $('c-gate-signin')?.addEventListener('click', openSignIn);
+  $('c-gate-skip')?.addEventListener('click', () => { ss.set(GATE_DECLINED_KEY); gateCard?.classList.add('hidden'); CTRL.cache.focus(); });
+
+  const save = $<HTMLButtonElement>('c-save');
+  save?.addEventListener('click', async () => {
+    if (!signedIn()) { openSignIn(); return; }
+    try {
+      const u = clerk().user;
+      const prev: string[] = Array.isArray(u.unsafeMetadata?.scenarios) ? u.unsafeMetadata.scenarios : [];
+      const list = [location.href, ...prev.filter((x) => x !== location.href)].slice(0, 20);
+      await u.update({ unsafeMetadata: { ...u.unsafeMetadata, scenarios: list } });
+      save.textContent = 'Saved ✓';
+    } catch { save.textContent = 'Could not save'; }
+    setTimeout(() => (save.textContent = 'Save scenario'), 1800);
+  });
+  const onClerk = () => {
+    const sync = () => { if (signedIn()) gateCard?.classList.add('hidden'); };
+    sync(); clerk()?.addListener?.(sync);
+  };
+  if (clerk()?.loaded) onClerk(); else document.addEventListener('clerk:ready', onClerk, { once: true });
+
+  // ---- wiring -------------------------------------------------------------
+  const inputs = [CTRL.tier, CTRL.volume, CTRL.variant, CTRL.cache, CTRL.residual, CTRL.frontier];
+  for (const el of inputs) {
+    el.addEventListener('input', (ev) => { if (!allow(el, ev)) return; if (el === CTRL.volume) syncSlider(); render(); });
+    el.addEventListener('change', (ev) => { if (!allow(el, ev)) return; });
+  }
+  CTRL.range.addEventListener('input', (ev) => {
+    if (!allow(CTRL.range, ev)) return;
+    const v = sliderToVolume(Number(CTRL.range.value));
+    CTRL.volume.value = String(v);
+    CTRL.range.setAttribute('aria-valuetext', `${v.toLocaleString()} tasks a month`);
+    render();
+  });
+  const share = $<HTMLButtonElement>('c-share')!;
+  share.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(location.href); share.textContent = 'Link copied ✓'; }
+    catch { share.textContent = 'Copy failed — use the address bar'; }
+    setTimeout(() => (share.textContent = 'Copy link'), 1600);
+  });
+
+  // re-layout on resize (width changes only; row heights are fixed)
+  let raf = 0, lastW = 0;
+  new ResizeObserver(() => {
+    const w = widthOf(groupsEl);
+    if (w === lastW) return; lastW = w;
+    cancelAnimationFrame(raf); raf = requestAnimationFrame(() => render(false));
+  }).observe(groupsEl);
+  render(false);
+  if (highlight) document.querySelector('.row.hl')?.scrollIntoView({ block: 'center' });
 </script>

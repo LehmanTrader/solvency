@@ -2,189 +2,73 @@
 import { getCollection } from 'astro:content';
 import Base from '../layouts/Base.astro';
 import Calculator from '../components/Calculator.astro';
-import Leaderboard from '../components/Leaderboard.astro';
-import Section from '../components/Section.astro';
-import BarChart from '../components/BarChart.astro';
 import Provenance from '../components/Provenance.astro';
-import Share from '../components/Share.astro';
-import changelog from '../data/changelog.json';
-import { headline, leaderboard, money, fmtX } from '../lib/headline.ts';
-import { models, sources } from '../lib/data.ts';
-import chartMeta from '../../../reports/charts/meta.json';
+import { headline, fmtX } from '../lib/headline.ts';
+import { DEFAULTS, compute, allChartRows } from '../lib/calc.ts';
+import { scatterPareto } from '../lib/charts.ts';
+import { sources } from '../lib/data.ts';
 
 const latest = (await getCollection('reports')).sort((a, b) => b.data.date - a.data.date)[0];
-const latestHref = latest ? `/reports/${latest.id.replace(/^\d{4}-\d{2}-/, '')}` : '/reports';
-const recent = changelog.entries.slice().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 4);
+const latestHref = latest ? `/research/${latest.id.replace(/^\d{4}-\d{2}-/, '')}` : '/research';
 const h = headline();
-const { measured } = leaderboard('heavy');
 const aa = sources.find((s) => s.benchmark === 'aa-coding-agent-index');
-const verified = models.reduce((a, m) => (m.last_verified > a ? m.last_verified : a), '');
 
-const bars = {
-  solved: measured.map((x, i) => ({ label: x.m.display_name, value: x.cost, display: money(x.cost), href: `/models/${x.m.model_id}`, lead: i === 0 })),
-  index: measured.slice().sort((a, b) => b.r.pass_rate - a.r.pass_rate)
-    .map((x, i) => ({ label: x.m.display_name, value: x.r.pass_rate * 100, display: String(Math.round(x.r.pass_rate * 100)), href: `/models/${x.m.model_id}`, lead: i === 0 })),
-  tokens: measured.slice().sort((a, b) => a.m.output_per_mtok - b.m.output_per_mtok)
-    .map((x, i) => ({ label: x.m.display_name, value: x.m.output_per_mtok, display: `$${x.m.output_per_mtok}`, href: `/models/${x.m.model_id}`, lead: i === 0 })),
-};
-const spreadTokens = Math.max(...measured.map((x) => x.m.output_per_mtok)) / Math.min(...measured.map((x) => x.m.output_per_mtok));
-const spreadSolved = measured[measured.length - 1].cost / measured[0].cost;
-const tiles = [
-  { k: 'Per input token', v: fmtX(h.inX), n: `${h.cheap.m.display_name} vs ${h.dear.m.display_name}, the top-scoring model` },
-  { k: 'Per output token', v: fmtX(h.outX), n: 'cheaper' },
-  { k: 'Per solved task', v: fmtX(h.solvedX), n: `${money(h.cheap.cost)} vs ${money(h.dear.cost)}`, accent: true },
-  { k: 'Spread, cheapest to dearest', v: `${fmtX(spreadTokens)} → ${fmtX(spreadSolved)}`, n: 'token price → cost per solved task' },
+// Chart B at the defaults; the island re-renders it with the visitor's settings.
+const { rows } = compute(DEFAULTS);
+const all = allChartRows(rows, DEFAULTS);
+const lead = all.find((r) => r.basis === 'measured')?.id;
+const scatterWide = scatterPareto(all, { width: 720, compact: false, lead });
+const scatterNarrow = scatterPareto(all, { width: 350, height: 350, compact: true, lead });
+
+const how = [
+  { k: 'The number', v: 'cost per solved task = cost per attempt ÷ pass rate', n: 'What it costs to get a task finished, not what a token costs.' },
+  { k: 'Measured', v: 'the benchmark observed the cost', n: 'No Solvency assumption is inside these figures. Tier and assumptions cannot move them.' },
+  { k: 'Modelled', v: 'pass rate published, cost from verified prices', n: 'Solvency\'s loop model, labelled as an assumption and adjustable. Never ranked against measured rows.' },
 ];
-const findings = [
-  { id: 'finding-1', file: 'divergence', eyebrow: 'Finding 1', ...chartMeta.divergence },
-  { id: 'finding-2', file: 'pareto', eyebrow: 'Finding 2', ...chartMeta.pareto },
-  { id: 'finding-3', file: 'staleness', eyebrow: 'Finding 3', ...chartMeta.staleness },
-];
-const toc = [['#leaderboard', 'Leaderboard'], ['#highlights', 'Highlights'], ['#calculator', 'Calculator'], ['#finding-1', 'Findings'], ['#sources', 'Sources']];
 ---
-<Base title="Solvency — cost per solved task for AI coding models"
-      description={`Per-token pricing does not predict what a coding task costs. ${h.cheap.m.display_name} is ${fmtX(h.outX)} cheaper than ${h.dear.m.display_name} per output token and ${fmtX(h.solvedX)} cheaper per solved task. Every figure sourced and dated.`}>
-
-  <!-- Hero: thesis on the left, the headline chart on the right -->
-  <div class="wrap pt-8 pb-6 grid gap-6 lg:grid-cols-[1fr_28rem] 2xl:grid-cols-[1fr_36rem] lg:gap-10 items-start">
-    <div>
-      <p class="eyebrow">Independent cost data · {h.measuredCount} measured models · verified {verified}</p>
-      <h1 class="h-display mt-2 max-w-4xl">Token price is not task cost.</h1>
-      <p class="lede mt-4 max-w-3xl">
-        Pricing pages compare dollars per million tokens. Solvency ranks AI coding models by
-        {' '}<strong class="text-[var(--color-ink)]">cost per solved task</strong> — what it costs to get a task finished —
-        with a source and a verification date on every number.
+<Base title="Solvency — which AI coding model is cheapest per solved task"
+      description="Which AI coding model is cheapest for your tasks and volume? Cost per solved task from measured benchmark runs and verified prices, with a source and date on every number.">
+  <div class="wrap pt-8 md:pt-10">
+    <div class="max-w-4xl mx-auto">
+      <Calculator />
+      <p class="mt-6 text-[var(--color-body)] leading-relaxed max-w-[64ch]">
+        Token price predicts almost nothing: {h.cheap.m.display_name} is {fmtX(h.outX)} cheaper per output token than{' '}
+        {h.dear.m.display_name} — and <strong class="text-[var(--color-ink)]">{fmtX(h.solvedX)} cheaper per solved task</strong>.{' '}
+        <a class="link" href={latestHref}>Read the note →</a>
       </p>
-      <div class="tile-grid mt-6 grid-cols-2 lg:grid-cols-4">
-        {tiles.map((t) => (
+    </div>
+
+    <section id="frontier" class="mt-20 max-w-4xl mx-auto" aria-labelledby="frontier-h">
+      <h2 id="frontier-h" class="h-section">Why not just pick the top score?</h2>
+      <div class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_15rem] items-start">
+        <div class="card card-pad" id="scatter">
+          <div class="hidden sm:block" data-chart data-layout="wide" data-w="720" set:html={scatterWide}></div>
+          <div class="sm:hidden" data-chart data-layout="narrow" data-w="350" set:html={scatterNarrow}></div>
+          <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+            <label class="small inline-flex items-center gap-2 min-h-11 cursor-pointer"><input id="scatter-stale" type="checkbox" class="size-4 accent-[var(--color-ink)]" /> Show stale pass rates</label>
+            <Provenance class="mt-0" source={aa?.attribution} href={aa?.attribution_url} verified={aa?.last_verified} />
+          </div>
+        </div>
+        <div class="text-sm leading-relaxed text-[var(--color-body)]">
+          <p>Lower and to the right is better. The line joins the measured models nobody beats on both axes.</p>
+          <p class="mt-3 text-[var(--color-muted)]">Modelled points move with your tier and assumptions; measured points never do. Hover or focus a point for its pass rate, cost and harness; click it for the model page.</p>
+          <a class="link small mt-4 inline-block" href="/methodology">See how the frontier is computed →</a>
+        </div>
+      </div>
+    </section>
+
+    <section id="how" class="mt-20 max-w-4xl mx-auto" aria-labelledby="how-h">
+      <h2 id="how-h" class="h-section">How it is computed</h2>
+      <div class="tile-grid mt-6 sm:grid-cols-3">
+        {how.map((t) => (
           <div class="tile">
             <p class="label">{t.k}</p>
-            <p class={`tile-v ${t.accent ? 'accent' : ''}`}>{t.v}</p>
-            <p class="tile-n">{t.n}</p>
+            <p class="mt-2 font-mono text-sm text-[var(--color-ink)]">{t.v}</p>
+            <p class="mt-2 text-sm text-[var(--color-muted)] leading-relaxed">{t.n}</p>
           </div>
         ))}
       </div>
-      <Provenance source={aa?.attribution} href={aa?.attribution_url} verified={h.verified}
-        note="measured on agentic coding tasks; prices from provider pricing pages" />
-    </div>
-
-    <div class="card card-pad" aria-label="Headline chart">
-      <div class="flex items-baseline justify-between gap-3">
-        <h2 class="h-card">Cost per solved task</h2>
-        <span class="pill pill-accent">measured</span>
-      </div>
-      <p class="small mt-1">USD per task that passes · lower is better</p>
-      <BarChart items={bars.solved} class="mt-4" />
-      <Provenance source={aa?.attribution} href={aa?.attribution_url} verified={aa?.last_verified} />
-      <a href="#leaderboard" class="small text-[var(--color-accent)] mt-2 inline-block">Full leaderboard ↓</a>
-    </div>
-  </div>
-
-  <!-- Sub-navigation for the sections below -->
-  <nav aria-label="On this page" class="border-y border-[var(--color-rule)] bg-[var(--color-panel)]">
-    <div class="wrap flex gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden py-1.5">
-      {toc.map(([href, name]) => <a href={href} class="nav-a">{name}</a>)}
-    </div>
-  </nav>
-
-  <div class="wrap">
-    <Section id="leaderboard" eyebrow="Leaderboard" title="Cost per solved task, ranked"
-      caption="Cost per attempt divided by pass rate. Lower is better. Measured and modelled rows are ranked separately and never averaged together.">
-      <a slot="aside" href="/methodology" class="btn">How this is computed</a>
-      <Leaderboard tier="heavy" />
-    </Section>
-
-    <div class="mt-10 grid gap-4 md:grid-cols-2" aria-label="Latest">
-      {latest && (
-        <a href={latestHref} class="card card-pad hover:bg-[var(--color-panel-2)] transition-colors">
-          <p class="eyebrow">Research note {String(latest.data.note).padStart(2, '0')} · {latest.data.date.toISOString().slice(0, 10)}</p>
-          <p class="h-card mt-2">{latest.data.title}</p>
-          <p class="mt-1.5 text-sm text-[var(--color-muted)] leading-relaxed">{latest.data.description}</p>
-          <p class="mt-3 small text-[var(--color-accent)]">Read the note →</p>
-        </a>
-      )}
-      <div class="card card-pad">
-        <p class="label">Changelog</p>
-        <ul class="mt-3 space-y-3">
-          {recent.map((e) => (
-            <li class="text-sm leading-snug">
-              <p class="small">{e.date} · {e.kind}</p>
-              <p class="text-[var(--color-ink)] mt-0.5">{e.summary}</p>
-            </li>
-          ))}
-        </ul>
-        <a href="/changelog" class="small text-[var(--color-accent)] mt-3 inline-block">All changes →</a>
-      </div>
-    </div>
-
-    <Section id="highlights" eyebrow="Highlights" title="Three ways to rank the same six models"
-      caption="Same measured rows, three axes. The order on the left is the one that predicts your bill; the order on the right is the one pricing pages publish.">
-      <div class="grid gap-4 md:grid-cols-3">
-        <div class="card card-pad">
-          <h3 class="h-card">Cost per solved task</h3>
-          <p class="small mt-1">USD per task that passes · lower is better</p>
-          <BarChart items={bars.solved} class="mt-4" />
-        </div>
-        <div class="card card-pad">
-          <h3 class="h-card">Coding Agent Index</h3>
-          <p class="small mt-1">Composite score, 0–100 · higher is better</p>
-          <BarChart items={bars.index} class="mt-4" />
-        </div>
-        <div class="card card-pad">
-          <h3 class="h-card">Output price</h3>
-          <p class="small mt-1">USD per million output tokens · what pricing pages show</p>
-          <BarChart items={bars.tokens} class="mt-4" />
-        </div>
-      </div>
-      <Provenance source={aa?.attribution} href={aa?.attribution_url} verified={aa?.last_verified}
-        note="index and per-task cost; output prices from each provider's pricing page" />
-    </Section>
-
-    <Section id="calculator" eyebrow="Calculator" title="Your task mix, your volume"
-      caption="Pick a task tier and a monthly volume. Measured rows cannot be moved by the assumptions; modelled rows can, and say so.">
-      <Calculator />
-    </Section>
-
-    {findings.map((f) => (
-      <Section id={f.id} eyebrow={f.eyebrow} title={f.title} caption={f.subtitle.join(' ')}>
-        <a slot="aside" href={`${latestHref}#${f.id}`} class="btn">Read in the note</a>
-        <figure class="card overflow-hidden">
-          <img src={`/charts/${f.file}.svg`} alt={f.title} width="900" height="600" class="chart-dark w-full h-auto block" loading="lazy" />
-          <img src={`/charts-light/${f.file}.svg`} alt={f.title} width="900" height="600" class="chart-light w-full h-auto" loading="lazy" />
-        </figure>
-        <Provenance>{f.source.join(' ')}</Provenance>
-      </Section>
-    ))}
-
-    <Section id="sources" eyebrow="Sources" title="Where every number comes from"
-      caption="In preference order: fewest Solvency assumptions first, then freshness. Benchmark data is cited and linked, never redistributed.">
-      <div class="card overflow-hidden">
-        <div class="tbl-wrap"><table class="tbl">
-          <thead><tr><th>Source</th><th class="r">Tasks</th><th>Covers 2026 models</th><th>Publishes cost</th><th>Basis</th><th>Newest entry</th><th>Verified</th></tr></thead>
-          <tbody>
-            {sources.map((s) => (
-              <tr>
-                <td class="ink"><a href={s.source_url} rel="noopener">{s.name}</a></td>
-                <td class="r">{s.tasks_n.toLocaleString()}</td>
-                <td class={s.covers_current_models ? 'ink' : 'muted'}>{s.covers_current_models ? 'yes' : 'no'}</td>
-                <td class={s.benchmark === 'aa-coding-agent-index' ? 'ink' : 'muted'}>{s.benchmark === 'aa-coding-agent-index' ? 'yes, measured' : s.benchmark === 'aider-polyglot' ? 'historical only' : 'not captured'}</td>
-                <td class="muted">{s.benchmark === 'aa-coding-agent-index' ? 'measured by source' : s.benchmark === 'aider-polyglot' ? 'historical at run date' : 'modelled by Solvency'}</td>
-                <td class={s.newest_entry_date ? '' : 'missing'}>{s.newest_entry_date ?? 'unknown'}</td>
-                <td class="muted">{s.last_verified}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table></div>
-      </div>
-      <Provenance note="Prices are verified against each provider's own pricing page; recalled prices are never used. Missing is printed as missing." />
-    </Section>
-
-    <section class="mt-16 card card-pad flex flex-wrap items-center justify-between gap-4" aria-label="Share">
-      <div>
-        <p class="eyebrow">Share the finding</p>
-        <p class="mt-1 text-sm text-[var(--color-muted)]">The tweet text is generated from the data, so it matches the tables above.</p>
-      </div>
-      <Share url={new URL(latestHref, Astro.site).href} compact />
+      <p class="small mt-3"><a class="link" href="/methodology">Methodology</a> · <a class="link" href="/methodology#sources">Sources</a> · <a class="link" href={latestHref}>Research note {String(latest?.data.note ?? 1).padStart(2, '0')}</a></p>
     </section>
   </div>
 </Base>
