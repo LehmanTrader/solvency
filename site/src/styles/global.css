@@ -128,6 +128,8 @@
   .btn-accent { background: var(--color-accent); color: var(--color-on-accent); border-color: var(--color-accent); font-weight: 700; }
   .btn-accent:hover { background: var(--color-accent-hover); color: var(--color-on-accent); border-color: var(--color-accent-hover); }
   .btn-quiet { border-color: transparent; color: var(--color-muted); padding-inline: .5rem; }
+  /* 44px touch targets on small screens */
+  @media (max-width: 639px) { .btn, .ctl, .theme-btn, details.disc > summary { min-height: 2.75rem; } .btn { padding-block: .7rem; } }
   .btn-quiet:hover { color: var(--color-ink); border-color: transparent; }
 
   .pill { display: inline-block; font-family: var(--font-mono); font-size: .62rem; letter-spacing: .14em;
