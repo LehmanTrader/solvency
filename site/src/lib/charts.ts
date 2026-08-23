@@ -128,7 +128,7 @@ export function rankedBars(rowsIn: ChartRow[], o: RankedOpts): string {
     // full-row-height hit rects so every link is a ≥ 44 px target on small screens
     const hitRow = `<rect class="hit" x="0" y="0" width="${compact ? w - 120 : barX}" height="${rowH}" fill="transparent"/>`;
     const cmp = r.compare ? (compact
-      ? `<a class="cmp" href="${esc(r.compare)}" aria-label="Compare ${esc(r.name)} head to head"><rect class="hit" x="${w - 120}" y="0" width="120" height="${rowH}" fill="transparent"/><text x="${w - 118}" y="${rowH - 14}" font-size="${FS_S}" class="t3">vs ›</text></a>`
+      ? `<a class="cmp" href="${esc(r.compare)}" aria-label="Compare vs ${esc(r.name)} head to head"><rect class="hit" x="${w - 120}" y="0" width="120" height="${rowH}" fill="transparent"/><text x="${w - 118}" y="${rowH - 14}" font-size="${FS_S}" class="t3">vs ›</text></a>`
       : `<a class="cmp" href="${esc(r.compare)}" aria-label="Compare ${esc(r.name)} head to head"><rect class="hit" x="${w - cmpW}" y="0" width="${cmpW}" height="${rowH}" fill="transparent"/><text x="${w}" y="${rowH / 2 + 4}" text-anchor="end" font-size="${FS_S}" class="t3">compare ›</text></a>`) : '';
     const rail = i === 0 ? `<rect x="0" y="0" width="2" height="${rowH}" fill="var(--color-${basis})"/>` : '';
     const name = trunc(r.name, compact ? w - 90 : labelW - 10, fs);

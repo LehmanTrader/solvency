@@ -323,6 +323,32 @@
   .tbl.tone-stale { --rail: var(--color-stale); }
   .tbl tr.lead td:first-child { box-shadow: inset 3px 0 0 var(--rail); }
   .tbl .rank { width: 2rem; color: var(--color-muted); font-size: .72rem; }
+  @media (min-width: 1024px) {
+    /* The model index has ten fields. Give each an explicit share of the
+       desktop card and allow descriptive cells to wrap instead of clipping
+       the source-verification date beyond the horizontal viewport. */
+    .tbl-models { table-layout: fixed; white-space: normal; font-size: .74rem; }
+    .tbl-models th, .tbl-models td { padding-inline: .55rem; vertical-align: top; }
+    .tbl-models thead th { font-size: .61rem; letter-spacing: .08em; overflow-wrap: anywhere; }
+    .tbl-models td:nth-child(1), .tbl-models td:nth-child(2), .tbl-models td:nth-child(8) { overflow-wrap: anywhere; }
+    .tbl-models .models-model { width: 18%; }
+    .tbl-models .models-provider { width: 10%; }
+    .tbl-models .models-status { width: 8%; }
+    .tbl-models .models-in, .tbl-models .models-out { width: 7%; }
+    .tbl-models .models-cached { width: 9%; }
+    .tbl-models .models-pass { width: 6%; }
+    .tbl-models .models-basis { width: 13%; }
+    .tbl-models .models-solved, .tbl-models .models-verified { width: 11%; }
+  }
+  @media (max-width: 639px) {
+    /* A two-model comparison must show both models at once. Wrapping the
+       headers and basis labels is clearer than an un-signposted x-scroll. */
+    .tbl-compare { table-layout: fixed; white-space: normal; }
+    .tbl-compare th:first-child { width: 34%; }
+    .tbl-compare th:not(:first-child) { width: 33%; }
+    .tbl-compare th, .tbl-compare td { padding-inline: .45rem; overflow-wrap: anywhere; vertical-align: top; }
+    .tbl-compare .basis { display: block; margin: .2rem 0 0; letter-spacing: .08em; }
+  }
 
   /* ---- inline SVG charts (site/src/lib/charts.ts) ------------------------ */
   .chart { display: block; width: 100%; height: auto; font-family: var(--font-mono);

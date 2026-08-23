@@ -40,12 +40,15 @@ import '../../styles/global.css';
   // one basis only: mixing measured and modelled costs in one ranked list is invalid
   const measured = rows.filter((x) => x.basis === 'measured_by_source');
   const show = (measured.length ? measured : rows).sort((a, b) => a.cost - b.cost);
-  document.getElementById('e-body')!.innerHTML = show.map(({ m, r, cost }) => `
-    <tr class="border-b border-[var(--color-rule)]">
-      <td class="py-1.5 pr-3 text-[var(--color-ink)]">${m.display_name}</td>
-      <td class="px-3 text-right text-[var(--color-body)]">${(r.pass_rate * 100).toFixed(0)}%</td>
-      <td class="pl-3 text-right text-[var(--color-accent)]">${money(cost)}</td>
-    </tr>`).join('');
+  const body = document.getElementById('e-body')!;
+  body.replaceChildren(...show.map(({ m, r, cost }) => {
+    const tr = document.createElement('tr'); tr.className = 'border-b border-[var(--color-rule)]';
+    const name = document.createElement('td'); name.className = 'py-1.5 pr-3 text-[var(--color-ink)]'; name.textContent = m.display_name;
+    const pass = document.createElement('td'); pass.className = 'px-3 text-right text-[var(--color-body)]'; pass.textContent = `${(r.pass_rate * 100).toFixed(0)}%`;
+    const solved = document.createElement('td'); solved.className = 'pl-3 text-right text-[var(--color-accent)]'; solved.textContent = money(cost);
+    tr.append(name, pass, solved);
+    return tr;
+  }));
   document.getElementById('e-note')!.textContent =
     `${measured.length ? 'Measured' : 'Modelled'} basis · ${tier} tier · prices verified ${models[0].last_verified}`;
 </script>

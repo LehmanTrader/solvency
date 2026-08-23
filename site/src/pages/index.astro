@@ -80,7 +80,11 @@ const how = [
   if (card && tip) {
     const show = (a: Element, x: number, y: number) => {
       const d = (a as HTMLElement).dataset;
-      tip.innerHTML = `<b>${d.name}</b>${d.basis} · ${d.cost} per solved task<br>pass ${d.pass}${d.harness ? ` · ${d.harness}` : ''}`;
+      const name = document.createElement('b'); name.textContent = d.name ?? '';
+      const detail = document.createTextNode(`${d.basis} · ${d.cost} per solved task`);
+      const br = document.createElement('br');
+      const pass = document.createTextNode(`pass ${d.pass}${d.harness ? ` · ${d.harness}` : ''}`);
+      tip.replaceChildren(name, detail, br, pass);
       const r = card.getBoundingClientRect();
       let left = x - r.left + 8, top = y - r.top + 8;
       tip.style.left = '0'; tip.style.top = '0';

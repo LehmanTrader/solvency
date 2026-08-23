@@ -14,6 +14,9 @@
  * GATE_MODE is the one switch. 'spec' is the table above; 'hard' gates every
  * control behind sign-in; 'free' gates nothing. When no Clerk key is set at
  * build time the site is always ungated regardless of this value.
+ *
+ * This gate is a conversion UX only. It must never protect paid data or APIs;
+ * future paid entitlements belong in server-verified Clerk/Stripe state.
  */
 export type GateMode = 'free' | 'spec' | 'hard';
 export type GateClass = 'free' | 'soft' | 'hard';

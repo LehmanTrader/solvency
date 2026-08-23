@@ -1,5 +1,5 @@
 {
-  "$schema_version": "2.0.0",
+  "$schema_version": "2.1.0",
   "description": "Public benchmark results used as pass-rate inputs. Solvency needs only pass_rate from a benchmark; cost is normally recomputed from current verified prices in models.json. Sources that publish their own measured per-task cost are marked cost_basis='measured_by_source' and bypass Solvency's loop model entirely.",
   "redistribution_policy": "Every row here is THIRD-PARTY data, ingested by reference. None of it may be republished in Solvency's CC-BY /data export. Rows carry redistributable=false and must be surfaced as attributed, linked citations only. Only Solvency's own Phase 3 measured runs are published as open data.",
   "cost_bases": {
@@ -133,6 +133,8 @@
     {
       "model_id": "claude-opus-5",
       "harness": "Claude Code",
+      "harness_version": null,
+      "harness_config": null,
       "variant": "Opus 5 (xhigh)",
       "entry_label": "Claude Code - Opus 5 (xhigh)",
       "benchmark": "aa-coding-agent-index",
@@ -151,6 +153,8 @@
     {
       "model_id": "claude-fable-5",
       "harness": "Claude Code",
+      "harness_version": null,
+      "harness_config": null,
       "variant": "Fable 5 (max) (with fallback)",
       "entry_label": "Claude Code - Fable 5 (max) (with fallback)",
       "benchmark": "aa-coding-agent-index",
@@ -170,6 +174,8 @@
     {
       "model_id": "gpt-5.6-sol",
       "harness": "Codex",
+      "harness_version": null,
+      "harness_config": null,
       "variant": "GPT-5.6 Sol (max)",
       "entry_label": "Codex - GPT-5.6 Sol (max)",
       "benchmark": "aa-coding-agent-index",
@@ -188,6 +194,8 @@
     {
       "model_id": "grok-4.5",
       "harness": "Grok Build",
+      "harness_version": null,
+      "harness_config": null,
       "variant": "Grok 4.5 (high)",
       "entry_label": "Grok Build - Grok 4.5 (high)",
       "benchmark": "aa-coding-agent-index",
@@ -206,6 +214,8 @@
     {
       "model_id": "gemini-3.7-flash",
       "harness": "Opencode",
+      "harness_version": null,
+      "harness_config": null,
       "variant": "Gemini 3.7 Flash (high)",
       "entry_label": "Opencode - Gemini 3.7 Flash (high)",
       "benchmark": "aa-coding-agent-index",
@@ -224,6 +234,8 @@
     {
       "model_id": "deepseek-v4-flash",
       "harness": "Codex",
+      "harness_version": null,
+      "harness_config": null,
       "variant": "DeepSeek V4 Flash 0731 (max)",
       "entry_label": "Codex - DeepSeek V4 Flash 0731 (max)",
       "benchmark": "aa-coding-agent-index",
@@ -243,6 +255,8 @@
       "model_id": null,
       "unmatched_reason": "Kimi K3 (Moonshot AI) is not carried in models.json; no verified price row.",
       "harness": "Kimi Code CLI",
+      "harness_version": null,
+      "harness_config": null,
       "entry_label": "Kimi Code CLI - Kimi K3",
       "benchmark": "aa-coding-agent-index",
       "index_score": 63,
@@ -261,6 +275,8 @@
       "model_id": null,
       "unmatched_reason": "GLM-5.2 was served via Novita in this run; the only GLM-5.2 price Solvency has verified is Mistral's resale listing, which is a different serving venue and may not match Novita's rate.",
       "harness": "Claude Code",
+      "harness_version": null,
+      "harness_config": null,
       "entry_label": "Claude Code - GLM-5.2",
       "benchmark": "aa-coding-agent-index",
       "index_score": 43,
@@ -279,6 +295,8 @@
       "model_id": null,
       "unmatched_reason": "Cursor Composer 2.5 Fast is a Cursor-proprietary model with no public per-token API price.",
       "harness": "Cursor CLI",
+      "harness_version": null,
+      "harness_config": null,
       "entry_label": "Cursor CLI - Composer 2.5 Fast",
       "benchmark": "aa-coding-agent-index",
       "index_score": 38,
@@ -295,6 +313,9 @@
     },
     {
       "model_id": "gpt-5.4",
+      "harness": null,
+      "harness_version": null,
+      "harness_config": null,
       "entry_label": "gpt-5.4 (xHigh)",
       "benchmark": "seal-swe-bench-pro",
       "pass_rate": 0.591,
@@ -309,6 +330,9 @@
     },
     {
       "model_id": "claude-opus-4-6",
+      "harness": null,
+      "harness_version": null,
+      "harness_config": null,
       "entry_label": "claude-opus-4-6 (thinking)",
       "benchmark": "seal-swe-bench-pro",
       "pass_rate": 0.519,
@@ -323,6 +347,9 @@
     },
     {
       "model_id": "gemini-3.1-pro-preview",
+      "harness": null,
+      "harness_version": null,
+      "harness_config": null,
       "entry_label": "gemini-3.1-pro (thinking)",
       "benchmark": "seal-swe-bench-pro",
       "pass_rate": 0.461,
@@ -338,6 +365,9 @@
     },
     {
       "model_id": "claude-opus-4-5",
+      "harness": null,
+      "harness_version": null,
+      "harness_config": null,
       "entry_label": "claude-opus-4-5-20251101",
       "benchmark": "seal-swe-bench-pro",
       "pass_rate": 0.4589,
@@ -353,6 +383,9 @@
     {
       "model_id": null,
       "unmatched_reason": "Muse Spark / Muse Spark 1.1 vendor and per-token pricing not identified; no verified price row.",
+      "harness": null,
+      "harness_version": null,
+      "harness_config": null,
       "entry_label": "Muse Spark 1.1",
       "benchmark": "seal-swe-bench-pro",
       "pass_rate": 0.615,
@@ -366,6 +399,9 @@
     },
     {
       "model_id": "gpt-5",
+      "harness": null,
+      "harness_version": null,
+      "harness_config": null,
       "entry_label": "gpt-5 (high)",
       "benchmark": "aider-polyglot",
       "pass_rate": 0.88,
@@ -380,6 +416,9 @@
     },
     {
       "model_id": "gpt-5",
+      "harness": null,
+      "harness_version": null,
+      "harness_config": null,
       "entry_label": "gpt-5 (medium)",
       "benchmark": "aider-polyglot",
       "pass_rate": 0.867,
@@ -394,6 +433,9 @@
     },
     {
       "model_id": "o3-pro",
+      "harness": null,
+      "harness_version": null,
+      "harness_config": null,
       "entry_label": "o3-pro (high)",
       "benchmark": "aider-polyglot",
       "pass_rate": 0.849,
@@ -408,6 +450,9 @@
     },
     {
       "model_id": "gemini-2.5-pro",
+      "harness": null,
+      "harness_version": null,
+      "harness_config": null,
       "entry_label": "gemini-2.5-pro-06-05 (32k think)",
       "benchmark": "aider-polyglot",
       "pass_rate": 0.831,
@@ -422,6 +467,9 @@
     },
     {
       "model_id": "o3",
+      "harness": null,
+      "harness_version": null,
+      "harness_config": null,
       "entry_label": "o3 (high)",
       "benchmark": "aider-polyglot",
       "pass_rate": 0.813,
@@ -436,6 +484,9 @@
     },
     {
       "model_id": "claude-opus-4",
+      "harness": null,
+      "harness_version": null,
+      "harness_config": null,
       "entry_label": "claude-opus-4 (32k thinking)",
       "benchmark": "aider-polyglot",
       "pass_rate": 0.72,
@@ -450,6 +501,9 @@
     },
     {
       "model_id": "claude-sonnet-4",
+      "harness": null,
+      "harness_version": null,
+      "harness_config": null,
       "entry_label": "claude-sonnet-4 (32k thinking)",
       "benchmark": "aider-polyglot",
       "pass_rate": 0.613,
@@ -464,6 +518,9 @@
     },
     {
       "model_id": "gpt-4.1",
+      "harness": null,
+      "harness_version": null,
+      "harness_config": null,
       "entry_label": "gpt-4.1",
       "benchmark": "aider-polyglot",
       "pass_rate": 0.524,
@@ -479,6 +536,9 @@
     {
       "model_id": null,
       "unmatched_reason": "grok-4 is no longer list-priced by xAI.",
+      "harness": null,
+      "harness_version": null,
+      "harness_config": null,
       "entry_label": "grok-4 (high)",
       "benchmark": "aider-polyglot",
       "pass_rate": 0.796,
@@ -494,6 +554,9 @@
     {
       "model_id": null,
       "unmatched_reason": "DeepSeek V3.2-Exp is no longer listed on DeepSeek's pricing page; only the V4 family is priced.",
+      "harness": null,
+      "harness_version": null,
+      "harness_config": null,
       "entry_label": "DeepSeek-V3.2-Exp (Reasoner)",
       "benchmark": "aider-polyglot",
       "pass_rate": 0.742,

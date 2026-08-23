@@ -27,7 +27,12 @@ export interface BenchmarkResult {
   run_date: string;
   source_url: string;
   redistributable: boolean;
-  harness?: string;
+  /** Named coding harness, or null when the source did not publish one. */
+  harness: string | null;
+  /** Exact harness release/version, or null when the source did not publish it. */
+  harness_version: string | null;
+  /** Source-published routing/turn/cache configuration, free text initially. */
+  harness_config: string | null;
   variant?: string;
   index_score?: number;
   pass_rate_derivation?: string;

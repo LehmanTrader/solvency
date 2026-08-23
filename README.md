@@ -14,7 +14,7 @@ deploys via GitHub Actions to Cloudflare Pages. Phase 3 (Solvency's own measured
 started.
 
 ```
-npm test          # 38 tests; the report tests re-derive every published table
+npm test          # 62 tests; the report tests re-derive every published table
 npm run coverage  # source, coverage and staleness audit
 npm run table     # headline table
 npm run watch     # checks each recorded price still appears on its source page; never writes

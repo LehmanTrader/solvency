@@ -31,7 +31,7 @@ const mine = solvedFor(model.model_id, 'heavy');
 const PEER_TIER = 'heavy', PEER_VOLUME = 200;
 const lb = leaderboard(PEER_TIER);
 const pool = mine ? (mine.basisKey === 'measured_by_source' ? lb.measured : mine.basisKey === 'historical_at_run_date' ? lb.historical : lb.modelled) : [];
-const harnessOf = (r) => r.cost_basis === 'measured_by_source' ? String(r.entry_label ?? '').split(' - ')[0] : undefined;
+const harnessOf = (r) => r.harness ?? undefined;
 const peerRows: ChartRow[] = pool.map((x) => ({
   id: x.m.model_id, name: x.m.display_name, href: `/models/${x.m.model_id}`, cost: x.cost, pass: x.r.pass_rate,
   basis: BASIS_OF[x.basisKey] ?? 'modelled', harness: harnessOf(x.r), attempt: x.perTask ?? undefined,

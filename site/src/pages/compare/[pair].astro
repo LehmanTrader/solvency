@@ -58,10 +58,10 @@ const statusNote = [a, b].filter((m) => m.status !== 'current').map((m) => `${m.
           <div class="px-5 py-3 border-t border-[var(--color-rule)] flex flex-wrap gap-2 items-center">
             <button id="k-share" type="button" class="btn btn-copy" aria-live="polite">Copy link</button>
             {CLERK_ENABLED && <button id="k-save" type="button" class="btn" data-analytics="save-scenario" aria-live="polite">Save scenario</button>}
-            <button id="k-download" type="button" class="btn" data-analytics="pro-download" aria-describedby="k-pro">Download table <span id="k-pro" class="pill pill-ink ml-1">Pro</span></button>
+            <button id="k-download" type="button" class="btn" data-analytics="pro-download" aria-describedby="k-pro">Export table <span id="k-pro" class="pill pill-ink ml-1">Pro soon</span></button>
           </div>
         </div>
-        <div class="card overflow-hidden"><div class="tbl-wrap"><table class="tbl">
+        <div class="card overflow-hidden"><div class="tbl-wrap"><table class="tbl tbl-compare">
           <caption>Verified pricing, pass rate and cost per solved task for {a.display_name} and {b.display_name}</caption>
           <thead><tr><th scope="col"><span class="sr-only">Figure</span></th><th scope="col" class="r"><a class="py-2 inline-block" href={`/models/${a.model_id}`}>{a.display_name}</a></th><th scope="col" class="r"><a class="py-2 inline-block" href={`/models/${b.model_id}`}>{b.display_name}</a></th></tr></thead>
           <tbody>{rows.map(([k, x, y, f]) => (
@@ -133,7 +133,7 @@ const statusNote = [a, b].filter((m) => m.status !== 'current').map((m) => `${m.
   // share and save (docs/landing-spec.md §3: copy is free, save and export hard-gate)
   wireCopy(document.getElementById('k-share') as HTMLButtonElement, () => location.href);
   wireSave(document.getElementById('k-save') as HTMLButtonElement | null, 'Save scenario', () => `${tierEl.value} · ${Number(volEl.value).toLocaleString()}/mo`);
-  document.getElementById('k-download')?.addEventListener('click', () => openSignUp('pro-download', 'Download this table — Pro. Create a free account and be first when it ships.'));
+  document.getElementById('k-download')?.addEventListener('click', () => openSignUp('pro-download', 'Table export is coming with Pro. Create a free account to be notified when it ships.'));
 
   // drag the volume marker: pointer x → log volume
   let dragging = false;

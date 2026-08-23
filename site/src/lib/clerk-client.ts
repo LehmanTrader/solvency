@@ -44,7 +44,11 @@ export function clerkAppearance() {
 
 const urls = () => ({ afterSignInUrl: location.href, afterSignUpUrl: location.href });
 
-/** Why the modal opened. Stored on the user as unsafeMetadata.intent so intents are countable in Clerk's user list. */
+/**
+ * Why the modal opened. Stored on the user as unsafeMetadata.intent so intents
+ * are countable in Clerk's user list. Never use unsafeMetadata for authorization:
+ * it is client-writable conversion analytics, not an entitlement source.
+ */
 export type Intent = 'gate' | 'save' | 'pro-notify' | 'pro-download';
 
 /**
@@ -70,6 +74,10 @@ function placeContext(el: HTMLElement): void {
  * strip themed like the card, shown while the modal is in the DOM.
  */
 function showContext(text: string): void {
+  // On small screens Clerk already fills most of the viewport. A fixed strip
+  // would cover the modal footer or duplicate its subtitle; the triggering
+  // gate/button provides the context immediately before the modal opens.
+  if (matchMedia('(max-width: 639px)').matches) return;
   let el = document.getElementById('auth-context');
   if (!el) {
     el = document.createElement('p');

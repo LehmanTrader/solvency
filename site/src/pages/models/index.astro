@@ -18,8 +18,13 @@ const nPass = models.filter((m) => bestResultFor(m.model_id)).length;
     <p class="lede mt-4 max-w-2xl">{models.length} models, {nCurrent} current. Each price is verified against the provider's own pricing page on the date shown. {nPass} have a published pass rate; the rest are shown as missing, never estimated.</p>
 
     <div class="mt-8 card overflow-hidden">
-      <div class="tbl-wrap"><table class="tbl">
+      <div class="tbl-wrap"><table class="tbl tbl-models">
         <caption>Every model Solvency tracks: verified pricing, pass rate, cost basis and cost per solved task at the heavy tier</caption>
+        <colgroup>
+          <col class="models-model" /><col class="models-provider" /><col class="models-status" />
+          <col class="models-in" /><col class="models-out" /><col class="models-cached" />
+          <col class="models-pass" /><col class="models-basis" /><col class="models-solved" /><col class="models-verified" />
+        </colgroup>
         <thead><tr>
           <th scope="col">Model</th><th scope="col">Provider</th><th scope="col">Status</th>
           <th scope="col" class="r">In $/M</th><th scope="col" class="r">Out $/M</th><th scope="col" class="r">Cached $/M</th>

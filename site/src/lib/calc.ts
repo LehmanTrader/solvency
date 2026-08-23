@@ -6,6 +6,7 @@
 import { models, assumptions, tiers, bestResultFor, extrasFor } from './data.ts';
 import { costPerSolvedTask, defaultOptions } from './engine.ts';
 import { rankedBars, BASIS_OF, money, moneyMonth, type ChartRow, type Basis } from './charts.ts';
+import { escapeHtml } from './html.ts';
 
 export { money, moneyMonth };
 
@@ -130,7 +131,7 @@ export function calloutHtml(rows: Row[], volume: number): string {
   const cheapest = pool[0];
   const best = pool.slice().sort((a, b) => b.r.pass_rate - a.r.pass_rate)[0];
   if (!cheapest || !best) return '<span class="text-[var(--color-muted)]">No model has both a verified price and a published pass rate under these settings.</span>';
-  const name = (x: Row) => `<strong>${x.m.display_name}</strong>`;
+  const name = (x: Row) => `<strong>${escapeHtml(x.m.display_name)}</strong>`;
   if (cheapest.m.model_id === best.m.model_id)
     return `${name(cheapest)} is both the cheapest per solved task and the highest pass rate here — ${money(cheapest.cost)} per solved task, ${moneyMonth(cheapest.cost * volume)} a month.`;
   const x = best.cost / cheapest.cost;

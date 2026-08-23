@@ -7,9 +7,28 @@ import { modelById, bestResultFor, extrasFor, tiers, assumptions, sourceFor } fr
 import { costPerSolvedTask, defaultOptions } from './engine.ts';
 import { money, moneyMonth, BASIS_OF, type Basis, type Series } from './charts.ts';
 import { ratio, fmtX } from './headline.ts';
+import { escapeHtml } from './html.ts';
+import type { BenchmarkResult } from './engine.ts';
 
 export type Tier = 'light' | 'moderate' | 'heavy';
 export interface Side { m: any; r: any | null; cost: number | null; basis: Basis | null; }
+
+/**
+ * Harness deltas are meaningful only inside one model on one benchmark.
+ * A named harness is required on both rows; absent metadata never becomes a
+ * wildcard, and two rows from the same harness are not a harness delta.
+ * Version and config travel with the rows as disclosure metadata, but do not
+ * weaken the model and benchmark identity constraints.
+ */
+export function harnessComparable(a: BenchmarkResult, b: BenchmarkResult): boolean {
+  return a.model_id !== null
+    && b.model_id !== null
+    && a.model_id === b.model_id
+    && a.benchmark === b.benchmark
+    && Boolean(a.harness)
+    && Boolean(b.harness)
+    && a.harness !== b.harness;
+}
 
 export function side(id: string, tier: Tier): Side {
   const m = modelById(id)!;
@@ -30,13 +49,16 @@ export function verdictHtml(a: Side, b: Side, volume: number): string {
   const saving = (dear.cost! - cheap.cost!) * volume;
   const tokenCheap = a.m.output_per_mtok <= b.m.output_per_mtok ? a : b;
   const flips = tokenCheap.m.model_id !== cheap.m.model_id;
+  const cheapName = escapeHtml(cheap.m.display_name);
+  const dearName = escapeHtml(dear.m.display_name);
+  const tokenCheapName = escapeHtml(tokenCheap.m.display_name);
   return `<p class="label">Verdict · <span class="t-${cheap.basis}">${cheap.basis}</span> basis</p>
     <p class="mt-2 text-[1.1rem] leading-relaxed text-[var(--color-ink)]">
-      <strong>${cheap.m.display_name}</strong> costs <strong>${money(cheap.cost!)}</strong> per solved task against
-      <strong>${dear.m.display_name}</strong> at ${money(dear.cost!)} — <strong class="t-better">▼ ${fmtX(x)} cheaper</strong>.
+      <strong>${cheapName}</strong> costs <strong>${money(cheap.cost!)}</strong> per solved task against
+      <strong>${dearName}</strong> at ${money(dear.cost!)} — <strong class="t-better">▼ ${fmtX(x)} cheaper</strong>.
       Over ${volume.toLocaleString()} tasks that is <strong>${moneyMonth(saving)}</strong> a month.
     </p>
-    <p class="mt-3 text-sm text-[var(--color-muted)] leading-relaxed">On output token price alone ${tokenCheap.m.display_name} looks ${fmtX(ratio(a.m.output_per_mtok, b.m.output_per_mtok))} cheaper.${flips ? ' The ranking reverses once you divide by pass rate — the cheaper tokens do not win the task.' : ' The ranking holds, but the margin changes.'}</p>`;
+    <p class="mt-3 text-sm text-[var(--color-muted)] leading-relaxed">On output token price alone ${tokenCheapName} looks ${fmtX(ratio(a.m.output_per_mtok, b.m.output_per_mtok))} cheaper.${flips ? ' The ranking reverses once you divide by pass rate — the cheaper tokens do not win the task.' : ' The ranking holds, but the margin changes.'}</p>`;
 }
 
 /** Cheaper first, so the chart's amber line is the verdict winner. */

@@ -8,12 +8,15 @@ import sitemap from '@astrojs/sitemap';
  * the PDF. On the site those need to resolve from the site root instead.
  */
 function absoluteChartPaths() {
+  const esc = (value) => String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
   return (tree) => {
     const walk = (n) => {
       if (n.type === 'image' && typeof n.url === 'string' && n.url.startsWith('charts/')) {
         // dark and light renders of the same figure; CSS shows the one for the active theme
-        const file = n.url.slice('charts/'.length);
-        const alt = String(n.alt ?? '').replace(/"/g, '&quot;');
+        const requested = n.url.slice('charts/'.length);
+        if (!/^[a-z0-9._-]+$/i.test(requested)) return;
+        const file = esc(requested);
+        const alt = esc(n.alt ?? '');
         n.type = 'html';
         n.value = `<img src="/charts/${file}" alt="${alt}" width="900" height="600" class="chart-dark" loading="lazy" />` +
                   `<img src="/charts-light/${file}" alt="${alt}" width="900" height="600" class="chart-light" loading="lazy" />`;
