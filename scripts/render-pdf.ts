@@ -13,6 +13,15 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { execFileSync, spawn } from 'node:child_process';
 import { dirname, join, resolve, basename } from 'node:path';
 
+const BRAND_AMBER = '#E0A02E';
+/** The Solvency mark, inline. Bars take the caller's ink; the weight is fixed. */
+const markSvg = (pt: string, bars: string) =>
+  `<svg width="${pt}" height="${pt}" viewBox="0 0 100 100" style="display:block;flex:none">` +
+  `<rect x="18" y="10" width="64" height="18" fill="${bars}"/>` +
+  `<rect x="10" y="44" width="80" height="7" fill="${bars}"/>` +
+  `<rect x="42" y="66" width="16" height="18" fill="${BRAND_AMBER}"/></svg>`;
+
+
 const src = resolve(process.argv[2] ?? 'reports/2026-08-cost-per-solved-task.md');
 /** Frontmatter feeds the website; the PDF builds its cover from the body below it. */
 const rawFile = readFileSync(resolve(process.argv[2] ?? 'reports/2026-08-cost-per-solved-task.md'), 'utf8');
@@ -65,7 +74,7 @@ function inlineSvg(rel: string, alt: string): string {
   <div class="chart-plot">${svg}</div>
   <div class="chart-foot">
     <span>${sources.map(esc).join(' ')}</span>
-    <span class="mark">SOLVENCY</span>
+    <span class="mark">${markSvg('7.5pt', 'var(--ink)')}<span><b>S</b>OLVENCY</span></span>
   </div>
 </figure>`;
 }
@@ -170,7 +179,9 @@ const CSS = `
   .hero { flex: 1; margin-top: 15pt; background: var(--card); border: .75pt solid var(--rule);
           border-radius: 7pt; overflow: hidden; display:flex; flex-direction:column; }
   .hero-top { display:flex; justify-content:space-between; align-items:flex-start; padding: 17pt 19pt 0; }
-  .hero-mark { font-family: var(--mono); font-weight:700; letter-spacing:.26em; font-size: 8.5pt; color: var(--ink); }
+  .hero-mark { font-family: var(--mono); font-weight:400; letter-spacing:.2em; font-size: 8.5pt; color: var(--ink);
+               display:inline-flex; align-items:center; gap:5pt; }
+  .hero-mark b { font-weight:700; }
   .hero-no { font-family: var(--mono); font-size: 9pt; letter-spacing:.1em; color: var(--ink); text-align:right; line-height:1.45; }
   .hero-mid { flex:1; display:flex; align-items:center; justify-content:center; padding: 0 30pt; }
   .hero-title { font-family: var(--mono); font-size: 20pt; letter-spacing:.15em; color: var(--ink);
@@ -179,7 +190,9 @@ const CSS = `
   .tagline { margin-top: 9pt; background: var(--card); border:.75pt solid var(--rule); border-radius: 7pt;
              padding: 12pt 17pt; display:flex; justify-content:space-between; align-items:center;
              font-family: var(--mono); font-size: 8.4pt; color: var(--ink); }
-  .tagline .mark { font-weight:700; letter-spacing:.2em; font-size:7pt; color: var(--muted); }
+  .tagline .mark { font-weight:400; letter-spacing:.18em; font-size:7pt; color: var(--muted);
+                   display:inline-flex; align-items:center; gap:4pt; }
+  .tagline .mark b { font-weight:700; }
   .cover-foot { display:flex; gap: 20pt; margin-top: 10pt; font-family: var(--mono);
                 font-size: 7pt; line-height:1.5; color: var(--muted); }
   .cover-foot > div { flex: 0 0 auto; }
@@ -236,7 +249,9 @@ const CSS = `
   .chart-foot { margin-top: 9pt; border-top:.5pt solid var(--rule); padding: 7pt 0 12pt;
                 display:flex; justify-content:space-between; gap: 14pt;
                 font-family: var(--mono); font-size: 6.7pt; color: var(--muted); }
-  .chart-foot .mark { font-weight:700; letter-spacing:.19em; color: var(--ink); white-space:nowrap; }
+  .chart-foot .mark { font-weight:400; letter-spacing:.17em; color: var(--ink); white-space:nowrap;
+                      display:inline-flex; align-items:center; gap:4pt; }
+  .chart-foot .mark b { font-weight:700; }
 
 `;
 
@@ -252,7 +267,7 @@ ${FONTS}<style>${CSS}</style></head><body>
   </div>
   <div class="hero">
     <div class="hero-top">
-      <span class="hero-mark">SOLVENCY</span>
+      <span class="hero-mark">${markSvg('11pt', 'var(--ink)')}<span><b>S</b>OLVENCY</span></span>
       <span class="hero-no">RESEARCH<br>NOTE&#8202;&#8211;&#8202;01</span>
     </div>
     <div class="hero-mid"><div class="hero-title">COST PER<br>SOLVED TASK</div></div>
@@ -260,7 +275,7 @@ ${FONTS}<style>${CSS}</style></head><body>
   </div>
   <div class="tagline">
     <span>The denominator is the whole story.</span>
-    <span class="mark">SOLVENCY</span>
+    <span class="mark">${markSvg('8pt', 'var(--muted)')}<span><b>S</b>OLVENCY</span></span>
   </div>
   <dl class="cover-foot">
     <div><dt>Verified</dt><dd>2026-08-21</dd></div>

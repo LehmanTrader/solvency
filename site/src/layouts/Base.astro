@@ -1,6 +1,7 @@
 ---
 import '../styles/global.css';
 import { CF_BEACON_TOKEN } from '../lib/site-config.ts';
+import Logo from '../components/Logo.astro';
 import { CLERK_ENABLED, CLERK_PUBLISHABLE_KEY, CLERK_FRONTEND_API } from '../lib/clerk.ts';
 import { models, sources } from '../lib/data.ts';
 interface Props {
@@ -50,7 +51,9 @@ const aa = sources.find((s) => s.benchmark === 'aa-coding-agent-index');
   <meta name="twitter:description" content={description} />
   <meta name="twitter:image" content={image} />
   <meta name="twitter:image:alt" content="Chart: cost per solved task for AI coding models" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%230A0C0D'/><text y='23' x='6' font-family='monospace' font-size='20' font-weight='700' fill='%23FFB000'>S</text></svg>" />
+  <link rel="icon" href="/brand/favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="/brand/favicon-32.png" sizes="32x32" type="image/png" />
+  <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png" />
   <!-- self-hosted fonts (site/public/fonts); the two above-the-fold faces are preloaded -->
   <link rel="preload" href="/fonts/source-serif-4-latin.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="preload" href="/fonts/jetbrains-mono-latin.woff2" as="font" type="font/woff2" crossorigin />
@@ -71,7 +74,7 @@ const aa = sources.find((s) => s.benchmark === 'aa-coding-agent-index');
   <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 btn">Skip to content</a>
   <header class="sticky top-0 z-40 border-b border-[var(--color-rule)] bg-[color-mix(in_srgb,var(--color-bg)_90%,transparent)] backdrop-blur">
     <div class="wrap min-h-14 flex flex-wrap items-center gap-x-3 sm:gap-x-5">
-      <a href="/" class="wordmark shrink-0 py-2" aria-label="Solvency home"><b>S</b>OLVENCY</a>
+      <a href="/" class="lockup shrink-0 py-2" aria-label="Solvency home"><Logo size={20} /><span class="wordmark"><b>S</b>OLVENCY</span></a>
       <nav aria-label="Primary" class="order-last basis-full sm:order-none sm:basis-auto flex-1 min-w-0 border-t border-[var(--color-rule)] sm:border-0 -mx-5 px-5 sm:mx-0 sm:px-0">
         <ul id="nav-list" class="nav-scroll flex items-stretch gap-0.5 -mx-1 px-1 h-11 sm:h-14">
           {NAV.map(([href, name]) => (
@@ -117,7 +120,7 @@ const aa = sources.find((s) => s.benchmark === 'aa-coding-agent-index');
   <footer class="border-t border-[var(--color-rule)] mt-24">
     <div class="wrap pt-10 pb-16 grid gap-8 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
       <div>
-        <p class="wordmark"><b>S</b>OLVENCY</p>
+        <p class="lockup"><Logo size={20} /><span class="wordmark"><b>S</b>OLVENCY</span></p>
         <p class="mt-3 text-sm max-w-md leading-relaxed">Cost per solved task for AI coding models. Every figure carries a source and a verification date. Where a number does not exist, it is reported as missing rather than estimated.</p>
         <p class="mt-4 small">Benchmark data is third-party, cited and linked, and is not redistributed.</p>
         <p class="small"><a class="link small-sans" href={aa?.attribution_url}>{aa?.attribution}</a>.</p>

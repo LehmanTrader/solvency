@@ -17,6 +17,14 @@ const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const META = JSON.parse(readFileSync(join(ROOT, 'reports', 'charts-light', 'meta.json'), 'utf8'));
 
 const BG = '#0A0C0D', INK = '#E6EAED', MUTED = '#78838A', ACCENT = '#FFB000';
+const BRAND_AMBER = '#E0A02E';
+/** The Solvency mark, inline. `bars` lets a light card reuse it unchanged. */
+const markSvg = (px: number, bars: string) =>
+  `<svg width="${px}" height="${px}" viewBox="0 0 100 100" aria-hidden="true">` +
+  `<rect x="18" y="10" width="64" height="18" fill="${bars}"/>` +
+  `<rect x="10" y="44" width="80" height="7" fill="${bars}"/>` +
+  `<rect x="42" y="66" width="16" height="18" fill="${BRAND_AMBER}"/></svg>`;
+
 const MONO = "'JetBrains Mono','SFMono-Regular',Menlo,Consolas,monospace";
 
 mkdirSync(OUT, { recursive: true });
@@ -51,9 +59,12 @@ for (const f of files) {
     html,body{margin:0;width:1200px;height:630px;background:${BG};
       font-family:${MONO};overflow:hidden}
     .wrap{height:630px;display:flex;flex-direction:column;padding:26px 34px 20px}
-    .top{display:flex;justify-content:space-between;align-items:baseline;
+    .top{display:flex;justify-content:space-between;align-items:center;
       border-bottom:1px solid #1C2226;padding-bottom:11px}
-    .mark{color:${ACCENT};font-weight:700;letter-spacing:.28em;font-size:13px}
+    .lockup{display:flex;align-items:center;gap:8px;color:${INK}}
+    .lockup svg{display:block}
+    .mark{color:${INK};font-weight:400;letter-spacing:.2em;font-size:13px}
+    .mark b{font-weight:700}
     .note{color:${MUTED};font-size:11px;letter-spacing:.14em}
     .title{color:${INK};font-size:23px;font-weight:700;margin:15px 0 2px}
     .sub{color:${MUTED};font-size:12px}
@@ -63,7 +74,7 @@ for (const f of files) {
       display:flex;justify-content:space-between}
   </style>
   <div class="wrap">
-    <div class="top"><span class="mark">SOLVENCY</span><span class="note">RESEARCH NOTE 01 · AUGUST 2026</span></div>
+    <div class="top"><span class="lockup">${markSvg(19, INK)}<span class="mark"><b>S</b>OLVENCY</span></span><span class="note">RESEARCH NOTE 01 · AUGUST 2026</span></div>
     <div class="title">${m?.title ?? key}</div>
     <div class="sub">${(m?.subtitle ?? [])[0] ?? ''}</div>
     <div class="plot">${svg}</div>

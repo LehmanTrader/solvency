@@ -18,7 +18,7 @@
   --color-rule: #232B31;
   --color-rule-strong: #333D45;  /* axes, section dividers */
   --color-control-border: #5A6670; /* form-control boundaries: 3.1:1 on panel (WCAG 1.4.11) */
-  --color-accent: #FFB000;       /* assertion: wordmark S, CTA fill, measured data */
+  --color-accent: #FFB000;       /* assertion: CTA fill, measured data */
   --color-accent-hover: #FFC23A;
   --color-accent-dim: #A67C22;   /* frontier line */
   --color-on-accent: #0A0C0D;
@@ -133,9 +133,14 @@
   .t-fresh { color: var(--color-fresh); }
   .t-better { color: var(--color-better); }
   .t-worse { color: var(--color-worse); }
-  /* the wordmark: ink, with amber only on the S */
-  .wordmark { font-family: var(--font-mono); font-weight: 700; letter-spacing: .28em; font-size: .8rem; color: var(--color-ink); }
-  .wordmark b { color: var(--color-accent); font-weight: inherit; }
+  /* The lockup: mark + wordmark, set as the brand's own lockup.svg sets it —
+     a bold S against a regular remainder, all in ink. The amber now lives in
+     the mark's weight, so the wordmark no longer borrows the accent (which
+     also stops brand and "measured data" sharing a colour in the chrome). */
+  .lockup { display: inline-flex; align-items: center; gap: .55rem; color: var(--color-ink); }
+  .lockup .logo-mark { flex: none; display: block; }
+  .wordmark { font-family: var(--font-mono); font-weight: 400; letter-spacing: .2em; font-size: .8rem; color: var(--color-ink); }
+  .wordmark b { font-weight: 700; color: inherit; }
 
   /* ---- surfaces ---------------------------------------------------------- */
   .card { background: var(--color-panel); border: 1px solid var(--color-rule); border-radius: 8px; }
