@@ -1,10 +1,11 @@
 ---
 import Base from '../../layouts/Base.astro';
 import Badge from '../../components/Badge.astro';
-import BarChart from '../../components/BarChart.astro';
 import Provenance from '../../components/Provenance.astro';
-import { sourceFor, shortSourceName } from '../../lib/data.ts';
-import { solvedFor, money, ratio, fmtX } from '../../lib/headline.ts';
+import { TIER_NAMES } from '../../lib/data.ts';
+import { side, verdictHtml, seriesFor, sourceOf } from '../../lib/compare.ts';
+import { volumeLines, money, moneyMonth } from '../../lib/charts.ts';
+import { fmtX, ratio } from '../../lib/headline.ts';
 
 export async function getStaticPaths() {
   const { models } = await import('../../lib/data.ts');
@@ -16,101 +17,131 @@ export async function getStaticPaths() {
 }
 
 const { a, b } = Astro.props;
-const sa = solvedFor(a.model_id, 'heavy'), sb = solvedFor(b.model_id, 'heavy');
-const outX = ratio(a.output_per_mtok, b.output_per_mtok);
-const inX = ratio(a.input_per_mtok, b.input_per_mtok);
-const cheaperTokens = a.output_per_mtok < b.output_per_mtok ? a : b;
-const both = sa !== null && sb !== null;
-const sameBasis = both && sa.basisKey === sb.basisKey;
-const solvedX = both ? ratio(sa.cost, sb.cost) : null;
-const cheaperSolved = both ? (sa.cost < sb.cost ? a : b) : null;
-const flips = both && cheaperTokens.model_id !== cheaperSolved.model_id;
-const basisLabel = (s) => s ? (s.basisKey === 'measured_by_source' ? 'measured' : 'modelled') : null;
+// Built at the calculator's defaults; ?tier=&volume= re-render in the island.
+const TIER = 'moderate', VOLUME = 200;
+const sa = side(a.model_id, TIER), sb = side(b.model_id, TIER);
+const verdict = verdictHtml(sa, sb, VOLUME);
+const series = seriesFor([sa, sb]);
+const linesWide = series.length ? volumeLines(series, { width: 640, volume: VOLUME, compact: false }) : '';
+const linesNarrow = series.length ? volumeLines(series, { width: 350, volume: VOLUME, compact: true }) : '';
 const price = (n) => n === null || n === undefined ? null : `$${n.toFixed(3).replace(/0+$/, '').replace(/\.$/, '')}`;
-const metric = (label, va, vb, fmt, note?) => ({ label, note, items: [
-  { label: a.display_name, value: va ?? 0, display: va == null ? 'missing' : fmt(va), lead: va != null && vb != null && va <= vb },
-  { label: b.display_name, value: vb ?? 0, display: vb == null ? 'missing' : fmt(vb), lead: va != null && vb != null && vb < va },
-]});
-const charts = [
-  metric('Input $/M tokens', a.input_per_mtok, b.input_per_mtok, price, 'lower is better'),
-  metric('Output $/M tokens', a.output_per_mtok, b.output_per_mtok, price, 'lower is better'),
-  metric('Cost per solved task', sa?.cost ?? null, sb?.cost ?? null, money, both ? (sameBasis ? `${basisLabel(sa)} basis · lower is better` : 'different bases — not comparable') : 'needs a pass rate for both'),
-];
+const cell = (s, f) => s.cost === null ? 'missing' : f(s.cost);
 const rows = [
-  ['Input $/Mtok', price(a.input_per_mtok), price(b.input_per_mtok)],
-  ['Output $/Mtok', price(a.output_per_mtok), price(b.output_per_mtok)],
-  ['Cached input $/Mtok', price(a.cached_input_per_mtok) ?? 'missing', price(b.cached_input_per_mtok) ?? 'missing'],
-  ['Pass rate', sa ? `${Math.round(sa.r.pass_rate * 100)}%` : 'missing', sb ? `${Math.round(sb.r.pass_rate * 100)}%` : 'missing'],
-  ['Pass rate source', sa ? shortSourceName(sa.r.benchmark) : 'missing', sb ? shortSourceName(sb.r.benchmark) : 'missing'],
-  ['Cost basis', basisLabel(sa) ?? 'missing', basisLabel(sb) ?? 'missing'],
-  ['Cost per solved task', sa ? money(sa.cost) : 'missing', sb ? money(sb.cost) : 'missing'],
+  ['Input $/Mtok', price(a.input_per_mtok), price(b.input_per_mtok), ''],
+  ['Output $/Mtok', price(a.output_per_mtok), price(b.output_per_mtok), ''],
+  ['Cached input $/Mtok', price(a.cached_input_per_mtok) ?? 'missing', price(b.cached_input_per_mtok) ?? 'missing', ''],
+  ['Pass rate', sa.r ? `${Math.round(sa.r.pass_rate * 100)}%` : 'missing', sb.r ? `${Math.round(sb.r.pass_rate * 100)}%` : 'missing', ''],
+  ['Cost basis', sa.basis ?? 'missing', sb.basis ?? 'missing', 'basis'],
+  ['Cost per solved task', cell(sa, money), cell(sb, money), 'solved'],
+  ['Cost per month', cell(sa, (c) => moneyMonth(c * VOLUME)), cell(sb, (c) => moneyMonth(c * VOLUME)), 'month'],
 ];
-const desc = both && sameBasis
-  ? `${cheaperSolved.display_name} costs ${fmtX(solvedX)} less per solved task (${basisLabel(sa)}). Token price alone would tell you ${cheaperTokens.display_name} is ${fmtX(outX)} cheaper.`
+const both = sa.cost !== null && sb.cost !== null;
+const desc = both && sa.basis === sb.basis
+  ? `${(sa.cost <= sb.cost ? a : b).display_name} costs ${fmtX(ratio(sa.cost, sb.cost))} less per solved task (${sa.basis}). Token price alone would tell you ${(a.output_per_mtok <= b.output_per_mtok ? a : b).display_name} is ${fmtX(ratio(a.output_per_mtok, b.output_per_mtok))} cheaper.`
   : `Verified API pricing for ${a.display_name} and ${b.display_name}. Cost per solved task requires a published pass rate for both, on the same cost basis.`;
-const srcA = sa ? sourceFor(sa.r.benchmark) : null;
+const src = sourceOf(sa) ?? sourceOf(sb);
 ---
 <Base title={`${a.display_name} vs ${b.display_name} — cost per solved task — Solvency`} description={desc}>
-  <div class="wrap pt-10">
+  <div class="wrap pt-8 md:pt-12 max-w-6xl" id="cmp" data-a={a.model_id} data-b={b.model_id}>
     <p class="eyebrow">Head to head</p>
     <h1 class="h-page mt-3">{a.display_name} <span class="text-[var(--color-muted)]">vs</span> {b.display_name}</h1>
-    <div class="mt-4 flex flex-wrap gap-2">
+    <div class="mt-3 flex flex-wrap gap-2">
       <Badge status={a.status}>{a.display_name}: {a.status}</Badge>
       <Badge status={b.status}>{b.display_name}: {b.status}</Badge>
-      <Badge>heavy tier</Badge>
     </div>
 
-    <div class="mt-8 grid gap-4 lg:grid-cols-[1.1fr_1fr] items-start">
-      <div class="card card-pad">
-        {both && sameBasis ? (
-          <>
-            <p class="label">Verdict · {basisLabel(sa)} basis</p>
-            <p class="mt-2 text-xl leading-snug text-[var(--color-ink)]">
-              <strong class="text-[var(--color-accent)]">{cheaperSolved.display_name}</strong> costs
-              <strong class="text-[var(--color-accent)]"> {fmtX(solvedX)} less</strong> per solved task.
-            </p>
-            <p class="mt-3 text-[var(--color-muted)] leading-relaxed">
-              On output token price alone, {cheaperTokens.display_name} looks {fmtX(outX)} cheaper ({fmtX(inX)} on input).
-              {flips ? ' The ranking reverses once you divide by pass rate — the cheaper tokens do not win the task.' : ' The ranking holds, but the margin changes.'}
-            </p>
-          </>
-        ) : both ? (
-          <>
-            <p class="label">No verdict</p>
-            <p class="mt-2 text-[var(--color-ink)] leading-relaxed">One cost is measured by its benchmark and the other is modelled by Solvency. The two bases are never ranked against each other, so no verdict is given here.</p>
-          </>
-        ) : (
-          <>
-            <p class="label">No verdict</p>
-            <p class="mt-2 text-[var(--color-ink)] leading-relaxed">Cost per solved task needs a published pass rate for both models. At least one has none, so it is reported as missing rather than estimated.</p>
-          </>
-        )}
-        <Provenance source={srcA?.attribution} href={srcA?.attribution_url ?? srcA?.source_url} verified={a.last_verified} note="prices from each provider's pricing page" />
-      </div>
+    <p class="mt-6 font-[family-name:var(--font-display)] text-[var(--color-ink)] text-[clamp(1.2rem,2.2vw,1.5rem)] leading-[1.7]">
+      For
+      <select id="k-tier" class="ctl ctl-inline" aria-label="Task tier">
+        {TIER_NAMES.map((t) => <option value={t} selected={t === TIER}>{t}</option>)}
+      </select>
+      tasks, about
+      <input id="k-volume" class="ctl ctl-inline" type="number" inputmode="numeric" min="1" max="10000000" step="1" value={VOLUME} aria-label="Tasks per month" />
+      a month.
+    </p>
 
-      <div class="card overflow-hidden">
-        {charts.map((c) => (
-          <div class="card-pad border-b border-[var(--color-rule)] last:border-b-0">
-            <div class="flex items-baseline justify-between gap-3"><p class="label">{c.label}</p><p class="small">{c.note}</p></div>
-            <BarChart items={c.items} class="mt-3" />
-          </div>
-        ))}
+    <div class="mt-6 grid gap-4 lg:grid-cols-[1fr_1.2fr] items-start">
+      <div class="card card-pad" id="k-verdict" set:html={verdict}></div>
+      <div class="card card-pad" id="k-chart">
+        <p class="label">Cost per month against volume · drag the marker</p>
+        {series.length ? (
+          <>
+            <div class="mt-3 hidden sm:block" data-chart data-layout="wide" data-w="640" set:html={linesWide}></div>
+            <div class="mt-3 sm:hidden" data-chart data-layout="narrow" data-w="350" set:html={linesNarrow}></div>
+            <p class="small mt-2">Solid line: measured. Dashed: modelled. Dotted: stale. Per-task cost is constant, so on log axes every line has the same slope; the gap is the verdict.</p>
+          </>
+        ) : <p class="small mt-3">No line to draw: neither model has a published pass rate.</p>}
       </div>
     </div>
 
     <div class="mt-6 card overflow-hidden"><div class="tbl-wrap"><table class="tbl">
       <thead><tr><th></th><th class="r"><a href={`/models/${a.model_id}`}>{a.display_name}</a></th><th class="r"><a href={`/models/${b.model_id}`}>{b.display_name}</a></th></tr></thead>
-      <tbody>{rows.map(([k, x, y]) => (
+      <tbody>{rows.map(([k, x, y, f]) => (
         <tr>
           <td class="muted">{k}</td>
-          <td class={`r ${x === 'missing' ? 'missing' : 'ink'}`}>{x}</td>
-          <td class={`r ${y === 'missing' ? 'missing' : 'ink'}`}>{y}</td>
+          <td class={`r ${x === 'missing' ? 'missing' : f === 'solved' ? sa.basis : 'ink'}`} data-f={f ? `${f}-a` : undefined}>{x}</td>
+          <td class={`r ${y === 'missing' ? 'missing' : f === 'solved' ? sb.basis : 'ink'}`} data-f={f ? `${f}-b` : undefined}>{y}</td>
         </tr>))}</tbody>
     </table></div></div>
-    <Provenance verified={a.last_verified} note="heavy task tier; measured rows ignore the tier">
+    <Provenance source={src?.attribution} href={src?.attribution_url ?? src?.source_url} verified={a.last_verified} note="prices from each provider's pricing page; measured rows ignore the tier">
       · <a class="link" href="/methodology">Methodology</a>
-      · <a class="link" href={`/models/${a.model_id}`}>{a.display_name}</a>
-      · <a class="link" href={`/models/${b.model_id}`}>{b.display_name}</a>
+      · <a class="link" href={`/?tier=${TIER}&volume=${VOLUME}`} id="k-all">All models at these settings</a>
     </Provenance>
   </div>
 </Base>
+
+<script>
+  import { side, verdictHtml, seriesFor } from '../../lib/compare.ts';
+  import { volumeLines, money, moneyMonth, VOL_MIN, VOL_MAX } from '../../lib/charts.ts';
+  const root = document.getElementById('cmp')!;
+  const A = root.dataset.a!, B = root.dataset.b!;
+  const tierEl = document.getElementById('k-tier') as HTMLSelectElement;
+  const volEl = document.getElementById('k-volume') as HTMLInputElement;
+  const TIERS = ['light', 'moderate', 'heavy'];
+  const q = new URLSearchParams(location.search);
+  if (TIERS.includes(q.get('tier') ?? '')) tierEl.value = q.get('tier')!;
+  const v = Number(q.get('volume')); if (q.get('volume') !== null && Number.isFinite(v)) volEl.value = String(Math.min(10_000_000, Math.max(1, Math.round(v))));
+
+  function render() {
+    const tier = tierEl.value as 'light' | 'moderate' | 'heavy';
+    const volume = Math.min(10_000_000, Math.max(1, Math.round(Number(volEl.value)) || 1));
+    const sa = side(A, tier), sb = side(B, tier);
+    document.getElementById('k-verdict')!.innerHTML = verdictHtml(sa, sb, volume);
+    const series = seriesFor([sa, sb]);
+    document.querySelectorAll<HTMLElement>('#k-chart [data-chart]').forEach((slot) => {
+      if (!series.length) return;
+      const compact = slot.dataset.layout === 'narrow';
+      const w = slot.offsetParent ? Math.max(300, Math.round(slot.getBoundingClientRect().width)) : Number(slot.dataset.w);
+      slot.innerHTML = volumeLines(series, { width: w, volume, compact });
+    });
+    const set = (f: string, s: any, fn: (c: number) => string) => {
+      const el = root.querySelector<HTMLElement>(`[data-f="${f}"]`); if (!el) return;
+      el.textContent = s.cost === null ? 'missing' : fn(s.cost);
+    };
+    set('solved-a', sa, money); set('solved-b', sb, money);
+    set('month-a', sa, (c) => moneyMonth(c * volume)); set('month-b', sb, (c) => moneyMonth(c * volume));
+    (document.getElementById('k-all') as HTMLAnchorElement).href = `/?tier=${tier}&volume=${volume}`;
+    history.replaceState(null, '', `${location.pathname}?tier=${tier}&volume=${volume}`);
+  }
+  tierEl.addEventListener('input', render);
+  volEl.addEventListener('input', render);
+
+  // drag the volume marker: pointer x → log volume
+  let dragging = false;
+  const chart = document.getElementById('k-chart')!;
+  const toVolume = (svg: SVGSVGElement, clientX: number) => {
+    const r = svg.getBoundingClientRect();
+    const vb = svg.viewBox.baseVal;
+    const x = ((clientX - r.left) / r.width) * vb.width;
+    const x0 = Number(svg.dataset.px0), x1 = Number(svg.dataset.px1);
+    const t = Math.min(1, Math.max(0, (x - x0) / (x1 - x0)));
+    const vol = Math.pow(10, Math.log10(VOL_MIN) + t * (Math.log10(VOL_MAX) - Math.log10(VOL_MIN)));
+    const mag = Math.pow(10, Math.floor(Math.log10(vol)) - 1);
+    return Math.max(VOL_MIN, Math.round(vol / mag) * mag);
+  };
+  chart.addEventListener('pointerdown', (e) => { const svg = (e.target as Element).closest('svg'); if (!svg) return; dragging = true; volEl.value = String(toVolume(svg as SVGSVGElement, e.clientX)); render(); });
+  chart.addEventListener('pointermove', (e) => { if (!dragging) return; const svg = (e.target as Element).closest('svg'); if (!svg) return; volEl.value = String(toVolume(svg as SVGSVGElement, e.clientX)); render(); });
+  addEventListener('pointerup', () => { dragging = false; });
+  new ResizeObserver(() => render()).observe(chart);
+  if ([...q.keys()].length) render();
+</script>

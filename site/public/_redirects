@@ -1,0 +1,4 @@
+# "Reports" read as exports; the research notes live at /research. Old links
+# and the X share URL keep working.
+/reports            /research            301
+/reports/*          /research/:splat     301

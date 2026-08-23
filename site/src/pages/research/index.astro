@@ -4,7 +4,7 @@ import Base from '../../layouts/Base.astro';
 import Share from '../../components/Share.astro';
 import { headline, fmtX, money } from '../../lib/headline.ts';
 const reports = (await getCollection('reports')).sort((a, b) => b.data.date - a.data.date);
-const href = (r) => `/reports/${r.id.replace(/^\d{4}-\d{2}-/, '')}`;
+const href = (r) => `/research/${r.id.replace(/^\d{4}-\d{2}-/, '')}`;
 const h = headline();
 ---
 <Base title="Research notes — Solvency" description="Research notes on the real cost of AI coding models. Every figure sourced, dated, and re-derived by test.">

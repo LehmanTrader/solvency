@@ -44,7 +44,10 @@ const peers = models.filter((m) => m.model_id !== model.model_id && m.status ===
           <Badge>verified {model.last_verified}</Badge>
         </div>
       </div>
-      <a href={model.source_url} rel="noopener" class="btn">Provider pricing page ↗</a>
+      <div class="flex flex-wrap gap-2">
+        <a href={`/?highlight=${model.model_id}`} class="btn">Run this model in the calculator</a>
+        <a href={model.source_url} rel="noopener" class="btn">Provider pricing page ↗</a>
+      </div>
     </div>
 
     <div class="mt-8 grid gap-4 lg:grid-cols-[1fr_1fr]">
