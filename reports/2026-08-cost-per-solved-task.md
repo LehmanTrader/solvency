@@ -276,7 +276,7 @@ against treating the first as a proxy for the second.
 Every figure regenerates from the repository:
 
 ```
-npm test          # 31 tests, including data-integrity checks
+npm test          # 58 tests as of 2026-08-23, including data-integrity checks
 npm run coverage  # source, coverage and staleness audit
 npm run table     # the headline tables
 node scripts/charts.ts   # regenerates every chart in this report

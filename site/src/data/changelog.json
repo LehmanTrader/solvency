@@ -7,6 +7,12 @@
       "kind": "initial",
       "summary": "Initial dataset published: 25 models priced, each verified against its provider's own pricing page.",
       "detail": "Sources ingested: Artificial Analysis Coding Agent Index v1.4, Scale SEAL SWE-bench Pro, Aider polyglot. HAL evaluated and rejected as stale."
+    },
+    {
+      "date": "2026-08-23",
+      "kind": "correction",
+      "summary": "Research Note 01 said the suite was 31 tests; it is 58. The figure is now dated.",
+      "detail": "The note's 'Reproduce this' block quoted the test count as at publication on 2026-08-21 and did not move as tests were added. It now carries the date it was counted, so a later reading is stale-but-labelled rather than wrong. No price, table, chart, pass rate or cost figure changed."
     }
   ]
 }
