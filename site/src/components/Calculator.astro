@@ -33,7 +33,12 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
     <div>
       <input id="c-volume-range" class="ctl-range" type="range" min="0" max="1000" step="1" value="325"
         aria-label="Tasks per month, slider" aria-valuetext={`${DEFAULTS.volume} tasks a month`} data-ctl="volume" />
-      <div class="ticks small" aria-hidden="true"><span>10</span><span>1k</span><span>10k</span><span>100k</span></div>
+      <!-- One label per decade. The track is log10 over VOL_MIN..VOL_MAX, so a
+           label every decade is exactly evenly spaced, which is what the flex
+           does. Dropping one (as an earlier 10/1k/10k/100k set did) leaves the
+           labels at 0/33/66% while those values sit at 0/50/75%, and the handle
+           then reads a decade off: 200 tasks appeared to sit on "1k". -->
+      <div class="ticks small" aria-hidden="true"><span>10</span><span>100</span><span>1k</span><span>10k</span><span>100k</span></div>
     </div>
   </div>
 
