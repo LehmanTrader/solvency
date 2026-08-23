@@ -48,7 +48,24 @@ const urls = () => ({ afterSignInUrl: location.href, afterSignUpUrl: location.hr
 export type Intent = 'gate' | 'save' | 'pro-notify' | 'pro-download';
 
 /**
- * One line of OUR copy above Clerk's modal. clerk-js takes its own copy only
+ * Where the strip goes: hard against Clerk's card, above it when the viewport
+ * has room and below it otherwise. It must never cover the card's own title,
+ * so the card is measured rather than guessed at.
+ */
+function placeContext(el: HTMLElement): void {
+  const card = document.querySelector('.cl-modalContent, .cl-card');
+  const r = card?.getBoundingClientRect();
+  const h = el.offsetHeight, M = 12;
+  let top: number;
+  if (!r || !r.height) top = Math.max(M, innerHeight / 2 - 304);
+  else if (r.top - h - M >= M) top = r.top - h - M;
+  else if (r.bottom + M + h <= innerHeight - M) top = r.bottom + M;
+  else top = Math.max(M, innerHeight - h - M);
+  el.style.top = `${Math.round(top)}px`;
+}
+
+/**
+ * One line of OUR copy beside Clerk's modal. clerk-js takes its own copy only
  * at load(), so the entry point's context is rendered by the page: a fixed
  * strip themed like the card, shown while the modal is in the DOM.
  */
@@ -63,16 +80,22 @@ function showContext(text: string): void {
   }
   el.textContent = text;
   el.setAttribute('data-show', '1');
+  placeContext(el);
+  const reposition = () => placeContext(el!);
   // hide when Clerk's modal leaves the DOM (close, Escape, or sign-up completes)
   let seen = false;
+  const stop = () => { el!.removeAttribute('data-show'); mo.disconnect(); removeEventListener('resize', reposition); };
   const mo = new MutationObserver(() => {
     const open = document.querySelector('.cl-modalBackdrop, .cl-modalContent');
-    if (open) { seen = true; return; }
+    if (open) { seen = true; reposition(); return; }
     if (!seen) return;
-    el!.removeAttribute('data-show'); mo.disconnect();
+    stop();
   });
   mo.observe(document.body, { childList: true, subtree: true });
-  setTimeout(() => { if (!seen) { el!.removeAttribute('data-show'); mo.disconnect(); } }, 4000);
+  addEventListener('resize', reposition);
+  // Clerk animates its card in and grows it as steps change; re-measure after
+  for (const t of [120, 400, 900]) setTimeout(reposition, t);
+  setTimeout(() => { if (!seen) stop(); }, 4000);
 }
 
 /**

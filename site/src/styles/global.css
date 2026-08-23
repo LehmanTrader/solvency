@@ -167,7 +167,10 @@
   /* One filled amber button per viewport: the header's Sign up — free, except
      while the gate card is open, when it yields to the card's Create free account. */
   body[data-gate-open] #auth-signup { background: transparent; color: var(--color-ink); border-color: var(--color-control-border); font-weight: 400; }
-  /* the sign-up modal's one-line context, rendered by the page above Clerk's card */
+  /* The sign-up modal's one-line context, rendered by the page beside Clerk's
+     card. `top` is set by placeContext() from the card's measured box — above
+     it when the viewport has room, below it otherwise — so it never covers
+     Clerk's own title. The value here is only the pre-measure fallback. */
   .auth-context { position: fixed; left: 50%; top: max(1rem, calc(50vh - 19rem)); transform: translate(-50%, -.5rem); z-index: 10001;
                   max-width: min(26rem, calc(100vw - 2rem)); padding: .55rem .9rem; border-radius: 6px; text-align: center;
                   font-family: var(--font-mono); font-size: .8rem; line-height: 1.45; color: var(--color-ink);

@@ -11,9 +11,11 @@ export function wireCopy(btn: HTMLButtonElement, url: () => string, idle = 'Copy
     btn.setAttribute('aria-busy', 'true');
     const write = navigator.clipboard?.writeText(url()) ?? Promise.reject(new Error('no clipboard'));
     const timeout = new Promise<never>((_, rej) => setTimeout(() => rej(new Error('timeout')), 1500));
-    try { await Promise.race([write, timeout]); btn.textContent = 'Link copied ✓'; }
-    catch { btn.textContent = 'Copy failed — use the address bar'; }
+    // Both outcomes fit the button's fixed min-width, so the action row never
+    // reflows; the longer instruction rides along as the button's title.
+    try { await Promise.race([write, timeout]); btn.textContent = 'Link copied ✓'; btn.removeAttribute('title'); }
+    catch { btn.textContent = 'Copy failed ✕'; btn.title = 'Copy the address bar instead.'; }
     btn.removeAttribute('aria-busy');
-    timer = window.setTimeout(() => (btn.textContent = idle), 1600);
+    timer = window.setTimeout(() => { btn.textContent = idle; btn.removeAttribute('title'); }, 1600);
   });
 }
