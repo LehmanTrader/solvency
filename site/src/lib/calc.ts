@@ -53,15 +53,16 @@ export function compute(s: Settings) {
   return { rows, missing };
 }
 
-const rowHtml = ({ m, r, cost, basis }: any, volume: number, i: number) => `
+const TONE: Record<string, string> = { measured_by_source: 'measured', modelled_by_solvency: 'modelled', historical_at_run_date: 'stale' };
+const rowHtml = ({ m, r, cost, basis, basisKey }: any, volume: number, i: number) => `
   <tr class="${i === 0 ? 'lead' : ''}">
     <td class="rank">${i + 1}</td>
     <td class="ink">
       <a href="/models/${m.model_id}">${m.display_name}</a>
-      ${basis === 'measured_by_source' ? '<span class="ml-2 text-[9px] uppercase tracking-[0.14em] text-[var(--color-accent)]">measured</span>' : ''}
+      <span class="ml-2 text-[9px] uppercase tracking-[0.14em] t-${TONE[basisKey] ?? 'modelled'}">${TONE[basisKey] ?? 'modelled'}</span>
     </td>
     <td class="r">${(r.pass_rate * 100).toFixed(0)}%</td>
-    <td class="r ${i === 0 ? 'accent' : 'ink'}">${money(cost)}</td>
+    <td class="r ${TONE[basisKey] ?? 'modelled'}">${money(cost)}</td>
     <td class="r ink">${money(cost * volume)}</td>
   </tr>`;
 
@@ -72,10 +73,10 @@ export function groupsHtml(rows: any[], volume: number) {
     return `
       <div class="border-b border-[var(--color-rule)] last:border-b-0">
         <div class="px-5 pt-4 pb-2">
-          <p class="eyebrow ${g.key === 'measured_by_source' ? '' : 'text-[var(--color-warn)]!'}">${g.title}</p>
+          <p class="eyebrow t-${TONE[g.key] ?? 'modelled'}">${g.title}</p>
           <p class="mt-1 small">${g.note}</p>
         </div>
-        <div class="tbl-wrap"><table class="tbl">
+        <div class="tbl-wrap"><table class="tbl tone-${TONE[g.key] ?? 'modelled'}">
           <thead><tr>
             <th class="rank">#</th><th>Model</th><th class="r">Pass</th>
             <th class="r">$ / solved task</th><th class="r">$ / month</th>

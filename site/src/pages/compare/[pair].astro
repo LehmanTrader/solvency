@@ -55,8 +55,8 @@ const srcA = sa ? sourceFor(sa.r.benchmark) : null;
     <p class="eyebrow">Head to head</p>
     <h1 class="h-page mt-3">{a.display_name} <span class="text-[var(--color-muted)]">vs</span> {b.display_name}</h1>
     <div class="mt-4 flex flex-wrap gap-2">
-      <Badge tone={a.status === 'current' ? 'accent' : 'warn'}>{a.display_name}: {a.status}</Badge>
-      <Badge tone={b.status === 'current' ? 'accent' : 'warn'}>{b.display_name}: {b.status}</Badge>
+      <Badge status={a.status}>{a.display_name}: {a.status}</Badge>
+      <Badge status={b.status}>{b.display_name}: {b.status}</Badge>
       <Badge>heavy tier</Badge>
     </div>
 

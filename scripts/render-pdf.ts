@@ -150,8 +150,8 @@ const CSS = `
   @page { size: A4; margin: 0; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; box-sizing: border-box; }
   :root {
-    --page:#F4F3F1; --card:#FFFFFF; --ink:#1B1B20; --body:#3A3D42; --muted:#6E7278;
-    --rule:#E4E2DE; --rule-soft:#EDEBE7; --accent:#A9631A; --amber:#FFB000;
+    --page:#F4F3F1; --card:#FFFFFF; --ink:#1B1B20; --body:#3A3D42; --muted:#5C6165;
+    --rule:#E4E2DE; --rule-soft:#EDEBE7; --accent:#8F5214; --amber:#FFB000;
     --sans: -apple-system, "SF Pro Text", "Helvetica Neue", Inter, Arial, sans-serif;
     --display: ui-serif, "New York", "Iowan Old Style", Charter, Georgia, serif;
     --mono: "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;

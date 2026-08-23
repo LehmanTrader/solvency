@@ -29,7 +29,6 @@ const lb = leaderboard('heavy');
 const pool = mine ? (mine.basisKey === 'measured_by_source' ? lb.measured : [...lb.modelled, ...lb.historical]) : [];
 const peerBars = pool.map((x) => ({ label: x.m.display_name, value: x.cost, display: money(x.cost), href: `/models/${x.m.model_id}`, lead: x.m.model_id === model.model_id }));
 const peers = models.filter((m) => m.model_id !== model.model_id && m.status === 'current').slice(0, 8);
-const tone = model.status === 'current' ? 'accent' : model.status === 'legacy' ? 'muted' : 'warn';
 ---
 <Base title={`${model.display_name} — pricing and cost per solved task — Solvency`}
       description={`${model.display_name} API pricing verified ${model.last_verified}: $${model.input_per_mtok}/M input, $${model.output_per_mtok}/M output${mine ? `, ${money(mine.cost)} per solved task (${measured ? 'measured' : 'modelled'})` : ', no published pass rate'}.`}>
@@ -39,9 +38,9 @@ const tone = model.status === 'current' ? 'accent' : model.status === 'legacy' ?
         <p class="eyebrow">{model.provider}</p>
         <h1 class="h-page mt-3">{model.display_name}</h1>
         <div class="mt-4 flex flex-wrap gap-2">
-          <Badge tone={tone}>{model.status}</Badge>
+          <Badge status={model.status}>{model.status}</Badge>
           <Badge>{model.capability_class}</Badge>
-          {best && <Badge tone={measured ? 'accent' : 'warn'}>{measured ? 'measured cost' : 'modelled cost'}</Badge>}
+          {best && <Badge provenance={measured ? 'measured' : best.cost_basis === 'historical_at_run_date' ? 'stale' : 'modelled'}>{measured ? 'measured cost' : best.cost_basis === 'historical_at_run_date' ? 'modelled cost · stale pass rate' : 'modelled cost'}</Badge>}
           <Badge>verified {model.last_verified}</Badge>
         </div>
       </div>
@@ -71,7 +70,7 @@ const tone = model.status === 'current' ? 'accent' : model.status === 'legacy' ?
             {tierCosts.map((t) => (
               <div class="tile">
                 <p class="label">{t.tier}</p>
-                <p class={`tile-v ${t.value === null ? 'missing' : 'accent'}`}>{t.value === null ? 'missing' : money(t.value)}</p>
+                <p class={`tile-v ${t.value === null ? 'missing' : measured ? 'measured' : 'modelled'}`}>{t.value === null ? 'missing' : money(t.value)}</p>
               </div>))}
           </div>
         ) : (
@@ -112,7 +111,7 @@ const tone = model.status === 'current' ? 'accent' : model.status === 'legacy' ?
     {peerBars.length > 1 && (
       <Section id="peers" eyebrow={mine.basisKey === 'measured_by_source' ? 'Measured peers' : 'Modelled peers'} title="Cost per solved task against its peers"
         caption={mine.basisKey === 'measured_by_source' ? 'Measured rows only. Lower is better.' : 'Modelled rows only, heavy tier. Lower is better. These are Solvency estimates, not observed costs.'}>
-        <div class="card card-pad max-w-3xl"><BarChart items={peerBars} /></div>
+        <div class="card card-pad max-w-3xl"><BarChart items={peerBars} tone={mine.basisKey === 'measured_by_source' ? 'measured' : 'modelled'} /></div>
         <Provenance source={bestSrc?.attribution} href={bestSrc?.attribution_url ?? best.source_url} verified={bestSrc?.last_verified ?? best.run_date} />
       </Section>
     )}

@@ -5,12 +5,12 @@
  * rows are drawn in the muted tone unless `mono` is false.
  */
 interface Item { label: string; value: number; display: string; href?: string; lead?: boolean; }
-interface Props { items: Item[]; max?: number; mono?: boolean; class?: string; }
-const { items, mono = true, class: cls = '' } = Astro.props;
+interface Props { items: Item[]; max?: number; mono?: boolean; class?: string; tone?: 'measured' | 'modelled'; }
+const { items, mono = true, class: cls = '', tone = 'measured' } = Astro.props;
 const max = Astro.props.max ?? Math.max(...items.map((i) => i.value), 0);
 const w = (v: number) => (max > 0 ? Math.max(1, (v / max) * 100) : 0);
 ---
-<ul class={`bars ${cls}`} role="list">
+<ul class={`bars ${tone} ${cls}`} role="list">
   {items.map((i) => (
     <li class={`br ${i.lead ? 'lead' : ''}`}>
       <span class="bl" title={i.label}>{i.href ? <a href={i.href} class="hover:text-[var(--color-accent)]">{i.label}</a> : i.label}</span>

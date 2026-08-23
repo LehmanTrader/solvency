@@ -29,13 +29,13 @@ const nPass = models.filter((m) => bestResultFor(m.model_id)).length;
             <tr>
               <td class="ink"><a href={`/models/${m.model_id}`}>{m.display_name}</a></td>
               <td class="muted">{m.provider}</td>
-              <td><Badge tone={m.status === 'current' ? 'accent' : m.status === 'legacy' ? 'muted' : 'warn'}>{m.status}</Badge></td>
+              <td><Badge status={m.status}>{m.status}</Badge></td>
               <td class="r">{price(m.input_per_mtok)}</td>
               <td class="r">{price(m.output_per_mtok)}</td>
               <td class={`r ${m.cached_input_per_mtok === null ? 'missing' : ''}`}>{price(m.cached_input_per_mtok) ?? 'missing'}</td>
               <td class={`r ${r ? '' : 'missing'}`}>{r ? `${Math.round(r.pass_rate * 100)}%` : 'missing'}</td>
               <td class="muted">{r ? (r.cost_basis === 'measured_by_source' ? 'measured' : r.cost_basis === 'historical_at_run_date' ? 'modelled · stale' : 'modelled') : '—'}</td>
-              <td class={`r ${s ? (s.basisKey === 'measured_by_source' ? 'accent' : 'ink') : 'missing'}`}>{s ? money(s.cost) : 'missing'}</td>
+              <td class={`r ${s ? (s.basisKey === 'measured_by_source' ? 'measured' : s.basisKey === 'historical_at_run_date' ? 'stale' : 'modelled') : 'missing'}`}>{s ? money(s.cost) : 'missing'}</td>
               <td class="muted">{m.last_verified}</td>
             </tr>); })}
         </tbody>

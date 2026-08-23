@@ -21,7 +21,7 @@ const harness = (label: string) => label.split(' - ')[0];
       <h3 class="h-card"><span class="text-[var(--color-accent)]">Measured</span> · cost per solved task</h3>
       <p class="mt-1 small">The benchmark ran the model and observed the cost. No Solvency assumption is inside these figures.</p>
     </div>
-    <span class="pill pill-accent">{measured.length} harness + model pairs</span>
+    <span class="pill pill-measured">measured · {measured.length} harness + model pairs</span>
   </div>
   <div class="tbl-wrap">
     <table class="tbl">
@@ -37,7 +37,7 @@ const harness = (label: string) => label.split(' - ')[0];
             <td class="muted">{harness(x.r.entry_label)}</td>
             <td class="r">{Math.round(x.r.pass_rate * 100)}</td>
             <td class="r">{x.perTask === null ? <span class="missing">missing</span> : money(x.perTask)}</td>
-            <td class={`r ${i === 0 ? 'accent' : 'ink'}`}>{money(x.cost)}</td>
+            <td class="r measured">{money(x.cost)}</td>
           </tr>
         ))}
       </tbody>
@@ -53,13 +53,13 @@ const harness = (label: string) => label.split(' - ')[0];
   <div class="card overflow-hidden mt-6">
     <div class="card-head">
       <div>
-        <h3 class="h-card"><span class="text-[var(--color-warn)]">Modelled</span> · pass rate published, cost estimated</h3>
+        <h3 class="h-card"><span class="t-modelled">Modelled</span> · pass rate published, cost estimated</h3>
         <p class="mt-1 small">These sources publish no cost. Cost is Solvency's loop model at today's verified prices — an assumption, labelled as one. Not comparable with the measured table.</p>
       </div>
-      <span class="pill pill-warn">{tier} tier</span>
+      <span class="pill pill-modelled">modelled · {tier} tier</span>
     </div>
     <div class="tbl-wrap">
-      <table class="tbl">
+      <table class="tbl tone-modelled">
         <thead><tr>
           <th class="rank">#</th><th>Model</th><th>Source</th><th>Pass rate from</th>
           <th class="r">Pass</th><th class="r">$ / solved task</th>
@@ -70,9 +70,9 @@ const harness = (label: string) => label.split(' - ')[0];
               <td class="rank">{i + 1}</td>
               <td class="ink"><a href={`/models/${x.m.model_id}`}>{x.m.display_name}</a></td>
               <td class="muted">{shortSourceName(x.r.benchmark)}</td>
-              <td class="muted">{x.r.run_date}{x.basisKey === 'historical_at_run_date' ? ' · stale' : ''}</td>
+              <td class={x.basisKey === 'historical_at_run_date' ? 'stale' : 'muted'}>{x.r.run_date}{x.basisKey === 'historical_at_run_date' ? ' · stale' : ''}</td>
               <td class="r">{Math.round(x.r.pass_rate * 100)}%</td>
-              <td class="r ink">{money(x.cost)}</td>
+              <td class={`r ${x.basisKey === 'historical_at_run_date' ? 'stale' : 'modelled'}`}>{money(x.cost)}</td>
             </tr>
           ))}
         </tbody>

@@ -1,5 +1,14 @@
 ---
-const { tone = 'muted' } = Astro.props;
-const tones = { muted: '', accent: 'pill-accent', warn: 'pill-warn', ink: 'pill-ink' };
+/**
+ * Two independent axes, never one prop: `provenance` says where a number came
+ * from (measured / modelled / stale / missing) and carries color; `status` says
+ * whether a model is current / legacy / retired and stays neutral, so that
+ * "modelled" and "retired" can no longer share a color. `tone` is kept for the
+ * brand-neutral cases (muted / accent / ink).
+ */
+interface Props { provenance?: 'measured' | 'modelled' | 'stale' | 'missing'; status?: 'current' | 'legacy' | 'retired' | string; tone?: 'muted' | 'accent' | 'ink'; }
+const { provenance, status, tone = 'muted' } = Astro.props;
+const tones = { muted: '', accent: 'pill-accent', ink: 'pill-ink' };
+const cls = provenance ? `pill-${provenance}` : status ? `pill-${status}` : (tones[tone] ?? '');
 ---
-<span class={`pill ${tones[tone] ?? ''}`}><slot /></span>
+<span class={`pill ${cls}`}><slot /></span>
