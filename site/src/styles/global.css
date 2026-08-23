@@ -53,8 +53,9 @@
       color-scheme: light;
     }
   }
-  html { background: var(--color-bg); color-scheme: dark; scroll-behavior: smooth; }
-  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  /* Instant anchor jumps. Smooth scrolling was observed never starting in
+     Chrome for in-page links, which left the sub-nav doing nothing. */
+  html { background: var(--color-bg); color-scheme: dark; }
   body { background: var(--color-bg); color: var(--color-body);
          font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
   ::selection { background: var(--color-accent); color: var(--color-on-accent); }
