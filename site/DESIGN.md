@@ -1,59 +1,78 @@
-# Solvency site — design brief (design/aa-style)
+# Solvency site — design brief (design/calculator-first)
 
-Reference studied: artificialanalysis.ai (home, /agents/coding-agents), 2026-08-22.
-Baseline: solvency.dev as shipped 2026-08-22 (single 48rem column, hero-then-calculator).
+Spec: `docs/landing-spec.md` (2026-08-22). Tokens: `docs/brand-review.md` §4.
+Baseline replaced: the AA-style hero → leaderboard → highlights → calculator → findings page.
 
-## What AA does structurally that we adopt
+## The page is the calculator
 
-1. **Wide, dense, data-first.** Content runs to ~1280px; the first screen shows a
-   compact thesis and then real charts/tables, not a manifesto.
-2. **Sticky global nav** with every section reachable in one click, plus a utility
-   cluster on the right (we use Data/Embed/Changelog, not login/premium).
-3. **Hero + side rail.** Left: one-line thesis and the headline number. Right: a
-   "latest" rail (newest research note, newest changelog entries) so the page feels
-   alive and dated.
-4. **Highlights row** of three chart cards directly under the hero, each with a title,
-   a one-line "what the axis means · lower is better" caption, and a source line.
-5. **Chart-led sections** with an eyebrow, a short plain-English caption, the figure,
-   then a source + last-verified line. Section TOC on the left at desktop widths.
-6. **One card/table system** reused on every page: same header row, same hairline
-   rules, same numeral column alignment, same "verified" stamp placement.
-7. **Trust signals everywhere:** methodology link, source attribution string, verified
-   date on every figure. AA puts them in a right-hand info card; we put them in a
-   `Provenance` line under every table/chart and in a Sources section on the home page.
+One question, two controls, the ranked answer. Nothing else above the fold.
 
-## What we deliberately do not copy
+- `/` — `Calculator.astro`: h1, the control sentence (`I build [tier] tasks, about [n] a
+  month`), a log-scale volume slider, then the result card: the `calloutHtml` sentence,
+  **Measured** bars, **Modelled** bars (own scale, own header — never interleaved), `Stale` and
+  `Not shown` behind `<details>`, the AA attribution string verbatim + verified date, `Copy
+  link`, `Save scenario`, and an `Assumptions (4)` disclosure (retry model, cache rate,
+  takeover cost, frontier toggle). Below the fold: one proof line from `headline()`, the
+  cost-vs-pass-rate scatter with the measured-only Pareto frontier, and a three-tile "how it
+  is computed" strip. Every row links to its model page and carries a `compare ›` action to
+  `/compare/[a]-vs-[b]?tier=&volume=`.
+- URL query is the single source of truth (`?tier=&volume=&variant=&cache=&residual=&frontier=&highlight=`);
+  every value is validated before it reaches the engine.
 
-AA's name, logo, purple/cream palette, serif display face, "Premium" nav, tabbed chart
-switchers, and their copy. Their attribution string on AA-sourced figures is kept
-byte-for-byte because their terms require it.
+## Charts — `src/lib/charts.ts`
 
-## What we keep of our own brand
+Pure functions `rows → SVG string`, rendered at build (wide and narrow layouts; CSS shows one)
+and again by the island. No library, no `<img>` of a report figure on product pages.
 
-- Ground `#0A0C0D`, panel `#101418`, rule `#1E252A`, ink `#E8ECEF`, amber `#FFB000`.
-- Monospace (JetBrains Mono) for every numeral, label and eyebrow; system sans for prose.
-- The voice: measured vs modelled are separate tables, "missing" is printed as a word,
-  never estimated; the verified date sits beside every number.
-- Signature element: the **amber rank rail** — on ranked tables the cheapest row gets an
-  amber left rule and amber numeral; the bar charts are single-hue amber with the
-  comparison row in ink. One accent, spent on the thing the product is about.
+| Chart | Function | Where |
+|---|---|---|
+| A — ranked bars | `rankedBars()` + `patchRanked()` | home result card. Re-sorts in place: rows are `<g class="row">` moved with a 220 ms `transform` transition; bar widths transition too. |
+| B — scatter + Pareto | `scatterPareto()` / `paretoFrontier()` | home, below the fold. Frontier on measured points only; modelled hollow; stale hidden behind `Show stale`. Labels placed greedily so none overlap. |
+| C — $/month vs volume | `volumeLines()` | `/compare/[pair]`. Max 6 series, categorical ramp; dash carries basis (solid measured, dashed modelled, dotted stale). Drag the marker to set volume. |
 
-## Page-by-page plan
+Rules: measured = solid `--color-measured`; modelled = hatched `<pattern>` in
+`--color-modelled`; stale = dashed hatch in `--color-stale`; the word is always printed.
+`<title>` + `<desc>` on every SVG, rows are `role="listitem"` with sentence `aria-label`s,
+JetBrains Mono numerals, colors only via CSS variables so one SVG serves light and dark.
+`test/charts.test.ts` asserts the measured SVG contains no modelled row.
 
-- **/** Hero (thesis, 3 headline stat tiles computed from data) + latest rail.
-  Highlights: three bar charts (cost per solved task, pass rate, output $/Mtok) on the
-  measured rows. Leaderboard: Measured table ranked; Modelled table separate, never
-  interleaved. Calculator in its own section. Findings: the three report charts with
-  captions. Sources: table with tasks, basis, newest entry, verified date. Share row.
-- **/reports** Card list with note number, date, description, Share on X + copy link.
-- **/reports/[slug]** Two-column at desktop: sticky TOC from headings, prose column with
-  improved type scale; share bar under the header and at the end.
-- **/models** Sortable-by-eye table (provider grouping, verified column, status badges).
-- **/models/[id]** Header + status badges; pricing tiles; cost per solved task tiles;
-  benchmark rows with basis; peer bar chart vs current models; compare links.
-- **/compare/[a]-vs-[b]** Verdict card; side-by-side tiles; two-bar chart per metric;
-  table; provenance line.
-- **/methodology, /data, /embed, /changelog** Same shell, prose system, no redesign of
-  content.
-- **Meta:** every page emits og:*, twitter:card=summary_large_image, twitter:title,
-  twitter:description, twitter:image (absolute), og:url, og:site_name.
+## The gate — `src/lib/gate.ts`
+
+```ts
+export const GATE_MODE: GateMode = 'spec';   // 'free' | 'spec' | 'hard'
+```
+
+That line is the whole policy. `'spec'` is the table in the landing spec §3: tier, volume,
+retry, compare and copy-link are free; the three assumption controls soft-gate (first touch
+shows an inline card once per session with *Keep exploring without it*; declining keeps the
+controls usable but the scenario cannot be saved); `Save scenario` hard-gates into
+`Clerk.openSignIn`. **Set it to `'hard'` to require sign-in for every control**, `'free'` to
+gate nothing. With no `PUBLIC_CLERK_PUBLISHABLE_KEY` at build time the site is ungated
+regardless. The header shows `Sign in` (the single amber button in the chrome) or Clerk's
+user button when signed in; `Save scenario` writes the scenario URL to the user's
+`unsafeMetadata.scenarios`.
+
+## Color — five meanings, nothing else
+
+Amber is measured data as text/fill and "click here to commit" as a filled button. Periwinkle
+is modelled, coral is stale, green/coral-red are better/worse deltas, green is a fresh verified
+stamp (≤ 30 days). Eyebrows, nav, rules, list markers, focus rings and inline code are neutral.
+`$/month` is neutral; only `$/solved` carries the basis color. Light and dark ship from the
+same tokens in `global.css` (`#FFB000` never appears on a light ground). Categorical ramp
+`--color-s1…s6` for Chart C only.
+
+## Page map
+
+Nav: Calculator · Models · Compare · Methodology · Research · Sign in. Footer: Data (CC-BY),
+Embed, Changelog, Source, Privacy, Terms. `/reports*` → `/research*` (Astro `redirects` +
+`public/_redirects` 301s for Cloudflare). `/compare` is a two-picker index onto the 300 static
+pair pages. `/methodology#sources` absorbed the home page's sources table. Model pages link
+to `/?highlight=id`, which outlines that row.
+
+## Kept from the previous brief
+
+Source Serif 4 display / IBM Plex Sans body / JetBrains Mono numerals; tabular numerals,
+hairline rules over boxes; the verified-date stamp on every page; `Provenance` line under
+every table and chart; AA attribution byte-for-byte; measured vs modelled never ranked against
+each other; missing printed as a word. No `scroll-behavior: smooth` — Chrome was observed
+never starting the scroll on in-page links.
