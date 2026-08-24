@@ -138,6 +138,52 @@ verified Stripe events; do not hand-edit entitlement rows to make counts agree.
 
 Connected Stripe sandbox work is allowed only after all of these are true:
 
+The manual Preview workflow uses two separately approved jobs on fresh runners.
+The deploy job receives only Cloudflare deployment credentials. The dependent
+smoke job checks out the same `github.sha`, attests that SHA through Access and
+then receives only these GitHub `preview` environment values:
+
+- variable `PREVIEW_CLERK_PUBLISHABLE_KEY`;
+- secrets `PREVIEW_CLERK_SMOKE_SECRET_KEY`,
+  `PREVIEW_CF_ACCESS_CLIENT_ID` and `PREVIEW_CF_ACCESS_CLIENT_SECRET`.
+
+Create the smoke Secret Key as a separately named key in the isolated Clerk
+Development instance so it can be revoked without changing the Pages runtime.
+Pages Preview alone receives runtime `CLERK_PUBLISHABLE_KEY`,
+`CLERK_SECRET_KEY`, `CLERK_JWT_KEY` and `BUILD_SHARE_TOKEN_SECRET`; never copy
+the JWT or share-token secret into GitHub. Revoke the smoke Clerk key and Access
+token after the one-time checkpoint, or retain them only with an explicit
+rotation owner if recurring Preview smoke is approved.
+
+### Preview red-smoke recovery
+
+Treat the Preview checkpoint as incomplete if the deploy job succeeds but the
+second approval is not granted, the smoke job fails, or its final cleanup line
+is absent. Keep Cloudflare Access and `STRIPE_WEBHOOK_ENABLED=false` in force;
+do not start Stripe work.
+
+1. If smoke created identities, list only Clerk Development users whose
+   `externalId` begins `solvency-preview-smoke-`. For every match, create a
+   temporary session with the separately named smoke key, call authenticated
+   `DELETE /api/preview-account-erasure` with the exact confirmation plus
+   Access service headers, and require `{ "data": { "erased": true } }`.
+   Delete that Clerk user only after D1 erasure succeeds. Never hand-delete D1
+   owner rows or delete the Clerk identity first.
+2. Preserve logs that contain operation names and request IDs, but never copy
+   Access credentials, Clerk keys, session tokens or `sv1_` paths into an
+   issue, artifact or support ticket.
+3. To darken Preview, make a reviewed commit that restores only the three
+   `[env.preview.vars]` account, entitlement and intent flags to `"false"`,
+   leave Preview erasure true and Stripe false, and run the manual Preview
+   deploy job. Reject the dependent smoke job because its readiness contract
+   correctly requires feature-on Preview; verify instead that the stable alias
+   and latest immutable hash remain behind Access and the three
+   account routes return the hardened no-store `503 SERVICE_UNAVAILABLE` state
+   through service authentication.
+4. Do not consider recovery complete until synthetic Clerk users are absent,
+   their D1 data is erased, and the intended exact build SHA and flag state are
+   independently attested.
+
 1. The GitHub `preview` environment has a required reviewer and `main` branch
    restriction. Preview uses a separate Clerk Development instance.
 2. Cloudflare Access rejects requests without valid user/service credentials.

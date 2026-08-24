@@ -12,6 +12,8 @@ test('authenticated account smoke is locked to an isolated preview and test iden
   assert.match(source, /const PREVIEW_ORIGIN = 'https:\/\/d1-functions-preview\.solvency-ru5\.pages\.dev';/);
   assert.match(source, /ACCOUNT_SMOKE_CONFIRM/);
   assert.match(source, /DELETE_ISOLATED_PREVIEW_DATA/);
+  assert.match(source, /requiredEnvironment\('EXPECTED_BUILD_SHA'\)/);
+  assert.match(source, /SHA256_COMMIT\.test\(expectedBuildSha\)/);
   assert.match(source, /secretKey\.startsWith\('sk_test_'\)/);
   assert.match(source, /publishableKey\.startsWith\('pk_test_'\)/);
   assert.doesNotMatch(source, /https:\/\/solvency\.dev/);
@@ -46,6 +48,33 @@ test('authenticated account smoke requires Access service credentials and always
   assert.ok(source.indexOf('await eraseAllAccountData(account)') < source.indexOf('await clerk.users.deleteUser(user.id)'));
   assert.doesNotMatch(source, /Promise\.all\(\[createAccount/);
   assert.doesNotMatch(source, /console\.(?:log|error|warn)\([^\n]*(?:secretKey|publishableKey|clientSecret|token|account\.user)/);
+});
+
+test('authenticated account smoke attests exact Preview readiness before creating identities', () => {
+  assert.match(source, /solvency-build-sha/);
+  assert.match(source, /data-account-plans-enabled="true"/);
+  assert.match(source, /data-product-intents-enabled="true"/);
+  assert.match(source, /data-clerk-publishable-key/);
+  for (const path of [
+    '/api/build-plans',
+    '/api/entitlement',
+    '/api/intents',
+    '/api/preview-account-erasure',
+  ]) assert.ok(source.includes(path), `missing Preview readiness probe for ${path}`);
+  assert.match(source, /response\.status !== 401/);
+  assert.match(source, /AUTH_REQUIRED/);
+  assert.match(source, /READINESS_ATTEMPTS/);
+  assert.ok(
+    [...source.matchAll(/AbortSignal\.timeout\(REQUEST_TIMEOUT_MS\)/g)].length >= 4,
+    'every unauthenticated, readiness, authenticated and public fetch path must be bounded',
+  );
+  assert.doesNotMatch(source, /GET \$\{path\} returned malformed JSON/);
+  assert.match(source, /Public share request returned malformed JSON/);
+
+  const accessProof = source.indexOf('await proveUnauthenticatedAccessDenial();');
+  const readiness = source.indexOf('await attestPreviewReadiness();');
+  const firstAccount = source.indexOf("await createAccount('a')");
+  assert.ok(accessProof >= 0 && accessProof < readiness && readiness < firstAccount);
 });
 
 test('authenticated account smoke covers the complete pre-billing workflow boundary', () => {

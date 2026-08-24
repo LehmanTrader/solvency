@@ -5,6 +5,10 @@ const PREVIEW_ORIGIN = 'https://d1-functions-preview.solvency-ru5.pages.dev';
 const REQUIRED_CONFIRMATION = 'DELETE_ISOLATED_PREVIEW_DATA';
 const ERASURE_CONFIRMATION = 'DELETE_MY_ISOLATED_PREVIEW_DATA';
 const PLAN_LIMIT = 20;
+const SHA256_COMMIT = /^[0-9a-f]{40}$/;
+const READINESS_ATTEMPTS = 15;
+const READINESS_RETRY_DELAY_MS = 2_000;
+const REQUEST_TIMEOUT_MS = 10_000;
 
 function requiredEnvironment(name) {
   const value = process.env[name]?.trim();
@@ -33,6 +37,10 @@ function accessHeaders() {
 }
 
 const baseUrl = previewOrigin();
+const expectedBuildSha = requiredEnvironment('EXPECTED_BUILD_SHA');
+if (!SHA256_COMMIT.test(expectedBuildSha)) {
+  throw new Error('EXPECTED_BUILD_SHA must be one exact lowercase 40-character commit SHA.');
+}
 if (requiredEnvironment('ACCOUNT_SMOKE_CONFIRM') !== REQUIRED_CONFIRMATION) {
   throw new Error(`ACCOUNT_SMOKE_CONFIRM must equal ${REQUIRED_CONFIRMATION}.`);
 }
@@ -150,6 +158,8 @@ async function apiRequest(account, path, options = {}) {
     headers,
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
     redirect: 'error',
+    cache: 'no-store',
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   let body = null;
   const contentType = response.headers.get('content-type') ?? '';
@@ -172,6 +182,8 @@ async function publicRequest(path) {
       ...cloudflareAccessHeaders,
     },
     redirect: 'error',
+    cache: 'no-store',
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   const contentType = response.headers.get('content-type') ?? '';
   let body = null;
@@ -179,7 +191,7 @@ async function publicRequest(path) {
     try {
       body = await response.json();
     } catch {
-      throw new Error(`GET ${path} returned malformed JSON (${response.status}).`);
+      throw new Error(`Public share request returned malformed JSON (${response.status}).`);
     }
   } else {
     body = await response.text();
@@ -192,6 +204,8 @@ async function proveUnauthenticatedAccessDenial() {
     const response = await fetch(new URL(path, baseUrl), {
       headers: { Accept: accept },
       redirect: 'manual',
+      cache: 'no-store',
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
     const location = response.headers.get('location');
     const accessRedirect = (() => {
@@ -217,6 +231,78 @@ async function proveUnauthenticatedAccessDenial() {
       );
     }
   }
+}
+
+async function accessRequest(path, { method = 'GET', accept = 'text/html, application/json' } = {}) {
+  return fetch(new URL(path, baseUrl), {
+    method,
+    headers: {
+      Accept: accept,
+      'Cache-Control': 'no-cache',
+      ...cloudflareAccessHeaders,
+    },
+    redirect: 'error',
+    cache: 'no-store',
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  });
+}
+
+async function requireAuthBoundary(path) {
+  const response = await accessRequest(path, { accept: 'application/json' });
+  const body = await response.json().catch(() => null);
+  if (response.status !== 401
+    || response.headers.get('x-error-code') !== 'AUTH_REQUIRED'
+    || response.headers.get('cache-control') !== 'no-store'
+    || body?.error?.code !== 'AUTH_REQUIRED') {
+    throw new Error(`${path} did not expose the expected authenticated Preview boundary.`);
+  }
+}
+
+async function attestPreviewReadinessOnce() {
+  const pageResponse = await accessRequest('/build-planner/', { accept: 'text/html' });
+  if (pageResponse.status !== 200
+    || !pageResponse.headers.get('content-type')?.startsWith('text/html')) {
+    await pageResponse.body?.cancel().catch(() => undefined);
+    throw new Error(`/build-planner/ returned ${pageResponse.status} instead of Preview HTML.`);
+  }
+  const page = await pageResponse.text();
+  const exactStamp = `<meta name="solvency-build-sha" content="${expectedBuildSha}">`;
+  if (!page.includes(exactStamp)) {
+    throw new Error('/build-planner/ does not attest the expected Preview build SHA.');
+  }
+  if (!page.includes('data-account-plans-enabled="true"')
+    || !page.includes('data-product-intents-enabled="true"')) {
+    throw new Error('/build-planner/ does not expose both Preview client gates as true.');
+  }
+  if (!page.includes(`data-clerk-publishable-key="${publishableKey}"`)
+    || page.includes('data-clerk-publishable-key="pk_live_')) {
+    throw new Error('/build-planner/ does not expose the expected Clerk Development client.');
+  }
+  await Promise.all([
+    requireAuthBoundary('/api/build-plans'),
+    requireAuthBoundary('/api/entitlement'),
+    requireAuthBoundary('/api/intents'),
+    requireAuthBoundary('/api/preview-account-erasure'),
+  ]);
+}
+
+async function attestPreviewReadiness() {
+  let lastFailure;
+  for (let attempt = 1; attempt <= READINESS_ATTEMPTS; attempt += 1) {
+    try {
+      await attestPreviewReadinessOnce();
+      return;
+    } catch (cause) {
+      lastFailure = cause;
+      if (attempt < READINESS_ATTEMPTS) {
+        await new Promise((resolve) => setTimeout(resolve, READINESS_RETRY_DELAY_MS));
+      }
+    }
+  }
+  throw new Error(
+    `Preview readiness attestation failed: ${lastFailure instanceof Error ? lastFailure.message : 'unknown failure'}`,
+    { cause: lastFailure },
+  );
 }
 
 function expectStatus(result, expected, operation) {
@@ -286,6 +372,7 @@ async function eraseAllAccountData(account) {
 
 async function runSmoke() {
   await proveUnauthenticatedAccessDenial();
+  await attestPreviewReadiness();
   // Create sequentially so a rejected sibling cannot finish after the finally
   // cleanup loop has already inspected the registered test identities.
   const accountA = await createAccount('a');

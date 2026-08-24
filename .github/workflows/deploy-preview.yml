@@ -11,16 +11,18 @@ name: Deploy Preview
 #   BUILD_SHARE_TOKEN_SECRET (at least 32 bytes before encoding) as Cloudflare
 #   Pages Preview secrets. Protect d1-functions-preview.solvency-ru5.pages.dev
 #   with Cloudflare Access, and create an Access service token for the smoke
-#   runner (`CF_ACCESS_CLIENT_ID` + `CF_ACCESS_CLIENT_SECRET`).
-# - Enable ACCOUNT_PLANS_ENABLED, ENTITLEMENTS_ENABLED and
-#   PRODUCT_INTENTS_ENABLED only after their controls and migrations are ready.
+#   runner. Add a separate Clerk Development Secret Key plus the Access token as
+#   preview-environment secrets PREVIEW_CLERK_SMOKE_SECRET_KEY,
+#   PREVIEW_CF_ACCESS_CLIENT_ID and PREVIEW_CF_ACCESS_CLIENT_SECRET.
+# - The reviewed Wrangler configuration enables ACCOUNT_PLANS_ENABLED,
+#   ENTITLEMENTS_ENABLED and PRODUCT_INTENTS_ENABLED only for Preview.
 # - Keep STRIPE_WEBHOOK_ENABLED false until a signed, size-bounded POST-only
 #   handler is deployed. Before Stripe sandbox testing, keep the hostname private
 #   but add an exact Access bypass (or separate public hostname) only for
 #   /api/stripe-webhook; that exception is safe only after raw-body Stripe
 #   signature verification exists.
-# This workflow never applies migrations, changes Pages variables/secrets or
-# enables any server-side runtime flag.
+# This workflow never applies migrations or changes Pages secrets. Runtime
+# flags are source-controlled in wrangler.toml; production and Stripe stay dark.
 
 on:
   workflow_dispatch:
@@ -172,3 +174,46 @@ jobs:
             --branch d1-functions-preview
             --commit-hash ${{ github.sha }}
             --commit-dirty=false
+
+  smoke-preview:
+    needs: deploy-preview
+    runs-on: ubuntu-latest
+    environment:
+      name: preview
+      deployment: false
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Verify exact deployed source for smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$(git rev-parse HEAD)" != "$GITHUB_SHA" ]]; then
+            echo "Smoke checkout does not match the deployed workflow commit."
+            exit 1
+          fi
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+
+      - name: Install isolated smoke dependencies
+        working-directory: site
+        run: npm ci --no-audit --no-fund
+
+      - name: Attest exact Preview SHA and run authenticated smoke
+        working-directory: site
+        env:
+          PREVIEW_BASE_URL: https://d1-functions-preview.solvency-ru5.pages.dev
+          EXPECTED_BUILD_SHA: ${{ github.sha }}
+          ACCOUNT_SMOKE_CONFIRM: DELETE_ISOLATED_PREVIEW_DATA
+          CLERK_SECRET_KEY: ${{ secrets.PREVIEW_CLERK_SMOKE_SECRET_KEY }}
+          CLERK_PUBLISHABLE_KEY: ${{ vars.PREVIEW_CLERK_PUBLISHABLE_KEY }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.PREVIEW_CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.PREVIEW_CF_ACCESS_CLIENT_SECRET }}
+        run: npm run smoke:account-preview

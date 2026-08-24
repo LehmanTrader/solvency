@@ -81,6 +81,22 @@ test('production deploy attests exact source SHA and every dark route after publ
   assert.match(script, /requestIdHeader !== error\.requestId/);
 });
 
+test('preview deploy hands the exact published SHA to an isolated authenticated smoke job', () => {
+  const workflow = read('.github/workflows/deploy-preview.yml');
+  const smoke = read('site/scripts/smoke-account-plans.mjs');
+  const publish = workflow.indexOf('Publish current commit to the isolated Preview branch');
+  const smokeJob = workflow.indexOf('smoke-preview:');
+  const attestation = workflow.indexOf('Attest exact Preview SHA and run authenticated smoke');
+  assert.ok(publish >= 0 && publish < smokeJob && smokeJob < attestation);
+  assert.match(workflow, /needs: deploy-preview/);
+  assert.match(workflow, /EXPECTED_BUILD_SHA: \$\{\{ github\.sha \}\}/);
+  assert.match(workflow, /ref: \$\{\{ github\.sha \}\}/);
+  assert.match(workflow, /deployment: false/);
+  assert.match(smoke, /EXPECTED_BUILD_SHA/);
+  assert.match(smoke, /solvency-build-sha/);
+  assert.match(smoke, /attestPreviewReadiness/);
+});
+
 test('the tracked operations runbook covers rollback, recovery and the exact reducer boundary', () => {
   const runbook = read('site/OPERATIONS.md');
   assert.match(runbook, /wrangler pages deployment list --project-name solvency --json/);

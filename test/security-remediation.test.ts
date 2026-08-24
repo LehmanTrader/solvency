@@ -92,10 +92,13 @@ test('deployment actions are immutable and installs are frozen', () => {
   assert.match(productionVars, /^ENTITLEMENTS_ENABLED = "false"$/m);
   assert.match(productionVars, /^PRODUCT_INTENTS_ENABLED = "false"$/m);
   assert.match(productionVars, /^STRIPE_WEBHOOK_ENABLED = "false"$/m);
-  assert.match(previewVars, /^ACCOUNT_PLANS_ENABLED = "false"$/m);
-  assert.match(previewVars, /^ENTITLEMENTS_ENABLED = "false"$/m);
-  assert.match(previewVars, /^PRODUCT_INTENTS_ENABLED = "false"$/m);
+  assert.match(previewVars, /^ACCOUNT_PLANS_ENABLED = "true"$/m);
+  assert.match(previewVars, /^ENTITLEMENTS_ENABLED = "true"$/m);
+  assert.match(previewVars, /^PRODUCT_INTENTS_ENABLED = "true"$/m);
+  assert.match(previewVars, /^PREVIEW_ACCOUNT_ERASURE_ENABLED = "true"$/m);
   assert.match(previewVars, /^STRIPE_WEBHOOK_ENABLED = "false"$/m);
+  assert.match(previewVars, /^APP_ENV = "preview"$/m);
+  assert.match(previewVars, /^CLERK_AUTHORIZED_PARTIES = "https:\/\/d1-functions-preview\.solvency-ru5\.pages\.dev"$/m);
   assert.match(developmentVars, /^STRIPE_WEBHOOK_ENABLED=false$/m);
   const sourceGuard = workflow.indexOf('Require current main as the production source');
   const checkout = workflow.indexOf('actions/checkout@');
@@ -108,11 +111,12 @@ test('deployment actions are immutable and installs are frozen', () => {
 test('preview deployment is manual, reviewed, isolated and migration-fail-closed', () => {
   const workflow = read('.github/workflows/deploy-preview.yml');
   const uses = [...workflow.matchAll(/^\s*(?:-\s*)?uses:\s*([^\s#]+)(?:\s+#.*)?$/gm)].map((match) => match[1]);
-  assert.equal(uses.length, 3);
+  assert.equal(uses.length, 5);
   for (const action of uses) assert.match(action, /@[0-9a-f]{40}$/);
 
   assert.match(workflow, /^on:\n\s+workflow_dispatch:$/m);
   assert.doesNotMatch(workflow, /^\s+(?:push|pull_request|schedule):/m);
+  assert.match(workflow, /^concurrency:\n\s+group: deploy-preview-\$\{\{ github\.ref \}\}\n\s+cancel-in-progress: false$/m);
   assert.match(workflow, /^\s*environment: preview$/m);
   assert.match(workflow, /default: do-not-deploy/);
   assert.match(workflow, /PREVIEW_DEPLOY_AUTHORIZATION" != "deploy-reviewed-preview"/);
@@ -123,6 +127,16 @@ test('preview deployment is manual, reviewed, isolated and migration-fail-closed
   assert.match(workflow, /PREVIEW_CLERK_PUBLISHABLE_KEY" != pk_test_\*/);
   assert.match(workflow, /PUBLIC_ACCOUNT_PLANS_ENABLED: 'true'/);
   assert.match(workflow, /PUBLIC_PRODUCT_INTENTS_ENABLED: 'true'/);
+  assert.match(workflow, /^\s*smoke-preview:$/m);
+  assert.match(workflow, /^\s*needs: deploy-preview$/m);
+  assert.match(workflow, /^\s*deployment: false$/m);
+  assert.match(workflow, /ref: \$\{\{ github\.sha \}\}/);
+  assert.match(workflow, /persist-credentials: false/);
+  assert.match(workflow, /EXPECTED_BUILD_SHA: \$\{\{ github\.sha \}\}/);
+  assert.match(workflow, /secrets\.PREVIEW_CLERK_SMOKE_SECRET_KEY/);
+  assert.match(workflow, /secrets\.PREVIEW_CF_ACCESS_CLIENT_ID/);
+  assert.match(workflow, /secrets\.PREVIEW_CF_ACCESS_CLIENT_SECRET/);
+  assert.match(workflow, /npm run smoke:account-preview/);
   assert.match(workflow, /npm ci --no-audit --no-fund/);
   assert.match(workflow, /npm run coverage/);
   assert.match(workflow, /npm audit --audit-level=high/);
@@ -141,8 +155,17 @@ test('preview deployment is manual, reviewed, isolated and migration-fail-closed
   const testSuite = workflow.indexOf('Verify datasets, server boundaries and published figures');
   const migrationGate = workflow.indexOf('Require a fully migrated Preview database');
   const publish = workflow.indexOf('Publish current commit to the isolated Preview branch');
+  const smoke = workflow.indexOf('Attest exact Preview SHA and run authenticated smoke');
   assert.ok(authorization >= 0 && authorization < testSuite);
   assert.ok(testSuite < migrationGate && migrationGate < publish);
+  assert.ok(publish < smoke);
+
+  const deployJob = workflow.split('  deploy-preview:\n', 2)[1]?.split('\n  smoke-preview:', 1)[0] ?? '';
+  const smokeJob = workflow.split('\n  smoke-preview:', 2)[1] ?? '';
+  assert.doesNotMatch(deployJob, /PREVIEW_CLERK_SMOKE_SECRET_KEY|PREVIEW_CF_ACCESS_CLIENT/);
+  assert.doesNotMatch(smokeJob, /CLOUDFLARE_API_TOKEN|CLOUDFLARE_ACCOUNT_ID/);
+  assert.match(smokeJob, /^\s+environment:\n\s+name: preview\n\s+deployment: false$/m);
+  assert.match(smokeJob, /^\s+permissions:\n\s+contents: read$/m);
 });
 
 test('D1 quota triggers use the remotely compatible parenthesized CASE form', () => {
