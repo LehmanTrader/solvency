@@ -51,9 +51,9 @@ BEGIN
    WHERE owner_user_id = NEW.owner_user_id
      AND expires_at <= NEW.recorded_at;
 
-  SELECT CASE WHEN (
+  SELECT (CASE WHEN (
     SELECT COUNT(*) FROM product_intent_events
      WHERE owner_user_id = NEW.owner_user_id
        AND expires_at > NEW.recorded_at
-  ) >= 512 THEN RAISE(ABORT, 'OWNER_PRODUCT_INTENT_LIMIT') END;
+  ) >= 512 THEN RAISE(ABORT, 'OWNER_PRODUCT_INTENT_LIMIT') END);
 END;

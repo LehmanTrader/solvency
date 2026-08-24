@@ -145,6 +145,17 @@ test('preview deployment is manual, reviewed, isolated and migration-fail-closed
   assert.ok(testSuite < migrationGate && migrationGate < publish);
 });
 
+test('D1 quota triggers use the remotely compatible parenthesized CASE form', () => {
+  for (const path of [
+    'site/migrations/0005_build_plan_operations.sql',
+    'site/migrations/0006_product_intent_events.sql',
+  ]) {
+    const migration = read(path);
+    assert.match(migration, /SELECT \(CASE WHEN \(/);
+    assert.doesNotMatch(migration, /SELECT CASE WHEN \(/);
+  }
+});
+
 test('first-party intent measurement is dark by default and explicitly surfaced to the client', () => {
   const layout = read('site/src/layouts/Base.astro');
   const example = read('site/.dev.vars.example');

@@ -234,8 +234,8 @@ BEGIN
   DELETE FROM build_plan_operation_requests
    WHERE owner_user_id = NEW.owner_user_id AND expires_at <= NEW.created_at;
 
-  SELECT CASE WHEN (
+  SELECT (CASE WHEN (
     SELECT COUNT(*) FROM build_plan_operation_requests
      WHERE owner_user_id = NEW.owner_user_id
-  ) >= 4096 THEN RAISE(ABORT, 'OWNER_OPERATION_LIMIT') END;
+  ) >= 4096 THEN RAISE(ABORT, 'OWNER_OPERATION_LIMIT') END);
 END;
