@@ -77,6 +77,7 @@ test('deployment actions are immutable and installs are frozen', () => {
 test('paid-workflow previews never fabricate private links, monitoring or unsafe export markup', () => {
   const page = read('site/src/pages/build-planner.astro');
   const exports = read('site/src/lib/build-export.ts');
+  const limits = read('site/src/lib/build-plan-limits.ts');
   const operations = read('site/src/lib/build-operations.ts');
   const ignores = read('.gitignore');
   assert.doesNotMatch(page, /navigator\.clipboard|Notification\.requestPermission|insertAdjacentHTML|innerHTML/);
@@ -85,7 +86,8 @@ test('paid-workflow previews never fabricate private links, monitoring or unsafe
   assert.match(page, /No link was created or copied/);
   assert.match(page, /Monitoring and email are off/);
   assert.match(exports, /spreadsheetSafeText/);
-  assert.match(exports, /MAX_BUILD_EXPORT_ROLES\s*=\s*24/);
+  assert.match(exports, /MAX_BUILD_EXPORT_ROLES\s*=\s*BUILD_PLAN_LIMITS\.maxRoles/);
+  assert.match(limits, /maxRoles:\s*24/);
   assert.match(ignores, /\.dev\.vars/);
   assert.match(ignores, /\.env\.\*/);
 });
@@ -99,4 +101,19 @@ test('planner analytics disclosure and payloads exclude raw build inputs', () =>
   assert.doesNotMatch(page, /track\([^\n]+(?:plan\.name|harness\.name|modelId|threshold)/);
   assert.match(page, /build_quote_first_edit_valid/);
   assert.match(page, /price_hypothesis: '19_monthly'/);
+});
+
+test('every planner mutation and export crosses the shared untrusted-plan gate', () => {
+  const page = read('site/src/pages/build-planner.astro');
+  const schema = read('site/src/lib/build-plan-schema.ts');
+  assert.match(page, /const eligibleModels = models\.filter\(\(model\) => model\.status === 'current'\)/);
+  assert.match(page, /const validated = validateUntrustedBuildPlanV1\(draft, eligibleModels\)/);
+  assert.match(page, /validateUntrustedBuildPlanV1\(readPlan\(\), eligibleModels\)/);
+  assert.match(page, /if \(!lastDraftValid \|\| !lastQuote\.valid\) return/g);
+  assert.match(schema, /HTTP[\s\S]{0,30}handlers must enter through parseBuildPlanJson\/validateBuildPlanJson/);
+  assert.match(schema, /export function validateBuildPlanJson\(/);
+  assert.match(schema, /origin === 'source_verified' \|\| origin === 'solvency_template'/);
+  assert.match(schema, /const eligibleCatalog = catalog\.filter\(\(model\) => model\.status === 'current'\)/);
+  assert.match(schema, /quoteBuildPlan\(parsed\.value, eligibleCatalog, quotedAt\)/);
+  assert.doesNotMatch(page, /assertionOrigin:\s*'(?:source_verified|solvency_template)'/);
 });

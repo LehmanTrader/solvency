@@ -2,6 +2,7 @@ import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { models } from '../scripts/load.ts';
 import { quoteBuildPlan, type BuildPlanV1 } from '../site/src/lib/build-cost.ts';
+import { BUILD_PLAN_LIMITS } from '../site/src/lib/build-plan-limits.ts';
 
 const plan = (harnessName = 'My completely custom harness'): BuildPlanV1 => ({
   schemaVersion: 1,
@@ -145,6 +146,22 @@ describe('BuildPlanV1 multi-model quote engine', () => {
     assert.equal(quote.valid, false);
     assert.equal(quote.buildAttemptCostUsd, null);
     assert.ok(quote.errors.some((e) => /numeric range/.test(e)));
+  });
+
+  test('rejects finite but operationally unsupported derived totals', () => {
+    const p = plan();
+    p.harness.fixedMonthlyCostUsd = BUILD_PLAN_LIMITS.maxDerivedQuoteUsd + 1;
+    const quote = quoteBuildPlan(p, models);
+    assert.equal(quote.valid, false);
+    assert.equal(quote.monthlyCostUsd, null);
+    assert.ok(quote.errors.some((error) => /numeric range/.test(error)));
+
+    const tinySuccess = plan();
+    tinySuccess.workload = { buildsPerMonth: 1_000_000_000, volumeBasis: 'successful_builds' };
+    tinySuccess.endToEndSuccess = { rate: 1e-12, basis: 'user_assumption' };
+    const volumeQuote = quoteBuildPlan(tinySuccess, models);
+    assert.equal(volumeQuote.valid, false);
+    assert.ok(volumeQuote.errors.some((error) => /monthly volume.*numeric range/.test(error)));
   });
 
   test('rejects unknown discriminants rather than silently choosing a calculation branch', () => {

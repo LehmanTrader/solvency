@@ -1,4 +1,5 @@
 import type { Model } from './engine.ts';
+import { BUILD_PLAN_LIMITS } from './build-plan-limits.ts';
 
 export type HarnessBasis = 'published' | 'solvency_template' | 'user_supplied';
 export type UsageBasis = 'measured' | 'template_assumption' | 'user_supplied';
@@ -230,7 +231,9 @@ export function quoteBuildPlan(
       + usage.outputTokens * outputRate
     ) / 1_000_000;
     const perBuild = perInvocation * role.expectedInvocationsPerBuildAttempt;
-    if (!finiteNonnegative(perInvocation) || !finiteNonnegative(perBuild)) {
+    if (!finiteNonnegative(perInvocation) || !finiteNonnegative(perBuild)
+      || perInvocation > BUILD_PLAN_LIMITS.maxDerivedQuoteUsd
+      || perBuild > BUILD_PLAN_LIMITS.maxDerivedQuoteUsd) {
       errors.push(`${prefix}: the derived role cost is outside the supported numeric range.`);
       continue;
     }
@@ -318,11 +321,19 @@ export function quoteBuildPlan(
   for (const [label, value] of [
     ['build-attempt cost', buildAttemptCostUsd],
     ['cost per successful build', variableCostPerSuccessfulBuildUsd],
-    ['attempted monthly volume', attemptedBuildsPerMonth],
-    ['successful monthly volume', successfulBuildsPerMonth],
     ['monthly cost', monthlyCostUsd],
   ] as const) {
-    if (value !== null && !finiteNonnegative(value)) errors.push(`Derived ${label} is outside the supported numeric range.`);
+    if (value !== null && (!finiteNonnegative(value) || value > BUILD_PLAN_LIMITS.maxDerivedQuoteUsd)) {
+      errors.push(`Derived ${label} is outside the supported numeric range.`);
+    }
+  }
+  for (const [label, value] of [
+    ['attempted monthly volume', attemptedBuildsPerMonth],
+    ['successful monthly volume', successfulBuildsPerMonth],
+  ] as const) {
+    if (value !== null && (!finiteNonnegative(value) || value > BUILD_PLAN_LIMITS.maxDerivedBuildVolume)) {
+      errors.push(`Derived ${label} is outside the supported numeric range.`);
+    }
   }
   if (errors.length) {
     return {

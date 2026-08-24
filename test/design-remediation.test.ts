@@ -107,6 +107,25 @@ test('build planner accepts a free-form harness and exposes the paid workflow be
   assert.match(page, /noticeReserve\s*=\s*160/);
   assert.match(page, /I’d consider Pro at \$19/);
   assert.match(page, /Research signal only\. No checkout, trial or subscription/);
+  assert.match(page, /id="b-name" maxlength=\{BUILD_PLAN_LIMITS\.maxPlanNameChars\}/);
+  assert.match(page, /data-field="label"[^>]*maxlength=\{BUILD_PLAN_LIMITS\.maxRoleLabelChars\}/);
+  assert.match(page, /data-field="calls"[^>]*max=\{BUILD_PLAN_LIMITS\.maxExpectedInvocations\}/);
+  assert.match(page, /validateUntrustedBuildPlanV1\(draft, eligibleModels\)/);
+  assert.match(page, /function renderInvalidDraft\(/);
+  assert.match(page, /setAttribute\('aria-invalid', 'true'\)/);
+  assert.match(page, /setAttribute\('aria-errormessage', errorId\)/);
+  assert.match(page, /descriptions\.add\(errorId\)/);
+  assert.match(page, /\.ctl\[data-plan-invalid='true'\]/);
+  assert.match(page, /\.plan-field-error/);
+  assert.match(page, /numericInput\s*=\s*\(input:[^)]+\)\s*=>\s*input\.value === '' \? Number\.NaN : input\.valueAsNumber/);
+  assert.match(page, /data-field="calls"[^>]*step="any"[^>]*value="1"/);
+  assert.match(page, /data-field="fresh"[^>]*step="any"/);
+  assert.doesNotMatch(page, /data-field="calls"[^>]*step="0\.25"/);
+  assert.match(page, /disabled = !lastQuote\.valid/);
+  assert.match(page, /if \(!lastDraftValid \|\| !lastQuote\.valid\) return/);
+  assert.doesNotMatch(page, /priceOverride:\s*custom\s*\?[^\n]+:\s*undefined/);
+  assert.doesNotMatch(page, /endToEndSuccess:\s*successText\s*\?[^\n]+:\s*undefined/);
+  assert.match(page, /form\.addEventListener\('focusout'/);
   for (const event of ['build-add-role', 'build-save-version', 'build-duplicate']) {
     assert.equal(page.match(new RegExp(event, 'g'))?.length, 1, `${event} should have one instrumentation path`);
   }

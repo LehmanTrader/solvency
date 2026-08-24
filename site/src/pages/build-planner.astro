@@ -2,6 +2,7 @@
 import Base from '../layouts/Base.astro';
 import Section from '../components/Section.astro';
 import { models } from '../lib/data.ts';
+import { BUILD_PLAN_LIMITS } from '../lib/build-plan-limits.ts';
 
 const currentModels = models.filter((model) => model.status === 'current');
 const harnessExamples = [
@@ -40,17 +41,17 @@ const harnessExamples = [
         <div class="card-pad grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           <label class="block sm:col-span-2">
             <span class="label">Plan name</span>
-            <input class="ctl ctl-row mt-2 w-full" id="b-name" value="Fable orchestrator + lower-cost workers" />
+            <input class="ctl ctl-row mt-2 w-full" id="b-name" maxlength={BUILD_PLAN_LIMITS.maxPlanNameChars} value="Fable orchestrator + lower-cost workers" />
           </label>
           <label class="block sm:col-span-2">
             <span class="label">Harness name</span>
-            <input class="ctl ctl-row mt-2 w-full" id="b-harness" list="harness-examples" value="Custom harness" autocomplete="off" />
+            <input class="ctl ctl-row mt-2 w-full" id="b-harness" list="harness-examples" maxlength={BUILD_PLAN_LIMITS.maxHarnessNameChars} value="Custom harness" autocomplete="off" />
             <datalist id="harness-examples">{harnessExamples.map((name) => <option value={name} />)}</datalist>
             <span class="small block mt-1">Type any public, internal or custom harness.</span>
           </label>
           <label class="block">
             <span class="label">Harness version</span>
-            <input class="ctl ctl-row mt-2 w-full" id="b-version" placeholder="optional" />
+            <input class="ctl ctl-row mt-2 w-full" id="b-version" maxlength={BUILD_PLAN_LIMITS.maxHarnessVersionChars} placeholder="optional" />
           </label>
           <label class="block">
             <span class="label">Configuration basis</span>
@@ -62,7 +63,7 @@ const harnessExamples = [
           </label>
           <label class="block">
             <span class="label">Build volume / month</span>
-            <input class="ctl ctl-row mt-2 w-full" id="b-volume" type="number" min="1" step="1" value="100" />
+            <input class="ctl ctl-row mt-2 w-full" id="b-volume" type="number" min="1" max={BUILD_PLAN_LIMITS.maxBuildsPerMonth} step="any" value="100" />
           </label>
           <label class="block">
             <span class="label">Volume means</span>
@@ -73,15 +74,15 @@ const harnessExamples = [
           </label>
           <label class="block">
             <span class="label">Harness overhead / attempt</span>
-            <span class="money-input mt-2"><span>$</span><input class="ctl ctl-row w-full" id="b-overhead" type="number" min="0" step="0.01" value="0" /></span>
+            <span class="money-input mt-2"><span>$</span><input class="ctl ctl-row w-full" id="b-overhead" type="number" min="0" max={BUILD_PLAN_LIMITS.maxFixedCostUsd} step="any" value="0" /></span>
           </label>
           <label class="block">
             <span class="label">Fixed harness cost / month</span>
-            <span class="money-input mt-2"><span>$</span><input class="ctl ctl-row w-full" id="b-fixed" type="number" min="0" step="1" value="0" /></span>
+            <span class="money-input mt-2"><span>$</span><input class="ctl ctl-row w-full" id="b-fixed" type="number" min="0" max={BUILD_PLAN_LIMITS.maxFixedCostUsd} step="any" value="0" /></span>
           </label>
           <label class="block lg:col-span-2">
             <span class="label">End-to-end system success</span>
-            <span class="percent-input mt-2"><input class="ctl ctl-row w-full" id="b-success" type="number" min="0.01" max="100" step="0.1" placeholder="Not supplied" /><span>%</span></span>
+            <span class="percent-input mt-2"><input class="ctl ctl-row w-full" id="b-success" type="number" min="0.01" max="100" step="any" placeholder="Not supplied" /><span>%</span></span>
             <span class="small block mt-1">Optional. Must describe the whole configured system—not individual model benchmarks.</span>
           </label>
           <label class="block lg:col-span-2">
@@ -298,24 +299,24 @@ const harnessExamples = [
       <div class="card-head">
         <div class="flex flex-wrap items-center gap-3 min-w-0">
           <span class="role-index label">Role</span>
-          <input class="ctl ctl-row role-label" data-field="label" aria-label="Role label" value="Worker pool" />
+          <input class="ctl ctl-row role-label" data-field="label" aria-label="Role label" maxlength={BUILD_PLAN_LIMITS.maxRoleLabelChars} value="Worker pool" />
         </div>
         <button type="button" class="btn btn-quiet role-remove" aria-label="Remove model role">Remove</button>
       </div>
       <div class="card-pad grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         <label class="block"><span class="label">Role type</span><select class="ctl ctl-row mt-2 w-full" data-field="kind"><option value="orchestrator">Orchestrator</option><option value="worker">Worker / subagent</option><option value="other">Other / fallback</option></select></label>
         <label class="block sm:col-span-2"><span class="label">Model</span><select class="ctl ctl-row mt-2 w-full" data-field="model">{currentModels.map((model) => <option value={model.model_id} data-input={model.input_per_mtok} data-cache={model.cached_input_per_mtok ?? ''} data-output={model.output_per_mtok}>{model.display_name} · {model.provider}</option>)}</select></label>
-        <label class="block"><span class="label">Expected calls / build</span><input class="ctl ctl-row mt-2 w-full" data-field="calls" type="number" min="0.01" step="0.25" value="1" /></label>
+        <label class="block"><span class="label">Expected calls / build</span><input class="ctl ctl-row mt-2 w-full" data-field="calls" type="number" min="0.01" max={BUILD_PLAN_LIMITS.maxExpectedInvocations} step="any" value="1" /></label>
         <label class="block"><span class="label">Usage basis</span><select class="ctl ctl-row mt-2 w-full" data-field="usage-basis"><option value="template_assumption">Template assumption</option><option value="user_supplied">User supplied</option><option value="measured">Measured · user asserted</option></select></label>
-        <label class="block"><span class="label">Fresh input / call</span><input class="ctl ctl-row mt-2 w-full" data-field="fresh" type="number" min="0" step="100" value="20000" /></label>
-        <label class="block"><span class="label">Cache read / call</span><input class="ctl ctl-row mt-2 w-full" data-field="cache" type="number" min="0" step="100" value="0" /></label>
-        <label class="block"><span class="label">Output / call</span><input class="ctl ctl-row mt-2 w-full" data-field="output" type="number" min="0" step="100" value="2000" /></label>
+        <label class="block"><span class="label">Fresh input / call</span><input class="ctl ctl-row mt-2 w-full" data-field="fresh" type="number" min="0" max={BUILD_PLAN_LIMITS.maxTokensPerInvocation} step="any" value="20000" /></label>
+        <label class="block"><span class="label">Cache read / call</span><input class="ctl ctl-row mt-2 w-full" data-field="cache" type="number" min="0" max={BUILD_PLAN_LIMITS.maxTokensPerInvocation} step="any" value="0" /></label>
+        <label class="block"><span class="label">Output / call</span><input class="ctl ctl-row mt-2 w-full" data-field="output" type="number" min="0" max={BUILD_PLAN_LIMITS.maxTokensPerInvocation} step="any" value="2000" /></label>
         <label class="sm:col-span-2 lg:col-span-4 inline-flex items-center gap-2 min-h-11 text-sm text-[var(--color-ink)] cursor-pointer"><input type="checkbox" class="chk" data-field="custom-toggle" /> Use custom or contracted token prices for this role</label>
         <div class="custom-prices sm:col-span-2 lg:col-span-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-4" hidden>
           <label class="block"><span class="label">Custom rate basis</span><select class="ctl ctl-row mt-2 w-full" data-field="custom-basis"><option value="user_supplied">User supplied</option><option value="contract">Contract</option></select></label>
-          <label class="block"><span class="label">Custom input / M</span><span class="money-input mt-2"><span>$</span><input class="ctl ctl-row w-full" data-field="custom-input" type="number" min="0" step="0.001" /></span></label>
-          <label class="block"><span class="label">Custom cache read / M</span><span class="money-input mt-2"><span>$</span><input class="ctl ctl-row w-full" data-field="custom-cache" type="number" min="0" step="0.001" /></span></label>
-          <label class="block"><span class="label">Custom output / M</span><span class="money-input mt-2"><span>$</span><input class="ctl ctl-row w-full" data-field="custom-output" type="number" min="0" step="0.001" /></span></label>
+          <label class="block"><span class="label">Custom input / M</span><span class="money-input mt-2"><span>$</span><input class="ctl ctl-row w-full" data-field="custom-input" type="number" min="0" max={BUILD_PLAN_LIMITS.maxPricePerMtokUsd} step="any" /></span></label>
+          <label class="block"><span class="label">Custom cache read / M</span><span class="money-input mt-2"><span>$</span><input class="ctl ctl-row w-full" data-field="custom-cache" type="number" min="0" max={BUILD_PLAN_LIMITS.maxPricePerMtokUsd} step="any" /></span></label>
+          <label class="block"><span class="label">Custom output / M</span><span class="money-input mt-2"><span>$</span><input class="ctl ctl-row w-full" data-field="custom-output" type="number" min="0" max={BUILD_PLAN_LIMITS.maxPricePerMtokUsd} step="any" /></span></label>
         </div>
       </div>
     </article>
@@ -325,6 +326,7 @@ const harnessExamples = [
 <script>
   import { models } from '../lib/data.ts';
   import { quoteBuildPlan, type BuildPlanV1, type BuildRoleV1 } from '../lib/build-cost.ts';
+  import { validateUntrustedBuildPlanV1, type BuildPlanIssue } from '../lib/build-plan-schema.ts';
   import { compareBuildQuotes, createBuildSnapshot, duplicateBuildSnapshot, type BuildSnapshotV1 } from '../lib/build-workspace.ts';
   import { analyzeBuildSensitivity, breakEvenBuildPlans, type SensitivityAxis } from '../lib/build-sensitivity.ts';
   import {
@@ -338,10 +340,12 @@ const harnessExamples = [
   import { openSignUp, signedIn, track } from '../lib/clerk-client.ts';
 
   const form = document.getElementById('composer-form') as HTMLFormElement;
+  const eligibleModels = models.filter((model) => model.status === 'current');
   const rolesEl = document.getElementById('b-roles')!;
   const template = document.getElementById('b-role-template') as HTMLTemplateElement;
   let lastPlan: BuildPlanV1;
   let lastQuote: ReturnType<typeof quoteBuildPlan>;
+  let lastDraftValid = false;
   let currentPlanId = crypto.randomUUID();
   let baselineSnapshotId: string | null = null;
   const snapshots: BuildSnapshotV1[] = [];
@@ -351,8 +355,9 @@ const harnessExamples = [
   let editedValidQuoteTracked = false;
   const byId = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
   const setText = (id: string, next: string) => { const target = byId(id); if (target.textContent !== next) target.textContent = next; };
-  const value = (id: string) => (byId<HTMLInputElement>(id).value ?? '').trim();
-  const number = (id: string) => Number(byId<HTMLInputElement>(id).value);
+  const value = (id: string) => (byId<HTMLInputElement>(id).value ?? '').normalize('NFC').trim();
+  const numericInput = (input: HTMLInputElement) => input.value === '' ? Number.NaN : input.valueAsNumber;
+  const number = (id: string) => numericInput(byId<HTMLInputElement>(id));
   const field = <T extends HTMLInputElement | HTMLSelectElement>(role: Element, name: string) => role.querySelector<T>(`[data-field="${name}"]`)!;
   const money = (n: number | null) => n === null ? 'Missing' : `$${n.toLocaleString(undefined, { minimumFractionDigits: n < 1 ? 3 : 2, maximumFractionDigits: n < 1 ? 4 : 2 })}`;
 
@@ -408,34 +413,40 @@ const harnessExamples = [
 
   function readRole(role: HTMLElement): BuildRoleV1 {
     const custom = field<HTMLInputElement>(role, 'custom-toggle').checked;
+    const customCache = field<HTMLInputElement>(role, 'custom-cache').value;
     const usageBasis = field<HTMLSelectElement>(role, 'usage-basis').value as BuildRoleV1['usagePerInvocation']['basis'];
     return {
       roleId: role.dataset.roleId!,
       kind: field<HTMLSelectElement>(role, 'kind').value as BuildRoleV1['kind'],
-      label: field<HTMLInputElement>(role, 'label').value,
+      label: field<HTMLInputElement>(role, 'label').value.normalize('NFC').trim(),
       modelId: field<HTMLSelectElement>(role, 'model').value,
-      expectedInvocationsPerBuildAttempt: Number(field<HTMLInputElement>(role, 'calls').value),
+      expectedInvocationsPerBuildAttempt: numericInput(field<HTMLInputElement>(role, 'calls')),
       usagePerInvocation: {
-        uncachedInputTokens: Number(field<HTMLInputElement>(role, 'fresh').value),
-        cacheReadTokens: Number(field<HTMLInputElement>(role, 'cache').value),
+        uncachedInputTokens: numericInput(field<HTMLInputElement>(role, 'fresh')),
+        cacheReadTokens: numericInput(field<HTMLInputElement>(role, 'cache')),
         cacheWriteTokens: 0,
-        outputTokens: Number(field<HTMLInputElement>(role, 'output').value),
+        outputTokens: numericInput(field<HTMLInputElement>(role, 'output')),
         basis: usageBasis,
-        assertionOrigin: usageBasis === 'template_assumption' ? 'solvency_template' : 'user_asserted',
+        assertionOrigin: 'user_asserted',
       },
-      priceOverride: custom ? {
-        inputPerMtok: field<HTMLInputElement>(role, 'custom-input').value === '' ? Number.NaN : Number(field<HTMLInputElement>(role, 'custom-input').value),
-        cacheReadPerMtok: field<HTMLInputElement>(role, 'custom-cache').value === '' ? undefined : Number(field<HTMLInputElement>(role, 'custom-cache').value),
-        outputPerMtok: field<HTMLInputElement>(role, 'custom-output').value === '' ? Number.NaN : Number(field<HTMLInputElement>(role, 'custom-output').value),
+      ...(custom ? { priceOverride: {
+        inputPerMtok: numericInput(field<HTMLInputElement>(role, 'custom-input')),
+        ...(customCache === '' ? {} : { cacheReadPerMtok: numericInput(field<HTMLInputElement>(role, 'custom-cache')) }),
+        outputPerMtok: numericInput(field<HTMLInputElement>(role, 'custom-output')),
         basis: field<HTMLSelectElement>(role, 'custom-basis').value as NonNullable<BuildRoleV1['priceOverride']>['basis'],
         assertionOrigin: 'user_asserted',
-      } : undefined,
+      } } : {}),
     };
   }
 
   function readPlan(): BuildPlanV1 {
     const successText = value('b-success');
     const harnessBasis = value('b-harness-basis') as BuildPlanV1['harness']['configBasis'];
+    const endToEndSuccess = successText ? {
+      rate: Number(successText) / 100,
+      basis: value('b-success-basis') as NonNullable<BuildPlanV1['endToEndSuccess']>['basis'],
+      assertionOrigin: 'user_asserted' as const,
+    } : undefined;
     return {
       schemaVersion: 1,
       name: value('b-name'),
@@ -443,16 +454,93 @@ const harnessExamples = [
       harness: {
         name: value('b-harness'), version: value('b-version') || null,
         configBasis: harnessBasis,
-        assertionOrigin: harnessBasis === 'solvency_template' ? 'solvency_template' : 'user_asserted',
+        assertionOrigin: 'user_asserted',
         fixedCostPerBuildAttemptUsd: number('b-overhead'), fixedMonthlyCostUsd: number('b-fixed'),
       },
       roles: [...rolesEl.querySelectorAll<HTMLElement>('[data-role]')].map(readRole),
-      endToEndSuccess: successText ? {
-        rate: Number(successText) / 100,
-        basis: value('b-success-basis') as NonNullable<BuildPlanV1['endToEndSuccess']>['basis'],
-        assertionOrigin: 'user_asserted',
-      } : undefined,
+      ...(endToEndSuccess ? { endToEndSuccess } : {}),
     };
+  }
+
+  function issueControl(path: string): HTMLInputElement | HTMLSelectElement | HTMLButtonElement | null {
+    const direct: Record<string, string> = {
+      '$.name': 'b-name', '$.workload.buildsPerMonth': 'b-volume', '$.workload.volumeBasis': 'b-volume-basis',
+      '$.harness.name': 'b-harness', '$.harness.version': 'b-version', '$.harness.configBasis': 'b-harness-basis',
+      '$.harness.fixedCostPerBuildAttemptUsd': 'b-overhead', '$.harness.fixedMonthlyCostUsd': 'b-fixed',
+      '$.endToEndSuccess.rate': 'b-success', '$.endToEndSuccess.basis': 'b-success-basis', '$.roles': 'b-add-role',
+    };
+    if (direct[path]) return byId(direct[path]) as HTMLInputElement | HTMLSelectElement | HTMLButtonElement;
+    const match = /^\$\.roles\[(\d+)\]\.(.+)$/.exec(path);
+    if (!match) return null;
+    const role = rolesEl.querySelectorAll<HTMLElement>('[data-role]')[Number(match[1])];
+    if (!role) return null;
+    const roleFields: Record<string, string> = {
+      kind: 'kind', label: 'label', modelId: 'model', expectedInvocationsPerBuildAttempt: 'calls',
+      'usagePerInvocation.uncachedInputTokens': 'fresh', 'usagePerInvocation.cacheReadTokens': 'cache',
+      'usagePerInvocation.outputTokens': 'output', 'usagePerInvocation.basis': 'usage-basis',
+      'priceOverride.inputPerMtok': 'custom-input', 'priceOverride.cacheReadPerMtok': 'custom-cache',
+      'priceOverride.outputPerMtok': 'custom-output', 'priceOverride.basis': 'custom-basis',
+    };
+    const fieldName = roleFields[match[2]];
+    return fieldName ? field<HTMLInputElement | HTMLSelectElement>(role, fieldName) : null;
+  }
+
+  function clearPlanIssueControls() {
+    for (const control of form.querySelectorAll<HTMLElement>('[data-plan-invalid="true"]')) {
+      const errorId = control.dataset.planErrorId;
+      control.removeAttribute('aria-invalid');
+      control.removeAttribute('aria-errormessage');
+      control.removeAttribute('data-plan-invalid');
+      delete control.dataset.planErrorId;
+      const descriptions = (control.getAttribute('aria-describedby') ?? '').split(/\s+/).filter((id) => id && id !== errorId);
+      if (descriptions.length) control.setAttribute('aria-describedby', descriptions.join(' '));
+      else control.removeAttribute('aria-describedby');
+    }
+    for (const message of form.querySelectorAll('[data-plan-error="true"]')) message.remove();
+  }
+
+  function markPlanIssues(issues: BuildPlanIssue[]) {
+    clearPlanIssueControls();
+    const grouped = new Map<HTMLElement, BuildPlanIssue[]>();
+    for (const issue of issues) {
+      const control = issueControl(issue.path);
+      if (!control) continue;
+      const groupedIssues = grouped.get(control) ?? [];
+      groupedIssues.push(issue);
+      grouped.set(control, groupedIssues);
+    }
+    let errorIndex = 0;
+    for (const [control, controlIssues] of grouped) {
+      errorIndex += 1;
+      const errorId = `b-plan-error-${errorIndex}`;
+      const message = document.createElement('span');
+      message.id = errorId;
+      message.dataset.planError = 'true';
+      message.className = 'plan-field-error small';
+      message.textContent = controlIssues.map(issueMessage).join(' ');
+      (control.closest('label') ?? control.parentElement)?.appendChild(message);
+      control.setAttribute('aria-invalid', 'true');
+      control.setAttribute('aria-errormessage', errorId);
+      control.setAttribute('data-plan-invalid', 'true');
+      control.dataset.planErrorId = errorId;
+      const descriptions = new Set((control.getAttribute('aria-describedby') ?? '').split(/\s+/).filter(Boolean));
+      descriptions.add(errorId);
+      control.setAttribute('aria-describedby', [...descriptions].join(' '));
+    }
+  }
+
+  function issueMessage(issue: BuildPlanIssue): string {
+    const control = issueControl(issue.path);
+    const roleMatch = /^\$\.roles\[(\d+)\]/.exec(issue.path);
+    const rolePrefix = roleMatch ? `Role ${Number(roleMatch[1]) + 1} — ` : '';
+    const label = control?.getAttribute('aria-label')
+      ?? control?.closest('label')?.querySelector('.label')?.textContent?.trim()
+      ?? 'Build plan';
+    const message = control instanceof HTMLInputElement && control.type === 'number'
+      && control.value === '' && issue.code === 'TYPE'
+      ? 'Value is required.'
+      : issue.message;
+    return `${rolePrefix}${label}: ${message}`;
   }
 
   const cell = (text: string, right = false) => { const td = document.createElement('td'); td.textContent = text; if (right) td.className = 'r'; return td; };
@@ -476,12 +564,27 @@ const harnessExamples = [
       ['b-sens-base-attempt', 'b-sens-base-solved', 'b-sens-base-month'],
       ['b-sens-high-attempt', 'b-sens-high-solved', 'b-sens-high-month'],
     ];
+    if (!lastDraftValid) {
+      for (const ids of metricIds) for (const id of ids) byId(id).textContent = 'Missing';
+      byId('b-sens-low-label').textContent = 'Low · —';
+      byId('b-sens-high-label').textContent = 'High · —';
+      const status = 'Fix the current plan inputs before running sensitivity or break-even analysis.';
+      byId('b-sens-status').textContent = status;
+      byId('b-sens-announcement').textContent = status;
+      byId('b-be-current-attempt').textContent = 'Missing';
+      byId('b-be-current-fixed').textContent = 'Missing';
+      byId('b-be-baseline-attempt').textContent = baseline ? money(baseline.quote.buildAttemptCostUsd) : '—';
+      byId('b-be-baseline-fixed').textContent = baseline ? money(baseline.plan.harness.fixedMonthlyCostUsd) : '—';
+      setText('b-break-even', 'Break-even is unavailable while the current plan is invalid.');
+      setText('b-break-even-detail', 'Resolve the current plan errors to compare this plan with a saved baseline.');
+      return;
+    }
     try {
       if (!Number.isFinite(requestedPercent) || requestedPercent < 5 || requestedPercent > 90) {
         throw new RangeError('Sensitivity range must be between 5% and 90%.');
       }
       const requestedDelta = requestedPercent / 100;
-      const sensitivity = analyzeBuildSensitivity(lastPlan, models, axis, requestedDelta);
+      const sensitivity = analyzeBuildSensitivity(lastPlan, eligibleModels, axis, requestedDelta);
       byId('b-sens-low-label').textContent = `Low · ${factorLabel(sensitivity.lowFactor)}`;
       byId('b-sens-high-label').textContent = `High · ${factorLabel(sensitivity.highFactor)}`;
       const quotes = [sensitivity.low, sensitivity.base, sensitivity.high];
@@ -523,7 +626,7 @@ const harnessExamples = [
     }
     byId('b-be-baseline-attempt').textContent = money(baseline.quote.buildAttemptCostUsd);
     byId('b-be-baseline-fixed').textContent = money(baseline.plan.harness.fixedMonthlyCostUsd);
-    const result = breakEvenBuildPlans(lastPlan, baseline.plan, models);
+    const result = breakEvenBuildPlans(lastPlan, baseline.plan, eligibleModels);
     const currentName = 'Current edit';
     const baselineName = `${baseline.plan.name} v${baseline.version}`;
     if (result.kind === 'crosses') {
@@ -571,7 +674,7 @@ const harnessExamples = [
 
     const baseline = snapshots.find((item) => item.snapshotId === baselineSnapshotId);
     const cells = [byId('b-delta-attempt'), byId('b-delta-solved'), byId('b-delta-month')];
-    if (!baseline || !lastQuote.valid) {
+    if (!baseline || !lastDraftValid || !lastQuote.valid) {
       for (const item of cells) { item.textContent = baseline ? 'Invalid current' : 'No baseline'; item.removeAttribute('data-direction'); }
       byId('b-baseline-label').textContent = baseline ? `Baseline: ${baseline.plan.name} · v${baseline.version}` : 'Save a version to establish a baseline.';
       renderAnalysis(baseline);
@@ -713,9 +816,12 @@ const harnessExamples = [
     const status = byId('b-export-status'), error = byId('b-export-error'); status.textContent = ''; error.textContent = '';
     for (const id of ['b-export-json', 'b-export-csv', 'b-export-png']) byId<HTMLButtonElement>(id).setAttribute('aria-busy', 'true');
     try {
-      const plan = readPlan();
-      const quote = quoteBuildPlan(plan, models);
-      if (!quote.valid) throw new Error('Fix the quote errors above before exporting.');
+      const validated = validateUntrustedBuildPlanV1(readPlan(), eligibleModels);
+      if (!validated.ok) {
+        render();
+        throw new Error('Resolve the current plan errors before exporting.');
+      }
+      const { value: plan, quote } = validated;
       if (format === 'json') downloadBlob(new Blob([buildExportJson(plan, quote)], { type: 'application/json;charset=utf-8' }), buildExportFilename(plan.name, format));
       else if (format === 'csv') downloadBlob(new Blob([buildExportCsv(plan, quote)], { type: 'text/csv;charset=utf-8' }), buildExportFilename(plan.name, format));
       else downloadBlob(await buildPngBlob(plan, quote), buildExportFilename(plan.name, format));
@@ -812,12 +918,56 @@ const harnessExamples = [
     render();
   }
 
+  function renderInvalidDraft(draft: BuildPlanV1, issues: BuildPlanIssue[]) {
+    lastDraftValid = false;
+    markPlanIssues(issues);
+    byId('b-role-count').textContent = `${draft.roles.length} role${draft.roles.length === 1 ? '' : 's'}`;
+    byId('b-attempt').textContent = 'Missing';
+    byId('b-solved').textContent = 'Missing';
+    byId('b-solved').classList.add('missing');
+    byId('b-solved-note').textContent = 'Resolve the plan errors below';
+    byId('b-month').textContent = 'Missing';
+    byId('b-month-note').textContent = 'No quote is calculated from invalid inputs';
+    byId('b-attempts').textContent = 'Missing';
+
+    const messages = byId('b-messages'); messages.replaceChildren();
+    const list = document.createElement('ul');
+    list.className = 'small list-disc pl-5 text-[var(--color-worse)]';
+    for (const issue of issues) {
+      const item = document.createElement('li'); item.textContent = issueMessage(issue); list.appendChild(item);
+    }
+    messages.appendChild(list);
+
+    const breakdown = byId('b-breakdown'); breakdown.replaceChildren();
+    const row = document.createElement('tr');
+    const unavailable = cell('Cost contribution is unavailable until the plan inputs are valid.');
+    unavailable.colSpan = 5; row.appendChild(unavailable); breakdown.appendChild(row);
+    const ledger = byId('b-ledger'); ledger.replaceChildren();
+    const ledgerItem = document.createElement('li');
+    ledgerItem.textContent = 'Assumption provenance is unavailable until the plan inputs are valid.';
+    ledger.appendChild(ledgerItem);
+
+    for (const id of ['b-export-json', 'b-export-csv', 'b-export-png']) byId<HTMLButtonElement>(id).disabled = true;
+    byId('b-export-ready').textContent = 'Resolve the plan errors above before exporting.';
+    byId<HTMLButtonElement>('b-save-version').disabled = true;
+    byId<HTMLButtonElement>('b-duplicate').disabled = true;
+    renderWorkspace();
+  }
+
   function render() {
     if (!rolesEl.children.length) return;
     byId('b-export-status').textContent = '';
     byId('b-export-error').textContent = '';
-    lastPlan = readPlan();
-    lastQuote = quoteBuildPlan(lastPlan, models);
+    const draft = readPlan();
+    const validated = validateUntrustedBuildPlanV1(draft, eligibleModels);
+    if (!validated.ok) {
+      renderInvalidDraft(draft, validated.issues);
+      return;
+    }
+    clearPlanIssueControls();
+    lastPlan = validated.value;
+    lastQuote = validated.quote;
+    lastDraftValid = true;
     byId('b-role-count').textContent = `${lastPlan.roles.length} role${lastPlan.roles.length === 1 ? '' : 's'}`;
     byId('b-attempt').textContent = money(lastQuote.buildAttemptCostUsd);
     byId('b-solved').textContent = money(lastQuote.variableCostPerSuccessfulBuildUsd);
@@ -850,14 +1000,14 @@ const harnessExamples = [
     }
 
     const ledger = byId('b-ledger'); ledger.replaceChildren();
-    const harnessLi = document.createElement('li'); harnessLi.textContent = `${lastPlan.harness.name}${lastPlan.harness.version ? ` ${lastPlan.harness.version}` : ''} · ${lastPlan.harness.configBasis.replaceAll('_', ' ')}`; ledger.appendChild(harnessLi);
+    const harnessLi = document.createElement('li'); harnessLi.textContent = `${lastPlan.harness.name}${lastPlan.harness.version ? ` ${lastPlan.harness.version}` : ''} · ${lastPlan.harness.configBasis.replaceAll('_', ' ')} · origin ${lastPlan.harness.assertionOrigin!.replaceAll('_', ' ')}`; ledger.appendChild(harnessLi);
     for (const role of lastQuote.roles) {
       const li = document.createElement('li');
-      li.textContent = `${role.label}: ${role.modelName} · ${role.priceBasis.replaceAll('_', ' ')}${role.priceLastVerified ? ` · price verified ${role.priceLastVerified}` : ''} · usage ${role.usageBasis.replaceAll('_', ' ')}`;
+      li.textContent = `${role.label}: ${role.modelName} · ${role.priceBasis.replaceAll('_', ' ')} · price origin ${role.priceAssertionOrigin.replaceAll('_', ' ')}${role.priceLastVerified ? ` · price verified ${role.priceLastVerified}` : ''} · usage ${role.usageBasis.replaceAll('_', ' ')} · usage origin ${role.usageAssertionOrigin.replaceAll('_', ' ')}`;
       ledger.appendChild(li);
     }
     const successLi = document.createElement('li'); successLi.textContent = lastPlan.endToEndSuccess
-      ? `Whole-system success: ${(lastPlan.endToEndSuccess.rate * 100).toFixed(1)}% · ${lastPlan.endToEndSuccess.basis.replaceAll('_', ' ')}`
+      ? `Whole-system success: ${(lastPlan.endToEndSuccess.rate * 100).toFixed(1)}% · ${lastPlan.endToEndSuccess.basis.replaceAll('_', ' ')} · origin ${lastPlan.endToEndSuccess.assertionOrigin!.replaceAll('_', ' ')}`
       : 'Whole-system success: not supplied; solved-build cost is intentionally missing.'; ledger.appendChild(successLi);
     for (const id of ['b-export-json', 'b-export-csv', 'b-export-png']) byId<HTMLButtonElement>(id).disabled = !lastQuote.valid;
     byId('b-export-ready').textContent = lastQuote.valid ? 'Current quote ready to export.' : 'Fix the quote errors above before exporting.';
@@ -898,29 +1048,40 @@ const harnessExamples = [
       seedCustomPrices(role);
     }
     render();
-    if (!editedValidQuoteTracked && lastQuote.valid) {
+    if (!editedValidQuoteTracked && lastDraftValid && lastQuote.valid) {
       editedValidQuoteTracked = true;
       track('build_quote_first_edit_valid', { path: location.pathname, role_count: String(lastPlan.roles.length), custom_prices: String(lastPlan.roles.some((item) => Boolean(item.priceOverride))) });
     }
+  });
+  form.addEventListener('focusout', (event) => {
+    const target = event.target as HTMLInputElement;
+    const canonicalTextField = ['b-name', 'b-harness', 'b-version'].includes(target.id)
+      || target.matches('[data-field="label"]');
+    if (!canonicalTextField) return;
+    const canonical = target.value.normalize('NFC').trim();
+    if (target.value === canonical) return;
+    target.value = canonical;
+    if (target.matches('[data-field="label"]')) renumber();
+    render();
   });
   byId('b-add-role').addEventListener('click', () => addRole());
   byId('b-export-json').addEventListener('click', () => exportCurrent('json'));
   byId('b-export-csv').addEventListener('click', () => exportCurrent('csv'));
   byId('b-export-png').addEventListener('click', () => exportCurrent('png'));
   byId('b-save-version').addEventListener('click', () => {
-    if (!lastQuote.valid) return;
-    const snapshot = createBuildSnapshot(snapshots, currentPlanId, crypto.randomUUID(), lastPlan, models);
+    if (!lastDraftValid || !lastQuote.valid) return;
+    const snapshot = createBuildSnapshot(snapshots, currentPlanId, crypto.randomUUID(), lastPlan, eligibleModels);
     snapshots.push(snapshot);
     baselineSnapshotId ??= snapshot.snapshotId;
     byId('b-workspace-message').textContent = `Saved ${snapshot.plan.name} version ${snapshot.version} in this tab.`;
     renderWorkspace();
   });
   byId('b-duplicate').addEventListener('click', () => {
-    if (!lastQuote.valid) return;
-    const source = createBuildSnapshot(snapshots, currentPlanId, crypto.randomUUID(), lastPlan, models);
+    if (!lastDraftValid || !lastQuote.valid) return;
+    const source = createBuildSnapshot(snapshots, currentPlanId, crypto.randomUUID(), lastPlan, eligibleModels);
     snapshots.push(source);
     const newPlanId = crypto.randomUUID();
-    const duplicate = duplicateBuildSnapshot(source, newPlanId, crypto.randomUUID(), `${lastPlan.name} copy`, models);
+    const duplicate = duplicateBuildSnapshot(source, newPlanId, crypto.randomUUID(), `${lastPlan.name} copy`, eligibleModels);
     snapshots.push(duplicate);
     baselineSnapshotId = source.snapshotId;
     currentPlanId = newPlanId;
@@ -991,6 +1152,9 @@ const harnessExamples = [
 <style is:global>
   .money-input, .percent-input { display: flex; align-items: center; gap: .45rem; font-family: var(--font-mono); color: var(--color-muted); }
   .money-input .ctl, .percent-input .ctl { min-width: 0; }
+  .ctl[data-plan-invalid='true'] { border-color: var(--color-worse); box-shadow: inset 0 0 0 1px var(--color-worse); }
+  .ctl[data-plan-invalid='true']:focus-visible { box-shadow: inset 0 0 0 1px var(--color-worse), 0 0 0 3px color-mix(in srgb, var(--color-worse) 28%, transparent); }
+  .plan-field-error { display: block; flex-basis: 100%; width: 100%; margin-top: .4rem; color: var(--color-worse); font-weight: 600; }
   .role-editor .role-label { width: min(18rem, 58vw); }
   .role-editor button:disabled { opacity: .35; cursor: not-allowed; }
   .ledger { display: grid; gap: .5rem; padding-left: 1rem; list-style: square; font-family: var(--font-mono); font-size: .72rem; line-height: 1.6; color: var(--color-muted); }

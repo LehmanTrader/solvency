@@ -2,10 +2,11 @@ import {
   harnessAssertionOrigin, priceOverrideAssertionOrigin, successAssertionOrigin, usageAssertionOrigin,
   type BuildInputOrigin, type BuildPlanV1, type BuildQuoteV1, type BuildRoleV1, type BuildRoleQuote,
 } from './build-cost.ts';
+import { BUILD_PLAN_LIMITS } from './build-plan-limits.ts';
 
 export type BuildExportFormat = 'json' | 'csv' | 'png';
 
-export const MAX_BUILD_EXPORT_ROLES = 24;
+export const MAX_BUILD_EXPORT_ROLES = BUILD_PLAN_LIMITS.maxRoles;
 export const MAX_BUILD_EXPORT_STRING = 10_000;
 export const MAX_BUILD_EXPORT_BYTES = 2_000_000;
 
