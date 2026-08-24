@@ -176,6 +176,11 @@
   .btn:disabled, .btn:disabled:hover, .btn:disabled:active {
     color: var(--color-muted); background: var(--color-panel-2); border-color: var(--color-rule); cursor: not-allowed;
   }
+  /* auth CTA is SSR'd disabled until Clerk is ready; keep it amber at first paint
+     so the page never flashes dark→amber on load */
+  #auth-signup:disabled, #auth-signup:disabled:hover, #auth-signup:disabled:active {
+    background: var(--color-accent); color: var(--color-on-accent); border-color: var(--color-accent); cursor: not-allowed;
+  }
   .btn-quiet { border-color: transparent; color: var(--color-muted); padding-inline: .5rem; }
   .btn-quiet:hover { color: var(--color-ink); border-color: transparent; }
   .btn[aria-busy="true"] { color: var(--color-muted); cursor: progress; }

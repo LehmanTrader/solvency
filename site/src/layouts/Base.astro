@@ -20,8 +20,7 @@ const NAV = [
   ['/', 'Calculator'], ['/build-planner', 'Build'], ['/pricing', 'Pricing'], ['/models', 'Models'], ['/compare', 'Compare'],
   ['/harness', 'Harness'], ['/methodology', 'Methodology'], ['/research', 'Research'],
 ];
-const DEV = [['/data', 'Data (CC-BY)'], ['/embed', 'Embed'], ['/changelog', 'Changelog'],
-  ['https://github.com/LehmanTrader/solvency', 'Source and tests']];
+const DEV = [['/data', 'Data (CC-BY)'], ['/embed', 'Embed'], ['/changelog', 'Changelog']];
 const current = (href: string) => (href === '/' ? path === '/' : path.startsWith(href));
 const verified = models.reduce((a, m) => (m.last_verified > a ? m.last_verified : a), '');
 const aa = sources.find((s) => s.benchmark === 'aa-coding-agent-index');
