@@ -8,6 +8,28 @@ import { spawnSync } from 'node:child_process';
 const ROOT = join(import.meta.dirname, '..');
 const read = (path: string) => readFileSync(join(ROOT, path), 'utf8');
 
+function workflowJob(source: string, name: string): string {
+  const marker = `  ${name}:\n`;
+  const start = source.indexOf(marker);
+  assert.ok(start >= 0, `missing workflow job ${name}`);
+  const remainder = source.slice(start + marker.length);
+  const next = remainder.search(/^  [a-z0-9][a-z0-9-]*:\n/m);
+  return next < 0 ? remainder : remainder.slice(0, next);
+}
+
+function workflowStep(job: string, name: string): string {
+  const marker = `      - name: ${name}\n`;
+  const start = job.indexOf(marker);
+  assert.ok(start >= 0, `missing workflow step ${name}`);
+  const remainder = job.slice(start + marker.length);
+  const next = remainder.search(/^      - (?:name|uses):/m);
+  return next < 0 ? remainder : remainder.slice(0, next);
+}
+
+function workflowSecrets(job: string): string[] {
+  return [...new Set([...job.matchAll(/secrets\.([A-Z0-9_]+)/g)].map((match) => match[1]))].sort();
+}
+
 test('the immutable migration manifest covers every SQL file with its exact digest', () => {
   const manifest = JSON.parse(read('site/migrations/checksums.json')) as {
     version: number;
@@ -38,6 +60,7 @@ test('both deploy workflows verify migrations, stamp the SHA, and reject a dirty
   for (const path of ['.github/workflows/deploy.yml', '.github/workflows/deploy-preview.yml']) {
     const workflow = read(path);
     assert.match(workflow, /npm run check:migrations/);
+    assert.match(workflow, /npm run verify:rollout-state/);
     assert.match(workflow, /PUBLIC_BUILD_SHA: \$\{\{ github\.sha \}\}/);
     assert.match(workflow, /git diff --check/);
     assert.match(workflow, /git status --porcelain --untracked-files=all/);
@@ -67,6 +90,7 @@ test('production deploy attests exact source SHA and every dark route after publ
     '/pricing/', '/build-planner/', '/models/', '/research/',
     '/api/build-plans', '/api/entitlement', '/api/intents',
     '/api/preview-account-erasure', '/api/checkout', '/api/billing-portal',
+    '/api/billing-readiness',
     '/api/stripe-webhook',
     '/shared-build-plans/',
   ]) assert.ok(script.includes(path), `missing production attestation for ${path}`);
@@ -82,19 +106,68 @@ test('production deploy attests exact source SHA and every dark route after publ
   assert.match(script, /requestIdHeader !== error\.requestId/);
 });
 
-test('preview deploy hands the exact published SHA to an isolated authenticated smoke job', () => {
+test('preview rollout resolves, conditionally preflights, deploys and always attests the same commit', () => {
   const workflow = read('.github/workflows/deploy-preview.yml');
   const smoke = read('site/scripts/smoke-account-plans.mjs');
+  const releaseSmoke = read('site/scripts/smoke-preview-release.mjs');
+  const resolveJob = workflowJob(workflow, 'resolve-rollout');
+  const providerJob = workflowJob(workflow, 'stripe-config-preflight');
+  const deployJob = workflowJob(workflow, 'deploy-preview');
+  const smokeJob = workflowJob(workflow, 'smoke-preview');
+  const releaseStep = workflowStep(smokeJob, 'Run non-destructive Preview release attestation');
+  const authenticatedStep = workflowStep(smokeJob, 'Run authenticated provider-read-only smoke after billing state exists');
+  const destructiveStep = workflowStep(smokeJob, 'Run destructive two-user account smoke while billing is dark');
+
+  const resolve = workflow.indexOf('  resolve-rollout:');
+  const provider = workflow.indexOf('  stripe-config-preflight:');
+  const deploy = workflow.indexOf('  deploy-preview:');
   const publish = workflow.indexOf('Publish current commit to the isolated Preview branch');
-  const smokeJob = workflow.indexOf('smoke-preview:');
-  const attestation = workflow.indexOf('Attest exact Preview SHA and run authenticated smoke');
-  assert.ok(publish >= 0 && publish < smokeJob && smokeJob < attestation);
-  assert.match(workflow, /needs: deploy-preview/);
-  assert.match(workflow, /EXPECTED_BUILD_SHA: \$\{\{ github\.sha \}\}/);
-  assert.match(workflow, /ref: \$\{\{ github\.sha \}\}/);
-  assert.match(workflow, /deployment: false/);
-  assert.match(workflow, /smoke-preview:[\s\S]*timeout-minutes: 15/);
-  assert.match(workflow, /npx --no-install playwright install --with-deps chromium/);
+  const smokeJobIndex = workflow.indexOf('  smoke-preview:');
+  const attestation = workflow.indexOf('Run non-destructive Preview release attestation');
+  assert.ok(resolve >= 0 && resolve < provider && provider < deploy && deploy < publish);
+  assert.ok(publish < smokeJobIndex && smokeJobIndex < attestation);
+
+  assert.match(resolveJob, /npm run verify:rollout-state -- --github-output "\$GITHUB_OUTPUT"/);
+  for (const output of [
+    'preview_stripe_enabled', 'preview_account_plans_enabled',
+    'preview_product_intents_enabled', 'preview_sandbox_ui_enabled',
+    'preview_webhook_access_mode', 'preview_destructive_smoke_enabled',
+  ]) assert.match(resolveJob, new RegExp(`${output}: \\$\\{\\{ steps\\.rollout\\.outputs\\.${output} \\}\\}`));
+
+  assert.match(providerJob, /^\s*needs: resolve-rollout$/m);
+  assert.match(providerJob, /^\s*if: needs\.resolve-rollout\.outputs\.preview_stripe_enabled == 'true'$/m);
+  assert.match(providerJob, /ref: \$\{\{ github\.sha \}\}/);
+  assert.match(providerJob, /git rev-parse HEAD[\s\S]*GITHUB_SHA/);
+  assert.match(providerJob, /npm run smoke:stripe-preview-config/);
+  assert.deepEqual(workflowSecrets(providerJob), ['PREVIEW_STRIPE_CONFIG_READ_ONLY_KEY']);
+
+  assert.match(deployJob, /^\s*needs: \[resolve-rollout, stripe-config-preflight\]$/m);
+  assert.match(deployJob, /^\s*if: \$\{\{ !cancelled\(\) && needs\.resolve-rollout\.result == 'success' && \(needs\.resolve-rollout\.outputs\.preview_stripe_enabled == 'false' \|\| needs\.stripe-config-preflight\.result == 'success'\) \}\}$/m);
+  assert.match(deployJob, /PUBLIC_ACCOUNT_PLANS_ENABLED: \$\{\{ needs\.resolve-rollout\.outputs\.preview_account_plans_enabled \}\}/);
+  assert.match(deployJob, /PUBLIC_PRODUCT_INTENTS_ENABLED: \$\{\{ needs\.resolve-rollout\.outputs\.preview_product_intents_enabled \}\}/);
+  assert.match(deployJob, /PUBLIC_STRIPE_SANDBOX_UI_ENABLED: \$\{\{ needs\.resolve-rollout\.outputs\.preview_sandbox_ui_enabled \}\}/);
+
+  assert.match(smokeJob, /^\s*needs: \[resolve-rollout, deploy-preview\]$/m);
+  assert.match(smokeJob, /timeout-minutes: 15/);
+  assert.match(smokeJob, /ref: \$\{\{ github\.sha \}\}/);
+  assert.match(smokeJob, /EXPECTED_BUILD_SHA: \$\{\{ github\.sha \}\}/);
+  assert.match(smokeJob, /npx --no-install playwright install --with-deps chromium/);
+  assert.doesNotMatch(releaseStep, /^\s*if:/m);
+  assert.match(releaseStep, /npm run smoke:preview-release/);
+  assert.match(releaseStep, /PREVIEW_WEBHOOK_ACCESS_MODE: \$\{\{ needs\.resolve-rollout\.outputs\.preview_webhook_access_mode \}\}/);
+  assert.match(authenticatedStep, /^\s*if: needs\.resolve-rollout\.outputs\.preview_stripe_enabled == 'true'$/m);
+  assert.match(authenticatedStep, /npm run smoke:preview-authenticated-provider-readonly/);
+  assert.doesNotMatch(authenticatedStep, /ACCOUNT_SMOKE_CONFIRM|DELETE_ISOLATED_PREVIEW_DATA/);
+  assert.match(destructiveStep, /^\s*if: needs\.resolve-rollout\.outputs\.preview_destructive_smoke_enabled == 'true'$/m);
+  assert.match(destructiveStep, /ACCOUNT_SMOKE_CONFIRM: DELETE_ISOLATED_PREVIEW_DATA/);
+  assert.match(destructiveStep, /npm run smoke:account-preview/);
+
+  assert.match(releaseSmoke, /PREVIEW_STRIPE_WEBHOOK_ENABLED/);
+  assert.match(releaseSmoke, /PREVIEW_WEBHOOK_ACCESS_MODE must be protected or exact-path-bypass/);
+  assert.match(releaseSmoke, /stripe-webhook-neighbor/);
+  assert.match(releaseSmoke, /requireAccessDenial\('\/api\/stripe-webhook'\)/);
+  assert.match(releaseSmoke, /webhookAccessMode === 'exact-path-bypass'/);
+  assert.doesNotMatch(releaseSmoke, /CLERK_SECRET_KEY|ACCOUNT_SMOKE_CONFIRM|DELETE_/);
   assert.match(smoke, /EXPECTED_BUILD_SHA/);
   assert.match(smoke, /solvency-build-sha/);
   assert.match(smoke, /attestPreviewReadiness/);

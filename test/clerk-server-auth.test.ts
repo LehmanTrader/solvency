@@ -3,6 +3,11 @@ import assert from 'node:assert/strict';
 import { createSign, generateKeyPairSync } from 'node:crypto';
 import { apiJson } from '../site/src/lib/server/api-http.ts';
 import { authenticateOwner, type AuthConfiguration } from '../site/src/lib/server/clerk-auth.ts';
+import {
+  DEVELOPMENT_DEPLOYMENT_ORIGIN,
+  PREVIEW_DEPLOYMENT_ORIGIN,
+  PRODUCTION_DEPLOYMENT_ORIGIN,
+} from '../site/src/lib/server/deployment-origin.ts';
 import type {
   D1DatabaseLike,
   D1PreparedStatementLike,
@@ -227,6 +232,86 @@ describe('networkless Clerk server authentication', () => {
     assert.equal(database.rateLimitBinds.length, 0);
   });
 
+  test('webhook bypass is host-locked to the one exact origin for each environment', async () => {
+    for (const [appEnv, origin] of [
+      ['production', PRODUCTION_DEPLOYMENT_ORIGIN],
+      ['preview', PREVIEW_DEPLOYMENT_ORIGIN],
+      ['development', DEVELOPMENT_DEPLOYMENT_ORIGIN],
+    ] as const) {
+      const database = new RateDatabase();
+      const rawBody = `{"environment":"${appEnv}"}`;
+      const request = new Request(`${origin}/api/stripe-webhook`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: rawBody,
+      });
+      const context = middlewareContext(request, database);
+      context.env.APP_ENV = appEnv;
+      context.env.STRIPE_WEBHOOK_ENABLED = 'true';
+      context.next = async () => {
+        assert.equal(await context.request.text(), rawBody);
+        return new Response(null, { status: 204 });
+      };
+      assert.equal((await apiMiddleware(context)).status, 204, appEnv);
+      assert.equal(database.prepareCalls.length, 0, appEnv);
+      assert.equal(database.rateLimitBinds.length, 0, appEnv);
+    }
+
+    const rejected = [
+      ['production', `https://solvency-ru5.pages.dev/api/stripe-webhook`],
+      ['production', `https://www.solvency.dev/api/stripe-webhook`],
+      ['production', `${PREVIEW_DEPLOYMENT_ORIGIN}/api/stripe-webhook`],
+      ['production', `https://evil.example/api/stripe-webhook`],
+      ['preview', `https://main.solvency-ru5.pages.dev/api/stripe-webhook`],
+      ['preview', `https://solvency-ru5.pages.dev/api/stripe-webhook`],
+      ['preview', `${PRODUCTION_DEPLOYMENT_ORIGIN}/api/stripe-webhook`],
+      ['development', `https://localhost:8788/api/stripe-webhook`],
+      ['development', `http://127.0.0.1:8788/api/stripe-webhook`],
+    ] as const;
+    for (const [appEnv, url] of rejected) {
+      const database = new RateDatabase();
+      const request = new Request(url, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"unread":true}',
+      });
+      const context = middlewareContext(request, database);
+      context.env.APP_ENV = appEnv;
+      context.env.STRIPE_WEBHOOK_ENABLED = 'true';
+      let nextCalls = 0;
+      context.next = async () => { nextCalls += 1; return new Response(null, { status: 204 }); };
+      const response = await apiMiddleware(context);
+      assert.equal(response.status, 400, url);
+      assert.equal(response.headers.get('x-error-code'), 'INVALID_REQUEST', url);
+      assert.equal(request.bodyUsed, false, url);
+      assert.equal(nextCalls, 0, url);
+      assert.equal(database.prepareCalls.length, 0, url);
+    }
+  });
+
+  test('noncanonical webhook path, query and encoded variants never enter the bypass', async () => {
+    for (const [suffix, expectedStatus] of [
+      ['/api/stripe-webhook/', 503],
+      ['/api/stripe-webhook?expand=data.object', 400],
+      ['/api/stripe-webhook%2Fextra', 503],
+      ['/api%2Fstripe-webhook', 503],
+      ['/api/stripe%2Dwebhook', 503],
+    ] as const) {
+      const database = new RateDatabase();
+      const request = new Request(`${PREVIEW_DEPLOYMENT_ORIGIN}${suffix}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"unread":true}',
+      });
+      const context = middlewareContext(request, database);
+      context.env.APP_ENV = 'preview';
+      context.env.STRIPE_WEBHOOK_ENABLED = 'true';
+      context.env.ACCOUNT_PLANS_ENABLED = 'false';
+      context.env.ENTITLEMENTS_ENABLED = 'false';
+      let nextCalls = 0;
+      context.next = async () => { nextCalls += 1; return new Response(null, { status: 204 }); };
+      const response = await apiMiddleware(context);
+      assert.equal(response.status, expectedStatus, suffix);
+      assert.equal(request.bodyUsed, false, suffix);
+      assert.equal(nextCalls, 0, suffix);
+      assert.equal(database.prepareCalls.length, 0, suffix);
+    }
+  });
+
   test('enabled Stripe webhook rejects non-POST methods and query strings before next or body access', async () => {
     const database = new RateDatabase();
     let nextCalls = 0;
@@ -350,6 +435,64 @@ describe('networkless Clerk server authentication', () => {
       assert.equal(denied.headers.get('x-error-code'), 'AUTH_REQUIRED');
       assert.equal(unauthenticatedDatabase.rateLimitBinds.length, 0);
     }
+  });
+
+  test('billing readiness is dark before auth unless at least one Stripe surface is enabled', async () => {
+    const database = new RateDatabase();
+    const context = middlewareContext(bearerRequest(
+      signSession(),
+      {},
+      'https://solvency.dev/api/billing-readiness',
+    ), database);
+    context.env.ACCOUNT_PLANS_ENABLED = 'true';
+    context.env.STRIPE_CHECKOUT_ENABLED = 'false';
+    context.env.STRIPE_PORTAL_ENABLED = 'false';
+    context.env.STRIPE_WEBHOOK_ENABLED = 'false';
+    let nextCalls = 0;
+    context.next = async () => { nextCalls += 1; return new Response(null, { status: 204 }); };
+
+    const response = await apiMiddleware(context);
+    assert.equal(response.status, 503);
+    assert.equal(nextCalls, 0);
+    assert.equal(database.prepareCalls.length, 0);
+    assert.equal(database.rateLimitBinds.length, 0);
+  });
+
+  test('any one Stripe surface enables only the exact authenticated readiness route', async () => {
+    for (const flag of [
+      'STRIPE_CHECKOUT_ENABLED',
+      'STRIPE_PORTAL_ENABLED',
+      'STRIPE_WEBHOOK_ENABLED',
+    ] as const) {
+      const database = new RateDatabase();
+      const context = middlewareContext(bearerRequest(
+        signSession(),
+        {},
+        'https://solvency.dev/api/billing-readiness',
+      ), database);
+      context.env.ACCOUNT_PLANS_ENABLED = 'false';
+      context.env.ENTITLEMENTS_ENABLED = 'false';
+      context.env.PRODUCT_INTENTS_ENABLED = 'false';
+      context.env.STRIPE_CHECKOUT_ENABLED = 'false';
+      context.env.STRIPE_PORTAL_ENABLED = 'false';
+      context.env.STRIPE_WEBHOOK_ENABLED = 'false';
+      context.env[flag] = 'true';
+      const response = await apiMiddleware(context);
+      assert.equal(response.status, 200, flag);
+      assert.deepEqual(await response.json(), { ownerUserId: 'user_account_alpha' }, flag);
+      assert.equal(database.rateLimitBinds.length, 1, flag);
+    }
+
+    const adjacentDatabase = new RateDatabase();
+    const adjacent = middlewareContext(bearerRequest(
+      signSession(),
+      {},
+      'https://solvency.dev/api/billing-readiness-extra',
+    ), adjacentDatabase);
+    adjacent.env.STRIPE_CHECKOUT_ENABLED = 'true';
+    const rejected = await apiMiddleware(adjacent);
+    assert.equal(rejected.status, 503);
+    assert.equal(adjacentDatabase.rateLimitBinds.length, 0);
   });
 
   test('entitlement reads use their own rollout flag while retaining verified-owner auth and rate limits', async () => {

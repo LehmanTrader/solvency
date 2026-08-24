@@ -195,7 +195,7 @@ describe('server-authoritative entitlement boundary', () => {
     const db = new SqliteD1();
     assert.deepEqual(await entitlement(db, 'user_account_alpha'), {
       tier: 'free', active: false, source: 'none', status: 'none',
-      currentPeriodEnd: null, cancelAtPeriodEnd: false,
+      billingInterval: null, currentPeriodEnd: null, cancelAtPeriodEnd: false,
     });
 
     const malformed = {
@@ -240,7 +240,7 @@ describe('server-authoritative entitlement boundary', () => {
     const parsed = JSON.parse(raw) as { data: { tier: string; active: boolean } };
     assert.deepEqual(parsed.data, {
       tier: 'pro', active: true, source: 'stripe', status: 'active',
-      currentPeriodEnd: new Date(futurePeriodEnd * 1000).toISOString(), cancelAtPeriodEnd: false,
+      billingInterval: 'month', currentPeriodEnd: new Date(futurePeriodEnd * 1000).toISOString(), cancelAtPeriodEnd: false,
     });
 
     const foreign = await handleEntitlement(apiContext(db, 'user_account_beta'));

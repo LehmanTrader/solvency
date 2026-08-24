@@ -9,7 +9,12 @@
     "build:functions": "wrangler pages functions build functions --outdir .wrangler/functions-build --project-directory . --build-output-directory dist",
     "check:migrations": "node scripts/verify-migration-checksums.mjs",
     "check:links": "node scripts/check-links.mjs",
+    "verify:rollout-state": "node scripts/verify-rollout-state.mjs",
+    "verify:production-artifact-dark": "node scripts/verify-production-artifact-dark.mjs",
     "verify:production-dark": "node scripts/verify-production-dark.mjs",
+    "smoke:preview-release": "node scripts/smoke-preview-release.mjs",
+    "smoke:preview-authenticated-provider-readonly": "node scripts/smoke-preview-authenticated-readonly.mjs",
+    "smoke:stripe-preview-config": "node scripts/smoke-stripe-preview-config.mjs",
     "smoke:account-preview": "node scripts/smoke-account-plans.mjs",
     "preview": "astro preview"
   },

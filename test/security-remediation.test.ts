@@ -8,6 +8,28 @@ import { calloutHtml, type Row } from '../site/src/lib/calc.ts';
 const ROOT = join(import.meta.dirname, '..');
 const read = (path: string) => readFileSync(join(ROOT, path), 'utf8');
 
+function workflowJob(source: string, name: string): string {
+  const marker = `  ${name}:\n`;
+  const start = source.indexOf(marker);
+  assert.ok(start >= 0, `missing workflow job ${name}`);
+  const remainder = source.slice(start + marker.length);
+  const next = remainder.search(/^  [a-z0-9][a-z0-9-]*:\n/m);
+  return next < 0 ? remainder : remainder.slice(0, next);
+}
+
+function workflowStep(job: string, name: string): string {
+  const marker = `      - name: ${name}\n`;
+  const start = job.indexOf(marker);
+  assert.ok(start >= 0, `missing workflow step ${name}`);
+  const remainder = job.slice(start + marker.length);
+  const next = remainder.search(/^      - (?:name|uses):/m);
+  return next < 0 ? remainder : remainder.slice(0, next);
+}
+
+function workflowSecrets(job: string): string[] {
+  return [...new Set([...job.matchAll(/secrets\.([A-Z0-9_]+)/g)].map((match) => match[1]))].sort();
+}
+
 test('production headers enforce a scoped content security policy', () => {
   const headers = read('site/public/_headers');
   assert.match(headers, /Content-Security-Policy:/);
@@ -73,6 +95,7 @@ test('deployment actions are immutable and installs are frozen', () => {
   assert.ok(uses.length >= 3);
   for (const action of uses) assert.match(action, /@[0-9a-f]{40}$/);
   assert.match(workflow, /run: npm ci --no-audit --no-fund/);
+  assert.match(workflow, /actions\/checkout@[0-9a-f]{40}[\s\S]*persist-credentials: false/);
   assert.match(workflow, /run: npm run coverage/);
   assert.match(workflow, /^\s*environment: production$/m);
   assert.match(workflow, /GITHUB_REF" != "refs\/heads\/main"/);
@@ -83,6 +106,10 @@ test('deployment actions are immutable and installs are frozen', () => {
   assert.match(workflow, /--commit-dirty=false/);
   assert.match(workflow, /PUBLIC_ACCOUNT_PLANS_ENABLED: 'false'/);
   assert.match(workflow, /PUBLIC_PRODUCT_INTENTS_ENABLED: 'false'/);
+  assert.match(workflow, /PUBLIC_DEPLOYMENT_ENV: 'production'/);
+  assert.match(workflow, /PUBLIC_STRIPE_SANDBOX_UI_ENABLED: 'false'/);
+  assert.match(workflow, /npm run verify:production-artifact-dark/);
+  assert.match(workflow, /npm run verify:rollout-state/);
   assert.doesNotMatch(workflow, /vars\.PUBLIC_ACCOUNT_PLANS_ENABLED/);
   assert.doesNotMatch(workflow, /vars\.PUBLIC_PRODUCT_INTENTS_ENABLED/);
   const section = (heading: string) => wrangler.split(`[${heading}]\n`, 2)[1]?.split(/\n(?=\[)/, 1)[0] ?? '';
@@ -114,65 +141,99 @@ test('deployment actions are immutable and installs are frozen', () => {
   assert.ok(checkout < verifyCommit && verifyCommit < publish);
 });
 
-test('preview deployment is manual, reviewed, isolated and migration-fail-closed', () => {
+test('preview deployment is staged, same-commit, credential-isolated and migration-fail-closed', () => {
   const workflow = read('.github/workflows/deploy-preview.yml');
   const uses = [...workflow.matchAll(/^\s*(?:-\s*)?uses:\s*([^\s#]+)(?:\s+#.*)?$/gm)].map((match) => match[1]);
-  assert.equal(uses.length, 5);
+  assert.ok(uses.length > 0);
   for (const action of uses) assert.match(action, /@[0-9a-f]{40}$/);
+
+  const resolveJob = workflowJob(workflow, 'resolve-rollout');
+  const providerJob = workflowJob(workflow, 'stripe-config-preflight');
+  const deployJob = workflowJob(workflow, 'deploy-preview');
+  const smokeJob = workflowJob(workflow, 'smoke-preview');
+  const releaseStep = workflowStep(smokeJob, 'Run non-destructive Preview release attestation');
+  const authenticatedStep = workflowStep(smokeJob, 'Run authenticated provider-read-only smoke after billing state exists');
+  const destructiveStep = workflowStep(smokeJob, 'Run destructive two-user account smoke while billing is dark');
 
   assert.match(workflow, /^on:\n\s+workflow_dispatch:$/m);
   assert.doesNotMatch(workflow, /^\s+(?:push|pull_request|schedule):/m);
   assert.match(workflow, /^concurrency:\n\s+group: deploy-preview-\$\{\{ github\.ref \}\}\n\s+cancel-in-progress: false$/m);
-  assert.match(workflow, /^\s*environment: preview$/m);
   assert.match(workflow, /default: do-not-deploy/);
-  assert.match(workflow, /PREVIEW_DEPLOY_AUTHORIZATION" != "deploy-reviewed-preview"/);
-  assert.match(workflow, /GITHUB_REF" != "refs\/heads\/main"/);
-  assert.match(workflow, /git rev-parse HEAD[\s\S]*GITHUB_SHA/);
+  assert.match(resolveJob, /PREVIEW_DEPLOY_AUTHORIZATION" != "deploy-reviewed-preview"/);
+  assert.match(resolveJob, /GITHUB_REF" != "refs\/heads\/main"/);
+  assert.match(resolveJob, /git rev-parse HEAD[\s\S]*GITHUB_SHA/);
+  assert.match(resolveJob, /npm run verify:rollout-state -- --github-output "\$GITHUB_OUTPUT"/);
+  assert.deepEqual(workflowSecrets(resolveJob), []);
 
-  assert.match(workflow, /vars\.PREVIEW_CLERK_PUBLISHABLE_KEY/);
-  assert.match(workflow, /PREVIEW_CLERK_PUBLISHABLE_KEY" != pk_test_\*/);
-  assert.match(workflow, /PUBLIC_ACCOUNT_PLANS_ENABLED: 'true'/);
-  assert.match(workflow, /PUBLIC_PRODUCT_INTENTS_ENABLED: 'true'/);
-  assert.match(workflow, /^\s*smoke-preview:$/m);
-  assert.match(workflow, /^\s*needs: deploy-preview$/m);
-  assert.match(workflow, /^\s*deployment: false$/m);
-  assert.match(workflow, /ref: \$\{\{ github\.sha \}\}/);
+  assert.doesNotMatch(resolveJob, /\b(?:vars|secrets)\./);
+  assert.doesNotMatch(resolveJob, /^    environment:/m);
+  assert.match(deployJob, /vars\.PREVIEW_CLERK_PUBLISHABLE_KEY/);
+  assert.match(deployJob, /PREVIEW_CLERK_PUBLISHABLE_KEY" != pk_test_\*/);
+  assert.match(resolveJob, /preview_account_plans_enabled: \$\{\{ steps\.rollout\.outputs\.preview_account_plans_enabled \}\}/);
+  assert.match(resolveJob, /preview_product_intents_enabled: \$\{\{ steps\.rollout\.outputs\.preview_product_intents_enabled \}\}/);
+  assert.match(resolveJob, /preview_sandbox_ui_enabled: \$\{\{ steps\.rollout\.outputs\.preview_sandbox_ui_enabled \}\}/);
+  assert.match(resolveJob, /preview_webhook_access_mode: \$\{\{ steps\.rollout\.outputs\.preview_webhook_access_mode \}\}/);
+
+  assert.match(providerJob, /^\s*needs: resolve-rollout$/m);
+  assert.match(providerJob, /^\s*if: needs\.resolve-rollout\.outputs\.preview_stripe_enabled == 'true'$/m);
+  assert.match(providerJob, /^\s*environment:\n\s+name: preview\n\s+deployment: false$/m);
+  assert.match(providerJob, /ref: \$\{\{ github\.sha \}\}/);
+  assert.match(providerJob, /git rev-parse HEAD[\s\S]*GITHUB_SHA/);
+  assert.match(providerJob, /npm run smoke:stripe-preview-config/);
+  assert.deepEqual(workflowSecrets(providerJob), ['PREVIEW_STRIPE_CONFIG_READ_ONLY_KEY']);
+
+  assert.match(deployJob, /^\s*needs: \[resolve-rollout, stripe-config-preflight\]$/m);
+  assert.match(deployJob, /^\s*if: \$\{\{ !cancelled\(\) && needs\.resolve-rollout\.result == 'success' && \(needs\.resolve-rollout\.outputs\.preview_stripe_enabled == 'false' \|\| needs\.stripe-config-preflight\.result == 'success'\) \}\}$/m);
+  assert.match(deployJob, /^\s*environment: preview$/m);
+  assert.match(deployJob, /PUBLIC_ACCOUNT_PLANS_ENABLED: \$\{\{ needs\.resolve-rollout\.outputs\.preview_account_plans_enabled \}\}/);
+  assert.match(deployJob, /PUBLIC_PRODUCT_INTENTS_ENABLED: \$\{\{ needs\.resolve-rollout\.outputs\.preview_product_intents_enabled \}\}/);
+  assert.match(deployJob, /PUBLIC_DEPLOYMENT_ENV: 'preview'/);
+  assert.match(deployJob, /PUBLIC_STRIPE_SANDBOX_UI_ENABLED: \$\{\{ needs\.resolve-rollout\.outputs\.preview_sandbox_ui_enabled \}\}/);
   assert.match(workflow, /persist-credentials: false/);
-  assert.match(workflow, /EXPECTED_BUILD_SHA: \$\{\{ github\.sha \}\}/);
-  assert.match(workflow, /secrets\.PREVIEW_CLERK_SMOKE_SECRET_KEY/);
-  assert.match(workflow, /secrets\.PREVIEW_CF_ACCESS_CLIENT_ID/);
-  assert.match(workflow, /secrets\.PREVIEW_CF_ACCESS_CLIENT_SECRET/);
-  assert.match(workflow, /npm run smoke:account-preview/);
-  assert.match(workflow, /npx --no-install playwright install --with-deps chromium/);
-  assert.match(workflow, /npm ci --no-audit --no-fund/);
-  assert.match(workflow, /npm run coverage/);
-  assert.match(workflow, /npm audit --audit-level=high/);
-  assert.match(workflow, /npm run build:functions/);
-  assert.match(workflow, /Keep STRIPE_WEBHOOK_ENABLED false until a signed, size-bounded POST-only/);
-  assert.doesNotMatch(workflow, /STRIPE_WEBHOOK_ENABLED\s*[:=]\s*['"]?true/);
+  assert.deepEqual(workflowSecrets(deployJob), ['CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_API_TOKEN']);
 
-  assert.match(workflow, /d1 migrations list solvency-build-plans-preview --env preview --remote/);
-  assert.match(workflow, /grep -Fq "No migrations to apply"/);
+  assert.match(smokeJob, /^\s*needs: \[resolve-rollout, deploy-preview\]$/m);
+  assert.match(smokeJob, /^\s*environment:\n\s+name: preview\n\s+deployment: false$/m);
+  assert.match(smokeJob, /EXPECTED_BUILD_SHA: \$\{\{ github\.sha \}\}/);
+  assert.deepEqual(workflowSecrets(smokeJob), [
+    'PREVIEW_CF_ACCESS_CLIENT_ID',
+    'PREVIEW_CF_ACCESS_CLIENT_SECRET',
+    'PREVIEW_CLERK_SMOKE_SECRET_KEY',
+  ]);
+  assert.doesNotMatch(releaseStep, /^\s*if:/m);
+  assert.match(releaseStep, /npm run smoke:preview-release/);
+  assert.match(releaseStep, /PREVIEW_WEBHOOK_ACCESS_MODE: \$\{\{ needs\.resolve-rollout\.outputs\.preview_webhook_access_mode \}\}/);
+  assert.match(authenticatedStep, /^\s*if: needs\.resolve-rollout\.outputs\.preview_stripe_enabled == 'true'$/m);
+  assert.match(authenticatedStep, /npm run smoke:preview-authenticated-provider-readonly/);
+  assert.doesNotMatch(authenticatedStep, /ACCOUNT_SMOKE_CONFIRM|DELETE_ISOLATED_PREVIEW_DATA/);
+  assert.match(destructiveStep, /^\s*if: needs\.resolve-rollout\.outputs\.preview_destructive_smoke_enabled == 'true'$/m);
+  assert.match(destructiveStep, /ACCOUNT_SMOKE_CONFIRM: DELETE_ISOLATED_PREVIEW_DATA/);
+  assert.match(destructiveStep, /npm run smoke:account-preview/);
+
+  assert.match(smokeJob, /npx --no-install playwright install --with-deps chromium/);
+  assert.match(workflow, /npm ci --no-audit --no-fund/);
+  assert.match(deployJob, /npm run coverage/);
+  assert.match(deployJob, /npm audit --audit-level=high/);
+  assert.match(deployJob, /npm run build:functions/);
+
+  assert.match(deployJob, /d1 migrations list solvency-build-plans-preview --env preview --remote/);
+  assert.match(deployJob, /grep -Fq "No migrations to apply"/);
   assert.doesNotMatch(workflow, /d1 migrations apply|pages secret (?:put|bulk|delete)/);
-  assert.match(workflow, /--branch d1-functions-preview/);
-  assert.match(workflow, /--commit-hash \$\{\{ github\.sha \}\}/);
-  assert.doesNotMatch(workflow, /--branch main/);
+  assert.match(deployJob, /--branch d1-functions-preview/);
+  assert.match(deployJob, /--commit-hash \$\{\{ github\.sha \}\}/);
+  assert.doesNotMatch(deployJob, /--branch main/);
 
   const authorization = workflow.indexOf('Require reviewed preview authorization');
+  const provider = workflow.indexOf('Verify same-commit read-only Stripe sandbox configuration');
   const testSuite = workflow.indexOf('Verify datasets, server boundaries and published figures');
   const migrationGate = workflow.indexOf('Require a fully migrated Preview database');
   const publish = workflow.indexOf('Publish current commit to the isolated Preview branch');
-  const smoke = workflow.indexOf('Attest exact Preview SHA and run authenticated smoke');
-  assert.ok(authorization >= 0 && authorization < testSuite);
+  const smoke = workflow.indexOf('Run non-destructive Preview release attestation');
+  assert.ok(authorization >= 0 && authorization < provider && provider < testSuite);
   assert.ok(testSuite < migrationGate && migrationGate < publish);
   assert.ok(publish < smoke);
-
-  const deployJob = workflow.split('  deploy-preview:\n', 2)[1]?.split('\n  smoke-preview:', 1)[0] ?? '';
-  const smokeJob = workflow.split('\n  smoke-preview:', 2)[1] ?? '';
-  assert.doesNotMatch(deployJob, /PREVIEW_CLERK_SMOKE_SECRET_KEY|PREVIEW_CF_ACCESS_CLIENT/);
-  assert.doesNotMatch(smokeJob, /CLOUDFLARE_API_TOKEN|CLOUDFLARE_ACCOUNT_ID/);
-  assert.match(smokeJob, /^\s+environment:\n\s+name: preview\n\s+deployment: false$/m);
-  assert.match(smokeJob, /^\s+permissions:\n\s+contents: read$/m);
+  assert.match(providerJob, /^\s*permissions:\n\s+contents: read$/m);
+  assert.match(smokeJob, /^\s*permissions:\n\s+contents: read$/m);
 });
 
 test('D1 quota triggers use the remotely compatible parenthesized CASE form', () => {

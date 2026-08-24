@@ -1,8 +1,12 @@
 ---
 import Base from '../layouts/Base.astro';
 import Section from '../components/Section.astro';
-import { CLERK_ENABLED } from '../lib/clerk.ts';
+import StripeSandbox from '../components/StripeSandbox.astro';
+import { CLERK_ENABLED, CLERK_PUBLISHABLE_KEY } from '../lib/clerk.ts';
 const PRODUCT_INTENTS_ENABLED = import.meta.env.PUBLIC_PRODUCT_INTENTS_ENABLED === 'true';
+const STRIPE_SANDBOX_UI_ENABLED = import.meta.env.PUBLIC_DEPLOYMENT_ENV === 'preview'
+  && import.meta.env.PUBLIC_STRIPE_SANDBOX_UI_ENABLED === 'true'
+  && CLERK_PUBLISHABLE_KEY.startsWith('pk_test_');
 
 const comparison = [
   {
@@ -50,7 +54,7 @@ const comparison = [
 const launchDecisions = [
   {
     title: 'Trial',
-    copy: 'Decision pending. Before checkout, Solvency must state whether there is no trial or publish its exact length and first billing date.',
+    copy: 'Decision pending. Before public or live checkout, Solvency must state whether there is no trial or publish its exact length and first billing date.',
   },
   {
     title: 'Cancellation',
@@ -76,15 +80,19 @@ const launchDecisions = [
     <section class="card card-pad mt-8 grid gap-5 sm:grid-cols-[1fr_auto] sm:items-start" aria-labelledby="pricing-status-title">
       <div class="max-w-3xl">
         <p class="label">Launch status</p>
-        <h2 class="h-card mt-2" id="pricing-status-title">There is nothing to buy today.</h2>
-        <p class="mt-2 text-sm leading-relaxed">Billing is not live. There is no active checkout, trial, subscription, upgrade or paid entitlement. The Build Composer is an open product preview, and its current access and safety limits do not establish the final Free or Pro tiers.</p>
+        <h2 class="h-card mt-2" id="pricing-status-title">{STRIPE_SANDBOX_UI_ENABLED ? 'Operator-only Stripe sandbox.' : 'There is nothing to buy today.'}</h2>
+        <p class="mt-2 text-sm leading-relaxed">{STRIPE_SANDBOX_UI_ENABLED
+          ? 'This Access-protected Preview may create Stripe test Customers, test Subscriptions and Preview entitlement records. It cannot accept a real payment or create a live subscription. Public and Production billing remain off.'
+          : 'Billing is not live. There is no active checkout, trial, subscription, upgrade or paid entitlement. The Build Composer is an open product preview, and its current access and safety limits do not establish the final Free or Pro tiers.'}</p>
         <div class="mt-4 flex flex-wrap gap-2">
           <a class="btn" href="/build-planner">Use the open Build Composer</a>
           <a class="btn btn-quiet" href="#launch-decisions">Review launch decisions ↓</a>
         </div>
       </div>
-      <span class="pill pill-ink self-start justify-self-start">Billing off</span>
+      <span class="pill pill-ink self-start justify-self-start">{STRIPE_SANDBOX_UI_ENABLED ? 'Test mode' : 'Billing off'}</span>
     </section>
+
+    {STRIPE_SANDBOX_UI_ENABLED && <StripeSandbox />}
 
     <Section id="plans" eyebrow="Packaging" title="Free now; Pro is a validation hypothesis" class="mt-20"
       caption="The proposed price and feature boundary may change after recurring-value evidence is reviewed.">
@@ -153,8 +161,8 @@ const launchDecisions = [
       <p class="small mt-3">“Planned” does not guarantee inclusion, timing or a final limit. Final entitlements will be enforced by the server before billing is enabled.</p>
     </Section>
 
-    <Section id="launch-decisions" eyebrow="Before checkout" title="Terms that still need a launch decision"
-      caption="These items will be decided and published before any payment action is shown.">
+    <Section id="launch-decisions" eyebrow="Before public checkout" title="Terms that still need a launch decision"
+      caption="These items will be decided and published before any public or live payment action is shown.">
       <div class="tile-grid sm:grid-cols-2">
         {launchDecisions.map((item) => (
           <article class="tile">

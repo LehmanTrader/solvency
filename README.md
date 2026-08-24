@@ -13,6 +13,12 @@ pricing export, an embed widget and a changelog. Every push to `main` runs the t
 deploys via GitHub Actions to Cloudflare Pages. Phase 3 (Solvency's own measured runs) is not
 started.
 
+**Paid-tier rollout state (2026-08-24):** there is no purchasable paid tier yet. Stripe is dark
+in the protected Preview deployment, and all account and billing surfaces remain dark in
+production. The reviewed rollout sequence and recovery procedures live in
+[`site/OPERATIONS.md`](site/OPERATIONS.md); the source-controlled Preview switch state lives in
+[`site/preview-rollout.json`](site/preview-rollout.json).
+
 ```
 npm test          # regression, integrity and report tests re-derive every published table
 npm run coverage  # source, coverage and staleness audit

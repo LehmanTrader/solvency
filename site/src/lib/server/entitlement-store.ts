@@ -17,6 +17,7 @@ export interface OwnerEntitlement {
   active: boolean;
   source: 'none' | 'stripe';
   status: BillingSubscriptionStatus | 'none';
+  billingInterval: 'month' | 'year' | null;
   currentPeriodEnd: string | null;
   cancelAtPeriodEnd: boolean;
 }
@@ -234,7 +235,7 @@ export async function getBoundBillingCustomerId(
 function freeEntitlement(): OwnerEntitlement {
   return {
     tier: 'free', active: false, source: 'none', status: 'none',
-    currentPeriodEnd: null, cancelAtPeriodEnd: false,
+    billingInterval: null, currentPeriodEnd: null, cancelAtPeriodEnd: false,
   };
 }
 
@@ -270,6 +271,7 @@ export async function getOwnerEntitlement(
     active,
     source: 'stripe',
     status,
+    billingInterval: price?.interval ?? null,
     currentPeriodEnd: new Date(row.current_period_end * 1000).toISOString(),
     cancelAtPeriodEnd: row.cancel_at_period_end === 1,
   };

@@ -1,0 +1,48 @@
+---
+import { CLERK_ENABLED } from '../lib/clerk.ts';
+import stripeSandboxRuntime from '../lib/stripe-sandbox-runtime.js?raw';
+---
+<section class="card card-pad mt-5 border-[var(--color-rule-strong)]" id="stripe-sandbox-console"
+  data-clerk-enabled={CLERK_ENABLED ? 'true' : 'false'}
+  data-preview-origin="https://d1-functions-preview.solvency-ru5.pages.dev"
+  aria-labelledby="stripe-sandbox-title" hidden>
+  <div class="flex flex-wrap items-start justify-between gap-3">
+    <div>
+      <p class="label">Protected Preview</p>
+      <h2 class="h-card mt-2" id="stripe-sandbox-title">Stripe test-mode billing harness</h2>
+    </div>
+    <span class="pill pill-ink">Sandbox · no real charges</span>
+  </div>
+  <p class="mt-3 max-w-3xl text-sm leading-relaxed">Operator-only validation. These controls open Stripe-hosted test pages and can create test Customer and Subscription records in the isolated Preview account. They cannot charge a real card or change Production.</p>
+  <p class="mt-3 max-w-3xl text-sm leading-relaxed" id="stripe-sandbox-warning"><strong>Use only Stripe test payment details.</strong> Do not enter a real card number or real customer data. This is not a customer offer; trial, cancellation, refund, tax and renewal terms are not final.</p>
+  <p class="mt-3 text-sm leading-relaxed text-[var(--color-muted)]" id="stripe-sandbox-help">Sign in with a Preview test account. The browser sends only the billing cadence; the server selects the allowlisted Stripe test Price. Existing or unpaid test subscriptions must be managed in the portal and cannot start a second Checkout.</p>
+  <div class="card card-pad mt-4" id="stripe-sandbox-return" role="region" tabindex="-1"
+    aria-labelledby="stripe-sandbox-return-title" aria-describedby="stripe-sandbox-return-copy" hidden>
+    <h3 class="h-card" id="stripe-sandbox-return-title"></h3>
+    <p class="mt-2 text-sm leading-relaxed" id="stripe-sandbox-return-copy"></p>
+  </div>
+  <div class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4" role="group" aria-label="Stripe sandbox actions" aria-describedby="stripe-sandbox-help stripe-sandbox-warning">
+    <button type="button" class="btn min-w-0 w-full whitespace-normal text-center" id="stripe-sandbox-month" disabled>Open $19/month test Checkout</button>
+    <button type="button" class="btn min-w-0 w-full whitespace-normal text-center" id="stripe-sandbox-year" disabled>Open $190/year test Checkout</button>
+    <button type="button" class="btn btn-quiet min-w-0 w-full whitespace-normal text-center" id="stripe-sandbox-portal" disabled>Open test billing portal</button>
+    <button type="button" class="btn btn-quiet min-w-0 w-full whitespace-normal text-center" id="stripe-sandbox-refresh" disabled>Refresh verified status</button>
+  </div>
+  <div class="card card-pad mt-4" id="stripe-sandbox-summary" role="status" aria-live="polite" aria-atomic="true" hidden>
+    <h3 class="h-card">Verified account snapshot</h3>
+    <dl class="mt-3 grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-4">
+      <div><dt class="label">Test identity</dt><dd class="mt-1 break-all" id="stripe-sandbox-identity"></dd></div>
+      <div><dt class="label">Preview access</dt><dd class="mt-1" id="stripe-sandbox-access"></dd></div>
+      <div><dt class="label">Stripe status</dt><dd class="mt-1" id="stripe-sandbox-subscription-status"></dd></div>
+      <div><dt class="label">Cadence</dt><dd class="mt-1" id="stripe-sandbox-cadence"></dd></div>
+      <div><dt class="label">Current test period ends</dt><dd class="mt-1 break-words num" id="stripe-sandbox-period-end"></dd></div>
+      <div><dt class="label">Period-end cancellation</dt><dd class="mt-1" id="stripe-sandbox-cancellation"></dd></div>
+      <div><dt class="label">Last checked</dt><dd class="mt-1 break-words num" id="stripe-sandbox-checked"></dd></div>
+    </dl>
+  </div>
+  <p class="mt-3 text-sm leading-relaxed" id="stripe-sandbox-status" role="status" aria-live="polite" aria-atomic="true">Preview account controls are loading.</p>
+  <p class="mt-2 text-sm leading-relaxed text-[var(--color-worse)]" id="stripe-sandbox-error" role="alert" aria-atomic="true"></p>
+</section>
+
+<!-- `?raw` plus an inline module is intentional: when the build-time gate is
+     false, Astro emits neither this markup nor a dormant Preview JS chunk. -->
+<script is:inline type="module" set:html={stripeSandboxRuntime}></script>

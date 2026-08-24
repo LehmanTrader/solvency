@@ -35,6 +35,8 @@ jobs:
           fi
 
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
       - name: Verify checked-out production commit
         shell: bash
@@ -63,6 +65,10 @@ jobs:
         working-directory: site
         run: npm run check:migrations
 
+      - name: Verify source-controlled rollout state
+        working-directory: site
+        run: npm run verify:rollout-state
+
       # Guards the published figures: the report tests re-derive every table
       # from the datasets, so a bad price edit fails here rather than shipping.
       # Some root tests import site server modules, so install their dependencies
@@ -86,8 +92,14 @@ jobs:
           PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.PUBLIC_CLERK_PUBLISHABLE_KEY }}
           PUBLIC_ACCOUNT_PLANS_ENABLED: 'false'
           PUBLIC_PRODUCT_INTENTS_ENABLED: 'false'
+          PUBLIC_DEPLOYMENT_ENV: 'production'
+          PUBLIC_STRIPE_SANDBOX_UI_ENABLED: 'false'
           PUBLIC_BUILD_SHA: ${{ github.sha }}
         run: npm run build
+
+      - name: Prove Preview billing code is absent from the production artifact
+        working-directory: site
+        run: npm run verify:production-artifact-dark
 
       - name: Verify Pages Functions bundle
         working-directory: site

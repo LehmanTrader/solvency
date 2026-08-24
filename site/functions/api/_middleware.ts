@@ -1,5 +1,6 @@
 import { apiError, enforceOwnerRateLimit, validateMutationBoundary, withApiHeaders } from '../../src/lib/server/api-http.ts';
 import { authenticateOwner, clerkAuthConfiguration } from '../../src/lib/server/clerk-auth.ts';
+import { expectedDeploymentOrigin } from '../../src/lib/server/deployment-origin.ts';
 import type { PagesHandler } from '../../src/lib/server/pages-types.ts';
 
 export const onRequest: PagesHandler = async (context) => {
@@ -10,12 +11,19 @@ export const onRequest: PagesHandler = async (context) => {
   const requestUrl = new URL(context.request.url);
   const pathname = requestUrl.pathname;
   // Stripe cannot present a Clerk session, browser Origin, or Cloudflare
-  // Access service-token headers. The future exact webhook handler must cap and
-  // verify the untouched raw body with Stripe-Signature before parsing it. Keep
-  // this exception exact so adjacent API paths retain every account boundary.
+  // Access service-token headers. The exact webhook handler caps and verifies
+  // the untouched raw body with Stripe-Signature before parsing it. Keep this
+  // exception host- and path-locked so adjacent routes retain every boundary.
   if (pathname === '/api/stripe-webhook') {
     if (context.env.STRIPE_WEBHOOK_ENABLED !== 'true') {
       return finish(apiError(requestId, 503, 'SERVICE_UNAVAILABLE', 'Stripe webhook service is unavailable.'));
+    }
+    const expectedOrigin = expectedDeploymentOrigin(context.env.APP_ENV);
+    if (!expectedOrigin) {
+      return finish(apiError(requestId, 503, 'SERVICE_UNAVAILABLE', 'Stripe webhook service is unavailable.'));
+    }
+    if (requestUrl.origin !== expectedOrigin) {
+      return finish(apiError(requestId, 400, 'INVALID_REQUEST', 'Webhook request is invalid.'));
     }
     if (context.request.method !== 'POST') {
       return finish(apiError(requestId, 405, 'METHOD_NOT_ALLOWED', 'Method is not allowed.', { allow: 'POST' }));
@@ -41,6 +49,7 @@ export const onRequest: PagesHandler = async (context) => {
   const previewAccountErasureRoute = pathname === '/api/preview-account-erasure';
   const stripeCheckoutRoute = pathname === '/api/checkout';
   const stripePortalRoute = pathname === '/api/billing-portal';
+  const stripeReadinessRoute = pathname === '/api/billing-readiness';
   const featureEnabled = accountPlansRoute
     ? context.env.ACCOUNT_PLANS_ENABLED === 'true'
     : entitlementRoute
@@ -51,16 +60,20 @@ export const onRequest: PagesHandler = async (context) => {
           ? context.env.STRIPE_CHECKOUT_ENABLED === 'true'
           : stripePortalRoute
             ? context.env.STRIPE_PORTAL_ENABLED === 'true'
-            : previewAccountErasureRoute
-              && context.env.APP_ENV === 'preview'
-              && context.env.PREVIEW_ACCOUNT_ERASURE_ENABLED === 'true'
-              // The destructive Preview smoke route cannot coexist with any
-              // provider-backed billing surface. A real account-deletion flow
-              // needs a durable deletion tombstone and provider reconciliation
-              // before its final D1 cascade.
-              && context.env.STRIPE_CHECKOUT_ENABLED !== 'true'
-              && context.env.STRIPE_PORTAL_ENABLED !== 'true'
-              && context.env.STRIPE_WEBHOOK_ENABLED !== 'true';
+            : stripeReadinessRoute
+              ? context.env.STRIPE_CHECKOUT_ENABLED === 'true'
+                || context.env.STRIPE_PORTAL_ENABLED === 'true'
+                || context.env.STRIPE_WEBHOOK_ENABLED === 'true'
+              : previewAccountErasureRoute
+                && context.env.APP_ENV === 'preview'
+                && context.env.PREVIEW_ACCOUNT_ERASURE_ENABLED === 'true'
+                // The destructive Preview smoke route cannot coexist with any
+                // provider-backed billing surface. A real account-deletion flow
+                // needs a durable deletion tombstone and provider reconciliation
+                // before its final D1 cascade.
+                && context.env.STRIPE_CHECKOUT_ENABLED !== 'true'
+                && context.env.STRIPE_PORTAL_ENABLED !== 'true'
+                && context.env.STRIPE_WEBHOOK_ENABLED !== 'true';
   if (!featureEnabled) {
     return finish(apiError(requestId, 503, 'SERVICE_UNAVAILABLE', 'Account service is unavailable.'));
   }

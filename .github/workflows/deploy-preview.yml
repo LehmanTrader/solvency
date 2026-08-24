@@ -2,27 +2,17 @@ name: Deploy Preview
 
 # Required GitHub environment checklist (create `preview` before first use):
 # - Add a required reviewer and restrict deployment branches to `main`.
-# - Add environment variable PREVIEW_CLERK_PUBLISHABLE_KEY with a Clerk
-#   Development-instance `pk_test_...` key. The production repository variable
-#   is deliberately not used by this workflow.
-# - Make CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID available as repository
-#   or preview-environment secrets. The token needs Pages write and D1 read.
-# - Configure Clerk server credentials and a random, unpadded-base64url
-#   BUILD_SHARE_TOKEN_SECRET (at least 32 bytes before encoding) as Cloudflare
-#   Pages Preview secrets. Protect d1-functions-preview.solvency-ru5.pages.dev
-#   with Cloudflare Access, and create an Access service token for the smoke
-#   runner. Add a separate Clerk Development Secret Key plus the Access token as
-#   preview-environment secrets PREVIEW_CLERK_SMOKE_SECRET_KEY,
-#   PREVIEW_CF_ACCESS_CLIENT_ID and PREVIEW_CF_ACCESS_CLIENT_SECRET.
-# - The reviewed Wrangler configuration enables ACCOUNT_PLANS_ENABLED,
-#   ENTITLEMENTS_ENABLED and PRODUCT_INTENTS_ENABLED only for Preview.
-# - Keep STRIPE_WEBHOOK_ENABLED false until a signed, size-bounded POST-only
-#   handler is deployed. Before Stripe sandbox testing, keep the hostname private
-#   but add an exact Access bypass (or separate public hostname) only for
-#   /api/stripe-webhook; that exception is safe only after raw-body Stripe
-#   signature verification exists.
-# This workflow never applies migrations or changes Pages secrets. Runtime
-# flags are source-controlled in wrangler.toml; production and Stripe stay dark.
+# - Add PREVIEW_CLERK_PUBLISHABLE_KEY as an environment variable with a Clerk
+#   Development-instance pk_test_ key. Production variables are not reused.
+# - Store Cloudflare deploy credentials, the Clerk Development smoke secret,
+#   Cloudflare Access service token, and the Stripe read-only configuration key
+#   as preview-environment secrets. Jobs receive only the credentials they use.
+# - Keep the exact Preview hostname private. The only public Access exception
+#   permitted by the rollout manifest is /api/stripe-webhook.
+# - preview-rollout.json and wrangler.toml are the reviewed rollout authority.
+#   Provider objects are re-attested from this same commit before any deploy
+#   with a Stripe surface enabled.
+# This workflow never applies migrations or changes provider secrets.
 
 on:
   workflow_dispatch:
@@ -41,12 +31,21 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy-preview:
+  resolve-rollout:
     runs-on: ubuntu-latest
-    environment: preview
     permissions:
       contents: read
-      deployments: write
+    outputs:
+      preview_stripe_enabled: ${{ steps.rollout.outputs.preview_stripe_enabled }}
+      preview_account_plans_enabled: ${{ steps.rollout.outputs.preview_account_plans_enabled }}
+      preview_product_intents_enabled: ${{ steps.rollout.outputs.preview_product_intents_enabled }}
+      preview_erasure_enabled: ${{ steps.rollout.outputs.preview_erasure_enabled }}
+      preview_webhook_enabled: ${{ steps.rollout.outputs.preview_webhook_enabled }}
+      preview_portal_enabled: ${{ steps.rollout.outputs.preview_portal_enabled }}
+      preview_checkout_enabled: ${{ steps.rollout.outputs.preview_checkout_enabled }}
+      preview_sandbox_ui_enabled: ${{ steps.rollout.outputs.preview_sandbox_ui_enabled }}
+      preview_webhook_access_mode: ${{ steps.rollout.outputs.preview_webhook_access_mode }}
+      preview_destructive_smoke_enabled: ${{ steps.rollout.outputs.preview_destructive_smoke_enabled }}
     steps:
       - name: Require reviewed preview authorization
         shell: bash
@@ -66,31 +65,101 @@ jobs:
             echo "GitHub did not provide an exact commit SHA."
             exit 1
           fi
-
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '24'
 
-      - name: Verify checked-out commit and required configuration
+      - name: Verify exact source and resolve rollout state
+        id: rollout
+        working-directory: site
         shell: bash
-        env:
-          PREVIEW_CLERK_PUBLISHABLE_KEY: ${{ vars.PREVIEW_CLERK_PUBLISHABLE_KEY }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
           if [[ "$(git rev-parse HEAD)" != "$GITHUB_SHA" ]]; then
-            echo "Checked-out commit does not match the workflow commit."
+            echo "Rollout checkout does not match the workflow commit."
             exit 1
           fi
-          if [[ "$PREVIEW_CLERK_PUBLISHABLE_KEY" != pk_test_* ]]; then
-            echo "The preview environment requires a Clerk Development publishable key."
+          npm run verify:rollout-state -- --github-output "$GITHUB_OUTPUT"
+
+  stripe-config-preflight:
+    needs: resolve-rollout
+    if: needs.resolve-rollout.outputs.preview_stripe_enabled == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment:
+      name: preview
+      deployment: false
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+
+      - name: Verify same-commit read-only Stripe sandbox configuration
+        working-directory: site
+        shell: bash
+        env:
+          STRIPE_CONFIG_READ_ONLY_KEY: ${{ secrets.PREVIEW_STRIPE_CONFIG_READ_ONLY_KEY }}
+          STRIPE_ACCOUNT_ID: ${{ vars.PREVIEW_STRIPE_ACCOUNT_ID }}
+          STRIPE_PRO_PRODUCT_ID: ${{ vars.PREVIEW_STRIPE_PRO_PRODUCT_ID }}
+          STRIPE_PRO_MONTHLY_PRICE_ID: ${{ vars.PREVIEW_STRIPE_PRO_MONTHLY_PRICE_ID }}
+          STRIPE_PRO_ANNUAL_PRICE_ID: ${{ vars.PREVIEW_STRIPE_PRO_ANNUAL_PRICE_ID }}
+          STRIPE_WEBHOOK_ENDPOINT_ID: ${{ vars.PREVIEW_STRIPE_WEBHOOK_ENDPOINT_ID }}
+          STRIPE_PORTAL_CONFIGURATION_ID: ${{ vars.PREVIEW_STRIPE_PORTAL_CONFIGURATION_ID }}
+        run: |
+          set -euo pipefail
+          if [[ "$(git rev-parse HEAD)" != "$GITHUB_SHA" ]]; then
+            echo "Stripe preflight checkout does not match the deployment commit."
+            exit 1
+          fi
+          npm run smoke:stripe-preview-config
+
+  deploy-preview:
+    needs: [resolve-rollout, stripe-config-preflight]
+    if: ${{ !cancelled() && needs.resolve-rollout.result == 'success' && (needs.resolve-rollout.outputs.preview_stripe_enabled == 'false' || needs.stripe-config-preflight.result == 'success') }}
+    runs-on: ubuntu-latest
+    environment: preview
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+
+      - name: Verify checked-out commit and deployment credentials
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PREVIEW_CLERK_PUBLISHABLE_KEY: ${{ vars.PREVIEW_CLERK_PUBLISHABLE_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ "$(git rev-parse HEAD)" != "$GITHUB_SHA" ]]; then
+            echo "Deployment checkout does not match the workflow commit."
             exit 1
           fi
           if [[ -z "$CLOUDFLARE_API_TOKEN" || -z "$CLOUDFLARE_ACCOUNT_ID" ]]; then
             echo "Cloudflare preview deployment credentials are unavailable."
+            exit 1
+          fi
+          if [[ "$PREVIEW_CLERK_PUBLISHABLE_KEY" != pk_test_* ]]; then
+            echo "The preview environment requires a Clerk Development publishable key."
             exit 1
           fi
 
@@ -102,8 +171,10 @@ jobs:
         working-directory: site
         run: npm run check:migrations
 
-      # Root tests import site server modules, so the frozen site install must
-      # remain ahead of this step.
+      - name: Re-verify source-controlled rollout state
+        working-directory: site
+        run: npm run verify:rollout-state
+
       - name: Verify datasets, server boundaries and published figures
         run: npm test
 
@@ -114,12 +185,14 @@ jobs:
         working-directory: site
         run: npm audit --audit-level=high
 
-      - name: Build preview with account UI enabled
+      - name: Build reviewed Preview artifact
         working-directory: site
         env:
           PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.PREVIEW_CLERK_PUBLISHABLE_KEY }}
-          PUBLIC_ACCOUNT_PLANS_ENABLED: 'true'
-          PUBLIC_PRODUCT_INTENTS_ENABLED: 'true'
+          PUBLIC_ACCOUNT_PLANS_ENABLED: ${{ needs.resolve-rollout.outputs.preview_account_plans_enabled }}
+          PUBLIC_PRODUCT_INTENTS_ENABLED: ${{ needs.resolve-rollout.outputs.preview_product_intents_enabled }}
+          PUBLIC_DEPLOYMENT_ENV: 'preview'
+          PUBLIC_STRIPE_SANDBOX_UI_ENABLED: ${{ needs.resolve-rollout.outputs.preview_sandbox_ui_enabled }}
           PUBLIC_BUILD_SHA: ${{ github.sha }}
         run: npm run build
 
@@ -139,8 +212,6 @@ jobs:
             exit 1
           fi
 
-      # Wrangler exits zero when migrations are pending, so require its exact
-      # no-pending state instead of trusting the process status alone.
       - name: Require a fully migrated Preview database
         working-directory: site
         shell: bash
@@ -176,7 +247,7 @@ jobs:
             --commit-dirty=false
 
   smoke-preview:
-    needs: deploy-preview
+    needs: [resolve-rollout, deploy-preview]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment:
@@ -207,11 +278,41 @@ jobs:
         working-directory: site
         run: npm ci --no-audit --no-fund
 
+      - name: Run non-destructive Preview release attestation
+        working-directory: site
+        env:
+          PREVIEW_BASE_URL: https://d1-functions-preview.solvency-ru5.pages.dev
+          EXPECTED_BUILD_SHA: ${{ github.sha }}
+          CLERK_PUBLISHABLE_KEY: ${{ vars.PREVIEW_CLERK_PUBLISHABLE_KEY }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.PREVIEW_CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.PREVIEW_CF_ACCESS_CLIENT_SECRET }}
+          PREVIEW_ACCOUNT_ERASURE_ENABLED: ${{ needs.resolve-rollout.outputs.preview_erasure_enabled }}
+          PREVIEW_STRIPE_WEBHOOK_ENABLED: ${{ needs.resolve-rollout.outputs.preview_webhook_enabled }}
+          PREVIEW_STRIPE_PORTAL_ENABLED: ${{ needs.resolve-rollout.outputs.preview_portal_enabled }}
+          PREVIEW_STRIPE_CHECKOUT_ENABLED: ${{ needs.resolve-rollout.outputs.preview_checkout_enabled }}
+          PREVIEW_STRIPE_SANDBOX_UI_ENABLED: ${{ needs.resolve-rollout.outputs.preview_sandbox_ui_enabled }}
+          PREVIEW_WEBHOOK_ACCESS_MODE: ${{ needs.resolve-rollout.outputs.preview_webhook_access_mode }}
+        run: npm run smoke:preview-release
+
       - name: Install pinned smoke browser
         working-directory: site
         run: npx --no-install playwright install --with-deps chromium
 
-      - name: Attest exact Preview SHA and run authenticated smoke
+      - name: Run authenticated provider-read-only smoke after billing state exists
+        if: needs.resolve-rollout.outputs.preview_stripe_enabled == 'true'
+        working-directory: site
+        env:
+          PREVIEW_BASE_URL: https://d1-functions-preview.solvency-ru5.pages.dev
+          EXPECTED_BUILD_SHA: ${{ github.sha }}
+          CLERK_SECRET_KEY: ${{ secrets.PREVIEW_CLERK_SMOKE_SECRET_KEY }}
+          CLERK_PUBLISHABLE_KEY: ${{ vars.PREVIEW_CLERK_PUBLISHABLE_KEY }}
+          CLERK_SMOKE_USER_EMAIL: ${{ vars.PREVIEW_CLERK_SMOKE_USER_EMAIL }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.PREVIEW_CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.PREVIEW_CF_ACCESS_CLIENT_SECRET }}
+        run: npm run smoke:preview-authenticated-provider-readonly
+
+      - name: Run destructive two-user account smoke while billing is dark
+        if: needs.resolve-rollout.outputs.preview_destructive_smoke_enabled == 'true'
         working-directory: site
         env:
           PREVIEW_BASE_URL: https://d1-functions-preview.solvency-ru5.pages.dev

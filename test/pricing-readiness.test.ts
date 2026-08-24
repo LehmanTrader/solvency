@@ -49,6 +49,54 @@ test('provisional prices cannot be mistaken for an active offer', () => {
   assert.doesNotMatch(page, /btn-accent/);
 });
 
+test('Stripe sandbox controls are double-gated, test-only and distrust browser return markers', () => {
+  const page = read('site/src/pages/pricing.astro');
+  const component = read('site/src/components/StripeSandbox.astro');
+  const client = read('site/src/lib/stripe-sandbox-runtime.js');
+  const production = read('.github/workflows/deploy.yml');
+  const preview = read('.github/workflows/deploy-preview.yml');
+  const rollout = JSON.parse(read('site/preview-rollout.json'));
+
+  assert.match(page, /PUBLIC_DEPLOYMENT_ENV === 'preview'/);
+  assert.match(page, /PUBLIC_STRIPE_SANDBOX_UI_ENABLED === 'true'/);
+  assert.match(page, /CLERK_PUBLISHABLE_KEY\.startsWith\('pk_test_'\)/);
+  assert.match(page, /\{STRIPE_SANDBOX_UI_ENABLED && <StripeSandbox \/>\}/);
+  assert.match(component, /id="stripe-sandbox-console"[\s\S]*hidden/);
+  assert.match(component, /Protected Preview/);
+  assert.match(component, /Use only Stripe test payment details/);
+  assert.match(page, /cannot accept a real payment or create a live subscription/);
+  assert.match(client, /return URL is not proof of payment or Pro access/);
+  assert.match(client, /does not delete an earlier test subscription or prove that no Stripe record exists/);
+  assert.match(component, /id="stripe-sandbox-month"[^>]*disabled/);
+  assert.match(component, /id="stripe-sandbox-year"[^>]*disabled/);
+  assert.match(component, /id="stripe-sandbox-portal"[^>]*disabled/);
+  assert.match(component, /id="stripe-sandbox-refresh"[^>]*disabled/);
+  assert.match(component, /stripe-sandbox-runtime\.js\?raw/);
+  assert.match(component, /script is:inline type="module"/);
+  assert.match(client, /authState\.status !== 'signed-in'/);
+  assert.match(client, /location\.origin !== previewOrigin/);
+  assert.match(client, /sandbox\.remove\(\)/);
+  assert.match(client, /history\.replaceState/);
+  assert.match(component, /role="alert" aria-atomic="true"/);
+  assert.match(client, /authenticatedJsonFetch/);
+  assert.match(client, /'Idempotency-Key'/);
+  assert.match(client, /stripeCheckoutBrowserKey/);
+  assert.match(client, /same signed-in Preview session\/cadence deterministically replays/);
+  assert.match(client, /checkout\.stripe\.com/);
+  assert.match(client, /billing\.stripe\.com/);
+  assert.match(client, /cs_test_/);
+  assert.doesNotMatch(client, /innerHTML|window\.open|unsafeMetadata|sessionStorage|localStorage/);
+  assert.match(production, /PUBLIC_DEPLOYMENT_ENV: 'production'/);
+  assert.match(production, /PUBLIC_STRIPE_SANDBOX_UI_ENABLED: 'false'/);
+  assert.match(production, /npm run verify:production-artifact-dark/);
+  assert.match(preview, /PUBLIC_DEPLOYMENT_ENV: 'preview'/);
+  assert.equal(rollout.stripeSandboxUiEnabled, false);
+  assert.match(preview, /PUBLIC_STRIPE_SANDBOX_UI_ENABLED: \$\{\{ needs\.resolve-rollout\.outputs\.preview_sandbox_ui_enabled \}\}/);
+  assert.match(preview, /npm run verify:rollout-state/);
+  assert.doesNotMatch(production, /vars\.PUBLIC_STRIPE_SANDBOX_UI_ENABLED/);
+  assert.doesNotMatch(preview, /vars\.PUBLIC_STRIPE_SANDBOX_UI_ENABLED/);
+});
+
 test('pricing names unresolved pre-checkout policy decisions instead of promising terms', () => {
   const page = read('site/src/pages/pricing.astro');
   for (const item of ['Trial', 'Cancellation', 'Refunds', 'Tax']) {
@@ -58,5 +106,5 @@ test('pricing names unresolved pre-checkout policy decisions instead of promisin
   assert.match(page, /automatic-renewal terms/);
   assert.match(page, /href="\/terms"/);
   assert.match(page, /href="\/privacy"/);
-  assert.match(page, /decided and published before any payment action is shown/);
+  assert.match(page, /decided and published before any public or live payment action is shown/);
 });

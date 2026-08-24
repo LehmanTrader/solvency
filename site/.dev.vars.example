@@ -1,4 +1,7 @@
-# Copy to .dev.vars for local Pages Functions testing. Never commit real keys.
+# Copy the active values in this first section to .dev.vars for local Pages
+# Functions runtime testing. Never commit real keys.
+#
+# --- Pages Functions runtime values (Wrangler) ---
 APP_ENV=development
 ACCOUNT_PLANS_ENABLED=false
 ENTITLEMENTS_ENABLED=false
@@ -14,11 +17,34 @@ CLERK_JWT_KEY="-----BEGIN PUBLIC KEY-----\nreplace_me\n-----END PUBLIC KEY-----"
 # At least 32 random bytes encoded as unpadded base64url. Server-only: never
 # prefix with PUBLIC_ and never place the real value in source or GitHub vars.
 BUILD_SHARE_TOKEN_SECRET=<replace-with-32-random-bytes-as-base64url>
-# Non-secret Stripe Price IDs. Leave both absent until the sandbox product and
-# recurring monthly/yearly prices exist; incomplete configuration fails closed.
-STRIPE_PRO_MONTHLY_PRICE_ID=
-STRIPE_PRO_ANNUAL_PRICE_ID=
-# Server-only Stripe credentials. Keep absent until the local adapter matrix is
-# green and a separate test-mode sandbox hookup is approved.
+
+# Stripe sandbox runtime configuration. Leave these empty unless intentionally
+# testing the local billing adapters; incomplete or wrong-mode values fail
+# closed. Expected test-mode prefixes are shown beside each value.
+# - Runtime secret key: sk_test_
+# - Webhook signing secret: whsec_
+# - Account trust anchor: acct_
+# - Reviewed non-default Portal configuration: bpc_
+# - Monthly and annual recurring prices: price_
 STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=
+STRIPE_ACCOUNT_ID=
+STRIPE_PORTAL_CONFIGURATION_ID=
+STRIPE_PRO_MONTHLY_PRICE_ID=
+STRIPE_PRO_ANNUAL_PRICE_ID=
+
+# Do not add STRIPE_PRO_PRODUCT_ID, STRIPE_WEBHOOK_ENDPOINT_ID, or
+# STRIPE_CONFIG_READ_ONLY_KEY here. Those are release-preflight inputs only
+# (the product and endpoint IDs are non-secret; the key is a restricted
+# rk_test_ secret) and are not available to the Pages Functions runtime.
+
+# --- Astro PUBLIC_* build-time values (not .dev.vars runtime values) ---
+# Set these in the environment that runs Astro (for example, an untracked
+# site/.env file or the invoking shell). They are compiled into the client/site
+# artifact and must never contain server secrets.
+# PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_replace_me
+# PUBLIC_ACCOUNT_PLANS_ENABLED=false
+# PUBLIC_PRODUCT_INTENTS_ENABLED=false
+# PUBLIC_DEPLOYMENT_ENV=development
+# PUBLIC_STRIPE_SANDBOX_UI_ENABLED=false
+# PUBLIC_BUILD_SHA=<optional-40-character-source-sha>

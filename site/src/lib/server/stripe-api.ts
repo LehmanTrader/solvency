@@ -6,11 +6,13 @@ export const STRIPE_REQUEST_TIMEOUT_MS = 10_000;
 
 const STRIPE_API_ORIGIN = 'https://api.stripe.com';
 const SECRET_KEY = /^sk_(test|live)_[A-Za-z0-9]{16,200}$/;
+const ACCOUNT_ID = /^acct_[A-Za-z0-9]{4,124}$/;
 const PRICE_ID = /^price_[A-Za-z0-9]{4,122}$/;
 const CUSTOMER_ID = /^cus_[A-Za-z0-9]{4,124}$/;
 const CHECKOUT_SESSION_ID = /^cs_(test|live)_[A-Za-z0-9]{4,120}$/;
 const SUBSCRIPTION_ID = /^sub_[A-Za-z0-9]{4,124}$/;
 const PORTAL_SESSION_ID = /^bps_[A-Za-z0-9]{4,124}$/;
+const PORTAL_CONFIGURATION_ID = /^bpc_[A-Za-z0-9]{4,124}$/;
 
 export type StripeMode = 'test' | 'live';
 export type StripeFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
@@ -18,11 +20,16 @@ export type StripeFetch = (input: RequestInfo | URL, init?: RequestInit) => Prom
 export interface StripeApiConfiguration {
   secretKey: string;
   mode: StripeMode;
+  accountId: string;
 }
 
 export interface StripeProPriceConfiguration {
   monthlyPriceId: string;
   annualPriceId: string;
+}
+
+export interface StripePortalConfiguration {
+  configurationId: string;
 }
 
 export type StripeApiFailure =
@@ -44,6 +51,10 @@ export interface StripeHostedSession {
   url: string;
 }
 
+export interface StripeAccountBinding {
+  id: string;
+}
+
 export interface StripeCheckoutSessionSnapshot {
   id: string;
   status: 'open' | 'complete' | 'expired';
@@ -51,6 +62,7 @@ export interface StripeCheckoutSessionSnapshot {
 }
 
 export interface StripeApi {
+  verifyAccountBinding(): Promise<StripeApiResult<StripeAccountBinding>>;
   createCustomer(idempotencyKey: string): Promise<StripeApiResult<StripeCustomer>>;
   createCheckoutSession(input: {
     customerId: string;
@@ -67,6 +79,7 @@ export interface StripeApi {
   }): Promise<StripeApiResult<StripeCheckoutSessionSnapshot>>;
   createPortalSession(input: {
     customerId: string;
+    configurationId: string;
     returnUrl: string;
     idempotencyKey: string;
   }): Promise<StripeApiResult<StripeHostedSession>>;
@@ -78,13 +91,21 @@ function exactConfiguredValue(value: string | undefined): string | null {
 
 export function stripeApiConfiguration(env: BuildPlansEnv): StripeApiConfiguration | null {
   const secretKey = exactConfiguredValue(env.STRIPE_SECRET_KEY);
+  const accountId = exactConfiguredValue(env.STRIPE_ACCOUNT_ID);
   const match = secretKey && SECRET_KEY.exec(secretKey);
-  if (!secretKey || !match) return null;
-  if (env.APP_ENV === 'production' && match[1] === 'live') return { secretKey, mode: 'live' };
+  if (!secretKey || !match || !accountId || !ACCOUNT_ID.test(accountId)) return null;
+  if (env.APP_ENV === 'production' && match[1] === 'live') return { secretKey, mode: 'live', accountId };
   if ((env.APP_ENV === 'preview' || env.APP_ENV === 'development') && match[1] === 'test') {
-    return { secretKey, mode: 'test' };
+    return { secretKey, mode: 'test', accountId };
   }
   return null;
+}
+
+export function stripePortalConfiguration(env: BuildPlansEnv): StripePortalConfiguration | null {
+  const configurationId = exactConfiguredValue(env.STRIPE_PORTAL_CONFIGURATION_ID);
+  return configurationId && PORTAL_CONFIGURATION_ID.test(configurationId)
+    ? { configurationId }
+    : null;
 }
 
 export function stripeProPriceConfiguration(env: BuildPlansEnv): StripeProPriceConfiguration | null {
@@ -295,8 +316,29 @@ export function createStripeApi(
     }
   }
 
+  let accountBinding: Promise<StripeApiResult<StripeAccountBinding>> | null = null;
+
+  function verifyAccountBinding(): Promise<StripeApiResult<StripeAccountBinding>> {
+    if (accountBinding) return accountBinding;
+    accountBinding = (async () => {
+      const result = await request('/v1/account', 'GET');
+      if (!result.ok) return result;
+      const value = result.value;
+      if (result.replayed || !plainObject(value) || value.object !== 'account'
+        || value.id !== configuration.accountId || value.deleted === true) {
+        return { ok: false, reason: 'invalid_response' };
+      }
+      return { ok: true, value: { id: configuration.accountId }, replayed: false };
+    })();
+    return accountBinding;
+  }
+
   return {
+    verifyAccountBinding,
+
     async createCustomer(idempotencyKey) {
+      const account = await verifyAccountBinding();
+      if (!account.ok) return account;
       const result = await request('/v1/customers', 'POST', idempotencyKey, new URLSearchParams());
       if (!result.ok) return result;
       const value = result.value;
@@ -313,6 +355,8 @@ export function createStripeApi(
         || input.expiresAt > 253_402_300_799) {
         return { ok: false, reason: 'invalid_response' };
       }
+      const account = await verifyAccountBinding();
+      if (!account.ok) return account;
       const parameters = new URLSearchParams();
       parameters.set('mode', 'subscription');
       parameters.set('ui_mode', 'hosted');
@@ -380,15 +424,21 @@ export function createStripeApi(
     },
 
     async createPortalSession(input) {
-      if (!validStripeCustomerId(input.customerId)) return { ok: false, reason: 'invalid_response' };
+      if (!validStripeCustomerId(input.customerId) || !PORTAL_CONFIGURATION_ID.test(input.configurationId)) {
+        return { ok: false, reason: 'invalid_response' };
+      }
+      const account = await verifyAccountBinding();
+      if (!account.ok) return account;
       const parameters = new URLSearchParams();
       parameters.set('customer', input.customerId);
+      parameters.set('configuration', input.configurationId);
       parameters.set('return_url', input.returnUrl);
       const result = await request('/v1/billing_portal/sessions', 'POST', input.idempotencyKey, parameters);
       if (!result.ok) return result;
       const value = result.value;
       if (!plainObject(value) || value.object !== 'billing_portal.session'
         || typeof value.id !== 'string' || !PORTAL_SESSION_ID.test(value.id)
+        || value.configuration !== input.configurationId
         || value.livemode !== expectedLiveMode(configuration) || !validPortalUrl(value.url)) {
         return { ok: false, reason: 'invalid_response' };
       }

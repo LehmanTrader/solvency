@@ -14,6 +14,7 @@ const closedRoutes = [
   { method: 'DELETE', path: '/api/preview-account-erasure' },
   { method: 'POST', path: '/api/checkout' },
   { method: 'POST', path: '/api/billing-portal' },
+  { method: 'GET', path: '/api/billing-readiness' },
   { method: 'POST', path: '/api/stripe-webhook' },
   { method: 'GET', path: `/shared-build-plans/sv1_${'A'.repeat(43)}` },
 ];
@@ -55,6 +56,14 @@ async function verifyPage(path) {
     && (!body.includes('data-account-plans-enabled="false"')
       || !body.includes('data-product-intents-enabled="false"'))) {
     fail('/build-planner/ does not expose both production client gates as false.');
+  }
+  if (path === '/pricing/' && [
+    'stripe-sandbox-console',
+    'Stripe test-mode billing harness',
+    '/api/checkout',
+    '/api/billing-portal',
+  ].some((marker) => body.includes(marker))) {
+    fail('/pricing/ exposes the Preview-only Stripe sandbox harness.');
   }
 }
 

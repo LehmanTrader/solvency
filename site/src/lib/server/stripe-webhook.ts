@@ -1,4 +1,5 @@
 import { apiError, apiJson } from './api-http.ts';
+import { expectedDeploymentOrigin } from './deployment-origin.ts';
 import {
   applyVerifiedBillingEvent,
   type BillingSubscriptionStatus,
@@ -120,6 +121,15 @@ function configuration(env: StripeWebhookEnvironment): WebhookConfiguration | nu
     annualPriceId,
     expectedLivemode,
   };
+}
+
+/**
+ * Validates the complete local runtime configuration required before the
+ * signed webhook surface can be considered ready. It deliberately exposes no
+ * configured values.
+ */
+export function stripeWebhookConfigurationReady(env: BuildPlansEnv): boolean {
+  return configuration(env) !== null;
 }
 
 function parseContentLength(value: string | null): number | null | 'invalid' {
@@ -423,7 +433,13 @@ export async function handleStripeWebhook(context: PagesContextLike): Promise<Re
   } catch {
     return finish('rejected_payload', apiError(requestId, 400, 'INVALID_REQUEST', 'Webhook request is invalid.'));
   }
-  if (url.protocol !== 'https:' || url.pathname !== STRIPE_WEBHOOK_PATH
+  const expectedOrigin = expectedDeploymentOrigin(env.APP_ENV);
+  if (!expectedOrigin) {
+    return finish('retryable_failure', apiError(
+      requestId, 503, 'SERVICE_UNAVAILABLE', 'Stripe webhook service is unavailable.',
+    ));
+  }
+  if (url.origin !== expectedOrigin || url.pathname !== STRIPE_WEBHOOK_PATH
     || url.search !== '' || url.searchParams.size !== 0) {
     return finish('rejected_payload', apiError(requestId, 400, 'INVALID_REQUEST', 'Webhook request is invalid.'));
   }

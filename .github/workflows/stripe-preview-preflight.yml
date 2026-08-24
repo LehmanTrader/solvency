@@ -1,0 +1,68 @@
+name: Stripe Preview Configuration Preflight
+
+# Read-only provider attestation. This workflow never deploys, writes Stripe
+# data, accesses Clerk, reads Cloudflare Access credentials, or receives a
+# runtime Stripe secret/webhook signing secret. Create a separate restricted
+# Stripe sandbox key with only Accounts Read, Products Read, Prices Read,
+# Webhook Endpoints Read and Billing Portal Configurations Read.
+
+on:
+  workflow_dispatch:
+    inputs:
+      authorization:
+        description: Run only after the reviewed Stripe sandbox objects exist
+        required: true
+        default: do-not-run
+        type: choice
+        options:
+          - do-not-run
+          - run-reviewed-preflight
+
+concurrency:
+  group: stripe-preview-configuration-preflight
+  cancel-in-progress: false
+
+jobs:
+  provider-config:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment:
+      name: preview
+      deployment: false
+    permissions:
+      contents: read
+    steps:
+      - name: Require reviewed preflight authorization
+        shell: bash
+        env:
+          PREFLIGHT_AUTHORIZATION: ${{ inputs.authorization }}
+        run: |
+          set -euo pipefail
+          if [[ "$PREFLIGHT_AUTHORIZATION" != "run-reviewed-preflight" ]]; then
+            echo "Stripe Preview configuration preflight was not authorized."
+            exit 1
+          fi
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "Stripe Preview configuration must be attested from main."
+            exit 1
+          fi
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+
+      - name: Verify exact read-only Stripe sandbox configuration
+        working-directory: site
+        env:
+          STRIPE_CONFIG_READ_ONLY_KEY: ${{ secrets.PREVIEW_STRIPE_CONFIG_READ_ONLY_KEY }}
+          STRIPE_ACCOUNT_ID: ${{ vars.PREVIEW_STRIPE_ACCOUNT_ID }}
+          STRIPE_PRO_PRODUCT_ID: ${{ vars.PREVIEW_STRIPE_PRO_PRODUCT_ID }}
+          STRIPE_PRO_MONTHLY_PRICE_ID: ${{ vars.PREVIEW_STRIPE_PRO_MONTHLY_PRICE_ID }}
+          STRIPE_PRO_ANNUAL_PRICE_ID: ${{ vars.PREVIEW_STRIPE_PRO_ANNUAL_PRICE_ID }}
+          STRIPE_WEBHOOK_ENDPOINT_ID: ${{ vars.PREVIEW_STRIPE_WEBHOOK_ENDPOINT_ID }}
+          STRIPE_PORTAL_CONFIGURATION_ID: ${{ vars.PREVIEW_STRIPE_PORTAL_CONFIGURATION_ID }}
+        run: npm run smoke:stripe-preview-config

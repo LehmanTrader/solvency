@@ -14,12 +14,17 @@ import type { D1DatabaseLike, PagesContextLike } from './pages-types.ts';
 import {
   createStripeApi,
   stripeApiConfiguration,
+  stripePortalConfiguration,
   stripeProPriceConfiguration,
   validStripeCustomerId,
   type StripeApi,
+  type StripeApiConfiguration,
   type StripeApiFailure,
   type StripeFetch,
+  type StripePortalConfiguration,
+  type StripeProPriceConfiguration,
 } from './stripe-api.ts';
+import { stripeWebhookConfigurationReady } from './stripe-webhook.ts';
 
 const BILLING_BODY_LIMIT = 256;
 const OWNER_ID = /^user_[A-Za-z0-9_-]{3,123}$/;
@@ -43,6 +48,13 @@ export interface BillingDependencies {
 
 type BodyResult = { ok: true; value: unknown } | { ok: false; response: Response };
 type OriginResult = { ok: true; origin: string } | { ok: false; reason: 'configuration' | 'forbidden' };
+type StripeRuntimeStage = 'webhook' | 'portal' | 'checkout';
+
+interface StripeRuntimeConfiguration {
+  stripe: StripeApiConfiguration;
+  portal: StripePortalConfiguration;
+  prices: StripeProPriceConfiguration;
+}
 
 const customerFlights = new WeakMap<object, Map<string, Promise<string>>>();
 const BILLING_SUBSCRIPTION_STATUSES = new Set([
@@ -93,6 +105,27 @@ function requestId(context: PagesContextLike): string {
 
 function billingUnavailable(id: string): Response {
   return apiError(id, 503, 'SERVICE_UNAVAILABLE', 'Billing service is unavailable.');
+}
+
+/**
+ * Fails every provider-backed stage closed unless the complete staged billing
+ * chain is present in this runtime. The pinned Portal configuration and both
+ * Prices are trust anchors even during webhook-only rollout; Checkout also
+ * requires the Portal and webhook flags themselves to be enabled.
+ */
+function stripeRuntimeConfiguration(
+  env: PagesContextLike['env'],
+  stage: StripeRuntimeStage,
+): StripeRuntimeConfiguration | null {
+  const stripe = stripeApiConfiguration(env);
+  const portal = stripePortalConfiguration(env);
+  const prices = stripeProPriceConfiguration(env);
+  if (env.STRIPE_WEBHOOK_ENABLED !== 'true'
+    || !stripeWebhookConfigurationReady(env)
+    || !stripe || !portal || !prices) return null;
+  if ((stage === 'portal' || stage === 'checkout') && env.STRIPE_PORTAL_ENABLED !== 'true') return null;
+  if (stage === 'checkout' && env.STRIPE_CHECKOUT_ENABLED !== 'true') return null;
+  return { stripe, portal, prices };
 }
 
 function exactOrigin(value: string, allowLocalhost: boolean): string | null {
@@ -415,9 +448,9 @@ export async function handleCheckout(
 ): Promise<Response> {
   const common = validateCommon(context);
   if (!common.ok) return common.response;
-  const stripeConfiguration = stripeApiConfiguration(context.env);
-  const prices = stripeProPriceConfiguration(context.env);
-  if (!stripeConfiguration || !prices) return billingUnavailable(common.id);
+  const runtime = stripeRuntimeConfiguration(context.env, 'checkout');
+  if (!runtime) return billingUnavailable(common.id);
+  const { stripe: stripeConfiguration, prices } = runtime;
   const parsed = await readBillingJson(context.request, common.id);
   if (!parsed.ok) return parsed.response;
   if (!exactObject(parsed.value, ['interval'])
@@ -662,14 +695,51 @@ export async function handleCheckout(
   }
 }
 
+export async function handleBillingReadiness(
+  context: PagesContextLike,
+  dependencies: BillingDependencies = {},
+): Promise<Response> {
+  const id = requestId(context);
+  if (context.request.method !== 'GET') {
+    return apiError(id, 405, 'METHOD_NOT_ALLOWED', 'Method is not allowed.', { allow: 'GET' });
+  }
+  const requestUrl = new URL(context.request.url);
+  if (requestUrl.pathname !== '/api/billing-readiness'
+    || requestUrl.search !== '' || requestUrl.searchParams.size !== 0) {
+    return apiError(id, 400, 'INVALID_REQUEST', 'Billing readiness request is invalid.');
+  }
+  const ownerUserId = context.data.ownerUserId;
+  if (!ownerUserId || !OWNER_ID.test(ownerUserId)) return billingUnavailable(id);
+  const webhookEnabled = context.env.STRIPE_WEBHOOK_ENABLED === 'true';
+  const portalEnabled = context.env.STRIPE_PORTAL_ENABLED === 'true';
+  const checkoutEnabled = context.env.STRIPE_CHECKOUT_ENABLED === 'true';
+  const requiredStage: StripeRuntimeStage = checkoutEnabled
+    ? 'checkout'
+    : portalEnabled
+      ? 'portal'
+      : 'webhook';
+  if (!webhookEnabled && !portalEnabled && !checkoutEnabled) return billingUnavailable(id);
+  const runtime = stripeRuntimeConfiguration(context.env, requiredStage);
+  if (!runtime) return billingUnavailable(id);
+  try {
+    const stripe = createStripeApi(runtime.stripe, dependencies.fetch);
+    const binding = await stripe.verifyAccountBinding();
+    if (!binding.ok) return billingUnavailable(id);
+    return apiJson({ data: { ready: true } });
+  } catch {
+    return billingUnavailable(id);
+  }
+}
+
 export async function handleBillingPortal(
   context: PagesContextLike,
   dependencies: BillingDependencies = {},
 ): Promise<Response> {
   const common = validateCommon(context);
   if (!common.ok) return common.response;
-  const stripeConfiguration = stripeApiConfiguration(context.env);
-  if (!stripeConfiguration) return billingUnavailable(common.id);
+  const runtime = stripeRuntimeConfiguration(context.env, 'portal');
+  if (!runtime) return billingUnavailable(common.id);
+  const { stripe: stripeConfiguration, portal: portalConfiguration } = runtime;
   const parsed = await readBillingJson(context.request, common.id);
   if (!parsed.ok) return parsed.response;
   if (!exactObject(parsed.value, [])) {
@@ -682,7 +752,8 @@ export async function handleBillingPortal(
     const key = await providerIdempotencyKey('portal', common.ownerUserId, common.browserKey);
     const result = await stripe.createPortalSession({
       customerId,
-      returnUrl: `${common.origin}/pricing`,
+      configurationId: portalConfiguration.configurationId,
+      returnUrl: `${common.origin}/pricing?billing=portal-return`,
       idempotencyKey: key,
     });
     if (!result.ok) {

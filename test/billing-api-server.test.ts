@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import {
   BILLING_OUTCOMES,
+  handleBillingReadiness,
   handleBillingPortal,
   handleCheckout,
   logBillingOutcome,
@@ -14,6 +15,7 @@ import {
   STRIPE_REQUEST_TIMEOUT_MS,
   STRIPE_RESPONSE_BODY_LIMIT,
   stripeApiConfiguration,
+  stripePortalConfiguration,
   stripeProPriceConfiguration,
   type StripeFetch,
 } from '../site/src/lib/server/stripe-api.ts';
@@ -93,6 +95,9 @@ const TEST_SECRET = `sk_test_${'A'.repeat(32)}`;
 const LIVE_SECRET = `sk_live_${'B'.repeat(32)}`;
 const MONTHLY_PRICE = 'price_monthly00000001';
 const ANNUAL_PRICE = 'price_annual000000001';
+const STRIPE_ACCOUNT = 'acct_solvency00000001';
+const PORTAL_CONFIGURATION = 'bpc_solvency000000001';
+const WEBHOOK_SECRET = `whsec_${'C'.repeat(32)}`;
 const OWNER_A = 'user_billing_alpha';
 const OWNER_B = 'user_billing_bravo';
 const BROWSER_KEY = 'checkout-key-0001';
@@ -119,6 +124,12 @@ function stripeJsonWithHeaders(
     status,
     headers: { 'Content-Type': 'application/json', ...headers },
   });
+}
+
+function afterVerifiedStripeAccount(response: () => Response): StripeFetch {
+  return async (input) => String(input).endsWith('/v1/account')
+    ? stripeJson({ id: STRIPE_ACCOUNT, object: 'account' })
+    : response();
 }
 
 class StripeMock {
@@ -148,6 +159,11 @@ class StripeMock {
     assert.equal(init.signal instanceof AbortSignal, true);
     const replacement = await this.override?.(call);
     if (replacement) return replacement;
+
+    if (call.url.endsWith('/v1/account') && call.method === 'GET') {
+      assert.equal(call.headers.get('idempotency-key'), null);
+      return stripeJson({ id: STRIPE_ACCOUNT, object: 'account' });
+    }
 
     const key = call.headers.get('idempotency-key');
     const compoundKey = `${call.method} ${call.url}\n${key ?? ''}`;
@@ -201,9 +217,11 @@ class StripeMock {
         : stripeJson({ error: { type: 'invalid_request_error', message: 'not found' } }, false, 404);
     } else if (call.url.endsWith('/v1/billing_portal/sessions') && call.method === 'POST') {
       this.portalCount += 1;
+      const parameters = new URLSearchParams(call.body);
       response = {
         id: `bps_${String(this.portalCount).padStart(16, '0')}`,
         object: 'billing_portal.session',
+        configuration: parameters.get('configuration'),
         livemode: live,
         url: `https://billing.stripe.com/p/session/test_${String(this.portalCount).padStart(24, '0')}`,
       };
@@ -221,15 +239,21 @@ function baseEnv(db: D1DatabaseLike, overrides: Partial<BuildPlansEnv> = {}): Bu
     APP_ENV: 'development',
     CLERK_AUTHORIZED_PARTIES: 'http://localhost:8788',
     STRIPE_SECRET_KEY: TEST_SECRET,
+    STRIPE_ACCOUNT_ID: STRIPE_ACCOUNT,
+    STRIPE_PORTAL_CONFIGURATION_ID: PORTAL_CONFIGURATION,
+    STRIPE_WEBHOOK_SECRET: WEBHOOK_SECRET,
     STRIPE_PRO_MONTHLY_PRICE_ID: MONTHLY_PRICE,
     STRIPE_PRO_ANNUAL_PRICE_ID: ANNUAL_PRICE,
+    STRIPE_WEBHOOK_ENABLED: 'true',
+    STRIPE_PORTAL_ENABLED: 'true',
+    STRIPE_CHECKOUT_ENABLED: 'true',
     ...overrides,
   };
 }
 
 function context(
   db: D1DatabaseLike,
-  path: '/api/checkout' | '/api/billing-portal',
+  path: '/api/checkout' | '/api/billing-portal' | '/api/billing-readiness',
   body: unknown,
   options: {
     owner?: string;
@@ -265,6 +289,10 @@ function portal(db: D1DatabaseLike, body: unknown = {}, options = {}) {
   return context(db, '/api/billing-portal', body, options);
 }
 
+function readiness(db: D1DatabaseLike, options = {}) {
+  return context(db, '/api/billing-readiness', undefined, { method: 'GET', ...options });
+}
+
 function form(call: RecordedCall): URLSearchParams {
   assert.equal(call.headers.get('content-type'), 'application/x-www-form-urlencoded');
   return new URLSearchParams(call.body);
@@ -273,17 +301,35 @@ function form(call: RecordedCall): URLSearchParams {
 describe('Stripe configuration and transport boundary', () => {
   test('pins test/live secrets to APP_ENV and requires two distinct exact price IDs', () => {
     const db = new SqliteD1();
-    assert.deepEqual(stripeApiConfiguration(baseEnv(db)), { secretKey: TEST_SECRET, mode: 'test' });
+    assert.deepEqual(stripeApiConfiguration(baseEnv(db)), {
+      secretKey: TEST_SECRET, mode: 'test', accountId: STRIPE_ACCOUNT,
+    });
     assert.deepEqual(stripeApiConfiguration(baseEnv(db, {
       APP_ENV: 'production', STRIPE_SECRET_KEY: LIVE_SECRET,
-    })), { secretKey: LIVE_SECRET, mode: 'live' });
+    })), { secretKey: LIVE_SECRET, mode: 'live', accountId: STRIPE_ACCOUNT });
     for (const overrides of [
       { APP_ENV: 'production', STRIPE_SECRET_KEY: TEST_SECRET },
       { APP_ENV: 'preview', STRIPE_SECRET_KEY: LIVE_SECRET },
       { APP_ENV: 'staging', STRIPE_SECRET_KEY: TEST_SECRET },
       { APP_ENV: 'development', STRIPE_SECRET_KEY: ` ${TEST_SECRET}` },
       { APP_ENV: 'development', STRIPE_SECRET_KEY: 'rk_test_not_allowed0000000000000' },
+      { STRIPE_ACCOUNT_ID: undefined },
+      { STRIPE_ACCOUNT_ID: 'acct_bad!' },
+      { STRIPE_ACCOUNT_ID: `${STRIPE_ACCOUNT} ` },
     ]) assert.equal(stripeApiConfiguration(baseEnv(db, overrides)), null);
+
+    assert.deepEqual(stripePortalConfiguration(baseEnv(db)), {
+      configurationId: PORTAL_CONFIGURATION,
+    });
+    assert.equal(stripePortalConfiguration(baseEnv(db, {
+      STRIPE_PORTAL_CONFIGURATION_ID: undefined,
+    })), null);
+    assert.equal(stripePortalConfiguration(baseEnv(db, {
+      STRIPE_PORTAL_CONFIGURATION_ID: 'bpc_bad!',
+    })), null);
+    assert.equal(stripePortalConfiguration(baseEnv(db, {
+      STRIPE_PORTAL_CONFIGURATION_ID: `${PORTAL_CONFIGURATION} `,
+    })), null);
 
     assert.deepEqual(stripeProPriceConfiguration(baseEnv(db)), {
       monthlyPriceId: MONTHLY_PRICE, annualPriceId: ANNUAL_PRICE,
@@ -291,6 +337,36 @@ describe('Stripe configuration and transport boundary', () => {
     assert.equal(stripeProPriceConfiguration(baseEnv(db, { STRIPE_PRO_MONTHLY_PRICE_ID: '19' })), null);
     assert.equal(stripeProPriceConfiguration(baseEnv(db, { STRIPE_PRO_ANNUAL_PRICE_ID: MONTHLY_PRICE })), null);
     assert.equal(stripeProPriceConfiguration(baseEnv(db, { STRIPE_PRO_ANNUAL_PRICE_ID: `${ANNUAL_PRICE} ` })), null);
+  });
+
+  test('attests the runtime key account once and blocks every mutation on an account mismatch', async () => {
+    const stripe = new StripeMock();
+    const api = createStripeApi({
+      secretKey: TEST_SECRET, mode: 'test', accountId: STRIPE_ACCOUNT,
+    }, stripe.fetch);
+    assert.deepEqual(await api.verifyAccountBinding(), {
+      ok: true, value: { id: STRIPE_ACCOUNT }, replayed: false,
+    });
+    assert.equal((await api.createCustomer('provider-key-0001')).ok, true);
+    assert.equal(stripe.calls.filter((call) => call.url.endsWith('/v1/account')).length, 1);
+    assert.equal(stripe.calls.filter((call) => call.method === 'POST').length, 1);
+
+    const calls: RecordedCall[] = [];
+    const mismatched = createStripeApi({
+      secretKey: TEST_SECRET, mode: 'test', accountId: STRIPE_ACCOUNT,
+    }, async (input, init = {}) => {
+      calls.push({
+        url: String(input), method: init.method ?? 'GET', headers: new Headers(init.headers),
+        body: typeof init.body === 'string' ? init.body : '',
+      });
+      return stripeJson({ id: 'acct_another000000001', object: 'account' });
+    });
+    assert.deepEqual(await mismatched.createCustomer('provider-key-0002'), {
+      ok: false, reason: 'invalid_response',
+    });
+    assert.deepEqual(calls.map(({ url, method }) => ({ url, method })), [{
+      url: 'https://api.stripe.com/v1/account', method: 'GET',
+    }]);
   });
 
   test('rejects provider mode, ID, hosted-URL, status and body-cap violations', async () => {
@@ -305,34 +381,46 @@ describe('Stripe configuration and transport boundary', () => {
       },
     ];
     for (const scenario of configurations) {
-      const api = createStripeApi({ secretKey: TEST_SECRET, mode: 'test' }, async () => stripeJson(scenario.response));
+      const api = createStripeApi(
+        { secretKey: TEST_SECRET, mode: 'test', accountId: STRIPE_ACCOUNT },
+        afterVerifiedStripeAccount(() => stripeJson(scenario.response)),
+      );
       assert.deepEqual(await api.createCustomer('provider-key-0001'), { ok: false, reason: 'invalid_response' }, scenario.name);
     }
 
-    const oversized = createStripeApi({ secretKey: TEST_SECRET, mode: 'test' }, async () => new Response(
-      JSON.stringify({ padding: 'x'.repeat(STRIPE_RESPONSE_BODY_LIMIT) }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } },
-    ));
+    const oversized = createStripeApi(
+      { secretKey: TEST_SECRET, mode: 'test', accountId: STRIPE_ACCOUNT },
+      afterVerifiedStripeAccount(() => new Response(
+        JSON.stringify({ padding: 'x'.repeat(STRIPE_RESPONSE_BODY_LIMIT) }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      )),
+    );
     assert.deepEqual(await oversized.createCustomer('provider-key-0001'), { ok: false, reason: 'invalid_response' });
 
-    const wrongStatus = createStripeApi({ secretKey: TEST_SECRET, mode: 'test' }, async () => stripeJson(
-      { id: 'cus_0000000000000001', object: 'customer', livemode: false }, false, 201,
-    ));
+    const wrongStatus = createStripeApi(
+      { secretKey: TEST_SECRET, mode: 'test', accountId: STRIPE_ACCOUNT },
+      afterVerifiedStripeAccount(() => stripeJson(
+        { id: 'cus_0000000000000001', object: 'customer', livemode: false }, false, 201,
+      )),
+    );
     assert.deepEqual(await wrongStatus.createCustomer('provider-key-0001'), { ok: false, reason: 'invalid_response' });
 
     const customerBody = JSON.stringify({
       id: 'cus_0000000000000001', object: 'customer', livemode: false,
     });
-    const wrongLength = createStripeApi({ secretKey: TEST_SECRET, mode: 'test' }, async () => new Response(
-      customerBody,
-      {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Content-Length': String(new TextEncoder().encode(customerBody).byteLength - 1),
+    const wrongLength = createStripeApi(
+      { secretKey: TEST_SECRET, mode: 'test', accountId: STRIPE_ACCOUNT },
+      afterVerifiedStripeAccount(() => new Response(
+        customerBody,
+        {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': String(new TextEncoder().encode(customerBody).byteLength - 1),
+          },
         },
-      },
-    ));
+      )),
+    );
     assert.deepEqual(await wrongLength.createCustomer('provider-key-0001'), {
       ok: false, reason: 'invalid_response',
     });
@@ -343,7 +431,10 @@ describe('Stripe configuration and transport boundary', () => {
       expires_at: 1_800_000_000,
       url: 'https://evil.example/c/pay/cs_test_0000000000000001',
     };
-    const checkoutApi = createStripeApi({ secretKey: TEST_SECRET, mode: 'test' }, async () => stripeJson(checkoutResponse));
+    const checkoutApi = createStripeApi(
+      { secretKey: TEST_SECRET, mode: 'test', accountId: STRIPE_ACCOUNT },
+      afterVerifiedStripeAccount(() => stripeJson(checkoutResponse)),
+    );
     assert.equal((await checkoutApi.createCheckoutSession({
       customerId: 'cus_0000000000000001', priceId: MONTHLY_PRICE,
       successUrl: 'https://solvency.dev/pricing?checkout=success',
@@ -362,21 +453,39 @@ describe('Stripe configuration and transport boundary', () => {
       expiresAt: 1_800_000_000, idempotencyKey: 'provider-key-0002',
     })).ok, false);
 
-    const portalApi = createStripeApi({ secretKey: TEST_SECRET, mode: 'test' }, async () => stripeJson({
-      id: 'bps_0000000000000001', object: 'billing_portal.session', livemode: false,
-      url: 'https://billing.stripe.com.evil.example/p/session/test_000000000000000000000001',
-    }));
+    const portalApi = createStripeApi(
+      { secretKey: TEST_SECRET, mode: 'test', accountId: STRIPE_ACCOUNT },
+      afterVerifiedStripeAccount(() => stripeJson({
+        id: 'bps_0000000000000001', object: 'billing_portal.session', livemode: false,
+        configuration: PORTAL_CONFIGURATION,
+        url: 'https://billing.stripe.com.evil.example/p/session/test_000000000000000000000001',
+      })),
+    );
     assert.equal((await portalApi.createPortalSession({
       customerId: 'cus_0000000000000001', returnUrl: 'https://solvency.dev/pricing',
+      configurationId: PORTAL_CONFIGURATION,
       idempotencyKey: 'provider-key-0001',
     })).ok, false);
+
+    const wrongConfigurationApi = createStripeApi(
+      { secretKey: TEST_SECRET, mode: 'test', accountId: STRIPE_ACCOUNT },
+      afterVerifiedStripeAccount(() => stripeJson({
+        id: 'bps_0000000000000001', object: 'billing_portal.session', livemode: false,
+        configuration: 'bpc_other000000000001',
+        url: 'https://billing.stripe.com/p/session/test_000000000000000000000001',
+      })),
+    );
+    assert.deepEqual(await wrongConfigurationApi.createPortalSession({
+      customerId: 'cus_0000000000000001', returnUrl: 'https://solvency.dev/pricing',
+      configurationId: PORTAL_CONFIGURATION, idempotencyKey: 'provider-key-0001',
+    }), { ok: false, reason: 'invalid_response' });
   });
 
   test('aborts an upstream request at the fixed production cap', async () => {
     assert.equal(STRIPE_REQUEST_TIMEOUT_MS, 10_000);
     let signal: AbortSignal | null = null;
     const api = createStripeApi(
-      { secretKey: TEST_SECRET, mode: 'test' },
+      { secretKey: TEST_SECRET, mode: 'test', accountId: STRIPE_ACCOUNT },
       async (_input, init) => {
         signal = init?.signal as AbortSignal;
         return new Promise<Response>((_resolve, reject) => {
@@ -391,11 +500,14 @@ describe('Stripe configuration and transport boundary', () => {
 
   test('classifies only bounded Stripe errors as conclusive and treats retry directives conservatively', async () => {
     const createWith = async (status: number, body: unknown, shouldRetry?: string) => {
-      const api = createStripeApi({ secretKey: TEST_SECRET, mode: 'test' }, async () => stripeJsonWithHeaders(
-        body,
-        status,
-        shouldRetry === undefined ? {} : { 'Stripe-Should-Retry': shouldRetry },
-      ));
+      const api = createStripeApi(
+        { secretKey: TEST_SECRET, mode: 'test', accountId: STRIPE_ACCOUNT },
+        afterVerifiedStripeAccount(() => stripeJsonWithHeaders(
+          body,
+          status,
+          shouldRetry === undefined ? {} : { 'Stripe-Should-Retry': shouldRetry },
+        )),
+      );
       return api.createCheckoutSession({
         customerId: 'cus_0000000000000001',
         priceId: MONTHLY_PRICE,
@@ -450,9 +562,13 @@ describe('authenticated checkout API', () => {
     assert.deepEqual({ ...db.sqlite.prepare(
       'SELECT owner_user_id, provider_customer_id FROM billing_customers',
     ).get() }, { owner_user_id: OWNER_A, provider_customer_id: 'cus_0000000000000001' });
-    assert.equal(stripe.calls.length, 2);
-    assert.match(stripe.calls[0].headers.get('idempotency-key') ?? '', /^solvency-customer-v1-[a-f0-9]{64}$/);
-    const values = form(stripe.calls[1]);
+    assert.equal(stripe.calls.length, 3);
+    assert.equal(stripe.calls[0].url, 'https://api.stripe.com/v1/account');
+    assert.equal(stripe.calls[0].method, 'GET');
+    const mutations = stripe.calls.filter((call) => call.method === 'POST');
+    assert.equal(mutations.length, 2);
+    assert.match(mutations[0].headers.get('idempotency-key') ?? '', /^solvency-customer-v1-[a-f0-9]{64}$/);
+    const values = form(mutations[1]);
     assert.deepEqual([...values.entries()], [
       ['mode', 'subscription'],
       ['ui_mode', 'hosted'],
@@ -463,8 +579,8 @@ describe('authenticated checkout API', () => {
       ['success_url', 'http://localhost:8788/pricing?checkout=success'],
       ['cancel_url', 'http://localhost:8788/pricing?checkout=canceled'],
     ]);
-    assert.match(stripe.calls[1].headers.get('idempotency-key') ?? '', /^solvency-checkout-v2-[a-f0-9]{64}$/);
-    assert.doesNotMatch(stripe.calls[1].body, /user_|amount|redirect|evil/);
+    assert.match(mutations[1].headers.get('idempotency-key') ?? '', /^solvency-checkout-v2-[a-f0-9]{64}$/);
+    assert.doesNotMatch(mutations[1].body, /user_|amount|redirect|evil/);
   });
 
   test('selects only the configured annual price and reuses the owner mapping', async () => {
@@ -477,8 +593,10 @@ describe('authenticated checkout API', () => {
     const response = await handleCheckout(checkout(db, { interval: 'year' }), { fetch: stripe.fetch, now: () => NOW });
     assert.equal(response.status, 200);
     assert.equal(stripe.customerCount, 0);
-    assert.equal(form(stripe.calls[0]).get('customer'), 'cus_9999999999999999');
-    assert.equal(form(stripe.calls[0]).get('line_items[0][price]'), ANNUAL_PRICE);
+    const checkoutCall = stripe.calls.find((call) => call.url.endsWith('/v1/checkout/sessions'));
+    assert.ok(checkoutCall);
+    assert.equal(form(checkoutCall).get('customer'), 'cus_9999999999999999');
+    assert.equal(form(checkoutCall).get('line_items[0][price]'), ANNUAL_PRICE);
   });
 
   test('isolates owners even when they reuse the same browser idempotency key', async () => {
@@ -641,6 +759,40 @@ describe('authenticated checkout API', () => {
       });
       assert.equal(response.status, 503);
       assert.equal(stripe.calls.length, 0);
+    }
+  });
+
+  test('requires the complete webhook and Portal stage before any Checkout storage or provider access', async () => {
+    let prepareCalls = 0;
+    let batchCalls = 0;
+    const noStorage: D1DatabaseLike = {
+      prepare() {
+        prepareCalls += 1;
+        throw new Error('mis-staged Checkout must not access D1');
+      },
+      async batch() {
+        batchCalls += 1;
+        throw new Error('mis-staged Checkout must not access D1');
+      },
+    };
+    const cases: Array<Partial<BuildPlansEnv>> = [
+      { STRIPE_CHECKOUT_ENABLED: 'false' },
+      { STRIPE_PORTAL_ENABLED: 'false' },
+      { STRIPE_WEBHOOK_ENABLED: 'false' },
+      { STRIPE_WEBHOOK_SECRET: undefined },
+      { STRIPE_PORTAL_CONFIGURATION_ID: undefined },
+      { STRIPE_PORTAL_CONFIGURATION_ID: 'bpc_bad!' },
+    ];
+    for (const env of cases) {
+      let fetchCalls = 0;
+      const response = await handleCheckout(checkout(noStorage, { interval: 'month' }, { env }), {
+        fetch: async () => { fetchCalls += 1; return stripeJson({}); },
+        now: () => NOW,
+      });
+      assert.equal(response.status, 503);
+      assert.equal(fetchCalls, 0);
+      assert.equal(prepareCalls, 0);
+      assert.equal(batchCalls, 0);
     }
   });
 
@@ -898,7 +1050,8 @@ describe('authenticated checkout API', () => {
     );
     assert.equal(response.status, 200);
     assert.equal(stripe.checkoutCount, 2);
-    const retrieval = stripe.calls.find((call) => call.method === 'GET');
+    const retrieval = stripe.calls.find((call) => call.method === 'GET'
+      && call.url.includes('/v1/checkout/sessions/'));
     assert.equal(retrieval?.url, `https://api.stripe.com/v1/checkout/sessions/${original.provider_session_id}`);
     assert.equal(retrieval?.headers.get('idempotency-key'), null);
     const checkoutCalls = stripe.calls.filter((call) => call.url.endsWith('/v1/checkout/sessions'));
@@ -1025,7 +1178,7 @@ describe('authenticated checkout API', () => {
     const row = db.sqlite.prepare(
       'SELECT provider_session_id, lock_expires_at FROM billing_checkout_attempts WHERE owner_user_id = ?',
     ).get(OWNER_A) as { provider_session_id: string; lock_expires_at: number };
-    stripe.override = (call) => call.method === 'GET'
+    stripe.override = (call) => call.method === 'GET' && call.url.includes('/v1/checkout/sessions/')
       ? stripeJson({
         ...(stripe.checkoutSessions.get(row.provider_session_id) ?? {}),
         customer: 'cus_wrong0000000000',
@@ -1122,6 +1275,101 @@ describe('authenticated checkout API', () => {
   });
 });
 
+describe('authenticated billing readiness API', () => {
+  test('returns only a boolean after one exact same-key account read and performs no mutation', async () => {
+    const noStorage: D1DatabaseLike = {
+      prepare() { throw new Error('readiness handler must not access D1'); },
+      async batch() { throw new Error('readiness handler must not access D1'); },
+    };
+    const stripe = new StripeMock();
+    const response = await handleBillingReadiness(readiness(noStorage), { fetch: stripe.fetch });
+    assert.equal(response.status, 200);
+    const raw = await response.text();
+    assert.equal(raw, '{"data":{"ready":true}}');
+    assert.doesNotMatch(raw, /acct_|cus_|price_|sk_(?:test|live)_/);
+    assert.deepEqual(stripe.calls.map((call) => ({ url: call.url, method: call.method })), [{
+      url: 'https://api.stripe.com/v1/account', method: 'GET',
+    }]);
+    assert.equal(stripe.customerCount, 0);
+    assert.equal(stripe.checkoutCount, 0);
+    assert.equal(stripe.portalCount, 0);
+  });
+
+  test('fails closed with one generic response for a mismatched account or transport failure', async () => {
+    for (const fetch of [
+      (async () => stripeJson({ id: 'acct_foreign000000001', object: 'account' })) as StripeFetch,
+      (async () => { throw new Error(`${TEST_SECRET} provider detail`); }) as StripeFetch,
+    ]) {
+      const db = new SqliteD1();
+      const response = await handleBillingReadiness(readiness(db), { fetch });
+      assert.equal(response.status, 503);
+      assert.deepEqual(await response.json(), {
+        error: {
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'Billing service is unavailable.',
+          requestId: 'req-billing',
+        },
+      });
+    }
+  });
+
+  test('validates every runtime value required by the enabled Stripe stage before account access', async () => {
+    const cases: Array<Partial<BuildPlansEnv>> = [
+      {
+        STRIPE_WEBHOOK_ENABLED: 'false',
+        STRIPE_PORTAL_ENABLED: 'false',
+        STRIPE_CHECKOUT_ENABLED: 'false',
+      },
+      { STRIPE_WEBHOOK_SECRET: undefined },
+      { STRIPE_PRO_MONTHLY_PRICE_ID: undefined },
+      { STRIPE_PORTAL_CONFIGURATION_ID: undefined },
+      {
+        STRIPE_PORTAL_ENABLED: 'false',
+        STRIPE_CHECKOUT_ENABLED: 'false',
+        STRIPE_PORTAL_CONFIGURATION_ID: undefined,
+      },
+      {
+        STRIPE_PORTAL_ENABLED: 'false',
+        STRIPE_CHECKOUT_ENABLED: 'false',
+        STRIPE_PORTAL_CONFIGURATION_ID: 'bpc_bad!',
+      },
+      { STRIPE_WEBHOOK_ENABLED: 'false' },
+      { STRIPE_PORTAL_ENABLED: 'false', STRIPE_CHECKOUT_ENABLED: 'true' },
+    ];
+    for (const env of cases) {
+      let fetchCalls = 0;
+      const response = await handleBillingReadiness(readiness(new SqliteD1(), { env }), {
+        fetch: async () => { fetchCalls += 1; return stripeJson({}); },
+      });
+      assert.equal(response.status, 503);
+      assert.equal(fetchCalls, 0);
+    }
+
+    const webhookOnly = await handleBillingReadiness(readiness(new SqliteD1(), {
+      env: { STRIPE_PORTAL_ENABLED: 'false', STRIPE_CHECKOUT_ENABLED: 'false' },
+    }), { fetch: new StripeMock().fetch });
+    assert.equal(webhookOnly.status, 200);
+  });
+
+  test('rejects methods, queries, missing owners and invalid configuration before Stripe', async () => {
+    const cases = [
+      readiness(new SqliteD1(), { method: 'POST' }),
+      readiness(new SqliteD1(), { url: 'http://localhost:8788/api/billing-readiness?verbose=true' }),
+      readiness(new SqliteD1(), { owner: 'attacker' }),
+      readiness(new SqliteD1(), { env: { STRIPE_ACCOUNT_ID: undefined } }),
+    ];
+    const expectedStatuses = [405, 400, 503, 503];
+    for (const [index, item] of cases.entries()) {
+      let fetchCalls = 0;
+      const response = await handleBillingReadiness(item, {
+        fetch: async () => { fetchCalls += 1; return stripeJson({}); },
+      });
+      assert.equal(response.status, expectedStatuses[index]);
+      assert.equal(fetchCalls, 0);
+    }
+  });
+});
+
 describe('authenticated billing portal API', () => {
   test('opens only the signed-in owner mapping with an exact fixed return URL', async () => {
     const db = new SqliteD1();
@@ -1136,11 +1384,14 @@ describe('authenticated billing portal API', () => {
     const response = await handleBillingPortal(portal(db, {}, { owner: OWNER_B }), { fetch: stripe.fetch });
     assert.equal(response.status, 200);
     assert.match((await response.json() as { data: { url: string } }).data.url, /^https:\/\/billing\.stripe\.com\//);
-    assert.deepEqual([...form(stripe.calls[0]).entries()], [
+    const portalCall = stripe.calls.find((call) => call.url.endsWith('/v1/billing_portal/sessions'));
+    assert.ok(portalCall);
+    assert.deepEqual([...form(portalCall).entries()], [
       ['customer', 'cus_2222222222222222'],
-      ['return_url', 'http://localhost:8788/pricing'],
+      ['configuration', PORTAL_CONFIGURATION],
+      ['return_url', 'http://localhost:8788/pricing?billing=portal-return'],
     ]);
-    assert.doesNotMatch(stripe.calls[0].body, /user_|cus_1111111111111111|redirect/);
+    assert.doesNotMatch(portalCall.body, /user_|cus_1111111111111111|redirect/);
   });
 
   test('does not create or disclose a foreign billing account when the owner has none', async () => {
@@ -1155,6 +1406,22 @@ describe('authenticated billing portal API', () => {
     const raw = await response.text();
     assert.doesNotMatch(raw, /cus_|user_billing_alpha/);
     assert.equal(stripe.calls.length, 0);
+  });
+
+  test('fails closed before Stripe when the immutable Portal configuration is absent or malformed', async () => {
+    for (const configurationId of [undefined, 'bpc_bad!', `${PORTAL_CONFIGURATION} `]) {
+      const db = new SqliteD1();
+      db.sqlite.prepare(
+        `INSERT INTO billing_customers (owner_user_id, provider_customer_id, created_at, updated_at)
+         VALUES (?, ?, ?, ?)`,
+      ).run(OWNER_A, 'cus_1111111111111111', NOW.toISOString(), NOW.toISOString());
+      const stripe = new StripeMock();
+      const response = await handleBillingPortal(portal(db, {}, {
+        env: { STRIPE_PORTAL_CONFIGURATION_ID: configurationId },
+      }), { fetch: stripe.fetch });
+      assert.equal(response.status, 503);
+      assert.equal(stripe.calls.length, 0);
+    }
   });
 
   test('requires an empty object and rejects portal parameter injection', async () => {

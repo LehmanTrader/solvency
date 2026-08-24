@@ -151,50 +151,257 @@ every incident:
 Pause the webhook flag if reconciliation diverges. Repair the adapter or replay
 verified Stripe events; do not hand-edit entitlement rows to make counts agree.
 
-## Stripe sandbox preflight
+## Stripe sandbox preflight and staged Preview rollout
 
-Connected Stripe sandbox work is allowed only after all of these are true:
+This rollout is test-mode Preview work, not a paid launch. Production is never
+an input to these steps: do not add or rotate Production Stripe credentials, do
+not change a Production Cloudflare setting, and do not change a Production
+flag. The production `[vars]` in `site/wrangler.toml` must keep every account,
+entitlement, intent, erasure and Stripe flag false. The production artifact also
+builds the Preview Stripe console as impossible and false. Stop if either
+invariant changes.
 
 The server-side Checkout, billing-portal and webhook adapters may be deployed
-dark before Stripe is connected. Dark deployment is not a paid launch: all
-three Stripe flags must remain false, and the production health matrix must
-continue to receive hardened no-store 503 responses from all three routes.
-Migration `0007_billing_checkout_attempts.sql` must be applied to the selected
-D1 database before Checkout can be enabled there.
+dark before Stripe is connected. Dark deployment is not provider readiness:
+all three Stripe flags remain false and the dark routes return their hardened,
+no-store 503 responses. Migration `0007_billing_checkout_attempts.sql` must be applied
+to the Preview D1 database before Checkout can be enabled.
 
-The destructive Preview smoke erasure route and provider-backed billing must
-never be enabled together. Middleware fails the erasure route closed whenever
-Checkout, Portal or Webhook is enabled. Before an operator-only sandbox run,
-finish the clean two-user smoke checkpoint, confirm no synthetic identity or D1
-row remains, then disable `PREVIEW_ACCOUNT_ERASURE_ENABLED` before enabling any
-Stripe flag. A future user-facing deletion flow must first persist a durable,
-non-cascading deletion tombstone that blocks Checkout, then reconcile or expire
-provider Sessions and subscriptions; deleting the billing customer and its
-cascading attempt row is final cleanup only.
+### Rollout authority and prerequisites
 
-The manual Preview workflow uses two separately approved jobs on fresh runners.
-The deploy job receives only Cloudflare deployment credentials. The dependent
-smoke job checks out the same `github.sha`, attests that SHA through Access and
-then receives only these GitHub `preview` environment values:
+There are exactly two source authorities for Preview rollout state:
 
-- variable `PREVIEW_CLERK_PUBLISHABLE_KEY`;
-- secrets `PREVIEW_CLERK_SMOKE_SECRET_KEY`,
-  `PREVIEW_CF_ACCESS_CLIENT_ID` and `PREVIEW_CF_ACCESS_CLIENT_SECRET`.
+- `site/wrangler.toml` owns the Preview server flags, `APP_ENV`, authorized
+  party and D1 binding. Never override its feature flags in the Pages dashboard.
+- `site/preview-rollout.json` owns the Preview-only public Stripe console flag
+  and the expected webhook Access mode (`protected` or `exact-path-bypass`).
 
-Create the smoke Secret Key as a separately named key in the isolated Clerk
-Development instance so it can be revoked without changing the Pages runtime.
-Pages Preview alone receives runtime `CLERK_PUBLISHABLE_KEY`,
-`CLERK_SECRET_KEY`, `CLERK_JWT_KEY` and `BUILD_SHARE_TOKEN_SECRET`; never copy
-the JWT or share-token secret into GitHub. Revoke the smoke Clerk key and Access
-token after the one-time checkpoint, or retain them only with an explicit
-rotation owner if recurring Preview smoke is approved.
+The exact reviewed `main` commit containing those files is the deployment
+authority. GitHub and Cloudflare environment values supply credentials and
+allowlisted provider identifiers; they do not authorize a feature transition.
+The external Access policy must match the manifest before deployment.
+
+Before stage 1 below, all of these conditions are mandatory:
+
+1. The GitHub `preview` environment has a required reviewer and permits only
+   `main`. Preview uses a separate Clerk Development instance and Stripe test
+   mode only.
+2. Cloudflare Access protects the complete stable Preview hostname. No webhook
+   bypass exists at baseline.
+3. Preview D1 has no pending migration, the immutable checksum gate passes, and
+   a recovery bookmark, database ID and exact source SHA are in the change
+   record.
+4. Preview has its server-only share-token secret. Its provider-owned
+   `*.pages.dev` alias remains wholly behind Access except for the later exact
+   webhook-path bypass; it does not inherit a `solvency.dev` zone WAF rule.
+5. The destructive two-user smoke has passed and removed both synthetic Clerk
+   identities and all of their D1 rows.
+
+The destructive Preview erasure route and provider-backed billing must never be
+enabled together. Middleware fails erasure closed when any Stripe surface is
+enabled, but the source transition must also be explicit: finish and clean the
+two-user smoke, then set `PREVIEW_ACCOUNT_ERASURE_ENABLED="false"` before any
+Stripe flag becomes true. Do not re-enable erasure merely to roll Stripe back.
+A future user-facing deletion flow must first persist a durable, non-cascading
+deletion tombstone that blocks Checkout, then reconcile or expire provider
+Sessions and subscriptions; deleting the billing customer and its cascading
+attempt row is final cleanup only.
+
+### Exact Preview environment inventory
+
+The GitHub `preview` environment must contain exactly the following rollout
+inputs for this workflow. Values with provider IDs are non-secret variables;
+credentials are environment secrets.
+
+| GitHub Preview variables | Required value |
+| --- | --- |
+| `PREVIEW_CLERK_PUBLISHABLE_KEY` | Clerk Development `pk_test_...` key |
+| `PREVIEW_CLERK_SMOKE_USER_EMAIL` | exact email of the dedicated stable Preview smoke user |
+| `PREVIEW_STRIPE_ACCOUNT_ID` | pinned Stripe test account `acct_...` |
+| `PREVIEW_STRIPE_PRO_PRODUCT_ID` | reviewed test Product `prod_...` |
+| `PREVIEW_STRIPE_PRO_MONTHLY_PRICE_ID` | reviewed monthly test Price `price_...` |
+| `PREVIEW_STRIPE_PRO_ANNUAL_PRICE_ID` | reviewed annual test Price `price_...` |
+| `PREVIEW_STRIPE_WEBHOOK_ENDPOINT_ID` | exact Preview test endpoint `we_...` |
+| `PREVIEW_STRIPE_PORTAL_CONFIGURATION_ID` | reviewed active, non-default test configuration `bpc_...` |
+
+| GitHub Preview secrets | Scope |
+| --- | --- |
+| `CLOUDFLARE_API_TOKEN` | Preview Pages deploy and Preview D1 migration listing only |
+| `CLOUDFLARE_ACCOUNT_ID` | account selector used with the deploy token |
+| `PREVIEW_CLERK_SMOKE_SECRET_KEY` | separately named Clerk Development `sk_test_...` key for smoke only |
+| `PREVIEW_CF_ACCESS_CLIENT_ID` | origin-scoped Preview Access service credential |
+| `PREVIEW_CF_ACCESS_CLIENT_SECRET` | origin-scoped Preview Access service credential |
+| `PREVIEW_STRIPE_CONFIG_READ_ONLY_KEY` | Stripe restricted test key `rk_test_...` for provider preflight only |
+
+Cloudflare Pages **Preview** runtime configuration must contain this separate
+matrix. Use the unprefixed names shown here; do not create `PREVIEW_...` aliases
+in the Pages runtime. Because this project manages text variables through
+Wrangler, commit the four non-secret Stripe identifier rows below under
+`[env.preview.vars]` in `site/wrangler.toml`; the dashboard cannot add or edit
+them. The provider preflight rejects any difference between those source values
+and the GitHub `PREVIEW_...` variables before it contacts Stripe.
+
+| Pages Preview runtime variables/config | Required value |
+| --- | --- |
+| `CLERK_PUBLISHABLE_KEY` | same Clerk Development `pk_test_...` client as the Preview build |
+| `STRIPE_ACCOUNT_ID` | exact same `acct_...` as `PREVIEW_STRIPE_ACCOUNT_ID` |
+| `STRIPE_PORTAL_CONFIGURATION_ID` | exact same non-default `bpc_...` as `PREVIEW_STRIPE_PORTAL_CONFIGURATION_ID` |
+| `STRIPE_PRO_MONTHLY_PRICE_ID` | exact same monthly `price_...` as the GitHub preflight variable |
+| `STRIPE_PRO_ANNUAL_PRICE_ID` | exact same annual `price_...` as the GitHub preflight variable |
+
+| Pages Preview runtime secrets | Scope |
+| --- | --- |
+| `CLERK_SECRET_KEY` | isolated Clerk Development runtime only |
+| `CLERK_JWT_KEY` | isolated Clerk Development verifier only |
+| `BUILD_SHARE_TOKEN_SECRET` | Preview share-token signing only |
+| `STRIPE_SECRET_KEY` | Stripe test-mode runtime key `sk_test_...` only |
+| `STRIPE_WEBHOOK_SECRET` | signing secret `whsec_...` for the exact Preview endpoint only |
+
+`CLERK_AUTHORIZED_PARTIES`, `APP_ENV`, every account/entitlement/intent/erasure
+flag and every Stripe feature flag remain source-controlled in
+`site/wrangler.toml`; there must be no Pages dashboard override. The Stripe
+Product ID and webhook endpoint ID, plus
+`PREVIEW_STRIPE_CONFIG_READ_ONLY_KEY`, are preflight-only and must never enter
+the Pages runtime. Conversely, `STRIPE_SECRET_KEY` and
+`STRIPE_WEBHOOK_SECRET` must never enter GitHub preflight, deploy or smoke
+jobs. The Clerk runtime key, JWT key and share-token secret must not enter
+GitHub. Cloudflare deploy credentials must not enter Pages runtime. This
+separation is a release boundary, not an organizational preference.
+
+Create one stable, non-production smoke user in the isolated Clerk Development
+instance and set its exact email in `PREVIEW_CLERK_SMOKE_USER_EMAIL`. It is not
+either destructive synthetic smoke identity and is not deleted by cleanup.
+Stripe-enabled smoke uses it only for authenticated GETs. Record one explicit
+owner and rotation schedule for this user, the separately named
+`PREVIEW_CLERK_SMOKE_SECRET_KEY`, and the Access service credentials. Revoke
+those credentials only after billing is dark and recurring smoke is
+intentionally retired or replacement credentials have passed the same smoke.
+
+The Stripe restricted key must have exactly these read permissions and no write
+permissions: **Accounts Read**, **Products Read**, **Prices Read**, **Webhook
+Endpoints Read**, and **Billing Portal Configurations Read**. Do not substitute
+an unrestricted `sk_test_...` runtime key for preflight.
+
+### Actual Preview workflow graph
+
+The manual `Deploy Preview` workflow is one exact-SHA, four-job dependency
+graph:
+
+```text
+resolve-rollout
+  -> stripe-config-preflight (conditional: any Stripe server surface is true)
+  -> deploy-preview
+  -> smoke-preview
+```
+
+When all Stripe server surfaces are false, the provider preflight is skipped
+and `deploy-preview` proceeds only after `resolve-rollout` succeeds. When any
+surface is true, `deploy-preview` is blocked unless the same-commit provider
+preflight succeeds. The jobs run on fresh runners and receive only their own
+credentials:
+
+- `resolve-rollout` receives no environment secrets. It requires explicit
+  authorization, current `main`, the exact GitHub SHA and valid source rollout
+  state.
+- Conditional `stripe-config-preflight` receives only the restricted Stripe
+  read key and the six allowlisted Stripe IDs. It performs GET-only account,
+  Product, Price, webhook-endpoint and Billing Portal configuration checks.
+- `deploy-preview` receives only the Cloudflare deploy credentials and the
+  Clerk publishable build variable. It rejects anything other than a Clerk
+  Development `pk_test_...` value, then rechecks source, tests, audit,
+  Functions, a clean tree and `No migrations to apply`; it never applies a
+  migration.
+- `smoke-preview` always performs non-destructive exact-SHA release attestation
+  through Access. While Stripe is dark and erasure is enabled it additionally
+  runs the destructive two-user cleanup smoke. Once any Stripe surface is on it
+  instead uses the stable Clerk user for authenticated provider- and
+  product-state-read-only entitlement, plan-list and `/api/billing-readiness`
+  GETs. Those GETs still advance the normal bounded per-owner D1 rate-limit
+  counter; they do not mutate Clerk, Stripe, plans, entitlements or billing
+  records.
+
+`Stripe Preview Configuration Preflight` is a separate, manual GET-only
+workflow for stage 2 while all Stripe surfaces are still dark. It does not
+deploy or mutate Stripe. Every later enabled `Deploy Preview` repeats the same
+provider attestation from the deployment commit before publishing.
+
+Before an enabled deployment, record and re-attest both immutable trust anchors:
+the exact `acct_...` account and the exact active, non-default `bpc_...` Portal
+configuration. The GitHub and Pages values must match byte-for-byte. Provider
+preflight proves the restricted key sees that account and that exact Portal
+policy. The deployed authenticated readiness GET independently uses the Pages
+runtime `STRIPE_SECRET_KEY` to retrieve `/v1/account` and fails closed unless it
+matches `STRIPE_ACCOUNT_ID`. Portal creation always sends the pinned
+`STRIPE_PORTAL_CONFIGURATION_ID` and rejects a different returned
+configuration. A provider dashboard change, key rotation or ID replacement
+requires re-attestation before another enabled deploy.
+
+### Exact stage order
+
+Use one reviewed source commit and one completed `Deploy Preview` run per source
+transition. Do not combine stages, and do not proceed unless the final smoke job
+passes for the exact deployed SHA.
+
+0. **Dark baseline:** `PREVIEW_ACCOUNT_ERASURE_ENABLED="true"`; Webhook, Portal
+   and Checkout false; `stripeSandboxUiEnabled=false`; webhook Access mode
+   `protected`. Production remains untouched and dark.
+1. **Close destructive testing:** run the two-user smoke to successful cleanup,
+   then commit only `PREVIEW_ACCOUNT_ERASURE_ENABLED="false"`. Keep all Stripe
+   flags false, UI false and Access protected; deploy and attest.
+2. **Pin provider configuration while dark:** create/review the Stripe test
+   Product, monthly and annual Prices, enabled exact webhook endpoint and active
+   non-default Portal configuration. Install the GitHub and Pages matrices
+   above, verify matching account/Portal/Price IDs, then run `Stripe Preview
+   Configuration Preflight`. Keep every Stripe flag and the UI false.
+3. **Stage the webhook edge:** externally add a bypass for only the exact
+   `/api/stripe-webhook` path. Do not bypass a prefix, wildcard, neighbor or any
+   other route. Commit only `webhookAccessMode="exact-path-bypass"` in
+   `site/preview-rollout.json`; keep Webhook, Portal, Checkout and UI false.
+   Deploy and require a public hardened 503 from the exact webhook route while
+   neighboring routes remain Access-protected.
+4. **Enable Webhook only:** commit only
+   `STRIPE_WEBHOOK_ENABLED="true"`; keep Portal, Checkout and UI false. The
+   same-commit conditional provider preflight must pass before deploy and smoke.
+5. **Enable Portal:** after signed webhook lifecycle evidence passes, commit only
+   `STRIPE_PORTAL_ENABLED="true"`; keep Checkout and UI false. Deploy and smoke.
+6. **Enable Checkout behind the operator UI:** after Portal evidence passes,
+   commit only `STRIPE_CHECKOUT_ENABLED="true"`; keep
+   `stripeSandboxUiEnabled=false`. Deploy, smoke and complete the provider-backed
+   lifecycle matrix below without exposing the console.
+7. **Expose the Preview sandbox console:** only after the lifecycle matrix and
+   reconciliation pass, commit only `stripeSandboxUiEnabled=true` in
+   `site/preview-rollout.json`, then deploy and smoke.
+
+Production remains untouched and dark during every stage. Never copy a Preview
+credential or identifier into Production as part of this sequence.
+
+### Reverse-order rollback
+
+Rollback is a sequence of reviewed forward commits and completed attestations,
+not dashboard flag edits. Preserve the exact stage evidence and reverse in this
+order:
+
+1. Set `stripeSandboxUiEnabled=false`; deploy and attest.
+2. Set `STRIPE_CHECKOUT_ENABLED="false"`; deploy and attest.
+3. Set `STRIPE_PORTAL_ENABLED="false"`; deploy and attest.
+4. Set `STRIPE_WEBHOOK_ENABLED="false"` while the exact-path Access bypass is
+   still present; deploy and prove the publicly reachable exact webhook path is
+   a hardened no-store 503 and neighboring paths are still Access-protected.
+5. Remove the external exact-path Access bypass, set
+   `webhookAccessMode="protected"`, deploy and attest the whole Preview origin
+   is protected.
+
+Leave `PREVIEW_ACCOUNT_ERASURE_ENABLED="false"` after ordinary billing
+rollback. Re-enabling destructive erasure requires a separate reviewed cleanup
+that proves no provider customer, Session, subscription, webhook retry or D1
+billing state remains. Production stays untouched and dark throughout rollback.
 
 ### Preview red-smoke recovery
 
-Treat the Preview checkpoint as incomplete if the deploy job succeeds but the
-second approval is not granted, the smoke job fails, or its final cleanup line
-is absent. Keep Cloudflare Access and `STRIPE_WEBHOOK_ENABLED=false` in force;
-do not start Stripe work.
+Before billing is introduced, treat the Preview checkpoint as incomplete if
+`resolve-rollout`, `deploy-preview` or `smoke-preview` fails, or if a destructive
+smoke run lacks its final cleanup success. Keep the full Preview origin behind
+Access and every Stripe flag false; do not start stage 1.
 
 1. If smoke created identities, list only Clerk Development users whose
    `externalId`, private metadata and test email all carry the exact synthetic
@@ -209,32 +416,13 @@ do not start Stripe work.
 2. Preserve logs that contain operation names and request IDs, but never copy
    Access credentials, Clerk keys, session tokens or `sv1_` paths into an
    issue, artifact or support ticket.
-3. To darken Preview, make a reviewed commit that restores only the three
-   `[env.preview.vars]` account, entitlement and intent flags to `"false"`,
-   leave Preview erasure true and Stripe false, and run the manual Preview
-   deploy job. Reject the dependent smoke job because its readiness contract
-   correctly requires feature-on Preview; verify instead that the stable alias
-   and latest immutable hash remain behind Access and the three
-   account routes return the hardened no-store `503 SERVICE_UNAVAILABLE` state
-   through service authentication.
+3. Fix forward on `main` with all Stripe flags false and Access protected. Run
+   the complete graph again. The non-destructive release attestation always
+   runs; the destructive two-user smoke runs only while billing is dark and
+   erasure is enabled.
 4. Do not consider recovery complete until synthetic Clerk users are absent,
-   their D1 data is erased, and the intended exact build SHA and flag state are
-   independently attested.
-
-1. The GitHub `preview` environment has a required reviewer and `main` branch
-   restriction. Preview uses a separate Clerk Development instance.
-2. Cloudflare Access rejects requests without valid user/service credentials.
-   The public webhook exception does not exist until raw-body signature
-   verification and a byte cap are deployed.
-3. Preview D1 has no pending migration, its checksum gate passes, and a recovery
-   bookmark is recorded.
-4. Preview has a server-only share-token secret. Its `*.pages.dev` alias remains
-   wholly behind Access and cannot inherit a `solvency.dev` zone WAF rule. Before
-   making any bearer link public, use a proxied custom hostname and complete the
-   public-share edge gate below. Account, entitlement and intent flags are
-   enabled only in Preview; every Stripe flag remains false.
-5. The two-user authenticated smoke matrix passes and leaves both Clerk and D1
-   clean.
+   their D1 data is erased, and the intended exact build SHA and source state
+   are independently attested.
 
 ### Public-share edge gate
 

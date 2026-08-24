@@ -20,8 +20,14 @@ import {
   STRIPE_WEBHOOK_API_VERSION,
   STRIPE_WEBHOOK_MAX_BODY_BYTES,
   STRIPE_WEBHOOK_OUTCOMES,
+  STRIPE_WEBHOOK_PATH,
   STRIPE_WEBHOOK_SIGNATURE_TOLERANCE_SECONDS,
 } from '../site/src/lib/server/stripe-webhook.ts';
+import {
+  DEVELOPMENT_DEPLOYMENT_ORIGIN,
+  PREVIEW_DEPLOYMENT_ORIGIN,
+  PRODUCTION_DEPLOYMENT_ORIGIN,
+} from '../site/src/lib/server/deployment-origin.ts';
 
 const migration = [
   '../site/migrations/0001_build_plans.sql',
@@ -231,7 +237,7 @@ async function signedRequest(
   });
   if (options.contentEncoding) headers.set('content-encoding', options.contentEncoding);
   if (options.contentLength) headers.set('content-length', options.contentLength);
-  return new Request(options.url ?? 'https://solvency.dev/api/stripe-webhook', {
+  return new Request(options.url ?? `${PREVIEW_DEPLOYMENT_ORIGIN}/api/stripe-webhook`, {
     method: 'POST', headers, body,
   });
 }
@@ -297,7 +303,7 @@ describe('Stripe webhook request and signature boundary', () => {
     let bodyAccesses = 0;
     const request = {
       method: 'POST',
-      url: 'https://solvency.dev/api/stripe-webhook',
+      url: `${PREVIEW_DEPLOYMENT_ORIGIN}/api/stripe-webhook`,
       headers: new Headers({ 'content-type': 'application/json' }),
       get body() {
         bodyAccesses += 1;
@@ -311,11 +317,11 @@ describe('Stripe webhook request and signature boundary', () => {
     assert.equal(response.headers.get('cache-control'), 'no-store');
     assert.equal(bodyAccesses, 0);
 
-    const get = new Request('https://solvency.dev/api/stripe-webhook');
+    const get = new Request(`${PREVIEW_DEPLOYMENT_ORIGIN}/api/stripe-webhook`);
     assert.equal((await invoke(context(db, get))).response.status, 405);
     assert.equal((await invoke(context(
       db,
-      await signedRequest(stripeEvent(), { url: 'https://solvency.dev/api/stripe-webhook?debug=1' }),
+      await signedRequest(stripeEvent(), { url: `${PREVIEW_DEPLOYMENT_ORIGIN}/api/stripe-webhook?debug=1` }),
     ))).response.status, 400);
     assert.equal((await invoke(context(
       db,
@@ -331,13 +337,72 @@ describe('Stripe webhook request and signature boundary', () => {
     }
   });
 
+  test('accepts only the exact deployment origin and canonical webhook URL for each environment', async () => {
+    const accepted = [
+      {
+        appEnv: 'production',
+        origin: PRODUCTION_DEPLOYMENT_ORIGIN,
+        payload: stripeEvent({ livemode: true }),
+      },
+      {
+        appEnv: 'preview',
+        origin: PREVIEW_DEPLOYMENT_ORIGIN,
+        payload: stripeEvent(),
+      },
+      {
+        appEnv: 'development',
+        origin: DEVELOPMENT_DEPLOYMENT_ORIGIN,
+        payload: stripeEvent(),
+      },
+    ] as const;
+    for (const candidate of accepted) {
+      const db = new SqliteD1();
+      const request = await signedRequest(candidate.payload, {
+        url: `${candidate.origin}${STRIPE_WEBHOOK_PATH}`,
+      });
+      const response = await invoke(context(db, request, { APP_ENV: candidate.appEnv }));
+      assert.equal(response.response.status, 409, candidate.appEnv);
+      assert.equal(request.bodyUsed, true, candidate.appEnv);
+    }
+
+    const rejected = [
+      // Production aliases and alternate hosts must never reach the callback.
+      { appEnv: 'production', url: `https://solvency-ru5.pages.dev${STRIPE_WEBHOOK_PATH}` },
+      { appEnv: 'production', url: `https://www.solvency.dev${STRIPE_WEBHOOK_PATH}` },
+      { appEnv: 'production', url: `${PREVIEW_DEPLOYMENT_ORIGIN}${STRIPE_WEBHOOK_PATH}` },
+      { appEnv: 'production', url: `https://evil.example${STRIPE_WEBHOOK_PATH}` },
+      // Preview is pinned to the single fixed deployment, not branch aliases.
+      { appEnv: 'preview', url: `https://main.solvency-ru5.pages.dev${STRIPE_WEBHOOK_PATH}` },
+      { appEnv: 'preview', url: `https://solvency-ru5.pages.dev${STRIPE_WEBHOOK_PATH}` },
+      { appEnv: 'preview', url: `${PRODUCTION_DEPLOYMENT_ORIGIN}${STRIPE_WEBHOOK_PATH}` },
+      // Local development is HTTP localhost on the one configured port only.
+      { appEnv: 'development', url: `https://localhost:8788${STRIPE_WEBHOOK_PATH}` },
+      { appEnv: 'development', url: `http://127.0.0.1:8788${STRIPE_WEBHOOK_PATH}` },
+      { appEnv: 'development', url: `http://localhost:8787${STRIPE_WEBHOOK_PATH}` },
+      // Noncanonical path/query variants are never treated as the endpoint.
+      { appEnv: 'preview', url: `${PREVIEW_DEPLOYMENT_ORIGIN}${STRIPE_WEBHOOK_PATH}/` },
+      { appEnv: 'preview', url: `${PREVIEW_DEPLOYMENT_ORIGIN}${STRIPE_WEBHOOK_PATH}?debug=1` },
+      { appEnv: 'preview', url: `${PREVIEW_DEPLOYMENT_ORIGIN}${STRIPE_WEBHOOK_PATH}%2Fextra` },
+      { appEnv: 'preview', url: `${PREVIEW_DEPLOYMENT_ORIGIN}/api%2Fstripe-webhook` },
+      { appEnv: 'preview', url: `${PREVIEW_DEPLOYMENT_ORIGIN}/api/stripe%2Dwebhook` },
+    ] as const;
+    for (const candidate of rejected) {
+      const db = new SqliteD1();
+      const request = await signedRequest(stripeEvent(), { url: candidate.url });
+      const response = await invoke(context(db, request, { APP_ENV: candidate.appEnv }));
+      assert.equal(response.response.status, 400, candidate.url);
+      assert.equal(response.response.headers.get('x-error-code'), 'INVALID_REQUEST', candidate.url);
+      assert.equal(request.bodyUsed, false, candidate.url);
+    }
+  });
+
   test('rejects declared and streamed overflow before unbounded allocation', async () => {
     const db = new SqliteD1();
     const timestamp = unixNow();
     let bodyAccesses = 0;
     const declared = {
       method: 'POST',
-      url: 'https://solvency.dev/api/stripe-webhook',
+      url: `${PREVIEW_DEPLOYMENT_ORIGIN}/api/stripe-webhook`,
       headers: new Headers({
         'content-type': 'application/json',
         'content-length': String(STRIPE_WEBHOOK_MAX_BODY_BYTES + 1),
@@ -359,7 +424,7 @@ describe('Stripe webhook request and signature boundary', () => {
       },
       cancel() { canceled = true; },
     });
-    const streamed = new Request('https://solvency.dev/api/stripe-webhook', {
+    const streamed = new Request(`${PREVIEW_DEPLOYMENT_ORIGIN}/api/stripe-webhook`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -460,8 +525,11 @@ describe('Stripe snapshot normalization and reducer integration', () => {
       [stripeEvent({ livemode: true }), {}],
       [stripeEvent({ livemode: false }), { APP_ENV: 'production' }],
     ] as const) {
+      const url = 'APP_ENV' in env && env.APP_ENV === 'production'
+        ? `${PRODUCTION_DEPLOYMENT_ORIGIN}${STRIPE_WEBHOOK_PATH}`
+        : undefined;
       assert.equal((await invoke(context(
-        rejected, await signedRequest(payload), env,
+        rejected, await signedRequest(payload, { url }), env,
       ))).response.status, 400);
     }
     assert.equal(rejected.sqlite.prepare('SELECT COUNT(*) AS count FROM billing_events').get()?.count, 0);
@@ -475,7 +543,9 @@ describe('Stripe snapshot normalization and reducer integration', () => {
       extra: { current_period_end: periodEnd + 99_999 },
     });
     const response = await invoke(context(
-      db, await signedRequest(payload), { APP_ENV: 'production' },
+      db, await signedRequest(payload, {
+        url: `${PRODUCTION_DEPLOYMENT_ORIGIN}${STRIPE_WEBHOOK_PATH}`,
+      }), { APP_ENV: 'production' },
     ));
     assert.equal(response.response.status, 200);
     assert.equal((await entitlement(db)).currentPeriodEnd, new Date(periodEnd * 1000).toISOString());
