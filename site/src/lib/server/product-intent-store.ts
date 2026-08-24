@@ -141,7 +141,7 @@ export async function recordProductIntent(
       nowSeconds,
       nowSeconds + PRODUCT_INTENT_RETENTION_SECONDS,
     ).run();
-    if (inserted.success !== true || (inserted.meta?.changes ?? 0) !== 1) {
+    if (inserted.success !== true) {
       throw new Error('Product intent was not persisted.');
     }
   } catch (cause) {
@@ -162,6 +162,11 @@ export async function recordProductIntent(
       return { ok: false, reason: 'owner_limit' };
     }
     throw cause;
+  }
+
+  const committed = await priorIntent(db, input.ownerUserId, input.eventId, nowSeconds);
+  if (!committed || committed.event_name !== input.eventName) {
+    throw new Error('Product intent commit could not be verified.');
   }
   return { ok: true, replayed: false };
 }

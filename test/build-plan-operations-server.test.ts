@@ -44,19 +44,22 @@ class SqliteStatement implements D1PreparedStatementLike {
   private readonly database: DatabaseSync;
   readonly query: string;
   readonly values: unknown[];
+  private readonly includeTriggerChanges: boolean;
 
   constructor(
     database: DatabaseSync,
     query: string,
     values: unknown[] = [],
+    includeTriggerChanges = false,
   ) {
     this.database = database;
     this.query = query;
     this.values = values;
+    this.includeTriggerChanges = includeTriggerChanges;
   }
 
   bind(...values: unknown[]): D1PreparedStatementLike {
-    return new SqliteStatement(this.database, this.query, values);
+    return new SqliteStatement(this.database, this.query, values, this.includeTriggerChanges);
   }
 
   async first<T>(): Promise<T | null> {
@@ -68,21 +71,29 @@ class SqliteStatement implements D1PreparedStatementLike {
   }
 
   async run<T>(): Promise<D1ResultLike<T>> {
+    const before = this.includeTriggerChanges
+      ? Number((this.database.prepare('SELECT total_changes() AS count').get() as { count: number }).count)
+      : 0;
     const result = this.database.prepare(this.query).run(...this.values);
-    return { success: true, results: [], meta: { changes: Number(result.changes) } };
+    const changes = this.includeTriggerChanges
+      ? Number((this.database.prepare('SELECT total_changes() AS count').get() as { count: number }).count) - before
+      : Number(result.changes);
+    return { success: true, results: [], meta: { changes } };
   }
 }
 
 class SqliteD1 implements D1DatabaseLike {
   readonly sqlite = new DatabaseSync(':memory:');
   private batchTail: Promise<void> = Promise.resolve();
+  private readonly includeTriggerChanges: boolean;
 
-  constructor() {
+  constructor(includeTriggerChanges = false) {
+    this.includeTriggerChanges = includeTriggerChanges;
     this.sqlite.exec(migration);
   }
 
   prepare(query: string): D1PreparedStatementLike {
-    return new SqliteStatement(this.sqlite, query);
+    return new SqliteStatement(this.sqlite, query, [], this.includeTriggerChanges);
   }
 
   async batch<T>(statements: D1PreparedStatementLike[]): Promise<Array<D1ResultLike<T>>> {
@@ -102,6 +113,33 @@ class SqliteD1 implements D1DatabaseLike {
     } finally {
       release();
     }
+  }
+}
+
+class BarrierSqliteD1 extends SqliteD1 {
+  private barrier: {
+    remaining: number;
+    promise: Promise<void>;
+    release: () => void;
+  } | null = null;
+
+  armBatchBarrier(participants = 2): void {
+    let release = () => undefined;
+    const promise = new Promise<void>((resolve) => { release = resolve; });
+    this.barrier = { remaining: participants, promise, release };
+  }
+
+  override async batch<T>(statements: D1PreparedStatementLike[]): Promise<Array<D1ResultLike<T>>> {
+    const barrier = this.barrier;
+    if (barrier) {
+      barrier.remaining -= 1;
+      if (barrier.remaining === 0) {
+        this.barrier = null;
+        barrier.release();
+      }
+      await barrier.promise;
+    }
+    return super.batch<T>(statements);
   }
 }
 
@@ -845,6 +883,92 @@ describe('operation quotas, retention and cascades', () => {
       'SELECT idempotency_key FROM build_plan_operation_requests ORDER BY idempotency_key',
     ).all() as Array<{ idempotency_key: string }>;
     assert.deepEqual(rows.map((row) => row.idempotency_key), ['current-idempotency-1']);
+  });
+
+  test('uses durable receipts when D1 change counts include expired-receipt pruning', async () => {
+    const db = new SqliteD1(true);
+    const firstPlan = planId(350);
+    seedPlan(db, OWNER_A, firstPlan, 2);
+    const seedExpiredReceipt = (index: number) => {
+      db.sqlite.prepare(
+        `INSERT INTO build_plan_operation_requests
+           (owner_user_id, operation, idempotency_key, request_hash, plan_id,
+            resource_type, resource_id, result_kind, created_at, expires_at)
+         VALUES (?, ?, ?, ?, ?, 'alert', ?, 'deleted', ?, ?)`,
+      ).run(
+        OWNER_A, `alert.delete:expired-${index}`, `expired-receipt-${String(index).padStart(4, '0')}`,
+        hashFor(8_000 + index), firstPlan, alertId(8_000 + index),
+        '2026-08-20T12:00:00.000Z', '2026-08-21T12:00:00.000Z',
+      );
+    };
+
+    seedExpiredReceipt(1);
+    const shared = await createShare(db, { planId: firstPlan, shareIndex: 350, now: NOW });
+    assert.equal(shared.result.ok, true);
+    if (shared.result.ok) assert.equal(shared.result.replayed, false);
+
+    seedExpiredReceipt(2);
+    const alert = await createAlert(db, {
+      planId: firstPlan, alertIndex: 350, trigger: 'monthly_spend_above', threshold: 250, now: NOW,
+    });
+    assert.equal(alert.ok, true);
+    if (alert.ok) assert.equal(alert.replayed, false);
+    if (!alert.ok || !shared.result.ok) return;
+
+    seedExpiredReceipt(3);
+    const updated = await updateOwnedBuildPlanAlert(db, {
+      ownerUserId: OWNER_A, planId: firstPlan, alertId: alert.resource.id, version: 2,
+      trigger: 'monthly_spend_change_percent', threshold: 15, baselineVersion: null,
+      idempotencyKey: 'prune-alert-update-1', requestHash: hashFor(8_103), now: LATER,
+    });
+    assert.equal(updated.ok && !updated.replayed, true);
+
+    seedExpiredReceipt(4);
+    assert.deepEqual(await revokeOwnedBuildPlanShare(db, {
+      ownerUserId: OWNER_A, planId: firstPlan, shareId: shared.result.resource.id,
+      idempotencyKey: 'prune-share-revoke-1', requestHash: hashFor(8_104), now: LATER,
+    }), { ok: true, replayed: false });
+
+    seedExpiredReceipt(5);
+    assert.deepEqual(await deleteOwnedBuildPlanAlert(db, {
+      ownerUserId: OWNER_A, planId: firstPlan, alertId: alert.resource.id,
+      idempotencyKey: 'prune-alert-delete-1', requestHash: hashFor(8_105), now: LATER,
+    }), { ok: true, replayed: false });
+  });
+
+  test('classifies a same-key concurrent revoke or delete loser as replayed', async () => {
+    const db = new BarrierSqliteD1(true);
+    const firstPlan = planId(375);
+    seedPlan(db, OWNER_A, firstPlan, 2);
+    const shared = await createShare(db, { planId: firstPlan, shareIndex: 375, now: NOW });
+    const alert = await createAlert(db, {
+      planId: firstPlan, alertIndex: 375, trigger: 'monthly_spend_above', threshold: 250, now: NOW,
+    });
+    assert.equal(shared.result.ok, true);
+    assert.equal(alert.ok, true);
+    if (!shared.result.ok || !alert.ok) return;
+
+    const revokeInput = {
+      ownerUserId: OWNER_A, planId: firstPlan, shareId: shared.result.resource.id,
+      idempotencyKey: 'concurrent-share-revoke-1', requestHash: hashFor(8_375), now: LATER,
+    };
+    db.armBatchBarrier();
+    const revoked = await Promise.all([
+      revokeOwnedBuildPlanShare(db, revokeInput),
+      revokeOwnedBuildPlanShare(db, revokeInput),
+    ]);
+    assert.deepEqual(revoked.map((result) => result.ok && result.replayed).sort(), [false, true]);
+
+    const deleteInput = {
+      ownerUserId: OWNER_A, planId: firstPlan, alertId: alert.resource.id,
+      idempotencyKey: 'concurrent-alert-delete-1', requestHash: hashFor(8_376), now: LATER,
+    };
+    db.armBatchBarrier();
+    const deleted = await Promise.all([
+      deleteOwnedBuildPlanAlert(db, deleteInput),
+      deleteOwnedBuildPlanAlert(db, deleteInput),
+    ]);
+    assert.deepEqual(deleted.map((result) => result.ok && result.replayed).sort(), [false, true]);
   });
 
   test('plan deletion cascades shares, inactive alerts and their idempotency records', async () => {

@@ -319,9 +319,8 @@ export async function appendOwnedBuildPlanVersion(
       ? { ok: false, reason: 'version_limit' }
       : { ok: false, reason: 'version_conflict' };
   }
-  let results;
   try {
-    results = await db.batch([
+    await db.batch([
       db.prepare(
         `INSERT INTO build_plan_versions
            (id, plan_id, version, plan_name, plan_schema_version, quote_engine_version,
@@ -347,14 +346,29 @@ export async function appendOwnedBuildPlanVersion(
     if (raced) return raced;
     throw new Error('Build plan version transaction failed.');
   }
-  const inserted = results[0]?.meta?.changes ?? 0;
-  if (inserted !== 1) {
-    const owned = await ownedPlanRow(db, input.ownerUserId, input.planId);
-    return owned ? { ok: false, reason: 'version_conflict' } : { ok: false, reason: 'not_found' };
+
+  // D1 can include AFTER-trigger updates in a statement's meta.changes count.
+  // The transaction's durable, owner-scoped version ID and idempotency receipt
+  // are the authoritative commit witness instead of a transport-specific count.
+  const resource = await getOwnedBuildPlan(
+    db,
+    input.ownerUserId,
+    input.planId,
+    input.expectedVersion + 1,
+  );
+  if (resource?.selectedVersion.id === input.versionId) {
+    const receipt = await priorRequest(db, input.ownerUserId, operation, input.idempotencyKey);
+    if (!receipt || receipt.request_hash !== input.requestHash
+      || receipt.plan_id !== input.planId || receipt.version !== input.expectedVersion + 1) {
+      throw new Error('Build plan version transaction did not commit its idempotency receipt.');
+    }
+    return { ok: true, replayed: false, resource };
   }
-  const resource = await getOwnedBuildPlan(db, input.ownerUserId, input.planId, input.expectedVersion + 1);
-  if (!resource) throw new Error('Created build plan version could not be read.');
-  return { ok: true, replayed: false, resource };
+
+  const raced = await replayResult(db, input.ownerUserId, operation, input.idempotencyKey, input.requestHash);
+  if (raced) return raced;
+  const owned = await ownedPlanRow(db, input.ownerUserId, input.planId);
+  return owned ? { ok: false, reason: 'version_conflict' } : { ok: false, reason: 'not_found' };
 }
 
 export async function deleteOwnedBuildPlan(
@@ -367,7 +381,9 @@ export async function deleteOwnedBuildPlan(
     `DELETE FROM build_plans
       WHERE id = ? AND owner_user_id = ? AND current_version = ?`,
   ).bind(planId, ownerUserId, expectedVersion).run();
-  if ((result.meta?.changes ?? 0) === 1) return 'deleted';
+  // D1 includes cascading child removals in meta.changes, so a successful
+  // owner-scoped parent deletion can report more than one changed row.
+  if ((result.meta?.changes ?? 0) > 0) return 'deleted';
   return await ownedPlanRow(db, ownerUserId, planId) ? 'version_conflict' : 'not_found';
 }
 

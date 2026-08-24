@@ -26,13 +26,20 @@ class Statement implements D1PreparedStatementLike {
   private readonly database: DatabaseSync;
   private readonly query: string;
   private readonly values: unknown[];
-  constructor(database: DatabaseSync, query: string, values: unknown[] = []) {
+  private readonly includeTriggerChanges: boolean;
+  constructor(
+    database: DatabaseSync,
+    query: string,
+    values: unknown[] = [],
+    includeTriggerChanges = false,
+  ) {
     this.database = database;
     this.query = query;
     this.values = values;
+    this.includeTriggerChanges = includeTriggerChanges;
   }
   bind(...values: unknown[]): D1PreparedStatementLike {
-    return new Statement(this.database, this.query, values);
+    return new Statement(this.database, this.query, values, this.includeTriggerChanges);
   }
   async first<T>(): Promise<T | null> {
     return (this.database.prepare(this.query).get(...this.values) as T | undefined) ?? null;
@@ -41,15 +48,27 @@ class Statement implements D1PreparedStatementLike {
     return { success: true, results: this.database.prepare(this.query).all(...this.values) as T[] };
   }
   async run<T>(): Promise<D1ResultLike<T>> {
+    const changesBefore = this.includeTriggerChanges
+      ? Number(this.database.prepare('SELECT total_changes() AS changes').get()?.changes ?? 0)
+      : 0;
     const result = this.database.prepare(this.query).run(...this.values);
-    return { success: true, results: [], meta: { changes: Number(result.changes) } };
+    const changes = this.includeTriggerChanges
+      ? Number(this.database.prepare('SELECT total_changes() AS changes').get()?.changes ?? 0) - changesBefore
+      : Number(result.changes);
+    return { success: true, results: [], meta: { changes } };
   }
 }
 
 class SqliteD1 implements D1DatabaseLike {
   readonly sqlite = new DatabaseSync(':memory:');
-  constructor() { this.sqlite.exec(migration); }
-  prepare(query: string): D1PreparedStatementLike { return new Statement(this.sqlite, query); }
+  private readonly includeTriggerChanges: boolean;
+  constructor(includeTriggerChanges = false) {
+    this.includeTriggerChanges = includeTriggerChanges;
+    this.sqlite.exec(migration);
+  }
+  prepare(query: string): D1PreparedStatementLike {
+    return new Statement(this.sqlite, query, [], this.includeTriggerChanges);
+  }
   async batch<T>(statements: D1PreparedStatementLike[]): Promise<Array<D1ResultLike<T>>> {
     this.sqlite.exec('BEGIN IMMEDIATE');
     try {
@@ -132,14 +151,14 @@ describe('append-only product-intent measurement', () => {
   });
 
   test('prunes expired owner rows and enforces immutable, closed, quota-bounded rows', async () => {
-    const db = new SqliteD1();
-    await recordProductIntent(db, {
+    const db = new SqliteD1(true);
+    assert.deepEqual(await recordProductIntent(db, {
       ownerUserId: OWNER_A, eventId: uuid(30), eventName: 'planner_started', nowSeconds: NOW,
-    });
-    await recordProductIntent(db, {
+    }), { ok: true, replayed: false });
+    assert.deepEqual(await recordProductIntent(db, {
       ownerUserId: OWNER_A, eventId: uuid(31), eventName: 'planner_started',
       nowSeconds: NOW + PRODUCT_INTENT_RETENTION_SECONDS,
-    });
+    }), { ok: true, replayed: false });
     assert.equal(db.sqlite.prepare('SELECT COUNT(*) AS count FROM product_intent_events').get()?.count, 1);
     assert.throws(() => db.sqlite.prepare(
       'UPDATE product_intent_events SET event_name = ? WHERE owner_user_id = ?',

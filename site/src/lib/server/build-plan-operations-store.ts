@@ -244,7 +244,7 @@ export async function createOwnedBuildPlanShare(
   }
 
   try {
-    const results = await db.batch([
+    await db.batch([
       db.prepare(
         `INSERT INTO build_plan_shares
            (id, owner_user_id, plan_id, version, token_hash, allow_quote_export, expires_at, created_at)
@@ -268,9 +268,6 @@ export async function createOwnedBuildPlanShare(
         input.now, operationExpiry(input.now), input.shareId, input.ownerUserId,
       ),
     ]);
-    if ((results[0]?.meta?.changes ?? 0) !== 1 || (results[1]?.meta?.changes ?? 0) !== 1) {
-      return { ok: false, reason: 'not_found' };
-    }
   } catch {
     const raced = await shareReplay(db, { ...input, operation });
     if (raced) return raced;
@@ -294,9 +291,11 @@ export async function createOwnedBuildPlanShare(
     throw new Error('Build plan share transaction failed.');
   }
 
-  const row = await ownedShareById(db, input.ownerUserId, input.planId, input.shareId);
-  if (!row) throw new Error('Created build plan share could not be read.');
-  return { ok: true, replayed: false, resource: shareResource(row, input.now) };
+  const committed = await shareReplay(db, { ...input, operation });
+  if (!committed) return { ok: false, reason: 'not_found' };
+  return committed.ok && committed.resource.id === input.shareId
+    ? { ...committed, replayed: false }
+    : committed;
 }
 
 export async function revokeOwnedBuildPlanShare(
@@ -322,6 +321,7 @@ export async function revokeOwnedBuildPlanShare(
   if (!await ownedShareById(db, input.ownerUserId, input.planId, input.shareId)) {
     return { ok: false, reason: 'not_found' };
   }
+  let insertedReceipt = false;
   try {
     const results = await db.batch([
       db.prepare(
@@ -342,17 +342,10 @@ export async function revokeOwnedBuildPlanShare(
           WHERE id = ? AND plan_id = ? AND owner_user_id = ?`,
       ).bind(input.shareId, input.planId, input.ownerUserId),
     ]);
-    if ((results[0]?.meta?.changes ?? 0) !== 1 || (results[1]?.meta?.changes ?? 0) !== 1) {
-      const raced = await priorOperation(
-        db, input.ownerUserId, operation, input.idempotencyKey, input.now,
-      );
-      if (raced) {
-        return raced.request_hash === input.requestHash
-          ? { ok: true, replayed: true }
-          : { ok: false, reason: 'idempotency_conflict' };
-      }
-      return { ok: false, reason: 'not_found' };
-    }
+    // The receipt INSERT is the linearization witness. Its BEFORE trigger may
+    // add pruning changes, so any positive count means this transaction won;
+    // a same-key loser sees the already-deleted resource and inserts zero rows.
+    insertedReceipt = (results[0]?.meta?.changes ?? 0) > 0;
   } catch {
     const raced = await priorOperation(
       db, input.ownerUserId, operation, input.idempotencyKey, input.now,
@@ -367,7 +360,16 @@ export async function revokeOwnedBuildPlanShare(
     }
     throw new Error('Build plan share revocation transaction failed.');
   }
-  return { ok: true, replayed: false };
+  const committed = await priorOperation(
+    db, input.ownerUserId, operation, input.idempotencyKey, input.now,
+  );
+  if (!committed) return { ok: false, reason: 'not_found' };
+  if (committed.request_hash !== input.requestHash) return { ok: false, reason: 'idempotency_conflict' };
+  if (committed.resource_id !== input.shareId || committed.result_kind !== 'revoked'
+    || await ownedShareById(db, input.ownerUserId, input.planId, input.shareId)) {
+    return { ok: false, reason: 'state_changed' };
+  }
+  return { ok: true, replayed: !insertedReceipt };
 }
 
 export async function getPublicSharedBuildPlan(
@@ -516,7 +518,7 @@ export async function createOwnedBuildPlanAlert(
     return { ok: false, reason: 'not_found' };
   }
   try {
-    const results = await db.batch([
+    await db.batch([
       db.prepare(
         `INSERT INTO build_plan_alert_settings
            (id, owner_user_id, plan_id, version, trigger_type, threshold,
@@ -541,9 +543,6 @@ export async function createOwnedBuildPlanAlert(
         input.now, operationExpiry(input.now), input.alertId, input.ownerUserId,
       ),
     ]);
-    if ((results[0]?.meta?.changes ?? 0) !== 1 || (results[1]?.meta?.changes ?? 0) !== 1) {
-      return { ok: false, reason: 'not_found' };
-    }
   } catch {
     const raced = await alertReplay(db, { ...input, operation });
     if (raced) return raced;
@@ -556,9 +555,11 @@ export async function createOwnedBuildPlanAlert(
     }
     throw new Error('Build plan alert transaction failed.');
   }
-  const row = await ownedAlertById(db, input.ownerUserId, input.planId, input.alertId);
-  if (!row) throw new Error('Created build plan alert could not be read.');
-  return { ok: true, replayed: false, resource: alertResource(row) };
+  const committed = await alertReplay(db, { ...input, operation });
+  if (!committed) return { ok: false, reason: 'not_found' };
+  return committed.ok && committed.resource.id === input.alertId
+    ? { ...committed, replayed: false }
+    : committed;
 }
 
 export async function updateOwnedBuildPlanAlert(
@@ -585,7 +586,7 @@ export async function updateOwnedBuildPlanAlert(
     return { ok: false, reason: 'not_found' };
   }
   try {
-    const results = await db.batch([
+    await db.batch([
       db.prepare(
         `UPDATE build_plan_alert_settings
             SET version = ?, trigger_type = ?, threshold = ?, baseline_version = ?,
@@ -608,9 +609,6 @@ export async function updateOwnedBuildPlanAlert(
         input.alertId, input.planId, input.ownerUserId,
       ),
     ]);
-    if ((results[0]?.meta?.changes ?? 0) !== 1 || (results[1]?.meta?.changes ?? 0) !== 1) {
-      return { ok: false, reason: 'not_found' };
-    }
   } catch {
     const raced = await alertReplay(db, { ...input, operation });
     if (raced) return raced;
@@ -622,9 +620,11 @@ export async function updateOwnedBuildPlanAlert(
     }
     throw new Error('Build plan alert update transaction failed.');
   }
-  const row = await ownedAlertById(db, input.ownerUserId, input.planId, input.alertId);
-  if (!row) throw new Error('Updated build plan alert could not be read.');
-  return { ok: true, replayed: false, resource: alertResource(row) };
+  const committed = await alertReplay(db, { ...input, operation });
+  if (!committed) return { ok: false, reason: 'not_found' };
+  return committed.ok && committed.resource.id === input.alertId
+    ? { ...committed, replayed: false }
+    : committed;
 }
 
 export async function deleteOwnedBuildPlanAlert(
@@ -650,6 +650,7 @@ export async function deleteOwnedBuildPlanAlert(
   if (!await ownedAlertById(db, input.ownerUserId, input.planId, input.alertId)) {
     return { ok: false, reason: 'not_found' };
   }
+  let insertedReceipt = false;
   try {
     const results = await db.batch([
       db.prepare(
@@ -670,17 +671,9 @@ export async function deleteOwnedBuildPlanAlert(
           WHERE id = ? AND plan_id = ? AND owner_user_id = ?`,
       ).bind(input.alertId, input.planId, input.ownerUserId),
     ]);
-    if ((results[0]?.meta?.changes ?? 0) !== 1 || (results[1]?.meta?.changes ?? 0) !== 1) {
-      const raced = await priorOperation(
-        db, input.ownerUserId, operation, input.idempotencyKey, input.now,
-      );
-      if (raced) {
-        return raced.request_hash === input.requestHash
-          ? { ok: true, replayed: true }
-          : { ok: false, reason: 'idempotency_conflict' };
-      }
-      return { ok: false, reason: 'not_found' };
-    }
+    // See revokeOwnedBuildPlanShare: trigger-inclusive counts can exceed one,
+    // while a serialized same-key loser inserts no receipt and reports zero.
+    insertedReceipt = (results[0]?.meta?.changes ?? 0) > 0;
   } catch {
     const raced = await priorOperation(
       db, input.ownerUserId, operation, input.idempotencyKey, input.now,
@@ -695,5 +688,14 @@ export async function deleteOwnedBuildPlanAlert(
     }
     throw new Error('Build plan alert delete transaction failed.');
   }
-  return { ok: true, replayed: false };
+  const committed = await priorOperation(
+    db, input.ownerUserId, operation, input.idempotencyKey, input.now,
+  );
+  if (!committed) return { ok: false, reason: 'not_found' };
+  if (committed.request_hash !== input.requestHash) return { ok: false, reason: 'idempotency_conflict' };
+  if (committed.resource_id !== input.alertId || committed.result_kind !== 'deleted'
+    || await ownedAlertById(db, input.ownerUserId, input.planId, input.alertId)) {
+    return { ok: false, reason: 'state_changed' };
+  }
+  return { ok: true, replayed: !insertedReceipt };
 }

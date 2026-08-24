@@ -41,15 +41,17 @@ class SqliteStatement implements D1PreparedStatementLike {
   private readonly database: DatabaseSync;
   readonly query: string;
   readonly values: unknown[];
+  private readonly includeTriggerChanges: boolean;
 
-  constructor(database: DatabaseSync, query: string, values: unknown[] = []) {
+  constructor(database: DatabaseSync, query: string, values: unknown[] = [], includeTriggerChanges = false) {
     this.database = database;
     this.query = query;
     this.values = values;
+    this.includeTriggerChanges = includeTriggerChanges;
   }
 
   bind(...values: unknown[]): D1PreparedStatementLike {
-    return new SqliteStatement(this.database, this.query, values);
+    return new SqliteStatement(this.database, this.query, values, this.includeTriggerChanges);
   }
 
   async first<T>(): Promise<T | null> {
@@ -61,20 +63,28 @@ class SqliteStatement implements D1PreparedStatementLike {
   }
 
   async run<T>(): Promise<D1ResultLike<T>> {
+    const before = this.includeTriggerChanges
+      ? Number((this.database.prepare('SELECT total_changes() AS count').get() as { count: number }).count)
+      : 0;
     const result = this.database.prepare(this.query).run(...this.values);
-    return { success: true, results: [], meta: { changes: Number(result.changes) } };
+    const changes = this.includeTriggerChanges
+      ? Number((this.database.prepare('SELECT total_changes() AS count').get() as { count: number }).count) - before
+      : Number(result.changes);
+    return { success: true, results: [], meta: { changes } };
   }
 }
 
 class SqliteD1 implements D1DatabaseLike {
   readonly sqlite = new DatabaseSync(':memory:');
+  private readonly includeTriggerChanges: boolean;
 
-  constructor() {
+  constructor(includeTriggerChanges = false) {
+    this.includeTriggerChanges = includeTriggerChanges;
     this.sqlite.exec(migration);
   }
 
   prepare(query: string): D1PreparedStatementLike {
-    return new SqliteStatement(this.sqlite, query);
+    return new SqliteStatement(this.sqlite, query, [], this.includeTriggerChanges);
   }
 
   async batch<T>(statements: D1PreparedStatementLike[]): Promise<Array<D1ResultLike<T>>> {
@@ -337,8 +347,8 @@ describe('D1-owned immutable BuildPlan versions', () => {
     assert.equal(await deleteOwnedBuildPlan(db, 'user_account_beta', input.planId, 1), 'not_found');
   });
 
-  test('allocates one next version for a shared expected revision and keeps snapshots immutable', async () => {
-    const db = new SqliteD1();
+  test('allocates one next version with trigger-inclusive D1 change counts and keeps snapshots immutable', async () => {
+    const db = new SqliteD1(true);
     const plan = makePlan();
     const firstAt = '2026-08-23T12:00:00.000Z';
     const planId = 'plan_33333333-3333-4333-8333-333333333333';
@@ -361,8 +371,17 @@ describe('D1-owned immutable BuildPlan versions', () => {
       versionId: 'version_33333333-3333-4333-8333-333333333332',
     });
     assert.equal(won.ok, true);
+    const replayed = await appendOwnedBuildPlanVersion(db, {
+      ...appendBase, idempotencyKey: 'append-key-000001',
+      versionId: 'version_33333333-3333-4333-8333-333333333339',
+    });
+    assert.equal(replayed.ok, true);
+    if (replayed.ok) {
+      assert.equal(replayed.replayed, true);
+      assert.equal(replayed.resource.selectedVersion.id, 'version_33333333-3333-4333-8333-333333333332');
+    }
     const stale = await appendOwnedBuildPlanVersion(db, {
-      ...appendBase, idempotencyKey: 'append-key-000002', requestHash: await sha256Hex('stale'),
+      ...appendBase, idempotencyKey: 'append-key-000002',
       versionId: 'version_33333333-3333-4333-8333-333333333333',
     });
     assert.deepEqual(stale, { ok: false, reason: 'version_conflict' });
