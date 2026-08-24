@@ -178,6 +178,7 @@ jobs:
   smoke-preview:
     needs: deploy-preview
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     environment:
       name: preview
       deployment: false
@@ -205,6 +206,10 @@ jobs:
       - name: Install isolated smoke dependencies
         working-directory: site
         run: npm ci --no-audit --no-fund
+
+      - name: Install pinned smoke browser
+        working-directory: site
+        run: npx --no-install playwright install --with-deps chromium
 
       - name: Attest exact Preview SHA and run authenticated smoke
         working-directory: site

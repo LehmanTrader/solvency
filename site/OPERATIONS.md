@@ -163,12 +163,15 @@ is absent. Keep Cloudflare Access and `STRIPE_WEBHOOK_ENABLED=false` in force;
 do not start Stripe work.
 
 1. If smoke created identities, list only Clerk Development users whose
-   `externalId` begins `solvency-preview-smoke-`. For every match, create a
-   temporary session with the separately named smoke key, call authenticated
+   `externalId`, private metadata and test email all carry the exact synthetic
+   smoke markers. Rerun the corrected smoke workflow: before creating any new
+   identity it signs each exact stale user in through Clerk's supported browser
+   testing flow on the stable Preview origin, calls authenticated
    `DELETE /api/preview-account-erasure` with the exact confirmation plus
-   Access service headers, and require `{ "data": { "erased": true } }`.
-   Delete that Clerk user only after D1 erasure succeeds. Never hand-delete D1
-   owner rows or delete the Clerk identity first.
+   origin-scoped Access service headers, and requires
+   `{ "data": { "erased": true } }`. It deletes that Clerk user only after D1
+   erasure succeeds. Never create a Backend API-only session for recovery,
+   hand-delete D1 owner rows or delete the Clerk identity first.
 2. Preserve logs that contain operation names and request IDs, but never copy
    Access credentials, Clerk keys, session tokens or `sv1_` paths into an
    issue, artifact or support ticket.

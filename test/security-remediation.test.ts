@@ -137,6 +137,7 @@ test('preview deployment is manual, reviewed, isolated and migration-fail-closed
   assert.match(workflow, /secrets\.PREVIEW_CF_ACCESS_CLIENT_ID/);
   assert.match(workflow, /secrets\.PREVIEW_CF_ACCESS_CLIENT_SECRET/);
   assert.match(workflow, /npm run smoke:account-preview/);
+  assert.match(workflow, /npx --no-install playwright install --with-deps chromium/);
   assert.match(workflow, /npm ci --no-audit --no-fund/);
   assert.match(workflow, /npm run coverage/);
   assert.match(workflow, /npm audit --audit-level=high/);

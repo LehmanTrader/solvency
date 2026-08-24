@@ -16,6 +16,8 @@ test('authenticated account smoke is locked to an isolated preview and test iden
   assert.match(source, /SHA256_COMMIT\.test\(expectedBuildSha\)/);
   assert.match(source, /secretKey\.startsWith\('sk_test_'\)/);
   assert.match(source, /publishableKey\.startsWith\('pk_test_'\)/);
+  assert.match(source, /clerk as clerkTesting, clerkSetup/);
+  assert.match(source, /chromium/);
   assert.doesNotMatch(source, /https:\/\/solvency\.dev/);
 
   const originGate = source.indexOf('const baseUrl = previewOrigin();');
@@ -48,12 +50,62 @@ test('authenticated account smoke requires Access service credentials and always
   assert.match(source, /clerk\.users\.getUserList\(\{[\s\S]*externalId: \[account\.externalId\]/);
   assert.match(source, /user = await recoverAccountUser\(account\)/);
   assert.match(source, /await eraseAllAccountData\(account\)/);
+  assert.match(source, /storageState/);
+  assert.match(source, /let erasureConfirmed = account\.storageState === 'none'/);
+  assert.match(source, /if \(!erasureConfirmed\) continue/);
   assert.match(source, /DELETE_MY_ISOLATED_PREVIEW_DATA/);
   assert.match(source, /await clerk\.users\.deleteUser\(user\.id\)/);
   assert.match(source, /new AggregateError/);
   assert.ok(source.indexOf('await eraseAllAccountData(account)') < source.indexOf('await clerk.users.deleteUser(user.id)'));
   assert.doesNotMatch(source, /Promise\.all\(\[createAccount/);
+  assert.doesNotMatch(source, /clerk\.sessions\.createSession/);
+  assert.doesNotMatch(source, /clerk\.sessions\.getToken/);
   assert.doesNotMatch(source, /console\.(?:log|error|warn)\([^\n]*(?:secretKey|publishableKey|clientSecret|token|account\.user)/);
+});
+
+test('authenticated account smoke obtains origin-bound tokens without leaking Access credentials', () => {
+  assert.match(source, /await clerkSetup\(\{ publishableKey, secretKey, dotenv: false \}\)/);
+  assert.match(source, /process\.env\.CLERK_TESTING_TOKEN/);
+  assert.match(source, /process\.env\.GITHUB_ACTIONS === 'true'/);
+  assert.match(source, /::add-mask::/);
+  assert.match(source, /testingToken\.replaceAll\('%', '%25'\)/);
+  assert.match(source, /await chromium\.launch\(\{ headless: true \}\)/);
+  assert.match(source, /account\.context\.route\(`\$\{baseUrl\}\/\*\*`/);
+  assert.match(source, /new URL\(route\.request\(\)\.url\(\)\)\.origin !== baseUrl/);
+  assert.match(source, /const response = await route\.fetch\(\{/);
+  assert.match(source, /maxRedirects: 0/);
+  assert.match(source, /await route\.fulfill\(\{ response \}\)/);
+  assert.doesNotMatch(source, /route\.continue\(\{\s*headers:/);
+  assert.match(source, /clerkTesting\.signIn\(\{[\s\S]*page,[\s\S]*emailAddress: account\.emailAddress/);
+  assert.match(source, /getToken\(forceRefresh \? \{ skipCache: true \} : undefined\)/);
+  assert.match(source, /claims\?\.sub !== account\.user\.id \|\| claims\?\.azp !== baseUrl/);
+  assert.match(source, /full signature, issuer, expiry, session-state and authorized-party checks/);
+  assert.doesNotMatch(source, /authorizedParties:\s*\[\]/);
+  assert.doesNotMatch(source, /setExtraHTTPHeaders/);
+  assert.match(source, /const exactAuthRejection = response\.status === 401/);
+  assert.match(source, /account\.storageState = 'touched'/);
+  assert.match(source, /including for GET requests and application-level errors/);
+  assert.match(source, /Authenticated erasure requires a live browser session/);
+  assert.match(source, /withBrowserDeadline/);
+  assert.match(source, /Clerk session token request timed out/);
+  const setup = source.indexOf('await clerkSetup({ publishableKey, secretKey, dotenv: false });');
+  const mask = source.indexOf('maskDynamicClerkTestingToken();');
+  const launch = source.indexOf('browser = await chromium.launch({ headless: true });');
+  assert.ok(setup >= 0 && setup < mask && mask < launch);
+});
+
+test('authenticated account smoke narrowly reconciles prior synthetic identities before creating more', () => {
+  assert.match(source, /SYNTHETIC_EXTERNAL_ID = \/\^solvency-preview-smoke-/);
+  assert.match(source, /user\.privateMetadata\?\.purpose !== 'automated_preview_smoke'/);
+  assert.match(source, /user\.privateMetadata\?\.runId !== match\[1\]/);
+  assert.match(source, /entry\.emailAddress === expectedEmail/);
+  assert.match(source, /STALE_IDENTITY_LIMIT/);
+  assert.match(source, /await reconcileStaleAccounts\(\)/);
+  assert.match(source, /homepage loads Clerk but does not issue account-owned API requests/);
+  assert.match(source, /account\.page\.goto\(`\$\{baseUrl\}\/`/);
+  const reconcile = source.indexOf('await reconcileStaleAccounts();');
+  const firstAccount = source.indexOf("await createAccount('a')");
+  assert.ok(reconcile >= 0 && reconcile < firstAccount);
 });
 
 test('authenticated account smoke attests exact Preview readiness before creating identities', () => {

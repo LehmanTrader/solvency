@@ -92,6 +92,8 @@ test('preview deploy hands the exact published SHA to an isolated authenticated 
   assert.match(workflow, /EXPECTED_BUILD_SHA: \$\{\{ github\.sha \}\}/);
   assert.match(workflow, /ref: \$\{\{ github\.sha \}\}/);
   assert.match(workflow, /deployment: false/);
+  assert.match(workflow, /smoke-preview:[\s\S]*timeout-minutes: 15/);
+  assert.match(workflow, /npx --no-install playwright install --with-deps chromium/);
   assert.match(smoke, /EXPECTED_BUILD_SHA/);
   assert.match(smoke, /solvency-build-sha/);
   assert.match(smoke, /attestPreviewReadiness/);

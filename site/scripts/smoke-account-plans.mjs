@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { createClerkClient } from '@clerk/backend';
+import { clerk as clerkTesting, clerkSetup } from '@clerk/testing/playwright';
+import { chromium } from '@playwright/test';
 
 const PREVIEW_ORIGIN = 'https://d1-functions-preview.solvency-ru5.pages.dev';
 const REQUIRED_CONFIRMATION = 'DELETE_ISOLATED_PREVIEW_DATA';
@@ -9,6 +11,9 @@ const SHA256_COMMIT = /^[0-9a-f]{40}$/;
 const READINESS_ATTEMPTS = 15;
 const READINESS_RETRY_DELAY_MS = 2_000;
 const REQUEST_TIMEOUT_MS = 10_000;
+const BROWSER_TIMEOUT_MS = 30_000;
+const STALE_IDENTITY_LIMIT = 20;
+const SYNTHETIC_EXTERNAL_ID = /^solvency-preview-smoke-([0-9a-f]{32})-([ab])$/;
 
 function requiredEnvironment(name) {
   const value = process.env[name]?.trim();
@@ -59,6 +64,7 @@ const clerk = createClerkClient({
 const cloudflareAccessHeaders = accessHeaders();
 const runId = randomUUID().replaceAll('-', '');
 const accounts = [];
+let browser = null;
 
 function testPlan(name) {
   return {
@@ -91,9 +97,107 @@ function testPlan(name) {
   };
 }
 
+function accountRecord(externalId, emailAddress, user = null, storageState = 'none') {
+  return {
+    externalId,
+    emailAddress,
+    user,
+    context: null,
+    page: null,
+    storageState,
+  };
+}
+
+function maskDynamicClerkTestingToken() {
+  const testingToken = process.env.CLERK_TESTING_TOKEN;
+  if (typeof testingToken !== 'string' || testingToken.length < 16
+    || testingToken.length > 4_096 || !/^[\x21-\x7e]+$/.test(testingToken)) {
+    throw new Error('Clerk testing token is missing or malformed.');
+  }
+  if (process.env.GITHUB_ACTIONS === 'true') {
+    // Escape the workflow-command metacharacter before registering the
+    // runtime-generated token, which GitHub cannot mask as a stored secret.
+    process.stdout.write(`::add-mask::${testingToken.replaceAll('%', '%25')}\n`);
+  }
+}
+
+async function withBrowserDeadline(account, label, task) {
+  let timer;
+  let timedOut = false;
+  try {
+    return await Promise.race([
+      Promise.resolve().then(task),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => {
+          timedOut = true;
+          reject(new Error(`${label} timed out.`));
+        }, BROWSER_TIMEOUT_MS);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+    if (timedOut) {
+      await account.context?.close().catch(() => undefined);
+      account.context = null;
+      account.page = null;
+    }
+  }
+}
+
+async function openBrowserSession(account) {
+  if (!browser || !account.user) throw new Error('Preview smoke browser or user is unavailable.');
+  account.context = await browser.newContext();
+  // Access credentials are attached only to the exact protected Preview
+  // origin. Clerk, analytics and every other third-party request must never
+  // receive the Cloudflare service-token headers.
+  await account.context.route(`${baseUrl}/**`, async (route) => {
+    if (new URL(route.request().url()).origin !== baseUrl) {
+      throw new Error('Access-header route escaped the exact Preview origin.');
+    }
+    // Playwright applies headers passed to route.continue() to redirected
+    // requests too. Fetch exactly one same-origin hop and fulfill it so any
+    // redirect is followed by the browser as a fresh, independently routed
+    // request and can never inherit the Access service credentials.
+    const response = await route.fetch({
+      headers: {
+        ...route.request().headers(),
+        ...cloudflareAccessHeaders,
+      },
+      maxRedirects: 0,
+      timeout: BROWSER_TIMEOUT_MS,
+    });
+    await route.fulfill({ response });
+  });
+  account.page = await account.context.newPage();
+  account.page.setDefaultTimeout(BROWSER_TIMEOUT_MS);
+  account.page.setDefaultNavigationTimeout(BROWSER_TIMEOUT_MS);
+  // The homepage loads Clerk but does not issue account-owned API requests.
+  // This keeps every D1 operation inside the explicit smoke sequence below.
+  const navigation = await account.page.goto(`${baseUrl}/`, {
+    waitUntil: 'domcontentloaded',
+  });
+  if (!navigation || navigation.status() !== 200 || new URL(account.page.url()).origin !== baseUrl) {
+    throw new Error('Browser smoke could not load the protected Preview application.');
+  }
+  const page = account.page;
+  await withBrowserDeadline(account, 'Clerk browser sign-in', () => clerkTesting.signIn({
+    page,
+    emailAddress: account.emailAddress,
+  }));
+  const browserUserId = await withBrowserDeadline(
+    account,
+    'Clerk browser identity check',
+    () => page.evaluate(() => window.Clerk?.user?.id ?? null),
+  );
+  if (browserUserId !== account.user.id) {
+    throw new Error('Clerk browser sign-in did not activate the expected synthetic user.');
+  }
+}
+
 async function createAccount(label) {
   const externalId = `solvency-preview-smoke-${runId}-${label}`;
-  const account = { externalId, user: null, session: null };
+  const emailAddress = `solvency+clerk_test_${runId}_${label}@example.com`;
+  const account = accountRecord(externalId, emailAddress);
   // Register the deterministic locator before the network mutation. If Clerk
   // commits the create but the response is lost, finally can still reconcile
   // and delete the synthetic identity by external ID.
@@ -101,7 +205,7 @@ async function createAccount(label) {
   try {
     account.user = await clerk.users.createUser({
       externalId,
-      emailAddress: [`solvency+clerk_test_${runId}_${label}@example.com`],
+      emailAddress: [emailAddress],
       firstName: 'Solvency',
       lastName: `Smoke ${label.toUpperCase()}`,
       skipPasswordRequirement: true,
@@ -116,7 +220,8 @@ async function createAccount(label) {
     }
     throw cause;
   }
-  account.session = await clerk.sessions.createSession({ userId: account.user.id });
+
+  await openBrowserSession(account);
   return account;
 }
 
@@ -134,33 +239,92 @@ async function recoverAccountUser(account) {
   return account.user;
 }
 
-async function sessionToken(account) {
-  if (!account.session) throw new Error('Test session was not created.');
-  return (await clerk.sessions.getToken(account.session.id)).jwt;
+async function sessionToken(account, skipCache = false) {
+  if (!account.page || !account.user) throw new Error('Test browser session was not created.');
+  const page = account.page;
+  const token = await withBrowserDeadline(
+    account,
+    'Clerk browser token request',
+    () => page.evaluate(async ({ forceRefresh, timeoutMs }) => {
+      let timeoutId;
+      try {
+        return await Promise.race([
+          Promise.resolve(
+            window.Clerk?.session?.getToken(forceRefresh ? { skipCache: true } : undefined) ?? null,
+          ),
+          new Promise((_, reject) => {
+            timeoutId = window.setTimeout(
+              () => reject(new Error('Clerk session token request timed out.')),
+              timeoutMs,
+            );
+          }),
+        ]);
+      } finally {
+        window.clearTimeout(timeoutId);
+      }
+    }, { forceRefresh: skipCache, timeoutMs: BROWSER_TIMEOUT_MS }),
+  );
+  if (typeof token !== 'string') throw new Error('Clerk browser session did not return a token.');
+
+  let claims;
+  try {
+    const segments = token.split('.');
+    if (segments.length !== 3) throw new Error('invalid JWT shape');
+    claims = JSON.parse(Buffer.from(segments[1], 'base64url').toString('utf8'));
+  } catch {
+    throw new Error('Clerk browser session returned an invalid token.');
+  }
+  // This is a non-authoritative preflight; the Pages Function still performs
+  // full signature, issuer, expiry, session-state and authorized-party checks.
+  if (claims?.sub !== account.user.id || claims?.azp !== baseUrl) {
+    throw new Error('Clerk browser token is missing the exact Preview authorized party.');
+  }
+  return token;
 }
 
 async function apiRequest(account, path, options = {}) {
-  const token = await sessionToken(account);
   const method = options.method ?? 'GET';
-  const headers = new Headers({
-    Accept: 'application/json',
-    Authorization: `Bearer ${token}`,
-    ...cloudflareAccessHeaders,
-    ...options.headers,
-  });
-  if (method !== 'GET') {
-    headers.set('Content-Type', 'application/json');
-    headers.set('Origin', baseUrl);
-    headers.set('Sec-Fetch-Site', 'same-origin');
+  let response;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const token = await sessionToken(account, attempt === 1);
+    const headers = new Headers({
+      Accept: 'application/json',
+      Authorization: `Bearer ${token}`,
+      ...cloudflareAccessHeaders,
+      ...options.headers,
+    });
+    if (method !== 'GET') {
+      headers.set('Content-Type', 'application/json');
+      headers.set('Origin', baseUrl);
+      headers.set('Sec-Fetch-Site', 'same-origin');
+    }
+
+    const stateBeforeRequest = account.storageState;
+    if (stateBeforeRequest === 'none') account.storageState = 'possible';
+    response = await fetch(new URL(path, baseUrl), {
+      method,
+      headers,
+      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      redirect: 'error',
+      cache: 'no-store',
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+    const exactAuthRejection = response.status === 401
+      && response.headers.get('x-error-code') === 'AUTH_REQUIRED';
+    if (exactAuthRejection) {
+      account.storageState = stateBeforeRequest;
+      if (attempt === 0) {
+        await response.body?.cancel().catch(() => undefined);
+        continue;
+      }
+    } else {
+      // Authentication middleware writes the bounded D1 rate-limit row before
+      // the handler, including for GET requests and application-level errors.
+      account.storageState = 'touched';
+    }
+    break;
   }
-  const response = await fetch(new URL(path, baseUrl), {
-    method,
-    headers,
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
-    redirect: 'error',
-    cache: 'no-store',
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-  });
+  if (!response) throw new Error(`${method} ${path} did not produce a response.`);
   let body = null;
   const contentType = response.headers.get('content-type') ?? '';
   if (contentType.startsWith('application/json')) {
@@ -386,7 +550,7 @@ async function deleteAllPlans(account) {
 }
 
 async function eraseAllAccountData(account) {
-  if (!account.session) return;
+  if (!account.page) throw new Error('Authenticated erasure requires a live browser session.');
   const erased = expectStatus(await apiRequest(account, '/api/preview-account-erasure', {
     method: 'DELETE',
     headers: { 'X-Preview-Erasure-Confirm': ERASURE_CONFIRMATION },
@@ -396,9 +560,48 @@ async function eraseAllAccountData(account) {
   }
 }
 
+function staleAccountFromUser(user) {
+  const match = SYNTHETIC_EXTERNAL_ID.exec(user.externalId ?? '');
+  if (!match || user.privateMetadata?.purpose !== 'automated_preview_smoke'
+    || user.privateMetadata?.runId !== match[1]) return null;
+  const expectedEmail = `solvency+clerk_test_${match[1]}_${match[2]}@example.com`;
+  if (!user.emailAddresses.some((entry) => entry.emailAddress === expectedEmail)) return null;
+  return accountRecord(user.externalId, expectedEmail, user, 'possible');
+}
+
+async function reconcileStaleAccounts() {
+  const result = await clerk.users.getUserList({
+    query: 'solvency+clerk_test_',
+    limit: STALE_IDENTITY_LIMIT + 1,
+    orderBy: '+created_at',
+  });
+  const staleAccounts = result.data.map(staleAccountFromUser).filter(Boolean);
+  if (staleAccounts.length > STALE_IDENTITY_LIMIT || result.totalCount > STALE_IDENTITY_LIMIT) {
+    throw new Error('Synthetic Clerk identity recovery exceeded its hard bound.');
+  }
+
+  for (const account of staleAccounts) {
+    accounts.push(account);
+    await openBrowserSession(account);
+    await eraseAllAccountData(account);
+    account.storageState = 'none';
+    await account.context.close();
+    account.context = null;
+    account.page = null;
+    await clerk.users.deleteUser(account.user.id);
+    account.user = null;
+  }
+}
+
 async function runSmoke() {
   await proveUnauthenticatedAccessDenial();
   await attestPreviewReadiness();
+  await clerkSetup({ publishableKey, secretKey, dotenv: false });
+  maskDynamicClerkTestingToken();
+  browser = await chromium.launch({ headless: true });
+  // Reconcile only identities carrying all three server-controlled synthetic
+  // markers. Recovery must succeed before this run creates another identity.
+  await reconcileStaleAccounts();
   // Create sequentially so a rejected sibling cannot finish after the finally
   // cleanup loop has already inspected the registered test identities.
   const accountA = await createAccount('a');
@@ -670,21 +873,31 @@ try {
       cleanupFailures.push(cause);
       continue;
     }
-    if (!user) continue;
-    try {
-      await eraseAllAccountData(account);
-    } catch (cause) {
-      cleanupFailures.push(cause);
-      // Keep the Clerk identity when D1 erasure is unconfirmed so a later
-      // authenticated cleanup can still target the same verified owner.
+    if (!user) {
+      await account.context?.close().catch((cause) => cleanupFailures.push(cause));
       continue;
     }
+    let erasureConfirmed = account.storageState === 'none';
+    if (account.storageState !== 'none') {
+      try {
+        await eraseAllAccountData(account);
+        account.storageState = 'none';
+        erasureConfirmed = true;
+      } catch (cause) {
+        cleanupFailures.push(cause);
+      }
+    }
+    await account.context?.close().catch((cause) => cleanupFailures.push(cause));
+    // An exact AUTH_REQUIRED response occurs before D1. Any non-auth response
+    // or ambiguous transport result requires authenticated erasure first.
+    if (!erasureConfirmed) continue;
     try {
       await clerk.users.deleteUser(user.id);
     } catch (cause) {
       cleanupFailures.push(cause);
     }
   }
+  await browser?.close().catch((cause) => cleanupFailures.push(cause));
   if (cleanupFailures.length) {
     failure = new AggregateError(
       failure ? [failure, ...cleanupFailures] : cleanupFailures,
