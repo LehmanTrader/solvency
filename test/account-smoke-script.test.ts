@@ -137,6 +137,14 @@ test('authenticated account smoke attests exact Preview readiness before creatin
 
 test('authenticated account smoke covers the complete pre-billing workflow boundary', () => {
   assert.match(source, /closed-default entitlement/);
+  const entitlementBoundary = source.slice(
+    source.indexOf('closed-default entitlement'),
+    source.indexOf('const shareBody'),
+  );
+  assert.match(entitlementBoundary, /tier: 'free',[\s\S]*source: 'none',[\s\S]*status: 'none'/);
+  assert.match(entitlementBoundary, /billingInterval: null/);
+  assert.match(entitlementBoundary, /currentPeriodEnd: null/);
+  assert.match(entitlementBoundary, /cancelAtPeriodEnd: false/);
   assert.match(source, /create owner A unlisted link/);
   assert.match(source, /cross-account unlisted-link list/);
   assert.match(source, /public unlisted-link HTML/);

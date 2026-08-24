@@ -685,6 +685,7 @@ async function runSmoke() {
     active: false,
     source: 'none',
     status: 'none',
+    billingInterval: null,
     currentPeriodEnd: null,
     cancelAtPeriodEnd: false,
   })) {
