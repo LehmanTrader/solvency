@@ -36,9 +36,9 @@ jobs:
         working-directory: site
         run: npm ci --no-audit --no-fund
 
-      - name: Audit production dependencies
+      - name: Audit site and deployment dependencies
         working-directory: site
-        run: npm audit --omit=dev --audit-level=high
+        run: npm audit --audit-level=high
 
       # Public by design (ships in page source). Set as a repository VARIABLE,
       # not a secret: Settings -> Secrets and variables -> Actions -> Variables.
@@ -47,11 +47,19 @@ jobs:
         working-directory: site
         env:
           PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.PUBLIC_CLERK_PUBLISHABLE_KEY }}
+          PUBLIC_ACCOUNT_PLANS_ENABLED: ${{ vars.PUBLIC_ACCOUNT_PLANS_ENABLED }}
         run: npm run build
+
+      - name: Verify Pages Functions bundle
+        working-directory: site
+        run: npm run build:functions
 
       - name: Publish to Cloudflare Pages
         uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy site/dist --project-name solvency --branch main
+          workingDirectory: site
+          packageManager: npm
+          wranglerVersion: '4.125.0'
+          command: pages deploy dist --project-name solvency --branch main

@@ -8,10 +8,359 @@
 const clerk = () => (window as any).Clerk;
 export const signedIn = (): boolean => Boolean(clerk()?.user);
 
+export type ClerkAuthState =
+  | { status: 'checking' }
+  | { status: 'disabled' }
+  | { status: 'signed-out' }
+  | { status: 'signed-in'; userId: string; sessionId: string | null }
+  | { status: 'error'; code: 'clerk_unavailable' };
+
+export interface ObserveClerkAuthOptions {
+  /** Override auto-detection. Pass the server-rendered Clerk flag when available. */
+  enabled?: boolean;
+  /** How long an enabled-but-unloaded Clerk instance may remain in `checking`. */
+  timeoutMs?: number;
+}
+
+const clerkScriptConfigured = (): boolean => typeof document !== 'undefined'
+  && Boolean(document.querySelector('script[data-clerk-publishable-key]'));
+
+const currentAuthState = (): ClerkAuthState => {
+  const c = clerk();
+  if (!c?.loaded) return { status: 'checking' };
+  if (!c.user) return { status: 'signed-out' };
+  if (typeof c.user.id !== 'string' || !c.user.id) return { status: 'error', code: 'clerk_unavailable' };
+  return {
+    status: 'signed-in',
+    userId: c.user.id,
+    sessionId: typeof c.session?.id === 'string' ? c.session.id : null,
+  };
+};
+
+/**
+ * Observe Clerk as a settled state machine. Unlike `onClerk`, this reports an
+ * auth-disabled build immediately and turns a failed enabled load into a safe
+ * error state instead of leaving account UI in an indefinite loading state.
+ */
+export function observeClerkAuth(
+  callback: (state: ClerkAuthState) => void,
+  options: ObserveClerkAuthOptions = {},
+): () => void {
+  const enabled = options.enabled ?? (Boolean(clerk()) || clerkScriptConfigured());
+  if (!enabled) {
+    callback({ status: 'disabled' });
+    return () => {};
+  }
+
+  let stopped = false;
+  let removeClerkListener: (() => void) | undefined;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const emit = (state: ClerkAuthState) => { if (!stopped) callback(state); };
+  const change = () => emit(currentAuthState());
+  const attach = () => {
+    if (stopped) return;
+    if (timer) clearTimeout(timer);
+    timer = undefined;
+    change();
+    const unsubscribe = clerk()?.addListener?.(change);
+    if (typeof unsubscribe === 'function') removeClerkListener = unsubscribe;
+  };
+  const ready = () => attach();
+
+  if (clerk()?.loaded) attach();
+  else {
+    emit({ status: 'checking' });
+    document.addEventListener('clerk:ready', ready, { once: true });
+    const timeoutMs = Math.max(0, options.timeoutMs ?? 10_000);
+    timer = setTimeout(() => {
+      timer = undefined;
+      emit({ status: 'error', code: 'clerk_unavailable' });
+      // Keep the one-shot ready listener: a late Clerk load can recover the UI.
+    }, timeoutMs);
+  }
+
+  return () => {
+    stopped = true;
+    if (timer) clearTimeout(timer);
+    document.removeEventListener('clerk:ready', ready);
+    removeClerkListener?.();
+  };
+}
+
 /** Runs cb once Clerk has loaded and again on every auth change. */
 export function onClerk(cb: () => void): void {
   const ready = () => { cb(); clerk()?.addListener?.(cb); };
   if (clerk()?.loaded) ready(); else document.addEventListener('clerk:ready', ready, { once: true });
+}
+
+export type AuthenticatedJsonErrorCode =
+  | 'INVALID_URL'
+  | 'AUTH_REQUIRED'
+  | 'SESSION_CHANGED'
+  | 'TOKEN_UNAVAILABLE'
+  | 'REQUEST_ABORTED'
+  | 'REQUEST_TIMEOUT'
+  | 'NETWORK_ERROR'
+  | 'FORBIDDEN'
+  | 'NOT_FOUND'
+  | 'CONFLICT'
+  | 'PLAN_LIMIT'
+  | 'VERSION_LIMIT'
+  | 'VERSION_CONFLICT'
+  | 'IDEMPOTENCY_CONFLICT'
+  | 'REQUEST_TOO_LARGE'
+  | 'INVALID_REQUEST'
+  | 'RATE_LIMITED'
+  | 'SERVER_ERROR'
+  | 'REQUEST_FAILED'
+  | 'INVALID_RESPONSE';
+
+const authenticatedJsonErrorMessages: Record<AuthenticatedJsonErrorCode, string> = {
+  INVALID_URL: 'The account request must use a same-origin URL.',
+  AUTH_REQUIRED: 'Sign in again to continue.',
+  SESSION_CHANGED: 'Your account session changed. Please try again.',
+  TOKEN_UNAVAILABLE: 'Your account session could not be verified. Please try again.',
+  REQUEST_ABORTED: 'The account request was cancelled.',
+  REQUEST_TIMEOUT: 'The account request timed out. Please try again.',
+  NETWORK_ERROR: 'The account service could not be reached. Please try again.',
+  FORBIDDEN: 'You do not have access to this resource.',
+  NOT_FOUND: 'The requested resource was not found.',
+  CONFLICT: 'This plan could not be changed because its account state is out of date. Refresh account plans before retrying.',
+  PLAN_LIMIT: 'This account has reached the preview limit of 20 plans. Refresh account plans, then delete an unneeded plan or keep this draft in the tab.',
+  VERSION_LIMIT: 'This account plan has reached the preview limit of 100 versions. Save the draft as a new account plan or keep it in the tab.',
+  VERSION_CONFLICT: 'This account plan changed since it was loaded. Refresh and reload its version history before retrying.',
+  IDEMPOTENCY_CONFLICT: 'This account save could not be safely matched to its earlier attempt. Please retry with a new request.',
+  REQUEST_TOO_LARGE: 'The plan is too large to save.',
+  INVALID_REQUEST: 'The plan contains fields that could not be saved.',
+  RATE_LIMITED: 'Too many account requests. Please try again later.',
+  SERVER_ERROR: 'The account service could not complete the request. Please try again.',
+  REQUEST_FAILED: 'The account request could not be completed.',
+  INVALID_RESPONSE: 'The account service returned an invalid response.',
+};
+
+export class AuthenticatedJsonError extends Error {
+  readonly code: AuthenticatedJsonErrorCode;
+  readonly status: number | null;
+  readonly requestId: string | null;
+
+  constructor(code: AuthenticatedJsonErrorCode, status: number | null = null, requestId: string | null = null) {
+    super(authenticatedJsonErrorMessages[code]);
+    this.name = 'AuthenticatedJsonError';
+    this.code = code;
+    this.status = status;
+    this.requestId = requestId;
+  }
+}
+
+export interface AuthenticatedJsonRequestInit
+  extends Omit<RequestInit, 'body' | 'credentials' | 'redirect' | 'signal'> {
+  /** A JSON-serializable request body. It is stringified exactly once for retries. */
+  json?: unknown;
+  signal?: AbortSignal;
+  timeoutMs?: number;
+}
+
+const trustedConflictCodes = new Set<AuthenticatedJsonErrorCode>([
+  'PLAN_LIMIT', 'VERSION_LIMIT', 'VERSION_CONFLICT', 'IDEMPOTENCY_CONFLICT',
+]);
+
+const statusErrorCode = (status: number, errorCodeHeader: string | null): AuthenticatedJsonErrorCode => {
+  if (status === 401) return 'AUTH_REQUIRED';
+  if (status === 403) return 'FORBIDDEN';
+  if (status === 404) return 'NOT_FOUND';
+  if (status === 409) {
+    return errorCodeHeader && trustedConflictCodes.has(errorCodeHeader as AuthenticatedJsonErrorCode)
+      ? errorCodeHeader as AuthenticatedJsonErrorCode
+      : 'CONFLICT';
+  }
+  if (status === 413) return 'REQUEST_TOO_LARGE';
+  if (status === 422) return 'INVALID_REQUEST';
+  if (status === 429) return 'RATE_LIMITED';
+  if (status >= 500) return 'SERVER_ERROR';
+  return 'REQUEST_FAILED';
+};
+
+function abortable<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
+  if (signal.aborted) return Promise.reject(signal.reason);
+  return new Promise<T>((resolve, reject) => {
+    const abort = () => reject(signal.reason);
+    signal.addEventListener('abort', abort, { once: true });
+    promise.then(
+      (value) => { signal.removeEventListener('abort', abort); resolve(value); },
+      (error) => { signal.removeEventListener('abort', abort); reject(error); },
+    );
+  });
+}
+
+/**
+ * Fetch a same-origin JSON endpoint with the active Clerk session token.
+ * A 401 gets one token-cache bypass and one retry; response bodies from failed
+ * requests are deliberately never read or surfaced.
+ */
+export async function authenticatedJsonFetch<T = unknown>(
+  input: string | URL,
+  init: AuthenticatedJsonRequestInit = {},
+): Promise<T> {
+  let url: URL;
+  try {
+    url = new URL(input, location.href);
+  } catch {
+    throw new AuthenticatedJsonError('INVALID_URL');
+  }
+  if (url.origin !== location.origin || url.username || url.password) {
+    throw new AuthenticatedJsonError('INVALID_URL');
+  }
+
+  const session = clerk()?.session;
+  if (!session?.getToken) throw new AuthenticatedJsonError('AUTH_REQUIRED', 401);
+  const sessionId = typeof session.id === 'string' ? session.id : null;
+  const controller = new AbortController();
+  let timedOut = false;
+  const outerAbort = () => controller.abort(init.signal?.reason);
+  if (init.signal?.aborted) outerAbort();
+  else init.signal?.addEventListener('abort', outerAbort, { once: true });
+  const timeoutMs = Math.min(60_000, Math.max(1, init.timeoutMs ?? 12_000));
+  const timeout = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+
+  const { json, signal: _signal, timeoutMs: _timeoutMs, headers: inputHeaders, ...requestInit } = init;
+  let body: string | undefined;
+  try {
+    if (json !== undefined) {
+      if (!safeJsonValue(json)) throw new Error('not JSON-safe');
+      body = JSON.stringify(json);
+    }
+  } catch {
+    clearTimeout(timeout);
+    init.signal?.removeEventListener('abort', outerAbort);
+    throw new AuthenticatedJsonError('INVALID_REQUEST');
+  }
+
+  const getToken = async (fresh: boolean): Promise<string> => {
+    try {
+      const value = await abortable(Promise.resolve(session.getToken(fresh ? { skipCache: true } : undefined)), controller.signal);
+      if (!value) throw new AuthenticatedJsonError('AUTH_REQUIRED', 401);
+      return value;
+    } catch (error) {
+      if (error instanceof AuthenticatedJsonError) throw error;
+      if (controller.signal.aborted) throw new AuthenticatedJsonError(timedOut ? 'REQUEST_TIMEOUT' : 'REQUEST_ABORTED');
+      throw new AuthenticatedJsonError('TOKEN_UNAVAILABLE');
+    }
+  };
+  const sessionIsCurrent = () => clerk()?.session === session
+    || (sessionId !== null && clerk()?.session?.id === sessionId);
+  const send = async (fresh: boolean): Promise<Response> => {
+    if (!sessionIsCurrent()) throw new AuthenticatedJsonError('SESSION_CHANGED');
+    const bearer = await getToken(fresh);
+    if (!sessionIsCurrent()) throw new AuthenticatedJsonError('SESSION_CHANGED');
+    const headers = new Headers(inputHeaders);
+    headers.set('Accept', 'application/json');
+    headers.set('Authorization', `Bearer ${bearer}`);
+    if (body !== undefined) headers.set('Content-Type', 'application/json');
+    try {
+      return await fetch(url, {
+        ...requestInit,
+        body,
+        headers,
+        credentials: 'same-origin',
+        redirect: 'error',
+        signal: controller.signal,
+      });
+    } catch {
+      if (controller.signal.aborted) throw new AuthenticatedJsonError(timedOut ? 'REQUEST_TIMEOUT' : 'REQUEST_ABORTED');
+      throw new AuthenticatedJsonError('NETWORK_ERROR');
+    }
+  };
+
+  try {
+    let response = await send(false);
+    if (response.status === 401) response = await send(true);
+    if (!response.ok) {
+      throw new AuthenticatedJsonError(
+        statusErrorCode(response.status, response.headers.get('x-error-code')),
+        response.status,
+        response.headers.get('x-request-id'),
+      );
+    }
+    if (!sessionIsCurrent()) throw new AuthenticatedJsonError('SESSION_CHANGED');
+    if (response.status === 204) return undefined as T;
+    const contentType = response.headers.get('content-type')?.toLowerCase() ?? '';
+    if (!contentType.includes('application/json')) throw new AuthenticatedJsonError('INVALID_RESPONSE', response.status);
+    try {
+      const value = await response.json() as T;
+      if (!sessionIsCurrent()) throw new AuthenticatedJsonError('SESSION_CHANGED');
+      return value;
+    } catch (error) {
+      if (error instanceof AuthenticatedJsonError) throw error;
+      if (controller.signal.aborted) throw new AuthenticatedJsonError(timedOut ? 'REQUEST_TIMEOUT' : 'REQUEST_ABORTED');
+      throw new AuthenticatedJsonError('INVALID_RESPONSE', response.status);
+    }
+  } finally {
+    clearTimeout(timeout);
+    init.signal?.removeEventListener('abort', outerAbort);
+  }
+}
+
+export const COMPOSER_AUTH_DRAFT_MAX_BYTES = 64 * 1024;
+export const COMPOSER_AUTH_DRAFT_MAX_AGE_MS = 30 * 60 * 1000;
+const COMPOSER_AUTH_DRAFT_KEY = 'solvency:composer-auth-draft:v1';
+
+type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
+interface ComposerAuthDraftEnvelope { version: 1; savedAt: number; draft: JsonValue }
+
+function safeJsonValue(value: unknown, seen = new Set<object>(), depth = 0): value is JsonValue {
+  if (value === null || typeof value === 'boolean' || typeof value === 'string') return true;
+  if (typeof value === 'number') return Number.isFinite(value);
+  if (typeof value !== 'object' || depth > 32 || seen.has(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  if (!Array.isArray(value) && prototype !== Object.prototype && prototype !== null) return false;
+  seen.add(value);
+  const valid = Array.isArray(value)
+    ? value.every((item) => safeJsonValue(item, seen, depth + 1))
+    : Object.entries(value).every(([key, item]) => key.length <= 256 && safeJsonValue(item, seen, depth + 1));
+  seen.delete(value);
+  return valid;
+}
+
+const utf8Bytes = (value: string): number => new TextEncoder().encode(value).byteLength;
+
+/** Preserve one canonical, JSON-safe Composer draft for an auth redirect. */
+export function preserveComposerDraftForAuth(canonicalDraft: unknown): boolean {
+  try {
+    if (!safeJsonValue(canonicalDraft) || canonicalDraft === null || Array.isArray(canonicalDraft)) return false;
+    const envelope: ComposerAuthDraftEnvelope = { version: 1, savedAt: Date.now(), draft: canonicalDraft };
+    const serialized = JSON.stringify(envelope);
+    if (utf8Bytes(serialized) > COMPOSER_AUTH_DRAFT_MAX_BYTES) return false;
+    sessionStorage.setItem(COMPOSER_AUTH_DRAFT_KEY, serialized);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Consume and remove the redirect draft. Expired, corrupt or oversized data is discarded. */
+export function consumeComposerDraftAfterAuth<T = unknown>(): T | null {
+  let serialized: string | null = null;
+  try {
+    serialized = sessionStorage.getItem(COMPOSER_AUTH_DRAFT_KEY);
+    sessionStorage.removeItem(COMPOSER_AUTH_DRAFT_KEY);
+    if (!serialized || serialized.length > COMPOSER_AUTH_DRAFT_MAX_BYTES
+      || utf8Bytes(serialized) > COMPOSER_AUTH_DRAFT_MAX_BYTES) return null;
+    const envelope = JSON.parse(serialized) as Partial<ComposerAuthDraftEnvelope>;
+    if (envelope.version !== 1 || typeof envelope.savedAt !== 'number'
+      || !Number.isFinite(envelope.savedAt) || envelope.savedAt > Date.now() + 60_000
+      || Date.now() - envelope.savedAt > COMPOSER_AUTH_DRAFT_MAX_AGE_MS
+      || !safeJsonValue(envelope.draft) || envelope.draft === null || Array.isArray(envelope.draft)) return null;
+    return envelope.draft as T;
+  } catch {
+    return null;
+  }
+}
+
+export function clearComposerDraftForAuth(): void {
+  try { sessionStorage.removeItem(COMPOSER_AUTH_DRAFT_KEY); } catch { /* storage may be unavailable */ }
 }
 
 const token = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();

@@ -101,6 +101,12 @@ test('planner analytics disclosure and payloads exclude raw build inputs', () =>
   assert.doesNotMatch(page, /track\([^\n]+(?:plan\.name|harness\.name|modelId|threshold)/);
   assert.match(page, /build_quote_first_edit_valid/);
   assert.match(page, /price_hypothesis: '19_monthly'/);
+  assert.match(privacy, /Cloudflare D1 under your verified Clerk account ID/);
+  assert.match(privacy, /Custom and contract rates may be commercially sensitive/);
+  assert.match(privacy, /session storage/);
+  assert.match(privacy, /expires after 30 minutes/);
+  assert.match(privacy, /cascades to all of its active versions, quote snapshots and idempotency records/);
+  assert.match(privacy, /provider backups/);
 });
 
 test('every planner mutation and export crosses the shared untrusted-plan gate', () => {

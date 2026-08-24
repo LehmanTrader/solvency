@@ -62,7 +62,7 @@ const aa = sources.find((s) => s.benchmark === 'aa-coding-agent-index');
     <script async crossorigin="anonymous"
             data-clerk-publishable-key={CLERK_PUBLISHABLE_KEY}
             src={`https://${CLERK_FRONTEND_API}/npm/@clerk/clerk-js@5/dist/clerk.browser.js`}
-            onload="window.Clerk.load({localization:{signUp:{start:{title:'Create your free Solvency account',subtitle:'Tune assumptions and keep scenario links — free.'}},signIn:{start:{title:'Sign in to Solvency',subtitle:'Continue with your free account.'}}}}).then(()=>document.dispatchEvent(new Event('clerk:ready')))"></script>
+            onload="window.Clerk.load({localization:{signUp:{start:{title:'Create your free Solvency account',subtitle:'Tune assumptions, keep scenario links and save Build Composer plans when available — free.'}},signIn:{start:{title:'Sign in to Solvency',subtitle:'Continue with your free account.'}}}}).then(()=>document.dispatchEvent(new Event('clerk:ready')))"></script>
   )}
   {CF_BEACON_TOKEN && (
     <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js"
@@ -100,7 +100,7 @@ const aa = sources.find((s) => s.benchmark === 'aa-coding-agent-index');
         const b = document.getElementById('auth-signup'), s = document.getElementById('auth-signin'), u = document.getElementById('auth-user');
         if (b && s && u) {
           s.addEventListener('click', (e) => { e.preventDefault(); openSignIn(); });
-          b.addEventListener('click', () => openSignUp('gate', 'Create your free account: tune assumptions and keep scenario links.'));
+          b.addEventListener('click', () => openSignUp('gate', 'Create your free account: tune assumptions, keep scenario links and save Build Composer plans when available.'));
           onClerk(() => {
             const c = (window as any).Clerk; if (!c) return;
             const on = !!c.user;

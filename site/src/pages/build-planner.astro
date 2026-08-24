@@ -3,8 +3,12 @@ import Base from '../layouts/Base.astro';
 import Section from '../components/Section.astro';
 import { models } from '../lib/data.ts';
 import { BUILD_PLAN_LIMITS } from '../lib/build-plan-limits.ts';
+import { CLERK_ENABLED } from '../lib/clerk.ts';
 
 const currentModels = models.filter((model) => model.status === 'current');
+const ACCOUNT_PLANS_ENABLED = import.meta.env.PUBLIC_ACCOUNT_PLANS_ENABLED === 'true';
+const ACCOUNT_PLAN_PREVIEW_MAX_PLANS = 20;
+const ACCOUNT_PLAN_PREVIEW_MAX_VERSIONS = 100;
 const harnessExamples = [
   'Custom harness', 'Hermes Agent', 'Claude Code', 'Codex', 'Pi', 'Grok Build',
   'Cursor', 'OpenCode', 'OpenHands', 'Goose',
@@ -32,7 +36,9 @@ const harnessExamples = [
       <span class="pill pill-ink">No checkout yet</span>
     </div>
 
-    <form class="mt-8 grid gap-6" id="composer-form" novalidate>
+    <form class="mt-8 grid gap-6" id="composer-form" novalidate
+          data-account-plans-enabled={ACCOUNT_PLANS_ENABLED ? 'true' : 'false'}
+          data-clerk-enabled={CLERK_ENABLED ? 'true' : 'false'}>
       <section class="card overflow-hidden" aria-labelledby="harness-title">
         <div class="card-head">
           <div><p class="label">Step 1</p><h2 class="h-card mt-1" id="harness-title">Harness and workload</h2></div>
@@ -117,7 +123,7 @@ const harnessExamples = [
           <div class="card-pad border-t border-[var(--color-rule)]" id="b-messages" aria-live="polite"></div>
           <div class="px-5 py-3 border-t border-[var(--color-rule)] flex flex-wrap gap-2">
             <a class="btn" href="#build-operations">Export options ↓</a>
-            <button type="button" class="btn" id="b-save-version" data-analytics="build-save-version">Save version</button>
+            <button type="button" class="btn" id="b-save-version" data-analytics="build-save-version">Save in this tab</button>
             <button type="button" class="btn" id="b-duplicate" data-analytics="build-duplicate">Duplicate plan</button>
           </div>
         </div>
@@ -144,22 +150,81 @@ const harnessExamples = [
           <div><p class="label">Step 4 · preview</p><h2 class="h-card mt-1" id="workspace-title">Plan versions and scenario delta</h2></div>
           <span class="pill pill-ink" id="b-version-count">0 saved</span>
         </div>
-        <div class="card-pad grid gap-5 lg:grid-cols-[.8fr_1.2fr]">
-          <div>
-            <p class="text-sm leading-relaxed text-[var(--color-body)]">Save an immutable quote, duplicate the current architecture, then edit the copy to see its cost delta against a baseline.</p>
-            <p class="small mt-2">Preview storage is limited to this open tab. Nothing is uploaded or synced; authenticated D1 persistence comes before billing.</p>
-            <div class="mt-4 grid grid-cols-3 gap-2" aria-label="Delta from selected baseline">
-              <div class="delta-tile"><p class="label">Attempt</p><p class="delta-v" id="b-delta-attempt">No baseline</p></div>
-              <div class="delta-tile"><p class="label">Solved</p><p class="delta-v" id="b-delta-solved">No baseline</p></div>
-              <div class="delta-tile"><p class="label">Monthly</p><p class="delta-v" id="b-delta-month">No baseline</p></div>
+        <div class="card-pad grid gap-6">
+          <div class="grid gap-5 lg:grid-cols-[.8fr_1.2fr]">
+            <div>
+              <p class="text-sm leading-relaxed text-[var(--color-body)]">Save an immutable quote, duplicate the current architecture, then edit the copy to see its cost delta against a baseline.</p>
+              <p class="small mt-2">Preview storage in the list beside this copy is limited to this open tab. It disappears when the tab closes and is never uploaded automatically.</p>
+              <div class="mt-4 grid grid-cols-3 gap-2" aria-label="Delta from selected baseline">
+                <div class="delta-tile"><p class="label">Attempt</p><p class="delta-v" id="b-delta-attempt">No baseline</p></div>
+                <div class="delta-tile"><p class="label">Solved</p><p class="delta-v" id="b-delta-solved">No baseline</p></div>
+                <div class="delta-tile"><p class="label">Monthly</p><p class="delta-v" id="b-delta-month">No baseline</p></div>
+              </div>
+              <p class="small mt-3" id="b-baseline-label">Save a version to establish a baseline.</p>
+              <p class="small mt-2" id="b-workspace-message" aria-live="polite"></p>
             </div>
-            <p class="small mt-3" id="b-baseline-label">Save a version to establish a baseline.</p>
-            <p class="small mt-2" id="b-workspace-message" aria-live="polite"></p>
+            <div>
+              <h3 class="label">Versions saved in this tab</h3>
+              <div class="mt-3 grid gap-2" id="b-snapshots"><p class="small">No versions yet.</p></div>
+            </div>
           </div>
-          <div>
-            <h3 class="label">Versions saved in this tab</h3>
-            <div class="mt-3 grid gap-2" id="b-snapshots"><p class="small">No versions yet.</p></div>
-          </div>
+
+          {ACCOUNT_PLANS_ENABLED && (
+            <section class="account-workspace border-t border-[var(--color-rule)] pt-6" aria-labelledby="account-workspace-title">
+              <div class="flex flex-wrap items-start justify-between gap-3">
+                <div class="max-w-3xl">
+                  <p class="label">Account storage · preview</p>
+                  <h3 class="h-card mt-2" id="account-workspace-title">Account plans</h3>
+                  <p class="small mt-2">Account plans are free during this preview so you can reopen named versions later. Preview safety limits are {ACCOUNT_PLAN_PREVIEW_MAX_PLANS} account plans and {ACCOUNT_PLAN_PREVIEW_MAX_VERSIONS} immutable versions per plan. These are storage safeguards, not final Free/Pro entitlements; billing is not active. Nothing from the editor is uploaded until you choose an account save action.</p>
+                </div>
+                <span class="pill pill-ink" id="b-account-state" role="status" aria-live="polite" aria-atomic="true">Checking account…</span>
+              </div>
+
+              <div class="operation-summary mt-4" id="b-account-recovered" hidden>
+                <p class="text-sm font-semibold text-[var(--color-ink)]">A valid draft was recovered after sign-in.</p>
+                <p class="small mt-1">It has not replaced the editor and has not been uploaded.</p>
+                <div class="mt-3 flex flex-wrap gap-2">
+                  <button type="button" class="btn" id="b-account-restore-recovered">Restore recovered draft</button>
+                  <button type="button" class="btn btn-quiet" id="b-account-discard-recovered">Discard recovered draft</button>
+                </div>
+              </div>
+
+              <div class="mt-4" id="b-account-auth-actions" hidden>
+                <p class="small" id="b-account-auth-copy">Sign in or create a free account to save plans and reopen them later. Your current quote and tab-only versions still work.</p>
+                <div class="mt-3 flex flex-wrap gap-2">
+                  <button type="button" class="btn" id="b-account-signin">Sign in to save</button>
+                  <button type="button" class="btn btn-accent" id="b-account-signup">Create free account</button>
+                </div>
+              </div>
+
+              <div class="mt-5 grid gap-5 lg:grid-cols-[.85fr_1.15fr]" id="b-account-signed-in" hidden>
+                <div class="min-w-0">
+                  <div class="flex flex-wrap items-center justify-between gap-2">
+                    <h4 class="label">Plans in your account</h4>
+                    <div class="flex flex-wrap items-center gap-2">
+                      <span class="small" id="b-account-capacity">0 of {ACCOUNT_PLAN_PREVIEW_MAX_PLANS} plans</span>
+                      <button type="button" class="btn btn-quiet" id="b-account-refresh">Refresh</button>
+                    </div>
+                  </div>
+                  <div class="mt-3 grid gap-2" id="b-account-plans" aria-busy="false"><p class="small">Loading account plans…</p></div>
+                  <button type="button" class="btn btn-quiet mt-3" id="b-account-more" hidden>Load more plans</button>
+                </div>
+                <div class="min-w-0">
+                  <h4 class="label break-words" id="b-account-selection-title">Current editor</h4>
+                  <p class="small mt-2" id="b-account-selection-copy">Save the current valid editor as a new account plan. This does not change versions in this tab.</p>
+                  <div class="mt-3 flex flex-wrap gap-2">
+                    <button type="button" class="btn" id="b-account-save" aria-describedby="b-account-selection-copy">Save current plan to account</button>
+                    <button type="button" class="btn btn-quiet" id="b-account-save-new" aria-describedby="b-account-selection-copy" hidden>Save as new account plan</button>
+                    <button type="button" class="btn btn-quiet" id="b-account-delete" hidden>Delete account plan</button>
+                  </div>
+                  <h5 class="label mt-5">Selected plan versions</h5>
+                  <div class="mt-3 grid gap-2" id="b-account-versions"><p class="small">Choose a plan to view its versions. The editor will not change.</p></div>
+                </div>
+              </div>
+              <p class="small mt-3" id="b-account-status" role="status" aria-live="polite" aria-atomic="true"></p>
+              <p class="small mt-2 text-[var(--color-worse)]" id="b-account-error" role="alert"></p>
+            </section>
+          )}
         </div>
       </section>
 
@@ -213,12 +278,12 @@ const harnessExamples = [
       <section class="card overflow-hidden" id="build-operations" aria-labelledby="operations-title">
         <div class="card-head">
           <div><p class="label">Step 6 · preview</p><h2 class="h-card mt-1" id="operations-title">Export, share and monitor</h2></div>
-          <span class="pill pill-ink">No server storage</span>
+          <span class="pill pill-ink">Exports local · share and alerts preview</span>
         </div>
         <div class="card-pad">
           <p class="text-sm leading-relaxed text-[var(--color-body)] max-w-4xl">
-            Downloads are created in this browser. Share and alert settings are drafts saved only in
-            this tab; no link is created, no plan is uploaded and no email is sent.
+            Downloads are created in this browser. These share and alert controls save drafts only in
+            this tab; no link is created, no plan is uploaded by these controls and no email is sent.
           </p>
 
           <div class="operation-grid mt-5">
@@ -285,10 +350,10 @@ const harnessExamples = [
     </form>
 
     <Section id="packaging" eyebrow="Packaging" title="What becomes Pro" class="mt-20"
-      caption="The full workflow is being built before checkout. Account-tier limits are not enforced yet; the 24-role browser safety cap still applies.">
+      caption={`The full workflow is being built before checkout. Preview access does not guarantee final tier placement; final tier entitlements are not active. Preview safety caps still apply: ${BUILD_PLAN_LIMITS.maxRoles} roles, ${ACCOUNT_PLAN_PREVIEW_MAX_PLANS} account plans and ${ACCOUNT_PLAN_PREVIEW_MAX_VERSIONS} versions per plan.`}>
       <div class="grid gap-4 md:grid-cols-2">
-        <div class="card card-pad"><p class="label">Free</p><h3 class="h-card mt-2">Experience the answer</h3><ul class="mt-3 text-sm leading-relaxed text-[var(--color-body)] list-disc pl-5"><li>Any harness name</li><li>Two model roles at list prices</li><li>One editable on-screen scenario</li><li>Public research and verified catalog</li></ul></div>
-        <div class="card card-pad"><p class="label">Pro · planned $19/month</p><h3 class="h-card mt-2">Operate the budget</h3><ul class="mt-3 text-sm leading-relaxed text-[var(--color-body)] list-disc pl-5"><li>Expanded role mixes and plan versions</li><li>Custom/contract prices and observed usage</li><li>Scenario deltas, sensitivity and break-even views</li><li>Unlisted links, exports and price/budget alerts</li></ul><div class="mt-5 border-t border-[var(--color-rule)] pt-4"><h4 class="text-sm font-semibold text-[var(--color-ink)]">Would this workflow be worth $19/month?</h4><button type="button" class="btn mt-3" id="b-pro-interest">I’d consider Pro at $19</button><p class="small mt-2">Research signal only. No checkout, trial or subscription.</p><p class="small mt-2" id="b-pro-interest-status" role="status" aria-live="polite"></p></div></div>
+        <div class="card card-pad"><p class="label">Free · preview</p><h3 class="h-card mt-2">Experience the answer</h3><ul class="mt-3 text-sm leading-relaxed text-[var(--color-body)] list-disc pl-5"><li>Any harness name and current list-price models</li><li>Editable on-screen scenarios and local exports</li><li>Tab-only versions; account plans when the storage preview is available</li><li>Public research and verified catalog</li></ul></div>
+        <div class="card card-pad"><p class="label">Pro · planned $19/month</p><h3 class="h-card mt-2">Operate the budget</h3><ul class="mt-3 text-sm leading-relaxed text-[var(--color-body)] list-disc pl-5"><li>Higher future plan, version and role limits</li><li>Custom/contract pricing and observed-usage workflows</li><li>Expanded comparison and review workflows</li><li>Unlisted links, operational exports and price/budget monitoring</li></ul><div class="mt-5 border-t border-[var(--color-rule)] pt-4"><h4 class="text-sm font-semibold text-[var(--color-ink)]">Would this workflow be worth $19/month?</h4><button type="button" class="btn mt-3" id="b-pro-interest">I’d consider Pro at $19</button><p class="small mt-2">Research signal only. No checkout, trial or subscription.</p><p class="small mt-2" id="b-pro-interest-status" role="status" aria-live="polite"></p></div></div>
       </div>
       <p class="small mt-3">The price is a validation hypothesis. Checkout will be added only after the workflow, persistence and server entitlement boundary are ready.</p>
     </Section>
@@ -337,7 +402,11 @@ const harnessExamples = [
     alertSummary, createAlertDraft, createShareDraft,
     type BuildAlertDraftV1, type BuildAlertTrigger, type BuildShareDraftV1, type ShareExpiryDays,
   } from '../lib/build-operations.ts';
-  import { openSignUp, signedIn, track } from '../lib/clerk-client.ts';
+  import {
+    AuthenticatedJsonError, authenticatedJsonFetch, clearComposerDraftForAuth,
+    consumeComposerDraftAfterAuth, observeClerkAuth, openSignIn, openSignUp,
+    preserveComposerDraftForAuth, signedIn, track, type ClerkAuthState,
+  } from '../lib/clerk-client.ts';
 
   const form = document.getElementById('composer-form') as HTMLFormElement;
   const eligibleModels = models.filter((model) => model.status === 'current');
@@ -353,6 +422,30 @@ const harnessExamples = [
   const alertDrafts: BuildAlertDraftV1[] = [];
   let editingAlertId: string | null = null;
   let editedValidQuoteTracked = false;
+  const accountPlansEnabled = form.dataset.accountPlansEnabled === 'true';
+  const clerkEnabled = form.dataset.clerkEnabled === 'true';
+  const accountPlanMaxPlans = 20;
+  const accountPlanMaxVersions = 100;
+  type AccountPlanSummary = { id: string; name: string; currentVersion: number; createdAt: string; updatedAt: string };
+  type AccountVersionSummary = { id: string; version: number; name: string; engineVersion: string; quotedAt: string; createdAt: string };
+  type AccountPlanResource = {
+    plan: AccountPlanSummary;
+    versions: AccountVersionSummary[];
+    selectedVersion: AccountVersionSummary & { planId: string; plan: BuildPlanV1; quote: ReturnType<typeof quoteBuildPlan> };
+  };
+  let accountAuth: ClerkAuthState = accountPlansEnabled ? { status: 'checking' } : { status: 'disabled' };
+  let accountAuthKey = '';
+  let accountPlans: AccountPlanSummary[] = [];
+  let accountNextCursor: string | null = null;
+  let selectedAccountPlan: AccountPlanResource | null = null;
+  let recoveredAccountDraft: BuildPlanV1 | null = null;
+  let accountRequest: AbortController | null = null;
+  let accountGeneration = 0;
+  let accountBusy = false;
+  let accountSessionExpired = false;
+  let conflictedAccountPlanId: string | null = null;
+  let pendingAccountWrite: { operation: string; planJson: string; key: string } | null = null;
+  let editorAnchorJson: string | null = null;
   const byId = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
   const setText = (id: string, next: string) => { const target = byId(id); if (target.textContent !== next) target.textContent = next; };
   const value = (id: string) => (byId<HTMLInputElement>(id).value ?? '').normalize('NFC').trim();
@@ -360,6 +453,467 @@ const harnessExamples = [
   const number = (id: string) => numericInput(byId<HTMLInputElement>(id));
   const field = <T extends HTMLInputElement | HTMLSelectElement>(role: Element, name: string) => role.querySelector<T>(`[data-field="${name}"]`)!;
   const money = (n: number | null) => n === null ? 'Missing' : `$${n.toLocaleString(undefined, { minimumFractionDigits: n < 1 ? 3 : 2, maximumFractionDigits: n < 1 ? 4 : 2 })}`;
+
+  const isRecord = (input: unknown): input is Record<string, unknown> => Boolean(input) && typeof input === 'object' && !Array.isArray(input);
+  const isAccountPlanSummary = (input: unknown): input is AccountPlanSummary => isRecord(input)
+    && typeof input.id === 'string' && typeof input.name === 'string'
+    && Number.isSafeInteger(input.currentVersion) && Number(input.currentVersion) > 0
+    && typeof input.createdAt === 'string' && typeof input.updatedAt === 'string';
+  const isAccountVersionSummary = (input: unknown): input is AccountVersionSummary => isRecord(input)
+    && typeof input.id === 'string' && Number.isSafeInteger(input.version) && Number(input.version) > 0
+    && typeof input.name === 'string' && typeof input.engineVersion === 'string'
+    && typeof input.quotedAt === 'string' && typeof input.createdAt === 'string';
+
+  function parseAccountPlanList(payload: unknown): { plans: AccountPlanSummary[]; nextCursor: string | null } | null {
+    if (!isRecord(payload) || !Array.isArray(payload.data) || !payload.data.every(isAccountPlanSummary)) return null;
+    if (payload.nextCursor !== null && payload.nextCursor !== undefined && typeof payload.nextCursor !== 'string') return null;
+    return { plans: payload.data, nextCursor: typeof payload.nextCursor === 'string' ? payload.nextCursor : null };
+  }
+
+  function parseAccountPlanResource(payload: unknown): AccountPlanResource | null {
+    if (!isRecord(payload) || !isRecord(payload.data)) return null;
+    const resource = payload.data;
+    if (!isAccountPlanSummary(resource.plan) || !Array.isArray(resource.versions)
+      || !resource.versions.every(isAccountVersionSummary) || !isRecord(resource.selectedVersion)) return null;
+    const selected = resource.selectedVersion;
+    if (!isAccountVersionSummary(selected) || typeof selected.planId !== 'string'
+      || !isRecord(selected.plan) || !isRecord(selected.quote)) return null;
+    return resource as AccountPlanResource;
+  }
+
+  const canonicalPlanJson = (plan: BuildPlanV1) => JSON.stringify(plan);
+  const editorIsDirty = () => !lastDraftValid || editorAnchorJson === null || canonicalPlanJson(lastPlan) !== editorAnchorJson;
+  const accountDate = (input: string) => {
+    const date = new Date(input);
+    return Number.isNaN(date.valueOf()) ? 'date unavailable' : date.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+  };
+
+  function setAccountStatus(message = '') {
+    if (!accountPlansEnabled) return;
+    byId('b-account-status').textContent = message;
+  }
+
+  function setAccountError(cause: unknown, fallback: string) {
+    if (!accountPlansEnabled) return;
+    const error = byId('b-account-error');
+    if (cause instanceof AuthenticatedJsonError) {
+      error.textContent = `${cause.message} ${fallback}`;
+      if (cause.code === 'AUTH_REQUIRED') {
+        accountSessionExpired = true;
+        accountPlans = []; accountNextCursor = null; selectedAccountPlan = null; conflictedAccountPlanId = null; pendingAccountWrite = null;
+      } else if (cause.code === 'VERSION_CONFLICT') {
+        conflictedAccountPlanId = selectedAccountPlan?.plan.id ?? null;
+        pendingAccountWrite = null;
+      } else if (cause.code === 'IDEMPOTENCY_CONFLICT') {
+        pendingAccountWrite = null;
+      }
+    } else error.textContent = fallback;
+    renderAccountShell();
+  }
+
+  function clearAccountMessages() {
+    if (!accountPlansEnabled) return;
+    byId('b-account-error').textContent = '';
+    byId('b-account-status').textContent = '';
+  }
+
+  function setAccountBusy(busy: boolean) {
+    accountBusy = busy;
+    if (!accountPlansEnabled) return;
+    const panel = byId('b-account-signed-in');
+    panel.setAttribute('aria-busy', busy ? 'true' : 'false');
+    byId('b-account-plans').setAttribute('aria-busy', busy ? 'true' : 'false');
+    for (const button of panel.querySelectorAll<HTMLButtonElement>('button')) {
+      if (busy) button.setAttribute('aria-busy', 'true'); else button.removeAttribute('aria-busy');
+    }
+    syncAccountControls();
+  }
+
+  function renderRecoveredDraft() {
+    if (!accountPlansEnabled) return;
+    byId('b-account-recovered').hidden = !recoveredAccountDraft;
+  }
+
+  function renderAccountShell() {
+    if (!accountPlansEnabled) return;
+    const state = byId('b-account-state');
+    const auth = byId('b-account-auth-actions');
+    const signed = byId('b-account-signed-in');
+    const signin = byId<HTMLButtonElement>('b-account-signin');
+    const signup = byId<HTMLButtonElement>('b-account-signup');
+    signin.hidden = false; signup.hidden = false;
+    if (accountSessionExpired) {
+      state.textContent = 'Session expired'; auth.hidden = false; signed.hidden = true;
+      byId('b-account-auth-copy').textContent = 'Sign in again to use account plans. Your current draft and versions in this tab are unchanged.';
+      renderRecoveredDraft(); return;
+    }
+    if (accountAuth.status === 'checking') {
+      state.textContent = 'Checking account…'; auth.hidden = true; signed.hidden = true;
+    } else if (accountAuth.status === 'disabled' || accountAuth.status === 'error') {
+      state.textContent = 'Account storage unavailable'; auth.hidden = false; signed.hidden = true;
+      signin.hidden = true; signup.hidden = true;
+      byId('b-account-auth-copy').textContent = 'Account plan storage is unavailable in this build. The current editor, tab-only versions and local exports still work.';
+    } else if (accountAuth.status === 'signed-out') {
+      state.textContent = 'Signed out'; auth.hidden = false; signed.hidden = true;
+      byId('b-account-auth-copy').textContent = 'Sign in or create a free account to save plans and reopen them later. Your current quote and tab-only versions still work.';
+    } else {
+      state.textContent = 'Account storage'; auth.hidden = true; signed.hidden = false;
+    }
+    renderRecoveredDraft();
+    syncAccountControls();
+  }
+
+  function renderAccountPlans() {
+    if (!accountPlansEnabled) return;
+    const list = byId('b-account-plans'); list.replaceChildren();
+    setText('b-account-capacity', `${Math.min(accountPlans.length, accountPlanMaxPlans)} of ${accountPlanMaxPlans} plans`);
+    if (!accountPlans.length) {
+      const empty = document.createElement('p'); empty.className = 'small';
+      empty.textContent = accountBusy ? 'Loading account plans…' : 'No account plans yet. Save the current valid editor as your first account plan.';
+      list.appendChild(empty);
+    }
+    for (const plan of accountPlans) {
+      const row = document.createElement('article'); row.className = 'snapshot-row';
+      const copy = document.createElement('div'); copy.className = 'min-w-0';
+      const title = document.createElement('p'); title.className = 'text-sm font-semibold text-[var(--color-ink)] truncate'; title.textContent = plan.name;
+      const meta = document.createElement('p'); meta.className = 'small mt-1'; meta.textContent = `Latest v${plan.currentVersion} · updated ${accountDate(plan.updatedAt)}`;
+      copy.append(title, meta);
+      const open = document.createElement('button'); open.type = 'button'; open.className = 'btn btn-quiet';
+      const selected = selectedAccountPlan?.plan.id === plan.id;
+      const needsReload = selected && conflictedAccountPlanId === plan.id;
+      open.textContent = needsReload ? 'Reload versions' : selected ? 'Selected' : 'View versions';
+      open.disabled = (selected && !needsReload) || accountBusy;
+      open.setAttribute('aria-label', `${needsReload ? 'Reload versions for' : selected ? 'Selected' : 'View versions for'} ${plan.name}, latest version ${plan.currentVersion}`);
+      open.addEventListener('click', () => void loadAccountPlan(plan.id));
+      row.append(copy, open); list.appendChild(row);
+    }
+    const more = byId<HTMLButtonElement>('b-account-more');
+    more.hidden = !accountNextCursor; more.disabled = accountBusy;
+    renderAccountSelection();
+  }
+
+  function renderAccountSelection() {
+    if (!accountPlansEnabled) return;
+    const title = byId('b-account-selection-title');
+    const copy = byId('b-account-selection-copy');
+    const versions = byId('b-account-versions'); versions.replaceChildren();
+    const save = byId<HTMLButtonElement>('b-account-save');
+    const saveNew = byId<HTMLButtonElement>('b-account-save-new');
+    const remove = byId<HTMLButtonElement>('b-account-delete');
+    const atPlanLimit = accountPlans.length >= accountPlanMaxPlans;
+    if (!selectedAccountPlan) {
+      title.textContent = 'Current editor';
+      copy.textContent = atPlanLimit
+        ? `All ${accountPlanMaxPlans} preview plan slots are in use. Choose an account plan to append a version or delete it; the current editor and tab-only versions are unchanged.`
+        : `Save the current valid editor as a new account plan. ${accountPlans.length} of ${accountPlanMaxPlans} preview plan slots are in use. This does not change versions in this tab.`;
+      save.textContent = atPlanLimit ? 'Plan limit reached' : 'Save current plan to account'; saveNew.hidden = true; remove.hidden = true;
+      const empty = document.createElement('p'); empty.className = 'small'; empty.textContent = 'Choose a plan to view its versions. The editor will not change.'; versions.appendChild(empty);
+      syncAccountControls(); return;
+    }
+    const resource = selectedAccountPlan;
+    const needsReload = conflictedAccountPlanId === resource.plan.id;
+    const atVersionLimit = resource.plan.currentVersion >= accountPlanMaxVersions;
+    title.textContent = resource.plan.name;
+    copy.textContent = needsReload
+      ? 'This account plan changed since it was loaded. Reload its versions before appending or deleting; the editor remains untouched. Saving as a new plan is still available when a plan slot is open.'
+      : atVersionLimit
+        ? `This plan is at the preview limit of v${accountPlanMaxVersions}. It cannot accept another version. Save the current editor as a new account plan if a plan slot is open, or keep it in this tab.`
+        : `The selected account plan is at v${resource.plan.currentVersion} of ${accountPlanMaxVersions}. Saving next appends the current editor as v${resource.plan.currentVersion + 1}; it does not overwrite an earlier version.`;
+    save.textContent = needsReload ? 'Reload before saving' : atVersionLimit ? 'Version limit reached' : 'Save next version to account';
+    saveNew.hidden = false; remove.hidden = false;
+    remove.setAttribute('aria-label', `Delete account plan ${resource.plan.name} and all ${resource.versions.length} versions`);
+    for (const version of resource.versions) {
+      const row = document.createElement('article'); row.className = 'snapshot-row';
+      const versionCopy = document.createElement('div'); versionCopy.className = 'min-w-0';
+      const versionTitle = document.createElement('p'); versionTitle.className = 'text-sm font-semibold text-[var(--color-ink)] truncate'; versionTitle.textContent = `${version.name} · v${version.version}`;
+      const meta = document.createElement('p'); meta.className = 'small mt-1'; meta.textContent = `Account quote ${accountDate(version.quotedAt)} · ${version.engineVersion}`;
+      versionCopy.append(versionTitle, meta);
+      const actions = document.createElement('div'); actions.className = 'flex flex-wrap gap-2';
+      const baseline = document.createElement('button'); baseline.type = 'button'; baseline.className = 'btn btn-quiet'; baseline.textContent = 'Use baseline'; baseline.disabled = accountBusy;
+      baseline.setAttribute('aria-label', `Use account plan ${version.name} version ${version.version} as the tab baseline`);
+      baseline.addEventListener('click', () => void loadAccountVersion(resource.plan.id, version.version, 'baseline'));
+      const restore = document.createElement('button'); restore.type = 'button'; restore.className = 'btn btn-quiet'; restore.textContent = 'Restore'; restore.disabled = accountBusy;
+      restore.setAttribute('aria-label', `Restore account plan ${version.name} version ${version.version} into the editor`);
+      restore.addEventListener('click', () => void loadAccountVersion(resource.plan.id, version.version, 'restore'));
+      actions.append(baseline, restore); row.append(versionCopy, actions); versions.appendChild(row);
+    }
+    syncAccountControls();
+  }
+
+  function syncAccountControls() {
+    if (!accountPlansEnabled) return;
+    const signedInToAccount = accountAuth.status === 'signed-in' && !accountSessionExpired;
+    const valid = lastDraftValid && Boolean(lastQuote?.valid);
+    const atPlanLimit = accountPlans.length >= accountPlanMaxPlans;
+    const selectedNeedsReload = Boolean(selectedAccountPlan && conflictedAccountPlanId === selectedAccountPlan.plan.id);
+    const selectedAtVersionLimit = Boolean(selectedAccountPlan && selectedAccountPlan.plan.currentVersion >= accountPlanMaxVersions);
+    for (const id of ['b-account-save', 'b-account-save-new', 'b-account-delete', 'b-account-refresh', 'b-account-more']) {
+      const button = byId<HTMLButtonElement>(id);
+      button.disabled = accountBusy || !signedInToAccount || ((id === 'b-account-save' || id === 'b-account-save-new') && !valid)
+        || (id === 'b-account-save' && (selectedNeedsReload || (selectedAccountPlan ? selectedAtVersionLimit : atPlanLimit)))
+        || (id === 'b-account-save-new' && atPlanLimit)
+        || (id === 'b-account-delete' && (!selectedAccountPlan || selectedNeedsReload))
+        || (id === 'b-account-more' && !accountNextCursor);
+    }
+    byId<HTMLButtonElement>('b-account-save').title = !valid
+      ? 'Resolve the current plan errors before saving to your account.'
+      : selectedNeedsReload ? 'Reload this account plan before appending or deleting.'
+        : selectedAtVersionLimit ? `This account plan already has ${accountPlanMaxVersions} versions.`
+          : !selectedAccountPlan && atPlanLimit ? `This account already has ${accountPlanMaxPlans} plans.` : '';
+    byId<HTMLButtonElement>('b-account-save-new').title = !valid
+      ? 'Resolve the current plan errors before saving to your account.'
+      : atPlanLimit ? `This account already has ${accountPlanMaxPlans} plans.` : '';
+  }
+
+  function startAccountRequest(): { controller: AbortController; generation: number } {
+    accountRequest?.abort();
+    const controller = new AbortController();
+    accountRequest = controller;
+    setAccountBusy(true);
+    return { controller, generation: accountGeneration };
+  }
+
+  function finishAccountRequest(controller: AbortController) {
+    if (accountRequest !== controller) return;
+    accountRequest = null;
+    setAccountBusy(false);
+  }
+
+  const accountRequestCurrent = (controller: AbortController, generation: number) => !controller.signal.aborted
+    && generation === accountGeneration && accountAuth.status === 'signed-in';
+
+  function upsertAccountPlan(summary: AccountPlanSummary) {
+    accountPlans = [summary, ...accountPlans.filter((item) => item.id !== summary.id)]
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }
+
+  async function loadAccountPlans(reset = true) {
+    if (!accountPlansEnabled || accountAuth.status !== 'signed-in') return;
+    const cursor = reset ? null : accountNextCursor;
+    if (!reset && !cursor) return;
+    clearAccountMessages();
+    const request = startAccountRequest();
+    if (reset && !accountPlans.length) renderAccountPlans();
+    setAccountStatus(reset ? 'Loading account plans…' : 'Loading more account plans…');
+    try {
+      const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : '';
+      const payload = await authenticatedJsonFetch(`/api/build-plans${query}`, { signal: request.controller.signal });
+      if (!accountRequestCurrent(request.controller, request.generation)) return;
+      const parsed = parseAccountPlanList(payload);
+      if (!parsed) throw new AuthenticatedJsonError('INVALID_RESPONSE');
+      accountPlans = reset
+        ? parsed.plans
+        : [...accountPlans, ...parsed.plans.filter((plan) => !accountPlans.some((item) => item.id === plan.id))];
+      accountNextCursor = parsed.nextCursor;
+      if (selectedAccountPlan) {
+        const refreshed = accountPlans.find((plan) => plan.id === selectedAccountPlan!.plan.id);
+        if (!refreshed) {
+          selectedAccountPlan = null;
+          conflictedAccountPlanId = null;
+        } else if (refreshed.currentVersion !== selectedAccountPlan.plan.currentVersion) {
+          conflictedAccountPlanId = selectedAccountPlan.plan.id;
+        }
+      }
+      renderAccountPlans();
+      setAccountStatus(conflictedAccountPlanId
+        ? 'Account plans refreshed. Reload the selected plan’s versions before appending or deleting; the editor is unchanged.'
+        : accountPlans.length ? `Loaded ${accountPlans.length} account plan${accountPlans.length === 1 ? '' : 's'}. The editor is unchanged.` : 'No account plans yet. The editor is unchanged.');
+    } catch (cause) {
+      if (request.controller.signal.aborted) return;
+      setAccountError(cause, 'Couldn’t load account plans. Versions in this tab are unchanged.');
+    } finally { finishAccountRequest(request.controller); renderAccountPlans(); }
+  }
+
+  async function loadAccountPlan(planId: string) {
+    if (accountAuth.status !== 'signed-in') return;
+    clearAccountMessages();
+    const request = startAccountRequest();
+    setAccountStatus('Loading account plan versions…');
+    try {
+      const payload = await authenticatedJsonFetch(`/api/build-plans/${encodeURIComponent(planId)}`, { signal: request.controller.signal });
+      if (!accountRequestCurrent(request.controller, request.generation)) return;
+      const resource = parseAccountPlanResource(payload);
+      if (!resource) throw new AuthenticatedJsonError('INVALID_RESPONSE');
+      selectedAccountPlan = resource; conflictedAccountPlanId = null; upsertAccountPlan(resource.plan); renderAccountPlans();
+      setAccountStatus(`Loaded ${resource.plan.name} version history. The editor is unchanged.`);
+    } catch (cause) {
+      if (request.controller.signal.aborted) return;
+      setAccountError(cause, 'Couldn’t load this account plan. The editor and tab-only versions are unchanged.');
+    } finally { finishAccountRequest(request.controller); renderAccountPlans(); }
+  }
+
+  function validateLoadedAccountPlan(resource: AccountPlanResource): ReturnType<typeof validateUntrustedBuildPlanV1> | null {
+    const validated = validateUntrustedBuildPlanV1(resource.selectedVersion.plan, eligibleModels);
+    if (!validated.ok) {
+      byId('b-account-error').textContent = 'This saved version uses data or a model that is no longer editable with the current catalog. It was not restored or used as a baseline.';
+      return null;
+    }
+    return validated;
+  }
+
+  function applyLoadedAccountVersion(resource: AccountPlanResource, action: 'restore' | 'baseline') {
+    const validated = validateLoadedAccountPlan(resource); if (!validated?.ok) return;
+    const label = `${resource.selectedVersion.name} version ${resource.selectedVersion.version}`;
+    if (action === 'restore') {
+      if (editorIsDirty() && !confirm(`Restore ${label} from your account? Your unsaved current editor changes will be replaced. Save them in this tab first if you want to keep them.`)) {
+        setAccountStatus('Restore cancelled. The current editor is unchanged.'); return;
+      }
+      currentPlanId = crypto.randomUUID();
+      applyPlan(validated.value);
+      editorAnchorJson = canonicalPlanJson(validated.value);
+      syncAccountControls();
+      setAccountStatus(`Restored ${label} from your account. It has not been resaved or uploaded again.`);
+      byId('b-workspace-message').textContent = `Restored ${label} from your account.`;
+      return;
+    }
+    const snapshotId = `account-${resource.selectedVersion.id}`;
+    let snapshot = snapshots.find((item) => item.snapshotId === snapshotId);
+    if (!snapshot) {
+      snapshot = {
+        schemaVersion: 1, snapshotId, planId: resource.plan.id,
+        version: resource.selectedVersion.version, savedAt: resource.selectedVersion.createdAt,
+        plan: structuredClone(validated.value), quote: structuredClone(validated.quote),
+      };
+      snapshots.push(snapshot);
+    }
+    baselineSnapshotId = snapshot.snapshotId;
+    renderWorkspace();
+    setAccountStatus(`Copied ${label} into this tab as the comparison baseline using the current verified catalog. No account data changed.`);
+  }
+
+  async function loadAccountVersion(planId: string, version: number, action: 'restore' | 'baseline') {
+    if (accountAuth.status !== 'signed-in') return;
+    clearAccountMessages();
+    const request = startAccountRequest();
+    setAccountStatus(`Loading account version ${version}…`);
+    try {
+      const payload = await authenticatedJsonFetch(`/api/build-plans/${encodeURIComponent(planId)}?version=${version}`, { signal: request.controller.signal });
+      if (!accountRequestCurrent(request.controller, request.generation)) return;
+      const resource = parseAccountPlanResource(payload);
+      if (!resource) throw new AuthenticatedJsonError('INVALID_RESPONSE');
+      selectedAccountPlan = resource; conflictedAccountPlanId = null; upsertAccountPlan(resource.plan); renderAccountPlans();
+      applyLoadedAccountVersion(resource, action);
+    } catch (cause) {
+      if (request.controller.signal.aborted) return;
+      setAccountError(cause, 'Couldn’t load this account plan version. The editor and tab-only versions are unchanged.');
+    } finally { finishAccountRequest(request.controller); renderAccountPlans(); }
+  }
+
+  function accountWriteKey(operation: string, planJson: string): string {
+    if (pendingAccountWrite?.operation === operation && pendingAccountWrite.planJson === planJson) return pendingAccountWrite.key;
+    const key = `composer:${crypto.randomUUID()}`;
+    pendingAccountWrite = { operation, planJson, key };
+    return key;
+  }
+
+  async function saveAccountPlan(asNew: boolean) {
+    if (accountAuth.status !== 'signed-in' || !lastDraftValid || !lastQuote.valid) return;
+    if (asNew || !selectedAccountPlan) {
+      if (accountPlans.length >= accountPlanMaxPlans) {
+        setAccountError(new AuthenticatedJsonError('PLAN_LIMIT'), 'Your current draft is still open and nothing was lost.');
+        return;
+      }
+    } else if (conflictedAccountPlanId === selectedAccountPlan.plan.id) {
+      setAccountError(new AuthenticatedJsonError('VERSION_CONFLICT'), 'Your current draft is still open and nothing was lost.');
+      return;
+    } else if (selectedAccountPlan.plan.currentVersion >= accountPlanMaxVersions) {
+      setAccountError(new AuthenticatedJsonError('VERSION_LIMIT'), 'Your current draft is still open and nothing was lost.');
+      return;
+    }
+    clearAccountMessages();
+    const plan = structuredClone(lastPlan);
+    const planJson = canonicalPlanJson(plan);
+    const target = !asNew ? selectedAccountPlan : null;
+    const operation = target ? `append:${target.plan.id}:${target.plan.currentVersion}` : 'create';
+    const headers: Record<string, string> = { 'Idempotency-Key': accountWriteKey(operation, planJson) };
+    if (target) headers['If-Match'] = `"${target.plan.currentVersion}"`;
+    const endpoint = target ? `/api/build-plans/${encodeURIComponent(target.plan.id)}/versions` : '/api/build-plans';
+    const request = startAccountRequest();
+    setAccountStatus(target ? `Saving ${plan.name} as the next account version…` : `Saving ${plan.name} as a new account plan…`);
+    try {
+      const payload = await authenticatedJsonFetch(endpoint, { method: 'POST', headers, json: plan, signal: request.controller.signal });
+      if (!accountRequestCurrent(request.controller, request.generation)) return;
+      const resource = parseAccountPlanResource(payload);
+      if (!resource) throw new AuthenticatedJsonError('INVALID_RESPONSE');
+      pendingAccountWrite = null; selectedAccountPlan = resource; conflictedAccountPlanId = null; upsertAccountPlan(resource.plan);
+      editorAnchorJson = planJson; renderAccountPlans();
+      setAccountStatus(`Saved ${resource.selectedVersion.name} version ${resource.selectedVersion.version} to your account. Versions in this tab are unchanged.`);
+      track('build_account_plan_save', { path: location.pathname, operation: target ? 'append_version' : 'create_plan' });
+    } catch (cause) {
+      if (request.controller.signal.aborted) return;
+      setAccountError(cause, 'Couldn’t save to your account. Your current draft is still open and nothing was lost.');
+    } finally { finishAccountRequest(request.controller); renderAccountPlans(); }
+  }
+
+  async function deleteAccountPlan() {
+    const resource = selectedAccountPlan;
+    if (!resource || accountAuth.status !== 'signed-in') return;
+    if (conflictedAccountPlanId === resource.plan.id) {
+      setAccountError(new AuthenticatedJsonError('VERSION_CONFLICT'), 'Reload its versions before deleting. Nothing was removed.');
+      return;
+    }
+    const dirty = editorIsDirty()
+      ? ' Your unsaved editor remains open in this tab and will not be deleted.'
+      : ' The current editor remains open in this tab, but this durable account copy will be removed.';
+    if (!confirm(`Delete “${resource.plan.name}” and all ${resource.versions.length} account version${resource.versions.length === 1 ? '' : 's'}?${dirty} This account deletion cannot be undone from Solvency.`)) {
+      setAccountStatus('Delete cancelled. The account plan and current editor are unchanged.'); return;
+    }
+    clearAccountMessages();
+    const request = startAccountRequest();
+    setAccountStatus(`Deleting ${resource.plan.name} from your account…`);
+    try {
+      const payload = await authenticatedJsonFetch(`/api/build-plans/${encodeURIComponent(resource.plan.id)}`, {
+        method: 'DELETE', headers: { 'If-Match': `"${resource.plan.currentVersion}"` }, json: {}, signal: request.controller.signal,
+      });
+      if (!accountRequestCurrent(request.controller, request.generation)) return;
+      if (!isRecord(payload) || !isRecord(payload.data) || payload.data.deleted !== true || payload.data.planId !== resource.plan.id) {
+        throw new AuthenticatedJsonError('INVALID_RESPONSE');
+      }
+      accountPlans = accountPlans.filter((plan) => plan.id !== resource.plan.id);
+      selectedAccountPlan = null; conflictedAccountPlanId = null; pendingAccountWrite = null; renderAccountPlans();
+      setAccountStatus(`Deleted ${resource.plan.name} and its account versions. The current editor and versions in this tab were not deleted.`);
+      byId('b-account-status').setAttribute('tabindex', '-1'); byId('b-account-status').focus();
+    } catch (cause) {
+      if (request.controller.signal.aborted) return;
+      setAccountError(cause, 'Couldn’t delete this account plan. Nothing was removed.');
+    } finally { finishAccountRequest(request.controller); renderAccountPlans(); }
+  }
+
+  function preserveEditorBeforeAuth(): boolean {
+    const validated = validateUntrustedBuildPlanV1(readPlan(), eligibleModels);
+    if (!validated.ok) { clearComposerDraftForAuth(); render(); return false; }
+    return preserveComposerDraftForAuth(validated.value);
+  }
+
+  function handleAccountAuth(state: ClerkAuthState) {
+    const key = state.status === 'signed-in' ? `${state.status}:${state.userId}:${state.sessionId ?? ''}` : state.status;
+    if (key === accountAuthKey) return;
+    accountAuthKey = key; accountAuth = state; accountSessionExpired = false;
+    accountGeneration += 1; accountRequest?.abort(); accountRequest = null; accountBusy = false;
+    accountPlans = []; accountNextCursor = null; selectedAccountPlan = null; conflictedAccountPlanId = null; pendingAccountWrite = null;
+    byId('b-account-error').textContent = '';
+    if (state.status === 'signed-in') {
+      const draft = consumeComposerDraftAfterAuth<unknown>();
+      if (draft) {
+        const validated = validateUntrustedBuildPlanV1(draft, eligibleModels);
+        if (validated.ok) {
+          const alreadyOpen = lastDraftValid && canonicalPlanJson(lastPlan) === canonicalPlanJson(validated.value);
+          recoveredAccountDraft = alreadyOpen ? null : validated.value;
+          setAccountStatus(alreadyOpen
+            ? 'Sign-in complete. The preserved draft is already open in the editor and was removed from temporary storage.'
+            : 'A valid draft was recovered after sign-in. Choose whether to restore or discard it; the editor is unchanged.');
+        } else {
+          recoveredAccountDraft = null;
+          setAccountStatus('A redirect draft could not be restored because it is no longer valid. The editor is unchanged.');
+        }
+      } else recoveredAccountDraft = null;
+    } else {
+      recoveredAccountDraft = null;
+      if (state.status === 'signed-out' || state.status === 'disabled') clearComposerDraftForAuth();
+    }
+    renderAccountShell(); renderAccountPlans();
+    if (state.status === 'signed-in') void loadAccountPlans();
+  }
 
   function renumber() {
     [...rolesEl.querySelectorAll<HTMLElement>('[data-role]')].forEach((role, index) => {
@@ -660,14 +1214,21 @@ const harnessExamples = [
       const row = document.createElement('article'); row.className = 'snapshot-row';
       const copy = document.createElement('div'); copy.className = 'min-w-0';
       const title = document.createElement('p'); title.className = 'text-sm font-semibold text-[var(--color-ink)] truncate'; title.textContent = `${snapshot.plan.name} · v${snapshot.version}`;
-      const meta = document.createElement('p'); meta.className = 'small mt-1'; meta.textContent = `${snapshot.plan.harness.name} · ${money(snapshot.quote.buildAttemptCostUsd)}/attempt · ${new Date(snapshot.savedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+      const meta = document.createElement('p'); meta.className = 'small mt-1'; meta.textContent = `${snapshot.snapshotId.startsWith('account-') ? 'Account copy · ' : ''}${snapshot.plan.harness.name} · ${money(snapshot.quote.buildAttemptCostUsd)}/attempt · ${new Date(snapshot.savedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
       copy.append(title, meta);
       const actions = document.createElement('div'); actions.className = 'flex flex-wrap gap-2';
       const baseline = document.createElement('button'); baseline.type = 'button'; baseline.className = 'btn btn-quiet'; baseline.textContent = snapshot.snapshotId === baselineSnapshotId ? 'Baseline' : 'Use baseline'; baseline.disabled = snapshot.snapshotId === baselineSnapshotId;
       baseline.setAttribute('aria-label', `Use ${snapshot.plan.name} version ${snapshot.version} as baseline`);
       baseline.addEventListener('click', () => { baselineSnapshotId = snapshot.snapshotId; renderWorkspace(); track('build-set-baseline', { path: location.pathname }); });
       const restore = document.createElement('button'); restore.type = 'button'; restore.className = 'btn btn-quiet'; restore.textContent = 'Restore'; restore.setAttribute('aria-label', `Restore ${snapshot.plan.name} version ${snapshot.version}`);
-      restore.addEventListener('click', () => { currentPlanId = snapshot.planId; applyPlan(snapshot.plan); byId('b-workspace-message').textContent = `Restored ${snapshot.plan.name} version ${snapshot.version}.`; track('build-restore-version', { path: location.pathname }); });
+      restore.addEventListener('click', () => {
+        if (editorIsDirty() && !confirm(`Restore ${snapshot.plan.name} version ${snapshot.version} from this tab? Your unsaved current editor changes will be replaced.`)) {
+          byId('b-workspace-message').textContent = 'Restore cancelled. The current editor is unchanged.'; return;
+        }
+        currentPlanId = snapshot.planId; applyPlan(snapshot.plan); editorAnchorJson = canonicalPlanJson(snapshot.plan); syncAccountControls();
+        byId('b-workspace-message').textContent = `Restored ${snapshot.plan.name} version ${snapshot.version} from this tab.`;
+        track('build-restore-version', { path: location.pathname });
+      });
       actions.append(baseline, restore); row.append(copy, actions); list.appendChild(row);
     }
     renderOperationVersions();
@@ -951,6 +1512,7 @@ const harnessExamples = [
     byId('b-export-ready').textContent = 'Resolve the plan errors above before exporting.';
     byId<HTMLButtonElement>('b-save-version').disabled = true;
     byId<HTMLButtonElement>('b-duplicate').disabled = true;
+    syncAccountControls();
     renderWorkspace();
   }
 
@@ -1013,6 +1575,7 @@ const harnessExamples = [
     byId('b-export-ready').textContent = lastQuote.valid ? 'Current quote ready to export.' : 'Fix the quote errors above before exporting.';
     byId<HTMLButtonElement>('b-save-version').disabled = !lastQuote.valid;
     byId<HTMLButtonElement>('b-duplicate').disabled = !lastQuote.valid;
+    syncAccountControls();
     renderWorkspace();
   }
 
@@ -1073,6 +1636,7 @@ const harnessExamples = [
     const snapshot = createBuildSnapshot(snapshots, currentPlanId, crypto.randomUUID(), lastPlan, eligibleModels);
     snapshots.push(snapshot);
     baselineSnapshotId ??= snapshot.snapshotId;
+    editorAnchorJson = canonicalPlanJson(lastPlan);
     byId('b-workspace-message').textContent = `Saved ${snapshot.plan.name} version ${snapshot.version} in this tab.`;
     renderWorkspace();
   });
@@ -1086,9 +1650,47 @@ const harnessExamples = [
     baselineSnapshotId = source.snapshotId;
     currentPlanId = newPlanId;
     applyPlan(duplicate.plan);
+    editorAnchorJson = canonicalPlanJson(duplicate.plan);
     byId('b-workspace-message').textContent = `Duplicated ${source.plan.name}; the original is now the comparison baseline.`;
     renderWorkspace();
   });
+
+  if (accountPlansEnabled) {
+    byId('b-account-refresh').addEventListener('click', () => void loadAccountPlans());
+    byId('b-account-more').addEventListener('click', () => void loadAccountPlans(false));
+    byId('b-account-save').addEventListener('click', () => void saveAccountPlan(false));
+    byId('b-account-save-new').addEventListener('click', () => void saveAccountPlan(true));
+    byId('b-account-delete').addEventListener('click', () => void deleteAccountPlan());
+    byId('b-account-signin').addEventListener('click', () => {
+      const preserved = preserveEditorBeforeAuth();
+      openSignIn();
+      setAccountStatus(preserved
+        ? 'Sign-in opened. A valid draft is stored temporarily in this tab for the redirect; nothing was uploaded.'
+        : 'Sign-in opened. The current invalid draft could not be preserved for a redirect; nothing was uploaded.');
+    });
+    byId('b-account-signup').addEventListener('click', () => {
+      const preserved = preserveEditorBeforeAuth();
+      openSignUp('save', 'Create a free account to save Build Composer plans during preview. Nothing is charged.');
+      setAccountStatus(preserved
+        ? 'Account sign-up opened. A valid draft is stored temporarily in this tab for the redirect; nothing was uploaded.'
+        : 'Account sign-up opened. The current invalid draft could not be preserved for a redirect; nothing was uploaded.');
+    });
+    byId('b-account-restore-recovered').addEventListener('click', () => {
+      const draft = recoveredAccountDraft; if (!draft) return;
+      if (editorIsDirty() && !confirm('Restore the draft recovered after sign-in? Your unsaved current editor changes will be replaced. Save them in this tab first if you want to keep them.')) {
+        setAccountStatus('Recovered-draft restore cancelled. The editor is unchanged.'); return;
+      }
+      currentPlanId = crypto.randomUUID();
+      applyPlan(draft);
+      recoveredAccountDraft = null; renderRecoveredDraft(); syncAccountControls();
+      setAccountStatus('Restored the recovered draft into the editor. It is not saved in this tab or your account.');
+    });
+    byId('b-account-discard-recovered').addEventListener('click', () => {
+      recoveredAccountDraft = null; renderRecoveredDraft();
+      setAccountStatus('Discarded the recovered redirect draft. The current editor is unchanged.');
+      byId('b-account-status').setAttribute('tabindex', '-1'); byId('b-account-status').focus();
+    });
+  }
 
   byId('b-share-save').addEventListener('click', () => {
     const error = byId('b-share-error'), status = byId('b-share-status'); error.textContent = ''; status.textContent = '';
@@ -1145,6 +1747,12 @@ const harnessExamples = [
     roleId: 'worker-pool', kind: 'worker', label: 'Worker pool', modelId: 'gpt-5.6-luna', expectedInvocationsPerBuildAttempt: 6,
     usagePerInvocation: { uncachedInputTokens: 20000, cacheReadTokens: 30000, cacheWriteTokens: 0, outputTokens: 2000, basis: 'template_assumption' },
   });
+  editorAnchorJson = lastDraftValid ? canonicalPlanJson(lastPlan) : null;
+  if (accountPlansEnabled) {
+    renderAccountShell(); renderAccountPlans();
+    const stopAccountAuth = observeClerkAuth(handleAccountAuth, { enabled: clerkEnabled });
+    addEventListener('pagehide', () => { stopAccountAuth(); accountRequest?.abort(); }, { once: true });
+  }
   renderAlertThreshold();
   track('build_planner_view', { path: location.pathname });
 </script>

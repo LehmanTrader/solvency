@@ -77,9 +77,9 @@ test('build planner accepts a free-form harness and exposes the paid workflow be
   assert.match(page, /Add model role/);
   assert.match(page, /custom or contracted token prices/);
   assert.match(page, /Billing and entitlement are intentionally\s+not connected yet/);
-  assert.match(page, /Save version/);
+  assert.match(page, /Save in this tab/);
   assert.match(page, /Duplicate plan/);
-  assert.match(page, /Preview storage is limited to this open tab/);
+  assert.match(page, /Preview storage[^.]+limited to this open tab/);
   assert.match(page, /Sensitivity and break-even/);
   assert.match(page, /Hypothetical one-variable sensitivity/);
   assert.match(page, /common attempted-build volume/);
@@ -91,7 +91,7 @@ test('build planner accepts a free-form harness and exposes the paid workflow be
   assert.match(page, /id="b-export-json"[^>]*>Download JSON/);
   assert.match(page, /id="b-export-csv"[^>]*>Download CSV/);
   assert.match(page, /id="b-export-png"[^>]*>Download PNG/);
-  assert.match(page, /no link is created, no plan is uploaded and no email is sent/i);
+  assert.match(page, /no link is created, no plan is uploaded by these controls and no email is sent/i);
   assert.match(page, /Draft · no link/);
   assert.match(page, /Draft · off/);
   assert.match(page, /Unlisted link · preview/);
@@ -107,6 +107,24 @@ test('build planner accepts a free-form harness and exposes the paid workflow be
   assert.match(page, /noticeReserve\s*=\s*160/);
   assert.match(page, /I’d consider Pro at \$19/);
   assert.match(page, /Research signal only\. No checkout, trial or subscription/);
+  assert.match(page, /PUBLIC_ACCOUNT_PLANS_ENABLED === 'true'/);
+  assert.match(page, /Nothing from the editor is uploaded until you choose an account save action/);
+  assert.match(page, /Preview safety limits are \{ACCOUNT_PLAN_PREVIEW_MAX_PLANS\} account plans and \{ACCOUNT_PLAN_PREVIEW_MAX_VERSIONS\} immutable versions per plan/);
+  assert.match(page, /id="b-account-capacity">0 of \{ACCOUNT_PLAN_PREVIEW_MAX_PLANS\} plans/);
+  assert.match(page, /accountPlans\.length >= accountPlanMaxPlans/);
+  assert.match(page, /currentVersion >= accountPlanMaxVersions/);
+  assert.match(page, /conflictedAccountPlanId === selectedAccountPlan\.plan\.id/);
+  assert.match(page, /Reload its versions before appending or deleting/);
+  assert.match(page, /Version limit reached/);
+  assert.match(page, /Plan limit reached/);
+  assert.match(page, /id="b-account-status" role="status" aria-live="polite" aria-atomic="true"/);
+  assert.match(page, /authenticatedJsonFetch/);
+  assert.match(page, /'Idempotency-Key'/);
+  assert.match(page, /'If-Match'/);
+  assert.match(page, /preserveComposerDraftForAuth/);
+  assert.match(page, /consumeComposerDraftAfterAuth/);
+  assert.match(page, /Preview access does not guarantee final tier placement/);
+  assert.doesNotMatch(page, /account-tier limits are not enforced yet/);
   assert.match(page, /id="b-name" maxlength=\{BUILD_PLAN_LIMITS\.maxPlanNameChars\}/);
   assert.match(page, /data-field="label"[^>]*maxlength=\{BUILD_PLAN_LIMITS\.maxRoleLabelChars\}/);
   assert.match(page, /data-field="calls"[^>]*max=\{BUILD_PLAN_LIMITS\.maxExpectedInvocations\}/);
@@ -129,6 +147,14 @@ test('build planner accepts a free-form harness and exposes the paid workflow be
   for (const event of ['build-add-role', 'build-save-version', 'build-duplicate']) {
     assert.equal(page.match(new RegExp(event, 'g'))?.length, 1, `${event} should have one instrumentation path`);
   }
+});
+
+test('privacy discloses bounded D1 throttling without implying request-content logging', () => {
+  const page = read('site/src/pages/privacy.astro');
+  assert.match(page, /one rate-limit counter row per verified Clerk account ID/);
+  assert.match(page, /current minute bucket and a capped request count/);
+  assert.match(page, /request contents are not logged in that row/);
+  assert.match(page, /per-account rate-limit counter, will be deleted within 30 days/);
 });
 
 test('every model pair uses the one generated canonical compare path', () => {

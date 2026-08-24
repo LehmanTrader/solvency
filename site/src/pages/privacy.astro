@@ -16,7 +16,7 @@ const updated = '2026-08-23';
     <h3>Reading the site</h3>
     <p>Nothing that identifies you. Pages are static files served by Cloudflare. Cloudflare Web Analytics records aggregate page views (page URL, referrer, browser type, country) without cookies, without fingerprinting and without storing IP addresses against visits. Cloudflare's own network logs, which may include your IP address, are governed by <a href="https://www.cloudflare.com/privacypolicy/" rel="noopener">Cloudflare's privacy policy</a>.</p>
     <p>On the Build Composer, cookieless product analytics may also record coarse interactions: opening the planner; adding a role; making a first edit that leaves a valid quote; saving, duplicating, restoring or choosing a baseline version; the export format; role count; whether any custom rate is present; an unlisted-link draft's expiry and export setting; an alert draft's trigger type; and a directional response to the $19/month price question. These events include the page path. They do not include plan or harness names, model selections, token counts, entered prices or thresholds, downloaded file contents, account details or email addresses.</p>
-    <p>Your light/dark theme choice is stored in your browser's local storage and never sent anywhere.</p>
+    <p>Your light/dark theme choice is stored in your browser's local storage and never sent anywhere. If you start account sign-in from the Build Composer, one valid canonical draft may be held in that tab's session storage so an OAuth redirect does not discard it. That temporary copy is limited to 64 KiB, expires after 30 minutes, is removed when read or discarded, and is not uploaded until you explicitly choose an account save action.</p>
     <p>Fonts are served from solvency.dev itself; no font request goes to a third party.</p>
 
     <h3>Creating an account</h3>
@@ -32,6 +32,11 @@ const updated = '2026-08-23';
     <p>When you sign in with Google or GitHub, Solvency asks only for your basic profile and email. It never sees your password, and it cannot read your repositories, mail or files.</p>
     <p>Signup intent and scenario URLs are stored in Clerk's client-writable account metadata. They are used for product research and the free save-link feature; they are never trusted as authorization for a paid feature. Your email is used to sign you in and to tell you about material changes to Solvency's data or terms. It is not sold, rented or shared with advertisers. If a newsletter is introduced it will be opt-in.</p>
 
+    <h3>Saving Build Composer account plans</h3>
+    <p>When account plan storage is available and you explicitly choose “Save to account,” Solvency stores the canonical plan and immutable versions in Cloudflare D1 under your verified Clerk account ID. Stored plan data can include plan and harness names and versions, model and role choices, routing volume, token usage, success assumptions, harness costs, custom or contracted token rates, provenance choices, server-generated quote snapshots, and save timestamps. Custom and contract rates may be commercially sensitive; do not enter them unless you are comfortable storing them with this service.</p>
+    <p>This data is used only to let you list, reopen, compare, version and delete your own plans and to operate the account-plan service. It is not copied into product analytics, advertising profiles or Clerk's client-writable metadata. Account ownership comes from the verified Clerk session on every request.</p>
+    <p>For abuse prevention, D1 also keeps one rate-limit counter row per verified Clerk account ID. It contains only the current minute bucket and a capped request count; request contents are not logged in that row. The row is included when active account data is erased.</p>
+
     <h3>Shared scenario links</h3>
     <p>A calculator link encodes the scenario's settings (task tier, volume, retry model, cache rate, takeover cost) in the URL. It contains nothing about you. Anyone you send it to sees only those settings.</p>
 
@@ -39,7 +44,7 @@ const updated = '2026-08-23';
     <table>
       <thead><tr><th>Service</th><th>Role</th><th>Data</th></tr></thead>
       <tbody>
-        <tr><td>Cloudflare</td><td>Hosting, CDN, cookieless analytics</td><td>Request logs, aggregate page views and coarse Build Composer interaction events described above</td></tr>
+        <tr><td>Cloudflare</td><td>Hosting, CDN, D1 account-plan storage and abuse prevention, cookieless analytics</td><td>Request logs; account-owned Build Composer plans, versions, quote snapshots and timestamps when you save them; one per-account minute-bucket rate-limit counter; aggregate page views; and coarse Build Composer interaction events described above</td></tr>
         <tr><td>Clerk</td><td>Authentication and free-account metadata</td><td>Email, name, OAuth profile, session, sign-in security logs, signup intent, scenario URLs</td></tr>
         <tr><td>Google, GitHub</td><td>Optional sign-in providers</td><td>Share your basic profile with Clerk when you choose them</td></tr>
       </tbody>
@@ -49,10 +54,10 @@ const updated = '2026-08-23';
     <p>The site sets no cookies for reading. Signing in sets Clerk's session cookie, which is strictly necessary for the account to work. There are no advertising or cross-site tracking cookies, so no consent banner is shown.</p>
 
     <h2>Your rights</h2>
-    <p>You can see, correct or delete your account data at any time. Email <a href="mailto:robertdhanda@gmail.com">robertdhanda@gmail.com</a> from the address on the account and it will be deleted within 30 days, including from Clerk. Residents of the EU, UK, California and other jurisdictions with data-protection law have the rights those laws grant, including access, correction, deletion and portability; the same email address handles all of them.</p>
+    <p>You can list and reopen your active Build Composer plans in the product and delete a plan there. Deleting a plan removes its active D1 plan record and cascades to all of its active versions, quote snapshots and idempotency records. To see, correct, export or delete all account data, email <a href="mailto:robertdhanda@gmail.com">robertdhanda@gmail.com</a> from the address on the account; the active account records, including Clerk, D1 plan records and the per-account rate-limit counter, will be deleted within 30 days. Residents of the EU, UK, California and other jurisdictions with data-protection law have the rights those laws grant, including access, correction, deletion and portability; the same email address handles all of them.</p>
 
     <h2>Retention</h2>
-    <p>Account data is kept while the account exists and deleted on request. Aggregate page-view and product-interaction analytics are kept indefinitely; they contain no account identifier or raw Build Composer inputs.</p>
+    <p>Active account and saved-plan data is kept while the account or plan exists and is deleted as described above. Cloudflare may retain encrypted disaster-recovery or provider backups for a limited period under its backup and deletion processes before they age out; those backups are not available in the product and are not used for another purpose. Aggregate page-view and product-interaction analytics are kept indefinitely; they contain no account identifier or raw Build Composer inputs.</p>
 
     <h2>Children</h2>
     <p>Solvency is not directed at children under 16 and does not knowingly collect their data.</p>
