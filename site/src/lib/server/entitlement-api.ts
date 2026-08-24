@@ -1,6 +1,7 @@
 import { apiError, apiJson } from './api-http.ts';
 import { getOwnerEntitlement } from './entitlement-store.ts';
 import type { PagesContextLike } from './pages-types.ts';
+import { logServerError } from './safe-server-log.ts';
 
 export async function handleEntitlement(context: PagesContextLike): Promise<Response> {
   const requestId = context.data.requestId ?? crypto.randomUUID();
@@ -28,6 +29,7 @@ export async function handleEntitlement(context: PagesContextLike): Promise<Resp
       ),
     });
   } catch {
+    logServerError(requestId, 'entitlement');
     return apiError(requestId, 503, 'SERVICE_UNAVAILABLE', 'Entitlement service is unavailable.');
   }
 }

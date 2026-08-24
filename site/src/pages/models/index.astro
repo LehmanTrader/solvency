@@ -17,9 +17,10 @@ const nPass = models.filter((m) => bestResultFor(m.model_id)).length;
     <h1 class="h-page mt-3">Every model Solvency tracks</h1>
     <p class="lede mt-4 max-w-2xl">{models.length} models, {nCurrent} current. Each price is verified against the provider's own pricing page on the date shown. {nPass} have a published pass rate; the rest are shown as missing, never estimated.</p>
 
-    <div class="mt-8 card overflow-hidden">
-      <div class="tbl-wrap"><table class="tbl tbl-models">
-        <caption>Every model Solvency tracks: verified pricing, pass rate, cost basis and cost per solved task at the heavy tier</caption>
+    <p class="small mt-8 mb-2 lg:hidden" id="models-table-scroll-help">Scroll horizontally to see every pricing field, cost basis and the Verified date.</p>
+    <div class="card overflow-hidden">
+      <div class="tbl-wrap tbl-scroll-region" role="region" tabindex="0" aria-labelledby="models-table-caption" aria-describedby="models-table-scroll-help" data-models-scroll><table class="tbl tbl-models">
+        <caption id="models-table-caption">Every model Solvency tracks: verified pricing, pass rate, cost basis and cost per solved task at the heavy tier</caption>
         <colgroup>
           <col class="models-model" /><col class="models-provider" /><col class="models-status" />
           <col class="models-in" /><col class="models-out" /><col class="models-cached" />
@@ -50,3 +51,17 @@ const nPass = models.filter((m) => bestResultFor(m.model_id)).length;
     <Provenance verified={verified} note="Measured and modelled figures in the last column are on different bases and must not be ranked against each other; see the leaderboard for the separated ranking." />
   </div>
 </Base>
+
+<script>
+  const scrollRegion = document.querySelector<HTMLElement>('[data-models-scroll]');
+
+  scrollRegion?.addEventListener('keydown', (event) => {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    if (scrollRegion.scrollWidth <= scrollRegion.clientWidth) return;
+
+    event.preventDefault();
+    scrollRegion.scrollBy({
+      left: event.key === 'ArrowRight' ? 80 : -80,
+    });
+  });
+</script>

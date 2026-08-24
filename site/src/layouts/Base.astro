@@ -26,12 +26,15 @@ const current = (href: string) => (href === '/' ? path === '/' : path.startsWith
 const verified = models.reduce((a, m) => (m.last_verified > a ? m.last_verified : a), '');
 const aa = sources.find((s) => s.benchmark === 'aa-coding-agent-index');
 const PRODUCT_INTENTS_ENABLED = import.meta.env.PUBLIC_PRODUCT_INTENTS_ENABLED === 'true';
+const buildShaInput = import.meta.env.PUBLIC_BUILD_SHA ?? '';
+const BUILD_SHA = /^[0-9a-f]{40}$/.test(buildShaInput) ? buildShaInput : 'local';
 ---
 <!doctype html>
 <html lang="en" data-product-intents-enabled={PRODUCT_INTENTS_ENABLED ? 'true' : 'false'}>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="solvency-build-sha" content={BUILD_SHA} />
   <title>{title}</title>
   <meta name="description" content={description} />
   <link rel="canonical" href={url} />
@@ -63,7 +66,8 @@ const PRODUCT_INTENTS_ENABLED = import.meta.env.PUBLIC_PRODUCT_INTENTS_ENABLED =
     <script async crossorigin="anonymous"
             data-clerk-publishable-key={CLERK_PUBLISHABLE_KEY}
             src={`https://${CLERK_FRONTEND_API}/npm/@clerk/clerk-js@5/dist/clerk.browser.js`}
-            onload="window.Clerk.load({localization:{signUp:{start:{title:'Create your free Solvency account',subtitle:'Tune assumptions, keep scenario links and save Build Composer plans when available — free.'}},signIn:{start:{title:'Sign in to Solvency',subtitle:'Continue with your free account.'}}}}).then(()=>document.dispatchEvent(new Event('clerk:ready')))"></script>
+            onload="Promise.resolve().then(()=>window.Clerk.load({localization:{signUp:{start:{title:'Create your free Solvency account',subtitle:'Tune assumptions, keep scenario links and save Build Composer plans when available — free.'}},signIn:{start:{title:'Sign in to Solvency',subtitle:'Continue with your free account.'}}}})).then(()=>{delete document.documentElement.dataset.clerkUiError;document.documentElement.dataset.clerkUiReady='true';document.dispatchEvent(new Event('clerk:ready'))}).catch(()=>{delete document.documentElement.dataset.clerkUiReady;document.documentElement.dataset.clerkUiError='true';document.dispatchEvent(new Event('clerk:error'))})"
+            onerror="delete document.documentElement.dataset.clerkUiReady;document.documentElement.dataset.clerkUiError='true';document.dispatchEvent(new Event('clerk:error'))"></script>
   )}
   {CF_BEACON_TOKEN && (
     <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js"
@@ -90,25 +94,50 @@ const PRODUCT_INTENTS_ENABLED = import.meta.env.PUBLIC_PRODUCT_INTENTS_ENABLED =
       var n=document.getElementById('nav-list'),c=n.querySelector('[aria-current="page"]');function more(){if(n.scrollLeft+n.clientWidth<n.scrollWidth-1)n.setAttribute('data-more','1');else n.removeAttribute('data-more');}function place(){if(c&&n.scrollWidth>n.clientWidth+1)n.scrollLeft=Math.max(0,c.offsetLeft-(n.clientWidth-c.offsetWidth)/2);more();}n.addEventListener('scroll',more,{passive:true});addEventListener('resize',function(){requestAnimationFrame(place);});requestAnimationFrame(place);})();</script>
       {CLERK_ENABLED && (
         <div class="site-header-auth shrink-0 flex items-center">
-          <a href="#" id="auth-signin" class="small mr-2 sm:mr-3 inline-flex items-center min-h-11 sm:min-h-0 text-[var(--color-ink)] hover:underline">Sign in</a>
-          <button type="button" id="auth-signup" class="btn btn-accent" data-analytics="nav-signup">Sign up</button>
+          <button type="button" id="auth-signin" aria-describedby="auth-readiness" class="small mr-2 sm:mr-3 inline-flex items-center min-h-11 sm:min-h-0 text-[var(--color-ink)] bg-transparent border-0 p-0 hover:underline disabled:cursor-default" disabled>Sign in</button>
+          <button type="button" id="auth-signup" class="btn btn-accent" data-analytics="nav-signup" aria-describedby="auth-readiness" disabled>Sign up</button>
           <div id="auth-user" class="hidden min-h-8" aria-label="Account"></div>
+          <p id="auth-readiness" class="sr-only" role="status" aria-live="polite" aria-atomic="true">Account controls are loading.</p>
         </div>
       )}
       <script>
-        import { onClerk, openSignIn, openSignUp, clerkAppearance, wireAnalytics } from '../lib/clerk-client.ts';
+        import { observeClerkAuth, openSignIn, openSignUp, clerkAppearance, wireAnalytics } from '../lib/clerk-client.ts';
         wireAnalytics();
-        const b = document.getElementById('auth-signup'), s = document.getElementById('auth-signin'), u = document.getElementById('auth-user');
-        if (b && s && u) {
-          s.addEventListener('click', (e) => { e.preventDefault(); openSignIn(); });
-          b.addEventListener('click', () => openSignUp('gate', 'Create your free account: tune assumptions, keep scenario links and save Build Composer plans when available.'));
-          onClerk(() => {
-            const c = (window as any).Clerk; if (!c) return;
-            const on = !!c.user;
-            b.classList.toggle('hidden', on); s.style.display = on ? 'none' : ''; u.classList.toggle('hidden', !on);
-            if (on && !u.hasChildNodes()) c.mountUserButton(u, { appearance: clerkAppearance() });
-            if (!on && u.hasChildNodes()) { c.unmountUserButton(u); u.replaceChildren(); }
+        const b = document.getElementById('auth-signup') as HTMLButtonElement | null;
+        const s = document.getElementById('auth-signin') as HTMLButtonElement | null;
+        const u = document.getElementById('auth-user');
+        const status = document.getElementById('auth-readiness');
+        if (b && s && u && status) {
+          const setAvailable = (available: boolean) => {
+            b.disabled = !available;
+            s.disabled = !available;
+          };
+          const modalUnavailable = () => {
+            setAvailable(false);
+            status.textContent = 'Account sign-in is unavailable right now. Please reload and try again.';
+          };
+          s.addEventListener('click', () => {
+            if (s.disabled) return;
+            if (openSignIn() === 'unavailable') modalUnavailable();
           });
+          b.addEventListener('click', () => {
+            if (openSignUp('gate', 'Create your free account: tune assumptions, keep scenario links and save Build Composer plans when available.') === 'unavailable') modalUnavailable();
+          });
+          const stop = observeClerkAuth((state) => {
+            const ready = state.status === 'signed-in' || state.status === 'signed-out';
+            setAvailable(ready);
+            status.textContent = state.status === 'checking'
+              ? 'Account controls are loading.'
+              : state.status === 'error'
+                ? 'Account sign-in is unavailable right now. Please reload and try again.'
+                : '';
+            const c = (window as any).Clerk;
+            const on = state.status === 'signed-in';
+            b.classList.toggle('hidden', on); s.style.display = on ? 'none' : ''; u.classList.toggle('hidden', !on);
+            if (on && c && !u.hasChildNodes()) c.mountUserButton(u, { appearance: clerkAppearance() });
+            if (!on && c && u.hasChildNodes()) { c.unmountUserButton(u); u.replaceChildren(); }
+          }, { enabled: true });
+          addEventListener('pagehide', stop, { once: true });
         }
       </script>
     </div>

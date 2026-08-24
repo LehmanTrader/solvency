@@ -3,6 +3,7 @@ import { createClerkClient } from '@clerk/backend';
 
 const PREVIEW_ORIGIN = 'https://d1-functions-preview.solvency-ru5.pages.dev';
 const REQUIRED_CONFIRMATION = 'DELETE_ISOLATED_PREVIEW_DATA';
+const ERASURE_CONFIRMATION = 'DELETE_MY_ISOLATED_PREVIEW_DATA';
 const PLAN_LIMIT = 20;
 
 function requiredEnvironment(name) {
@@ -83,19 +84,46 @@ function testPlan(name) {
 }
 
 async function createAccount(label) {
-  const user = await clerk.users.createUser({
-    externalId: `solvency-preview-smoke-${runId}-${label}`,
-    emailAddress: [`solvency+clerk_test_${runId}_${label}@example.com`],
-    firstName: 'Solvency',
-    lastName: `Smoke ${label.toUpperCase()}`,
-    skipPasswordRequirement: true,
-    skipLegalChecks: true,
-    privateMetadata: { purpose: 'automated_preview_smoke', runId },
+  const externalId = `solvency-preview-smoke-${runId}-${label}`;
+  const account = { externalId, user: null, session: null };
+  // Register the deterministic locator before the network mutation. If Clerk
+  // commits the create but the response is lost, finally can still reconcile
+  // and delete the synthetic identity by external ID.
+  accounts.push(account);
+  try {
+    account.user = await clerk.users.createUser({
+      externalId,
+      emailAddress: [`solvency+clerk_test_${runId}_${label}@example.com`],
+      firstName: 'Solvency',
+      lastName: `Smoke ${label.toUpperCase()}`,
+      skipPasswordRequirement: true,
+      skipLegalChecks: true,
+      privateMetadata: { purpose: 'automated_preview_smoke', runId },
+    });
+  } catch (cause) {
+    try {
+      await recoverAccountUser(account);
+    } catch (recoveryCause) {
+      throw new AggregateError([cause, recoveryCause], 'Clerk test-user creation could not be reconciled.');
+    }
+    throw cause;
+  }
+  account.session = await clerk.sessions.createSession({ userId: account.user.id });
+  return account;
+}
+
+async function recoverAccountUser(account) {
+  if (account.user) return account.user;
+  const result = await clerk.users.getUserList({
+    externalId: [account.externalId],
+    limit: 2,
   });
-  accounts.push({ user, session: null });
-  const session = await clerk.sessions.createSession({ userId: user.id });
-  accounts[accounts.length - 1].session = session;
-  return accounts[accounts.length - 1];
+  const matches = result.data.filter((user) => user.externalId === account.externalId);
+  if (matches.length > 1) {
+    throw new Error('Clerk returned duplicate users for one smoke external ID.');
+  }
+  account.user = matches[0] ?? null;
+  return account.user;
 }
 
 async function sessionToken(account) {
@@ -159,6 +187,38 @@ async function publicRequest(path) {
   return { response, body };
 }
 
+async function proveUnauthenticatedAccessDenial() {
+  for (const [path, accept] of [['/', 'text/html'], ['/api/build-plans', 'application/json']]) {
+    const response = await fetch(new URL(path, baseUrl), {
+      headers: { Accept: accept },
+      redirect: 'manual',
+    });
+    const location = response.headers.get('location');
+    const accessRedirect = (() => {
+      if (![301, 302, 303, 307, 308].includes(response.status) || !location) return false;
+      try {
+        const target = new URL(location, baseUrl);
+        return target.hostname.endsWith('.cloudflareaccess.com')
+          && target.pathname.startsWith('/cdn-cgi/access/login/');
+      } catch {
+        return false;
+      }
+    })();
+    const accessForbidden = response.status === 403
+      && response.headers.get('server')?.toLowerCase() === 'cloudflare'
+      && response.headers.has('cf-ray')
+      && !response.headers.has('x-error-code');
+    await response.body?.cancel().catch(() => undefined);
+    if (!accessRedirect && !accessForbidden) {
+      const errorCode = response.headers.get('x-error-code') ?? 'NO_ERROR_CODE';
+      throw new Error(
+        `${path} is not demonstrably protected by Cloudflare Access `
+        + `(received ${response.status}, ${errorCode}).`,
+      );
+    }
+  }
+}
+
 function expectStatus(result, expected, operation) {
   const allowed = Array.isArray(expected) ? expected : [expected];
   if (!allowed.includes(result.response.status)) {
@@ -213,11 +273,40 @@ async function deleteAllPlans(account) {
   }
 }
 
+async function eraseAllAccountData(account) {
+  if (!account.session) return;
+  const erased = expectStatus(await apiRequest(account, '/api/preview-account-erasure', {
+    method: 'DELETE',
+    headers: { 'X-Preview-Erasure-Confirm': ERASURE_CONFIRMATION },
+  }), 200, 'erase isolated preview account data');
+  if (JSON.stringify(erased.body) !== JSON.stringify({ data: { erased: true } })) {
+    throw new Error('Preview account erasure returned an invalid response.');
+  }
+}
+
 async function runSmoke() {
-  const [accountA, accountB] = await Promise.all([createAccount('a'), createAccount('b')]);
+  await proveUnauthenticatedAccessDenial();
+  // Create sequentially so a rejected sibling cannot finish after the finally
+  // cleanup loop has already inspected the registered test identities.
+  const accountA = await createAccount('a');
+  const accountB = await createAccount('b');
 
   expectStatus(await apiRequest(accountA, '/api/build-plans'), 200, 'initial owner A list');
   expectStatus(await apiRequest(accountB, '/api/build-plans'), 200, 'initial owner B list');
+
+  const intentEventId = randomUUID();
+  expectStatus(await apiRequest(accountA, '/api/intents', {
+    method: 'POST',
+    body: { eventId: intentEventId, name: 'planner_started' },
+  }), 201, 'record owner A product intent');
+  const replayedIntent = expectStatus(await apiRequest(accountA, '/api/intents', {
+    method: 'POST',
+    body: { eventId: intentEventId, name: 'planner_started' },
+  }), 200, 'replay owner A product intent');
+  if (replayedIntent.response.headers.get('idempotency-replayed') !== 'true'
+    || replayedIntent.body?.data?.accepted !== true || replayedIntent.body?.data?.replayed !== true) {
+    throw new Error('Product-intent replay did not acknowledge the original event UUID.');
+  }
 
   const firstPlan = testPlan('Smoke account plan 01');
   const createKey = `smoke-create-${runId}-01`;
@@ -459,19 +548,35 @@ try {
 } catch (cause) {
   failure = cause;
 } finally {
+  const cleanupFailures = [];
   for (const account of accounts) {
+    let user;
     try {
-      await deleteAllPlans(account);
-    } catch {
-      // Continue to identity cleanup and report the original smoke failure.
+      user = await recoverAccountUser(account);
+    } catch (cause) {
+      cleanupFailures.push(cause);
+      continue;
+    }
+    if (!user) continue;
+    try {
+      await eraseAllAccountData(account);
+    } catch (cause) {
+      cleanupFailures.push(cause);
+      // Keep the Clerk identity when D1 erasure is unconfirmed so a later
+      // authenticated cleanup can still target the same verified owner.
+      continue;
+    }
+    try {
+      await clerk.users.deleteUser(user.id);
+    } catch (cause) {
+      cleanupFailures.push(cause);
     }
   }
-  for (const account of accounts) {
-    try {
-      await clerk.users.deleteUser(account.user.id);
-    } catch {
-      if (!failure) failure = new Error('A Clerk smoke-test user could not be deleted.');
-    }
+  if (cleanupFailures.length) {
+    failure = new AggregateError(
+      failure ? [failure, ...cleanupFailures] : cleanupFailures,
+      'Authenticated preview smoke cleanup did not complete.',
+    );
   }
 }
 

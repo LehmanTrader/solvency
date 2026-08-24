@@ -3,6 +3,7 @@ export interface BuildPlansEnv {
   ACCOUNT_PLANS_ENABLED?: string;
   ENTITLEMENTS_ENABLED?: string;
   PRODUCT_INTENTS_ENABLED?: string;
+  PREVIEW_ACCOUNT_ERASURE_ENABLED?: string;
   STRIPE_WEBHOOK_ENABLED?: string;
   APP_ENV?: string;
   CLERK_SECRET_KEY?: string;

@@ -8,6 +8,7 @@ import {
   type ServerConfirmedProductIntentName,
 } from './product-intent-store.ts';
 import type { PagesContextLike } from './pages-types.ts';
+import { logServerError } from './safe-server-log.ts';
 
 const BODY_LIMIT = 512;
 
@@ -23,6 +24,7 @@ type IntentErrorCode =
   | 'SERVICE_UNAVAILABLE';
 
 function intentError(id: string, status: number, code: IntentErrorCode, allow?: string): Response {
+  if (code === 'INTERNAL_ERROR') logServerError(id, 'product_intents');
   return apiJson({ error: { code, message: 'Product intent was not accepted.', requestId: id } }, status, {
     'X-Error-Code': code,
     'X-Request-Id': id,
@@ -108,6 +110,7 @@ export async function recordServerConfirmedProductIntent(
       eventName,
     });
   } catch {
+    logServerError(context.data.requestId, 'product_intents');
     // A measurement outage must never turn a successful primary mutation into a failure.
   }
 }

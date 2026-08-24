@@ -173,6 +173,9 @@
   .btn-accent { background: var(--color-accent); color: var(--color-on-accent); border-color: var(--color-accent); font-weight: 700; }
   .btn-accent:hover { background: var(--color-accent-hover); color: var(--color-on-accent); border-color: var(--color-accent-hover); }
   .btn-accent:active { background: var(--color-accent); }
+  .btn:disabled, .btn:disabled:hover, .btn:disabled:active {
+    color: var(--color-muted); background: var(--color-panel-2); border-color: var(--color-rule); cursor: not-allowed;
+  }
   .btn-quiet { border-color: transparent; color: var(--color-muted); padding-inline: .5rem; }
   .btn-quiet:hover { color: var(--color-ink); border-color: transparent; }
   .btn[aria-busy="true"] { color: var(--color-muted); cursor: progress; }
@@ -305,6 +308,7 @@
 
   /* ---- data tables: one system for every page ---------------------------- */
   .tbl-wrap { overflow-x: auto; }
+  .tbl-scroll-region:focus-visible { outline-offset: -2px; }
   .tbl { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-size: .8rem;
          font-variant-numeric: tabular-nums; white-space: nowrap; }
   .tbl caption { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }

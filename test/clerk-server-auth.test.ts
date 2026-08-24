@@ -347,6 +347,53 @@ describe('networkless Clerk server authentication', () => {
     assert.equal(disabledDatabase.rateLimitBinds.length, 0);
   });
 
+  test('preview account erasure has an exact preview-only gate and retains auth, origin and rate limits', async () => {
+    const previewOrigin = 'https://d1-functions-preview.solvency-ru5.pages.dev';
+    const database = new RateDatabase();
+    const enabled = middlewareContext(bearerRequest(
+      signSession({ azp: previewOrigin }),
+      {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Origin: previewOrigin,
+          'Sec-Fetch-Site': 'same-origin',
+        },
+      },
+      `${previewOrigin}/api/preview-account-erasure`,
+    ), database);
+    enabled.env.APP_ENV = 'preview';
+    enabled.env.CLERK_AUTHORIZED_PARTIES = previewOrigin;
+    enabled.env.ACCOUNT_PLANS_ENABLED = 'false';
+    enabled.env.PREVIEW_ACCOUNT_ERASURE_ENABLED = 'true';
+    const response = await apiMiddleware(enabled);
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { ownerUserId: 'user_account_alpha' });
+    assert.equal(database.rateLimitBinds.length, 1);
+
+    for (const [url, appEnv, flag] of [
+      ['https://solvency.dev/api/preview-account-erasure', 'production', 'true'],
+      [`${previewOrigin}/api/preview-account-erasure`, 'preview', 'false'],
+      [`${previewOrigin}/api/preview-account-erasures`, 'preview', 'true'],
+    ] as const) {
+      const deniedDatabase = new RateDatabase();
+      const denied = middlewareContext(bearerRequest(signSession({ azp: new URL(url).origin }), {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Origin: new URL(url).origin,
+          'Sec-Fetch-Site': 'same-origin',
+        },
+      }, url), deniedDatabase);
+      denied.env.APP_ENV = appEnv;
+      denied.env.CLERK_AUTHORIZED_PARTIES = new URL(url).origin;
+      denied.env.PREVIEW_ACCOUNT_ERASURE_ENABLED = flag;
+      const rejected = await apiMiddleware(denied);
+      assert.equal(rejected.status, 503);
+      assert.equal(deniedDatabase.rateLimitBinds.length, 0);
+    }
+  });
+
   test('rejects an invalid token before rate limiting', async () => {
     const database = new RateDatabase();
     const response = await apiMiddleware(middlewareContext(

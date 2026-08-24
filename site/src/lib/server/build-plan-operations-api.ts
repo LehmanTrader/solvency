@@ -16,6 +16,7 @@ import {
 } from './build-plan-operations-store.ts';
 import { recordServerConfirmedProductIntent } from './product-intent-api.ts';
 import type { PagesContextLike } from './pages-types.ts';
+import { logServerError } from './safe-server-log.ts';
 
 const OPERATION_BODY_LIMIT = 4 * 1024;
 const OPERATION_RESPONSE_LIMIT = 512 * 1024;
@@ -73,6 +74,7 @@ function operationError(
   message: string,
   allow?: string,
 ): Response {
+  if (code === 'INTERNAL_ERROR') logServerError(id, 'build_plan_operations');
   return apiJson({ error: { code, message, requestId: id } }, status, {
     'X-Error-Code': code,
     'X-Request-Id': id,

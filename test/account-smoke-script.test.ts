@@ -29,9 +29,22 @@ test('authenticated account smoke requires Access service credentials and always
   assert.match(source, /requiredEnvironment\('CF_ACCESS_CLIENT_SECRET'\)/);
   assert.match(source, /CF-Access-Client-Id/);
   assert.match(source, /CF-Access-Client-Secret/);
+  assert.match(source, /proveUnauthenticatedAccessDenial/);
+  assert.match(source, /cloudflareaccess\.com/);
+  assert.match(source, /\['\/', 'text\/html'\]/);
+  assert.match(source, /\['\/api\/build-plans', 'application\/json'\]/);
+  assert.match(source, /!response\.headers\.has\('x-error-code'\)/);
+  assert.match(source, /const errorCode = response\.headers\.get\('x-error-code'\)/);
   assert.match(source, /finally \{/);
-  assert.match(source, /await deleteAllPlans\(account\)/);
-  assert.match(source, /await clerk\.users\.deleteUser\(account\.user\.id\)/);
+  assert.match(source, /accounts\.push\(account\)[\s\S]*clerk\.users\.createUser/);
+  assert.match(source, /clerk\.users\.getUserList\(\{[\s\S]*externalId: \[account\.externalId\]/);
+  assert.match(source, /user = await recoverAccountUser\(account\)/);
+  assert.match(source, /await eraseAllAccountData\(account\)/);
+  assert.match(source, /DELETE_MY_ISOLATED_PREVIEW_DATA/);
+  assert.match(source, /await clerk\.users\.deleteUser\(user\.id\)/);
+  assert.match(source, /new AggregateError/);
+  assert.ok(source.indexOf('await eraseAllAccountData(account)') < source.indexOf('await clerk.users.deleteUser(user.id)'));
+  assert.doesNotMatch(source, /Promise\.all\(\[createAccount/);
   assert.doesNotMatch(source, /console\.(?:log|error|warn)\([^\n]*(?:secretKey|publishableKey|clientSecret|token|account\.user)/);
 });
 
@@ -45,6 +58,9 @@ test('authenticated account smoke covers the complete pre-billing workflow bound
   assert.match(source, /create owner A inactive alert/);
   assert.match(source, /cross-account inactive-alert list/);
   assert.match(source, /replay owner A inactive-alert delete/);
+  assert.match(source, /record owner A product intent/);
+  assert.match(source, /replay owner A product intent/);
+  assert.match(source, /idempotency-replayed/);
   assert.match(source, /status !== 'inactive'/);
   assert.match(source, /'token' in listedShares\.body\.data\[0\]/);
 });

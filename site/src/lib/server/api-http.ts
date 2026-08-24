@@ -1,5 +1,6 @@
 import { BUILD_PLAN_LIMITS } from '../build-plan-limits.ts';
 import type { D1DatabaseLike } from './pages-types.ts';
+import { logServerError, type ServerErrorBoundary } from './safe-server-log.ts';
 
 export type ApiErrorCode =
   | 'INVALID_REQUEST'
@@ -62,8 +63,11 @@ export function apiError(
   status: number,
   code: ApiErrorCode,
   message: string,
-  options: { issues?: unknown[]; allow?: string } = {},
+  options: { issues?: unknown[]; allow?: string; logBoundary?: ServerErrorBoundary } = {},
 ): Response {
+  if (code === 'INTERNAL_ERROR') {
+    logServerError(requestId, options.logBoundary ?? 'api_handler');
+  }
   const body: ApiErrorBody = {
     error: {
       code,
@@ -127,6 +131,7 @@ export async function enforceOwnerRateLimit(
       ? null
       : apiError(requestId, 503, 'SERVICE_UNAVAILABLE', 'Account plan storage is unavailable.');
   } catch {
+    logServerError(requestId, 'rate_limit');
     return apiError(requestId, 503, 'SERVICE_UNAVAILABLE', 'Account plan storage is unavailable.');
   }
 }

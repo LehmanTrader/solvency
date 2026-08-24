@@ -9,4 +9,5 @@ dist/
 !.dev.vars.example
 .wrangler/
 public/charts/
+public/charts-light/harness.svg
 public/og/

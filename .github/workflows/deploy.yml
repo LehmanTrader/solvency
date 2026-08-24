@@ -38,10 +38,16 @@ jobs:
 
       - name: Verify checked-out production commit
         shell: bash
+        env:
+          PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.PUBLIC_CLERK_PUBLISHABLE_KEY }}
         run: |
           set -euo pipefail
           if [[ "$(git rev-parse HEAD)" != "$GITHUB_SHA" ]]; then
             echo "Checked-out commit does not match the workflow commit."
+            exit 1
+          fi
+          if [[ "$PUBLIC_CLERK_PUBLISHABLE_KEY" != pk_live_* ]]; then
+            echo "Production requires a Clerk live publishable key."
             exit 1
           fi
 
@@ -52,6 +58,10 @@ jobs:
       - name: Install site dependencies
         working-directory: site
         run: npm ci --no-audit --no-fund
+
+      - name: Verify immutable migration checksums
+        working-directory: site
+        run: npm run check:migrations
 
       # Guards the published figures: the report tests re-derive every table
       # from the datasets, so a bad price edit fails here rather than shipping.
@@ -76,11 +86,24 @@ jobs:
           PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.PUBLIC_CLERK_PUBLISHABLE_KEY }}
           PUBLIC_ACCOUNT_PLANS_ENABLED: 'false'
           PUBLIC_PRODUCT_INTENTS_ENABLED: 'false'
+          PUBLIC_BUILD_SHA: ${{ github.sha }}
         run: npm run build
 
       - name: Verify Pages Functions bundle
         working-directory: site
         run: npm run build:functions
+
+      - name: Require a clean generated source tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          dirty="$(git status --porcelain --untracked-files=all)"
+          if [[ -n "$dirty" ]]; then
+            printf '%s\n' "$dirty"
+            echo "Build or Functions compilation changed the checked-out source tree."
+            exit 1
+          fi
 
       - name: Publish to Cloudflare Pages
         uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3
@@ -96,3 +119,9 @@ jobs:
             --branch main
             --commit-hash ${{ github.sha }}
             --commit-dirty=false
+
+      - name: Attest production SHA and dark-mode health
+        working-directory: site
+        env:
+          EXPECTED_BUILD_SHA: ${{ github.sha }}
+        run: npm run verify:production-dark

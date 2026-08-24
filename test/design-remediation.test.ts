@@ -22,6 +22,12 @@ test('desktop models table assigns every field a visible column', () => {
   assert.match(page, /class="tbl tbl-models"/);
   assert.match(page, /<colgroup>[\s\S]*models-model[\s\S]*models-verified[\s\S]*<\/colgroup>/);
   assert.match(css, /@media \(min-width: 1024px\)[\s\S]*\.tbl-models\s*\{[^}]*table-layout:\s*fixed;[^}]*white-space:\s*normal;/);
+  assert.match(page, /class="tbl-wrap tbl-scroll-region" role="region" tabindex="0" aria-labelledby="models-table-caption" aria-describedby="models-table-scroll-help" data-models-scroll/);
+  assert.match(page, /id="models-table-scroll-help"[^>]*>Scroll horizontally to see every pricing field, cost basis and the Verified date/);
+  assert.match(page, /<caption id="models-table-caption">/);
+  assert.match(page, /event\.key !== 'ArrowLeft' && event\.key !== 'ArrowRight'/);
+  assert.match(page, /scrollRegion\.scrollBy\(\{[\s\S]*left: event\.key === 'ArrowRight' \? 80 : -80/);
+  assert.match(css, /\.tbl-scroll-region:focus-visible\s*\{[^}]*outline-offset:\s*-2px;/);
 });
 
 test('mobile navigation reveals the current item and keeps direct sign-in', () => {
@@ -31,10 +37,23 @@ test('mobile navigation reveals the current item and keeps direct sign-in', () =
   assert.match(base, /scrollLeft\s*=/);
   assert.match(base, /n\.scrollWidth\s*>\s*n\.clientWidth\s*\+\s*1/);
   assert.doesNotMatch(base, /id="auth-signin"[^>]*\bhidden\b/);
+  assert.match(base, /<button type="button" id="auth-signin"[^>]*disabled>Sign in<\/button>/);
+  assert.match(base, /id="auth-signup"[^>]*disabled/);
+  assert.match(base, /s\.disabled = !available/);
+  assert.match(base, /observeClerkAuth/);
+  assert.match(base, /Account controls are loading/);
+  assert.match(base, /dataset\.clerkUiReady='true';document\.dispatchEvent\(new Event\('clerk:ready'\)\)/);
+  assert.match(base, /\.catch\(\(\)=>\{[^}]*dataset\.clerkUiError='true';document\.dispatchEvent\(new Event\('clerk:error'\)\)/);
+  assert.match(base, /onerror="[^\"]*dataset\.clerkUiError='true';document\.dispatchEvent\(new Event\('clerk:error'\)\)"/);
+  const client = read('site/src/lib/clerk-client.ts');
+  assert.match(client, /if \(!c\?\.loaded \|\| !clerkUiReady\(\)\) return 'unavailable'/);
+  assert.match(client, /document\.addEventListener\('clerk:error', failed, \{ once: true \}\)/);
   assert.match(base, /flex-wrap sm:flex-nowrap/);
   assert.match(base, /basis-full sm:order-none sm:basis-0 flex-1 min-w-0/);
   assert.doesNotMatch(base, /hidden lg:block small shrink-0[^>]*>prices verified/);
   assert.match(css, /@media \(max-width: 359px\)[\s\S]*\.site-header-lockup\s*\{[^}]*min-width:\s*2\.75rem;[^}]*min-height:\s*2\.75rem;[\s\S]*\.site-header-lockup \.wordmark\s*\{\s*display:\s*none;/);
+  assert.match(css, /\.btn:disabled, \.btn:disabled:hover, \.btn:disabled:active\s*\{[^}]*cursor:\s*not-allowed;/);
+  assert.match(css, /\.btn\[aria-busy="true"\]\s*\{[^}]*cursor:\s*progress;/);
 });
 
 test('mobile auth does not render the fixed context strip', () => {
@@ -118,12 +137,21 @@ test('build planner accepts a free-form harness and exposes the paid workflow be
   assert.match(page, /b-operations-refresh/);
   assert.match(page, /build_quote_first_edit_valid/);
   assert.doesNotMatch(page, /build_quote_valid/);
-  assert.match(page, /build-pro-price-interest/);
-  assert.match(page, /directional research signal/);
+  assert.doesNotMatch(page, /openSignUp\('build-pro-price-interest'/);
+  assert.doesNotMatch(page, /track\('build_pro_price_interest'/);
+  assert.match(page, /if \(signedIn\(\)\) \{[\s\S]*await recordProductIntentSignal\('pro_price_interest'\)/);
+  assert.match(page, /proInterestMeasurementEnabled = document\.documentElement\.dataset\.productIntentsEnabled === 'true'/);
+  assert.match(page, /Account-based research measurement is unavailable in this build\. No interest can be submitted or charged/);
+  assert.match(page, /We could not confirm your interest signal\. You can retry safely; account-based signals are deduplicated/);
+  assert.match(page, /After signing in, select this button again to submit your interest\. Nothing was submitted or charged yet/);
+  assert.match(page, /id="b-account-signin" disabled>Sign in to save/);
+  assert.match(page, /id="b-account-signup" disabled>Create free account/);
+  assert.match(page, /authActionsReady = accountSessionExpired \|\| accountAuth\.status === 'signed-out'/);
+  assert.match(page, /signin\.disabled = !authActionsReady; signup\.disabled = !authActionsReady/);
   assert.match(page, /Planned expiry:/);
   assert.match(page, /noticeReserve\s*=\s*160/);
   assert.match(page, /I’d consider Pro at \$19/);
-  assert.match(page, /Research signal only\. No upgrade, checkout, trial or subscription/);
+  assert.match(page, /Requires a free account so one person counts once\. Research signal only—no upgrade, checkout, trial, subscription or charge/);
   assert.match(page, /PUBLIC_ACCOUNT_PLANS_ENABLED === 'true'/);
   assert.match(page, /Nothing from the editor is uploaded until you choose an account save action/);
   assert.match(page, /Preview safety limits are \{ACCOUNT_PLAN_PREVIEW_MAX_PLANS\} account plans and \{ACCOUNT_PLAN_PREVIEW_MAX_VERSIONS\} immutable versions per plan/);
@@ -172,6 +200,25 @@ test('build planner accepts a free-form harness and exposes the paid workflow be
   for (const event of ['build-add-role', 'build-save-version', 'build-duplicate']) {
     assert.equal(page.match(new RegExp(event, 'g'))?.length, 1, `${event} should have one instrumentation path`);
   }
+});
+
+test('pricing offers one disclosed, non-transactional first-party price-interest action', () => {
+  const page = read('site/src/pages/pricing.astro');
+  assert.match(page, /id="pricing-pro-interest" data-clerk-enabled=/);
+  assert.match(page, /id="pricing-pro-interest-button"[^>]*disabled>I’d consider Pro at \$19/);
+  assert.match(page, /Requires a free account so one person counts once/);
+  assert.match(page, /research signal only—no plan is reserved and there is no upgrade, checkout, trial, subscription or charge/);
+  assert.doesNotMatch(page, /track\('build_pro_price_interest'/);
+  assert.equal(page.match(/recordProductIntentSignal\('pro_price_interest'\)/g)?.length, 1);
+  assert.match(page, /if \(signedIn\(\)\) \{[\s\S]*await recordProductIntentSignal\('pro_price_interest'\)/);
+  assert.match(page, /measurementEnabled = document\.documentElement\.dataset\.productIntentsEnabled === 'true'/);
+  assert.match(page, /Account-based research measurement is unavailable in this build\. No interest can be submitted or charged/);
+  assert.match(page, /We could not confirm your interest signal\. You can retry safely; account-based signals are deduplicated/);
+  assert.doesNotMatch(page, /openSignUp\('build-pro-price-interest'/);
+  assert.match(page, /After signing in, select this button again to submit your interest\. Nothing was submitted or charged yet/);
+  assert.doesNotMatch(page, /id="pricing-pro-interest-button"[^>]*data-analytics/);
+  assert.match(page, /observeClerkAuth\(renderAuth/);
+  assert.match(page, /result === 'unavailable'/);
 });
 
 test('privacy discloses bounded D1 throttling without implying request-content logging', () => {

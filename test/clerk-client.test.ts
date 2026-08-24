@@ -6,6 +6,8 @@ import {
   authenticatedJsonFetch,
   consumeComposerDraftAfterAuth,
   observeClerkAuth,
+  openSignIn,
+  openSignUp,
   preserveComposerDraftForAuth,
   productIntentNameForAnalyticsEvent,
   recordProductIntentSignal,
@@ -17,6 +19,7 @@ const originals = {
   document: (globalThis as any).document,
   location: (globalThis as any).location,
   sessionStorage: (globalThis as any).sessionStorage,
+  getComputedStyle: (globalThis as any).getComputedStyle,
   fetch: globalThis.fetch,
 };
 
@@ -46,8 +49,13 @@ afterEach(() => {
   (globalThis as any).document = originals.document;
   (globalThis as any).location = originals.location;
   (globalThis as any).sessionStorage = originals.sessionStorage;
+  (globalThis as any).getComputedStyle = originals.getComputedStyle;
   globalThis.fetch = originals.fetch;
 });
+
+const setThemeTokens = () => {
+  (globalThis as any).getComputedStyle = () => ({ getPropertyValue: () => '#111111' });
+};
 
 test('product-intent mapping is closed and never forwards analytics detail', () => {
   assert.equal(productIntentNameForAnalyticsEvent('build_planner_view'), 'planner_started');
@@ -133,6 +141,7 @@ test('auth observer reports loaded auth and unsubscribes', () => {
     addListener(callback: () => void) { listener = callback; return () => { unsubscribed = true; }; },
   };
   setBrowser(clerk);
+  (globalThis as any).document.documentElement.dataset.clerkUiReady = 'true';
   const states: string[] = [];
   const stop = observeClerkAuth((state) => states.push(state.status));
   clerk.user = null as any;
@@ -149,6 +158,78 @@ test('auth observer settles an enabled Clerk load failure and may be stopped', a
   await new Promise((resolve) => setTimeout(resolve, 5));
   stop();
   assert.deepEqual(states, ['checking', 'error']);
+});
+
+test('auth observer settles immediately on a Clerk load error event', () => {
+  setBrowser();
+  let failed: (() => void) | undefined;
+  (globalThis as any).document.addEventListener = (name: string, callback: () => void) => {
+    if (name === 'clerk:error') failed = callback;
+  };
+  const states: string[] = [];
+  const stop = observeClerkAuth((state) => states.push(state.status), { enabled: true, timeoutMs: 60_000 });
+  failed?.();
+  stop();
+  assert.deepEqual(states, ['checking', 'error']);
+});
+
+test('a loaded-but-not-UI-ready Clerk queues one modal until the ready event', () => {
+  let ready: (() => void) | undefined;
+  let openedWith: Record<string, any> | undefined;
+  let componentsReady = false;
+  let calls = 0;
+  const clerk = {
+    loaded: true,
+    openSignUp(options: Record<string, any>) {
+      if (!componentsReady) throw new Error('components not ready');
+      calls += 1;
+      openedWith = options;
+    },
+  };
+  setBrowser(clerk);
+  setThemeTokens();
+  (globalThis as any).document.addEventListener = (name: string, callback: () => void) => {
+    if (name === 'clerk:ready') ready = callback;
+  };
+
+  assert.equal((globalThis as any).document.documentElement.dataset.clerkUiReady, undefined);
+  assert.doesNotThrow(() => assert.equal(openSignUp('build-pro-price-interest'), 'queued'));
+  assert.equal(openedWith, undefined);
+  assert.equal(calls, 0);
+  componentsReady = true;
+  ready?.();
+  assert.equal((globalThis as any).document.documentElement.dataset.clerkUiReady, 'true');
+  assert.equal(calls, 1);
+  assert.equal(openedWith?.unsafeMetadata.intent, 'build-pro-price-interest');
+  assert.equal(openedWith?.unsafeMetadata.scenario, 'https://solvency.dev/build-planner/');
+  ready?.();
+  assert.equal(calls, 1);
+});
+
+test('early modal taps coalesce to the latest action and modal exceptions fail closed', () => {
+  let ready: (() => void) | undefined;
+  const opened: string[] = [];
+  const clerk = {
+    loaded: false,
+    openSignUp() { opened.push('sign-up'); },
+    openSignIn() { opened.push('sign-in'); },
+  };
+  setBrowser(clerk);
+  setThemeTokens();
+  (globalThis as any).document.addEventListener = (name: string, callback: () => void) => {
+    if (name === 'clerk:ready') ready = callback;
+  };
+
+  assert.equal(openSignUp(), 'queued');
+  assert.equal(openSignIn(), 'queued');
+  clerk.loaded = true;
+  ready?.();
+  assert.deepEqual(opened, ['sign-in']);
+
+  clerk.openSignIn = () => { throw new Error('components not ready'); };
+  clerk.openSignUp = () => { throw new Error('components not ready'); };
+  assert.doesNotThrow(() => assert.equal(openSignIn(), 'unavailable'));
+  assert.doesNotThrow(() => assert.equal(openSignUp(), 'unavailable'));
 });
 
 test('authenticated JSON fetch sends a bearer token and retries one 401 with a fresh token', async () => {

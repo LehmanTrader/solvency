@@ -197,7 +197,9 @@ test('planner analytics disclosure and payloads exclude raw build inputs', () =>
   assert.match(privacy, /coarse Build Composer interaction events/);
   assert.doesNotMatch(page, /track\([^\n]+(?:plan\.name|harness\.name|modelId|threshold)/);
   assert.match(page, /build_quote_first_edit_valid/);
-  assert.match(page, /price_hypothesis: '19_monthly'/);
+  assert.doesNotMatch(page, /price_hypothesis/);
+  assert.doesNotMatch(page, /track\('build_pro_price_interest'/);
+  assert.match(page, /await recordProductIntentSignal\('pro_price_interest'\)/);
   assert.match(privacy, /Cloudflare D1 under your verified Clerk account ID/);
   assert.match(privacy, /Custom and contract rates may be commercially sensitive/);
   assert.match(privacy, /session storage/);

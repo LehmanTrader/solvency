@@ -5,9 +5,11 @@
   "scripts": {
     "sync": "node scripts/sync-assets.mjs",
     "dev": "npm run sync && astro dev",
-    "build": "npm run sync && astro build && npm run check:links",
+    "build": "npm run sync && astro build && node --experimental-strip-types scripts/render-security-headers.ts && npm run check:links",
     "build:functions": "wrangler pages functions build functions --outdir .wrangler/functions-build --project-directory . --build-output-directory dist",
+    "check:migrations": "node scripts/verify-migration-checksums.mjs",
     "check:links": "node scripts/check-links.mjs",
+    "verify:production-dark": "node scripts/verify-production-dark.mjs",
     "smoke:account-preview": "node scripts/smoke-account-plans.mjs",
     "preview": "astro preview"
   },

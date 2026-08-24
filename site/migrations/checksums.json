@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "algorithm": "sha256",
+  "migrations": [
+    {
+      "name": "0001_build_plans.sql",
+      "sha256": "5508bc4e06334749642272fb6eefde761bab7789271018204ddd4b32183d293a"
+    },
+    {
+      "name": "0002_build_plan_invariants.sql",
+      "sha256": "6f80ec8ada85f6d6b872bac3f36ac92d50ab2b40f8ea646f8af1e60d9633d2e7"
+    },
+    {
+      "name": "0003_build_plan_rate_limits.sql",
+      "sha256": "728c4a561632e3540f780050bb4fd32c4d510ead361d83522d78a85f4592db6f"
+    },
+    {
+      "name": "0004_billing_authority.sql",
+      "sha256": "b1b889b3c07d21df7e0cb3e33b360974122b6a9b779939849dfc0f944e83a851"
+    },
+    {
+      "name": "0005_build_plan_operations.sql",
+      "sha256": "e4bd20a388d6ba992dff0e6f405fb3b85254a7c099dbe191ea285cd4ab93360d"
+    },
+    {
+      "name": "0006_product_intent_events.sql",
+      "sha256": "a623e1210e038232cd8dbcb9bb0cea061a073f11686aee49682d92919a76eb01"
+    }
+  ]
+}

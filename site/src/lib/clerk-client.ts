@@ -25,9 +25,27 @@ export interface ObserveClerkAuthOptions {
 const clerkScriptConfigured = (): boolean => typeof document !== 'undefined'
   && Boolean(document.querySelector('script[data-clerk-publishable-key]'));
 
+/**
+ * `Clerk.loaded` can become true before Clerk's modal components are ready.
+ * Base.astro stamps this marker immediately before `clerk:ready`; listeners
+ * also stamp it when they receive that event so synthetic/late integrations
+ * retain the same invariant.
+ */
+const clerkUiReady = (): boolean => typeof document !== 'undefined'
+  && document.documentElement?.dataset.clerkUiReady === 'true';
+
+const clerkUiFailed = (): boolean => typeof document !== 'undefined'
+  && document.documentElement?.dataset.clerkUiError === 'true';
+
+const markClerkUiReady = (): void => {
+  if (typeof document === 'undefined' || !document.documentElement?.dataset) return;
+  document.documentElement.dataset.clerkUiReady = 'true';
+  delete document.documentElement.dataset.clerkUiError;
+};
+
 const currentAuthState = (): ClerkAuthState => {
   const c = clerk();
-  if (!c?.loaded) return { status: 'checking' };
+  if (!c?.loaded || !clerkUiReady()) return { status: 'checking' };
   if (!c.user) return { status: 'signed-out' };
   if (typeof c.user.id !== 'string' || !c.user.id) return { status: 'error', code: 'clerk_unavailable' };
   return {
@@ -61,36 +79,57 @@ export function observeClerkAuth(
     if (stopped) return;
     if (timer) clearTimeout(timer);
     timer = undefined;
+    document.removeEventListener('clerk:ready', ready);
+    document.removeEventListener('clerk:error', failed);
     change();
     const unsubscribe = clerk()?.addListener?.(change);
     if (typeof unsubscribe === 'function') removeClerkListener = unsubscribe;
   };
-  const ready = () => attach();
+  const ready = () => {
+    markClerkUiReady();
+    if (clerk()?.loaded) attach();
+  };
+  const failed = () => {
+    if (stopped) return;
+    if (timer) clearTimeout(timer);
+    timer = undefined;
+    emit({ status: 'error', code: 'clerk_unavailable' });
+    // Keep the one-shot ready listener: a later successful load can recover.
+  };
 
-  if (clerk()?.loaded) attach();
+  if (clerk()?.loaded && clerkUiReady()) attach();
   else {
     emit({ status: 'checking' });
     document.addEventListener('clerk:ready', ready, { once: true });
+    document.addEventListener('clerk:error', failed, { once: true });
     const timeoutMs = Math.max(0, options.timeoutMs ?? 10_000);
     timer = setTimeout(() => {
       timer = undefined;
       emit({ status: 'error', code: 'clerk_unavailable' });
       // Keep the one-shot ready listener: a late Clerk load can recover the UI.
     }, timeoutMs);
+    if (clerkUiFailed()) failed();
   }
 
   return () => {
     stopped = true;
     if (timer) clearTimeout(timer);
     document.removeEventListener('clerk:ready', ready);
+    document.removeEventListener('clerk:error', failed);
     removeClerkListener?.();
   };
 }
 
 /** Runs cb once Clerk has loaded and again on every auth change. */
 export function onClerk(cb: () => void): void {
-  const ready = () => { cb(); clerk()?.addListener?.(cb); };
-  if (clerk()?.loaded) ready(); else document.addEventListener('clerk:ready', ready, { once: true });
+  const ready = () => {
+    markClerkUiReady();
+    if (!clerk()?.loaded) return;
+    cb();
+    clerk()?.addListener?.(cb);
+  };
+  if (clerk()?.loaded && clerkUiReady()) ready();
+  else document.addEventListener('clerk:ready', ready, { once: true });
 }
 
 export type AuthenticatedJsonErrorCode =
@@ -411,6 +450,16 @@ const urls = () => ({ afterSignInUrl: location.href, afterSignUpUrl: location.hr
  */
 export type Intent = 'gate' | 'save' | 'pro-notify' | 'pro-download' | 'build-pro-price-interest';
 
+export type AuthModalOpenResult = 'opened' | 'queued' | 'unavailable';
+
+type AuthModalRequest =
+  | { kind: 'sign-in' }
+  | { kind: 'sign-up'; intent: Intent; context?: string };
+
+let queuedAuthModal: AuthModalRequest | null = null;
+let authModalReadyListenerInstalled = false;
+let authModalListenerDocument: Document | null = null;
+
 /**
  * Where the strip goes: hard against Clerk's card, above it when the viewport
  * has room and below it otherwise. It must never cover the card's own title,
@@ -466,18 +515,85 @@ function showContext(text: string): void {
   setTimeout(() => { if (!seen) stop(); }, 4000);
 }
 
+function invokeAuthModal(request: AuthModalRequest): AuthModalOpenResult {
+  const c = clerk();
+  if (!c?.loaded || !clerkUiReady()) return 'unavailable';
+  try {
+    if (request.kind === 'sign-in') {
+      if (typeof c.openSignIn !== 'function') return 'unavailable';
+      const result = c.openSignIn({ ...urls(), appearance: clerkAppearance() });
+      if (result && typeof result.catch === 'function') void result.catch(() => {});
+      return 'opened';
+    }
+    if (typeof c.openSignUp !== 'function') return 'unavailable';
+    const result = c.openSignUp({
+      ...urls(), appearance: clerkAppearance(),
+      unsafeMetadata: { intent: request.intent, scenario: location.href },
+    });
+    if (result && typeof result.catch === 'function') void result.catch(() => {});
+    if (request.context) showContext(request.context);
+    return 'opened';
+  } catch {
+    // Clerk can expose its modal methods before their UI components are ready.
+    // A failed modal open must leave the page usable and never escape the click.
+    return 'unavailable';
+  }
+}
+
+function removeAuthModalReadinessListeners(): void {
+  authModalListenerDocument?.removeEventListener('clerk:ready', flushQueuedAuthModal);
+  authModalListenerDocument?.removeEventListener('clerk:error', failQueuedAuthModal);
+  authModalReadyListenerInstalled = false;
+  authModalListenerDocument = null;
+}
+
+function flushQueuedAuthModal(): void {
+  markClerkUiReady();
+  removeAuthModalReadinessListeners();
+  const request = queuedAuthModal;
+  queuedAuthModal = null;
+  if (request) invokeAuthModal(request);
+}
+
+function failQueuedAuthModal(): void {
+  removeAuthModalReadinessListeners();
+  // Never retain a click across a settled load failure. A later user action
+  // can queue again if Clerk is reloaded successfully.
+  queuedAuthModal = null;
+}
+
+function requestAuthModal(request: AuthModalRequest): AuthModalOpenResult {
+  if (clerk()?.loaded && clerkUiReady()) return invokeAuthModal(request);
+  if (!clerk() && !clerkScriptConfigured()) return 'unavailable';
+  if (clerkUiFailed()) return 'unavailable';
+
+  // Keep only the visitor's latest intent. Repeated early taps must open at
+  // most one modal when Clerk settles, never a stack of sign-in/up dialogs.
+  queuedAuthModal = request;
+  if (authModalReadyListenerInstalled && authModalListenerDocument !== document) {
+    removeAuthModalReadinessListeners();
+  }
+  if (!authModalReadyListenerInstalled) {
+    authModalReadyListenerInstalled = true;
+    authModalListenerDocument = document;
+    document.addEventListener('clerk:ready', flushQueuedAuthModal, { once: true });
+    document.addEventListener('clerk:error', failQueuedAuthModal, { once: true });
+  }
+  return 'queued';
+}
+
 /**
  * Gates open sign-UP: a first-time visitor is asked to create the free
  * account, not to "welcome back". `intent` tags the trigger in the user's
  * unsafeMetadata (with the scenario URL) and `context` is the strip's text.
+ * Calls made during Clerk startup are coalesced and opened after `clerk:ready`.
  */
-export const openSignUp = (intent: Intent = 'gate', context?: string) => {
-  const c = clerk(); if (!c?.openSignUp) return false;
-  if (context) showContext(context);
-  c.openSignUp({ ...urls(), appearance: clerkAppearance(), unsafeMetadata: { intent, scenario: location.href } });
-  return true;
-};
-export const openSignIn = () => clerk()?.openSignIn?.({ ...urls(), appearance: clerkAppearance() });
+export const openSignUp = (
+  intent: Intent = 'gate',
+  context?: string,
+): AuthModalOpenResult => requestAuthModal({ kind: 'sign-up', intent, ...(context ? { context } : {}) });
+
+export const openSignIn = (): AuthModalOpenResult => requestAuthModal({ kind: 'sign-in' });
 
 /**
  * Counts a data-analytics click as a custom event if an analytics beacon is
@@ -549,8 +665,9 @@ function dispatchProductIntentSignal(name: ProductIntentName): void {
   // A returning user's session may settle after the page module runs. Queue
   // this one attempt only while Clerk itself is still loading; an already
   // settled signed-out visitor never creates a first-party owner event.
-  if (!clerk()?.loaded && clerkScriptConfigured()) {
+  if (!clerkUiReady() && clerkScriptConfigured()) {
     document.addEventListener('clerk:ready', () => {
+      markClerkUiReady();
       if (signedIn()) void recordProductIntentSignal(name);
     }, { once: true });
   }

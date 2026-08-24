@@ -1,6 +1,8 @@
 import { defineConfig } from 'astro/config';
 import tailwind from '@tailwindcss/vite';
 import sitemap from '@astrojs/sitemap';
+import { unified } from '@astrojs/markdown-remark';
+import rehypeAccessibleTableCaptions from './src/lib/rehype-table-captions.mjs';
 
 /**
  * The canonical report markdown lives in ../reports and references its charts
@@ -47,5 +49,11 @@ export default defineConfig({
   // to light-mode ink — unreadable. The fenced blocks are plain formulas and
   // shell snippets with nothing to highlight, so they now render as plain
   // <pre><code> and pick up the site's own theme-aware styling.
-  markdown: { remarkPlugins: [absoluteChartPaths], syntaxHighlight: false },
+  markdown: {
+    processor: unified({
+      remarkPlugins: [absoluteChartPaths],
+      rehypePlugins: [rehypeAccessibleTableCaptions],
+    }),
+    syntaxHighlight: false,
+  },
 });

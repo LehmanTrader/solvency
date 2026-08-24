@@ -7,6 +7,7 @@ import { CLERK_ENABLED } from '../lib/clerk.ts';
 
 const currentModels = models.filter((model) => model.status === 'current');
 const ACCOUNT_PLANS_ENABLED = import.meta.env.PUBLIC_ACCOUNT_PLANS_ENABLED === 'true';
+const PRODUCT_INTENTS_ENABLED = import.meta.env.PUBLIC_PRODUCT_INTENTS_ENABLED === 'true';
 const ACCOUNT_PLAN_PREVIEW_MAX_PLANS = 20;
 const ACCOUNT_PLAN_PREVIEW_MAX_VERSIONS = 100;
 const harnessExamples = [
@@ -194,8 +195,8 @@ const harnessExamples = [
               <div class="mt-4" id="b-account-auth-actions" hidden>
                 <p class="small" id="b-account-auth-copy">Sign in or create a free account to save plans and reopen them later. Your current quote and tab-only versions still work.</p>
                 <div class="mt-3 flex flex-wrap gap-2">
-                  <button type="button" class="btn" id="b-account-signin">Sign in to save</button>
-                  <button type="button" class="btn btn-accent" id="b-account-signup">Create free account</button>
+                  <button type="button" class="btn" id="b-account-signin" disabled>Sign in to save</button>
+                  <button type="button" class="btn btn-accent" id="b-account-signup" disabled>Create free account</button>
                 </div>
               </div>
 
@@ -376,7 +377,7 @@ const harnessExamples = [
       caption={`There is no upgrade or paid entitlement today. Preview access does not guarantee final tier placement. Safety caps still apply: ${BUILD_PLAN_LIMITS.maxRoles} roles, ${ACCOUNT_PLAN_PREVIEW_MAX_PLANS} account plans and ${ACCOUNT_PLAN_PREVIEW_MAX_VERSIONS} versions per plan.`}>
       <div class="grid gap-4 md:grid-cols-2">
         <div class="card card-pad"><p class="label">Available now · open preview</p><h3 class="h-card mt-2">Build and inspect the budget</h3><ul class="mt-3 text-sm leading-relaxed text-[var(--color-body)] list-disc pl-5"><li>Any harness name and mix of current catalog models</li><li>Editable usage, routing and custom-rate assumptions</li><li>Sensitivity, break-even, tab-only versions and local exports</li><li>Account plans only when the storage preview is enabled</li><li>Public research, methodology and verified catalog remain free</li></ul><p class="small mt-4">{ACCOUNT_PLANS_ENABLED ? 'The account preview can create and revoke unlisted links and persist inactive alert settings. No monitoring or email delivery is running.' : 'Unlisted-link delivery and monitoring are not available; their controls save settings only in this tab.'}</p></div>
-        <div class="card card-pad"><p class="label">Pro · planned $19/month hypothesis</p><h3 class="h-card mt-2">Keep the budget current</h3><ul class="mt-3 text-sm leading-relaxed text-[var(--color-body)] list-disc pl-5"><li>Higher plan, version and model-role limits</li><li>Durable custom/contract pricing and observed-usage profiles</li><li>Named architecture history, expanded comparisons and review workflows</li><li>Controlled share links and operational export workflows</li><li>Model-price and budget monitoring for saved plans</li></ul><p class="small mt-4">The intended recurring value is re-planning, review and monitoring—not a paywall on public research.</p><div class="mt-5 border-t border-[var(--color-rule)] pt-4"><h4 class="text-sm font-semibold text-[var(--color-ink)]">Would that recurring workflow be worth $19/month?</h4><button type="button" class="btn mt-3" id="b-pro-interest" aria-describedby="b-pro-interest-help">I’d consider Pro at $19</button><p class="small mt-2" id="b-pro-interest-help">Research signal only. No upgrade, checkout, trial or subscription.</p><p class="small mt-2" id="b-pro-interest-status" role="status" aria-live="polite" aria-atomic="true"></p></div></div>
+        <div class="card card-pad"><p class="label">Pro · planned $19/month hypothesis</p><h3 class="h-card mt-2">Keep the budget current</h3><ul class="mt-3 text-sm leading-relaxed text-[var(--color-body)] list-disc pl-5"><li>Higher plan, version and model-role limits</li><li>Durable custom/contract pricing and observed-usage profiles</li><li>Named architecture history, expanded comparisons and review workflows</li><li>Controlled share links and operational export workflows</li><li>Model-price and budget monitoring for saved plans</li></ul><p class="small mt-4">The intended recurring value is re-planning, review and monitoring—not a paywall on public research.</p><div class="mt-5 border-t border-[var(--color-rule)] pt-4"><h4 class="text-sm font-semibold text-[var(--color-ink)]">Would that recurring workflow be worth $19/month?</h4><button type="button" class="btn mt-3" id="b-pro-interest" aria-describedby="b-pro-interest-help b-pro-interest-status" disabled>I’d consider Pro at $19</button><p class="small mt-2" id="b-pro-interest-help">Requires a free account so one person counts once. Research signal only—no upgrade, checkout, trial, subscription or charge.</p><p class="small mt-2" id="b-pro-interest-status" role="status" aria-live="polite" aria-atomic="true">{!PRODUCT_INTENTS_ENABLED ? 'Account-based research measurement is unavailable in this build. No interest can be submitted or charged.' : CLERK_ENABLED ? 'Free-account sign-up is loading.' : 'Free-account sign-up is unavailable in this build.'}</p></div></div>
       </div>
       <p class="small mt-3">The price is a validation hypothesis. Checkout will be added only after recurring-value evidence is reviewed and a server-authoritative entitlement boundary is ready.</p>
     </Section>
@@ -436,7 +437,7 @@ const harnessExamples = [
   import {
     AuthenticatedJsonError, authenticatedJsonFetch, clearComposerDraftForAuth,
     consumeComposerDraftAfterAuth, observeClerkAuth, openSignIn, openSignUp,
-    preserveComposerDraftForAuth, signedIn, track, type ClerkAuthState,
+    preserveComposerDraftForAuth, recordProductIntentSignal, signedIn, track, type ClerkAuthState,
   } from '../lib/clerk-client.ts';
 
   const form = document.getElementById('composer-form') as HTMLFormElement;
@@ -490,6 +491,30 @@ const harnessExamples = [
   const operationKeys = new StableAccountOperationKeys();
   const byId = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
   const setText = (id: string, next: string) => { const target = byId(id); if (target.textContent !== next) target.textContent = next; };
+  const proInterestButton = byId<HTMLButtonElement>('b-pro-interest');
+  const proInterestStatus = byId('b-pro-interest-status');
+  const proInterestMeasurementEnabled = document.documentElement.dataset.productIntentsEnabled === 'true';
+  let latestProInterestAuth: ClerkAuthState = { status: 'checking' };
+  function renderProInterestAuth(state: ClerkAuthState) {
+    latestProInterestAuth = state;
+    const authReady = state.status === 'signed-in' || state.status === 'signed-out';
+    const ready = proInterestMeasurementEnabled && authReady;
+    proInterestButton.disabled = !ready;
+    proInterestButton.toggleAttribute('aria-busy', proInterestMeasurementEnabled && state.status === 'checking');
+    if (!proInterestMeasurementEnabled) {
+      proInterestStatus.textContent = 'Account-based research measurement is unavailable in this build. No interest can be submitted or charged.';
+      return;
+    }
+    if (ready) {
+      if (proInterestStatus.dataset.authReadiness === 'true') proInterestStatus.textContent = '';
+      delete proInterestStatus.dataset.authReadiness;
+      return;
+    }
+    proInterestStatus.dataset.authReadiness = 'true';
+    proInterestStatus.textContent = state.status === 'checking'
+      ? 'Free-account sign-up is loading.'
+      : 'Free-account sign-up is unavailable in this build. No interest was submitted and nothing was charged.';
+  }
   const value = (id: string) => (byId<HTMLInputElement>(id).value ?? '').normalize('NFC').trim();
   const numericInput = (input: HTMLInputElement) => input.value === '' ? Number.NaN : input.valueAsNumber;
   const number = (id: string) => numericInput(byId<HTMLInputElement>(id));
@@ -655,6 +680,8 @@ const harnessExamples = [
     const signin = byId<HTMLButtonElement>('b-account-signin');
     const signup = byId<HTMLButtonElement>('b-account-signup');
     signin.hidden = false; signup.hidden = false;
+    const authActionsReady = accountSessionExpired || accountAuth.status === 'signed-out';
+    signin.disabled = !authActionsReady; signup.disabled = !authActionsReady;
     if (accountSessionExpired) {
       state.textContent = 'Session expired'; auth.hidden = false; signed.hidden = true;
       byId('b-account-auth-copy').textContent = 'Sign in again to use account plans. Your current draft and versions in this tab are unchanged.';
@@ -2202,17 +2229,27 @@ const harnessExamples = [
     });
     byId('b-account-signin').addEventListener('click', () => {
       const preserved = preserveEditorBeforeAuth();
-      openSignIn();
-      setAccountStatus(preserved
-        ? 'Sign-in opened. A valid draft is stored temporarily in this tab for the redirect; nothing was uploaded.'
-        : 'Sign-in opened. The current invalid draft could not be preserved for a redirect; nothing was uploaded.');
+      const result = openSignIn();
+      if (result === 'unavailable') {
+        clearComposerDraftForAuth();
+        setAccountStatus('Sign-in is unavailable right now. The current editor is unchanged and nothing was uploaded.');
+      } else setAccountStatus(result === 'queued'
+        ? 'Sign-in is loading and will open when account controls are ready. Nothing was uploaded.'
+        : preserved
+          ? 'Sign-in opened. A valid draft is stored temporarily in this tab for the redirect; nothing was uploaded.'
+          : 'Sign-in opened. The current invalid draft could not be preserved for a redirect; nothing was uploaded.');
     });
     byId('b-account-signup').addEventListener('click', () => {
       const preserved = preserveEditorBeforeAuth();
-      openSignUp('save', 'Create a free account to save Build Composer plans during preview. Nothing is charged.');
-      setAccountStatus(preserved
-        ? 'Account sign-up opened. A valid draft is stored temporarily in this tab for the redirect; nothing was uploaded.'
-        : 'Account sign-up opened. The current invalid draft could not be preserved for a redirect; nothing was uploaded.');
+      const result = openSignUp('save', 'Create a free account to save Build Composer plans during preview. Nothing is charged.');
+      if (result === 'unavailable') {
+        clearComposerDraftForAuth();
+        setAccountStatus('Account sign-up is unavailable right now. The current editor is unchanged and nothing was uploaded.');
+      } else setAccountStatus(result === 'queued'
+        ? 'Account sign-up is loading and will open when account controls are ready. Nothing was uploaded.'
+        : preserved
+          ? 'Account sign-up opened. A valid draft is stored temporarily in this tab for the redirect; nothing was uploaded.'
+          : 'Account sign-up opened. The current invalid draft could not be preserved for a redirect; nothing was uploaded.');
     });
     byId('b-account-restore-recovered').addEventListener('click', () => {
       const draft = recoveredAccountDraft; if (!draft) return;
@@ -2271,13 +2308,28 @@ const harnessExamples = [
     }
   });
 
-  byId('b-pro-interest').addEventListener('click', () => {
-    const status = byId('b-pro-interest-status');
-    const emitted = track('build_pro_price_interest', { path: location.pathname, price_hypothesis: '19_monthly' });
-    if (signedIn()) status.textContent = emitted ? 'Thanks—this click was sent as a directional research signal. No upgrade exists and nothing was charged.' : 'You are signed in, but analytics is unavailable. No upgrade exists and nothing was charged.';
-    else {
-      const opened = openSignUp('build-pro-price-interest', 'Share interest in Build Composer Pro at $19/month. No checkout or charge.');
-      status.textContent = opened ? 'Free-account sign-up opened. There is no upgrade, checkout or charge.' : 'Sign-up is unavailable in this preview. There is no upgrade, checkout or charge.';
+  byId('b-pro-interest').addEventListener('click', async () => {
+    if (!proInterestMeasurementEnabled) return;
+    const status = proInterestStatus;
+    delete status.dataset.authReadiness;
+    if (signedIn()) {
+      proInterestButton.disabled = true;
+      proInterestButton.setAttribute('aria-busy', 'true');
+      const submitted = await recordProductIntentSignal('pro_price_interest');
+      status.textContent = submitted
+        ? 'Thanks—your account-based research signal was accepted. No upgrade exists and nothing was charged.'
+        : 'We could not confirm your interest signal. You can retry safely; account-based signals are deduplicated. No upgrade exists and nothing was charged.';
+      proInterestButton.removeAttribute('aria-busy');
+      const authReady = latestProInterestAuth.status === 'signed-in' || latestProInterestAuth.status === 'signed-out';
+      proInterestButton.disabled = !proInterestMeasurementEnabled || !authReady;
+    } else {
+      const result = openSignUp('gate', 'Create a free account, then return here to share interest in Build Composer Pro at $19/month. No checkout or charge.');
+      status.textContent = result === 'opened'
+        ? 'Free-account sign-up opened. After signing in, select this button again to submit your interest. Nothing was submitted or charged yet.'
+        : result === 'queued'
+          ? 'Free-account sign-up is loading. After signing in, select this button again to submit your interest. Nothing was submitted or charged yet.'
+          : 'Free-account sign-up is unavailable right now. No interest was submitted and nothing was charged.';
+      if (result === 'unavailable') proInterestButton.disabled = true;
     }
   });
 
@@ -2290,6 +2342,8 @@ const harnessExamples = [
     usagePerInvocation: { uncachedInputTokens: 20000, cacheReadTokens: 30000, cacheWriteTokens: 0, outputTokens: 2000, basis: 'template_assumption' },
   });
   editorAnchorJson = lastDraftValid ? canonicalPlanJson(lastPlan) : null;
+  const stopProInterestAuth = observeClerkAuth(renderProInterestAuth, { enabled: clerkEnabled });
+  addEventListener('pagehide', stopProInterestAuth, { once: true });
   if (accountPlansEnabled) {
     renderAccountShell(); renderAccountPlans();
     const stopAccountAuth = observeClerkAuth(handleAccountAuth, { enabled: clerkEnabled });

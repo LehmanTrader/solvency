@@ -26,7 +26,9 @@ export const onRequest: PagesHandler = async (context) => {
     try {
       return finish(await context.next());
     } catch {
-      return finish(apiError(requestId, 500, 'INTERNAL_ERROR', 'Webhook request could not be completed.'));
+      return finish(apiError(requestId, 500, 'INTERNAL_ERROR', 'Webhook request could not be completed.', {
+        logBoundary: 'stripe_webhook',
+      }));
     }
   }
 
@@ -36,11 +38,16 @@ export const onRequest: PagesHandler = async (context) => {
   const accountPlansRoute = pathname === '/api/build-plans' || pathname.startsWith('/api/build-plans/');
   const entitlementRoute = pathname === '/api/entitlement';
   const productIntentRoute = pathname === '/api/intents';
+  const previewAccountErasureRoute = pathname === '/api/preview-account-erasure';
   const featureEnabled = accountPlansRoute
     ? context.env.ACCOUNT_PLANS_ENABLED === 'true'
     : entitlementRoute
       ? context.env.ENTITLEMENTS_ENABLED === 'true'
-      : productIntentRoute && context.env.PRODUCT_INTENTS_ENABLED === 'true';
+      : productIntentRoute
+        ? context.env.PRODUCT_INTENTS_ENABLED === 'true'
+        : previewAccountErasureRoute
+          && context.env.APP_ENV === 'preview'
+          && context.env.PREVIEW_ACCOUNT_ERASURE_ENABLED === 'true';
   if (!featureEnabled) {
     return finish(apiError(requestId, 503, 'SERVICE_UNAVAILABLE', 'Account service is unavailable.'));
   }
@@ -66,6 +73,8 @@ export const onRequest: PagesHandler = async (context) => {
   try {
     return finish(await context.next());
   } catch {
-    return finish(apiError(requestId, 500, 'INTERNAL_ERROR', 'Request could not be completed.'));
+    return finish(apiError(requestId, 500, 'INTERNAL_ERROR', 'Request could not be completed.', {
+      logBoundary: 'account_api',
+    }));
   }
 };

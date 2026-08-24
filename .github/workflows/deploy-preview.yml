@@ -96,6 +96,10 @@ jobs:
         working-directory: site
         run: npm ci --no-audit --no-fund
 
+      - name: Verify immutable migration checksums
+        working-directory: site
+        run: npm run check:migrations
+
       # Root tests import site server modules, so the frozen site install must
       # remain ahead of this step.
       - name: Verify datasets, server boundaries and published figures
@@ -114,11 +118,24 @@ jobs:
           PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.PREVIEW_CLERK_PUBLISHABLE_KEY }}
           PUBLIC_ACCOUNT_PLANS_ENABLED: 'true'
           PUBLIC_PRODUCT_INTENTS_ENABLED: 'true'
+          PUBLIC_BUILD_SHA: ${{ github.sha }}
         run: npm run build
 
       - name: Verify Pages Functions bundle
         working-directory: site
         run: npm run build:functions
+
+      - name: Require a clean generated source tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          dirty="$(git status --porcelain --untracked-files=all)"
+          if [[ -n "$dirty" ]]; then
+            printf '%s\n' "$dirty"
+            echo "Build or Functions compilation changed the checked-out source tree."
+            exit 1
+          fi
 
       # Wrangler exits zero when migrations are pending, so require its exact
       # no-pending state instead of trusting the process status alone.

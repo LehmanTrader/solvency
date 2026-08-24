@@ -1,6 +1,8 @@
 ---
 import Base from '../layouts/Base.astro';
 import Section from '../components/Section.astro';
+import { CLERK_ENABLED } from '../lib/clerk.ts';
+const PRODUCT_INTENTS_ENABLED = import.meta.env.PUBLIC_PRODUCT_INTENTS_ENABLED === 'true';
 
 const comparison = [
   {
@@ -101,7 +103,7 @@ const launchDecisions = [
           <p class="small mt-4">Account storage can appear only in the reviewed preview environment. Its limits are safeguards, not a promised Free allowance.</p>
         </article>
 
-        <article class="card card-pad">
+        <article class="card card-pad" id="pricing-pro-interest" data-clerk-enabled={CLERK_ENABLED ? 'true' : 'false'}>
           <p class="label">Pro · planned, not for sale</p>
           <p class="tile-v mt-3">$19/month <span class="text-base font-normal text-[var(--color-muted)]">or $190/year</span></p>
           <p class="small mt-2">Provisional USD price hypothesis. No plan can be purchased or reserved.</p>
@@ -114,6 +116,12 @@ const launchDecisions = [
             <li>Model-price and budget monitoring for saved plans</li>
           </ul>
           <p class="small mt-4">The recurring hook is re-planning, review and monitoring—not access to public evidence.</p>
+          <div class="mt-5 border-t border-[var(--color-rule)] pt-4">
+            <h4 class="text-sm font-semibold text-[var(--color-ink)]">Would that recurring workflow be worth $19/month?</h4>
+            <button type="button" class="btn mt-3" id="pricing-pro-interest-button" aria-describedby="pricing-pro-interest-help pricing-pro-interest-status" disabled>I’d consider Pro at $19</button>
+            <p class="small mt-2" id="pricing-pro-interest-help">Requires a free account so one person counts once. This is a research signal only—no plan is reserved and there is no upgrade, checkout, trial, subscription or charge.</p>
+            <p class="small mt-2" id="pricing-pro-interest-status" role="status" aria-live="polite" aria-atomic="true">{!PRODUCT_INTENTS_ENABLED ? 'Account-based research measurement is unavailable in this build. No interest can be submitted or charged.' : CLERK_ENABLED ? 'Free-account sign-up is loading.' : 'Free-account sign-up is unavailable in this build.'}</p>
+          </div>
         </article>
       </div>
     </Section>
@@ -161,6 +169,62 @@ const launchDecisions = [
       </div>
     </Section>
   </div>
+  <script>
+    import { observeClerkAuth, openSignUp, recordProductIntentSignal, signedIn, type ClerkAuthState } from '../lib/clerk-client.ts';
+
+    const root = document.getElementById('pricing-pro-interest');
+    const button = document.getElementById('pricing-pro-interest-button') as HTMLButtonElement | null;
+    const status = document.getElementById('pricing-pro-interest-status');
+    if (root && button && status) {
+      const measurementEnabled = document.documentElement.dataset.productIntentsEnabled === 'true';
+      let latestAuthState: ClerkAuthState = { status: 'checking' };
+      const renderAuth = (state: ClerkAuthState) => {
+        latestAuthState = state;
+        const authReady = state.status === 'signed-in' || state.status === 'signed-out';
+        const ready = measurementEnabled && authReady;
+        button.disabled = !ready;
+        button.toggleAttribute('aria-busy', measurementEnabled && state.status === 'checking');
+        if (!measurementEnabled) {
+          status.textContent = 'Account-based research measurement is unavailable in this build. No interest can be submitted or charged.';
+          return;
+        }
+        if (ready) {
+          if (status.dataset.authReadiness === 'true') status.textContent = '';
+          delete status.dataset.authReadiness;
+          return;
+        }
+        status.dataset.authReadiness = 'true';
+        status.textContent = state.status === 'checking'
+          ? 'Free-account sign-up is loading.'
+          : 'Free-account sign-up is unavailable in this build. No interest was submitted and nothing was charged.';
+      };
+      button.addEventListener('click', async () => {
+        if (!measurementEnabled) return;
+        delete status.dataset.authReadiness;
+        if (signedIn()) {
+          button.disabled = true;
+          button.setAttribute('aria-busy', 'true');
+          const submitted = await recordProductIntentSignal('pro_price_interest');
+          status.textContent = submitted
+            ? 'Thanks—your account-based research signal was accepted. No upgrade exists and nothing was charged.'
+            : 'We could not confirm your interest signal. You can retry safely; account-based signals are deduplicated. No upgrade exists and nothing was charged.';
+          button.removeAttribute('aria-busy');
+          const authReady = latestAuthState.status === 'signed-in' || latestAuthState.status === 'signed-out';
+          button.disabled = !measurementEnabled || !authReady;
+          return;
+        }
+        const result = openSignUp('gate', 'Create a free account, then return here to share interest in Solvency Pro at $19/month. No checkout or charge.');
+        status.textContent = result === 'opened'
+          ? 'Free-account sign-up opened. After signing in, select this button again to submit your interest. Nothing was submitted or charged yet.'
+          : result === 'queued'
+            ? 'Free-account sign-up is loading. After signing in, select this button again to submit your interest. Nothing was submitted or charged yet.'
+            : 'Free-account sign-up is unavailable right now. No interest was submitted and nothing was charged.';
+        if (result === 'unavailable') button.disabled = true;
+      });
+      const stop = observeClerkAuth(renderAuth, { enabled: root.dataset.clerkEnabled === 'true' });
+      addEventListener('pagehide', stop, { once: true });
+    }
+  </script>
 </Base>
 
 <style>

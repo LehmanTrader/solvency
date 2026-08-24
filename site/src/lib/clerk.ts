@@ -1,3 +1,5 @@
+import { clerkPublishableKeyConfiguration } from './clerk-key.ts';
+
 /**
  * Clerk sign-in for the calculator gate.
  *
@@ -12,13 +14,11 @@
 export const CLERK_PUBLISHABLE_KEY: string = import.meta.env.PUBLIC_CLERK_PUBLISHABLE_KEY ?? '';
 
 export function clerkFrontendApi(key: string): string | null {
-  const m = /^pk_(test|live)_(.+)$/.exec(key);
-  if (!m) return null;
-  try {
-    const host = atob(m[2]).replace(/\$$/, '');
-    return /^[a-z0-9.-]+$/i.test(host) ? host : null;
-  } catch { return null; }
+  return clerkPublishableKeyConfiguration(key)?.frontendHost ?? null;
 }
 
 export const CLERK_FRONTEND_API = clerkFrontendApi(CLERK_PUBLISHABLE_KEY);
+if (CLERK_PUBLISHABLE_KEY && !CLERK_FRONTEND_API) {
+  throw new Error('PUBLIC_CLERK_PUBLISHABLE_KEY does not encode an allowed exact Clerk frontend host.');
+}
 export const CLERK_ENABLED = Boolean(CLERK_FRONTEND_API);
