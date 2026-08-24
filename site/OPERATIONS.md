@@ -74,7 +74,7 @@ and retrieve a Time Travel bookmark:
 
 ```bash
 cd site
-npx --no-install wrangler d1 time-travel info solvency-build-plans-preview --timestamp RFC3339_TIMESTAMP --json
+npx --no-install wrangler d1 time-travel info solvency-build-plans-preview --env preview --timestamp RFC3339_TIMESTAMP --json
 npx --no-install wrangler d1 migrations list solvency-build-plans-preview --env preview --remote
 ```
 
@@ -87,8 +87,8 @@ Time Travel restore changes remote data and requires explicit incident-commander
 approval. Inspect the target first, then restore by the recorded bookmark:
 
 ```bash
-npx --no-install wrangler d1 time-travel info solvency-build-plans-preview --timestamp RFC3339_TIMESTAMP --json
-npx --no-install wrangler d1 time-travel restore solvency-build-plans-preview --bookmark RECORDED_BOOKMARK --json
+npx --no-install wrangler d1 time-travel info solvency-build-plans-preview --env preview --timestamp RFC3339_TIMESTAMP --json
+npx --no-install wrangler d1 time-travel restore solvency-build-plans-preview --env preview --bookmark RECORDED_BOOKMARK --json
 ```
 
 After restore, keep affected flags false. Re-run migration listing, schema

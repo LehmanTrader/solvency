@@ -104,8 +104,8 @@ test('the tracked operations runbook covers rollback, recovery and the exact red
   const runbook = read('site/OPERATIONS.md');
   assert.match(runbook, /wrangler pages deployment list --project-name solvency --json/);
   assert.match(runbook, /EXPECTED_BUILD_SHA=KNOWN_GOOD_40_CHARACTER_SHA npm run verify:production-dark/);
-  assert.match(runbook, /wrangler d1 time-travel info/);
-  assert.match(runbook, /wrangler d1 time-travel restore/);
+  assert.match(runbook, /wrangler d1 time-travel info solvency-build-plans-preview --env preview/);
+  assert.match(runbook, /wrangler d1 time-travel restore solvency-build-plans-preview --env preview/);
   assert.match(runbook, /wrangler pages deployment tail/);
   assert.match(runbook, /billing_webhook_outcome/);
   assert.match(runbook, /applied,[\s\S]*replayed,\s*stale,\s*ignored,\s*signature-rejected,\s*payload-rejected and retryable/);
