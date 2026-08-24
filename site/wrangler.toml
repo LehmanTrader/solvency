@@ -15,6 +15,9 @@ migrations_dir = "./migrations"
 # Server-side rollout gate. Keep false until auth secrets, quotas, throttling,
 # migrations, privacy copy and authenticated smoke tests are all in place.
 ACCOUNT_PLANS_ENABLED = "false"
+ENTITLEMENTS_ENABLED = "false"
+PRODUCT_INTENTS_ENABLED = "false"
+STRIPE_WEBHOOK_ENABLED = "false"
 APP_ENV = "production"
 CLERK_AUTHORIZED_PARTIES = "https://solvency.dev"
 
@@ -27,5 +30,8 @@ migrations_dir = "./migrations"
 
 [env.preview.vars]
 ACCOUNT_PLANS_ENABLED = "false"
+ENTITLEMENTS_ENABLED = "false"
+PRODUCT_INTENTS_ENABLED = "false"
+STRIPE_WEBHOOK_ENABLED = "false"
 APP_ENV = "preview"
 CLERK_AUTHORIZED_PARTIES = "https://d1-functions-preview.solvency-ru5.pages.dev"

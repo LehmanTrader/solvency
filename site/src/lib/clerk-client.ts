@@ -108,6 +108,11 @@ export type AuthenticatedJsonErrorCode =
   | 'VERSION_LIMIT'
   | 'VERSION_CONFLICT'
   | 'IDEMPOTENCY_CONFLICT'
+  | 'DUPLICATE_RESOURCE'
+  | 'SHARE_LIMIT'
+  | 'ALERT_LIMIT'
+  | 'OPERATION_LIMIT'
+  | 'RESOURCE_STATE_CHANGED'
   | 'REQUEST_TOO_LARGE'
   | 'INVALID_REQUEST'
   | 'RATE_LIMITED'
@@ -125,13 +130,18 @@ const authenticatedJsonErrorMessages: Record<AuthenticatedJsonErrorCode, string>
   NETWORK_ERROR: 'The account service could not be reached. Please try again.',
   FORBIDDEN: 'You do not have access to this resource.',
   NOT_FOUND: 'The requested resource was not found.',
-  CONFLICT: 'This plan could not be changed because its account state is out of date. Refresh account plans before retrying.',
-  PLAN_LIMIT: 'This account has reached the preview limit of 20 plans. Refresh account plans, then delete an unneeded plan or keep this draft in the tab.',
-  VERSION_LIMIT: 'This account plan has reached the preview limit of 100 versions. Save the draft as a new account plan or keep it in the tab.',
+  CONFLICT: 'This account resource could not be changed because its state is out of date. Refresh it before retrying.',
+  PLAN_LIMIT: 'This account has reached the preview limit of 20 plans. Refresh account plans, then delete an unneeded plan or keep this draft in the tab. Higher limits are planned for Pro, but upgrades are not available yet.',
+  VERSION_LIMIT: 'This account plan has reached the preview limit of 100 versions. Save the draft as a new account plan or keep it in the tab. Higher limits are planned for Pro, but upgrades are not available yet.',
   VERSION_CONFLICT: 'This account plan changed since it was loaded. Refresh and reload its version history before retrying.',
-  IDEMPOTENCY_CONFLICT: 'This account save could not be safely matched to its earlier attempt. Please retry with a new request.',
+  IDEMPOTENCY_CONFLICT: 'This account change could not be safely matched to its earlier attempt. Change the settings or refresh before retrying.',
+  DUPLICATE_RESOURCE: 'Equivalent settings already exist for this account plan. Refresh the saved settings before retrying.',
+  SHARE_LIMIT: 'This account plan has reached its unlisted-link storage limit. Revoke an unneeded link before creating another.',
+  ALERT_LIMIT: 'This account plan has reached its inactive alert-settings limit. Delete an unneeded setting before creating another.',
+  OPERATION_LIMIT: 'This account has reached its temporary operation-replay limit. Please try again after older replay records expire.',
+  RESOURCE_STATE_CHANGED: 'This saved setting changed after the original request. Refresh the selected account plan before retrying.',
   REQUEST_TOO_LARGE: 'The plan is too large to save.',
-  INVALID_REQUEST: 'The plan contains fields that could not be saved.',
+  INVALID_REQUEST: 'The account request contains fields that could not be accepted. Review the current plan or settings.',
   RATE_LIMITED: 'Too many account requests. Please try again later.',
   SERVER_ERROR: 'The account service could not complete the request. Please try again.',
   REQUEST_FAILED: 'The account request could not be completed.',
@@ -162,6 +172,7 @@ export interface AuthenticatedJsonRequestInit
 
 const trustedConflictCodes = new Set<AuthenticatedJsonErrorCode>([
   'PLAN_LIMIT', 'VERSION_LIMIT', 'VERSION_CONFLICT', 'IDEMPOTENCY_CONFLICT',
+  'DUPLICATE_RESOURCE', 'SHARE_LIMIT', 'ALERT_LIMIT', 'OPERATION_LIMIT', 'RESOURCE_STATE_CHANGED',
 ]);
 
 const statusErrorCode = (status: number, errorCodeHeader: string | null): AuthenticatedJsonErrorCode => {
@@ -473,8 +484,82 @@ export const openSignIn = () => clerk()?.openSignIn?.({ ...urls(), appearance: c
  * present (Cloudflare Zaraz `zaraz.track`, or a beacon exposing trackEvent).
  * Silent when neither is loaded.
  */
+export type ProductIntentName =
+  | 'planner_started'
+  | 'valid_quote_created'
+  | 'export_downloaded'
+  | 'pro_price_interest';
+
+const PRODUCT_INTENT_BY_ANALYTICS_EVENT: Readonly<Record<string, ProductIntentName>> = {
+  build_planner_view: 'planner_started',
+  build_quote_first_edit_valid: 'valid_quote_created',
+  build_export: 'export_downloaded',
+  build_pro_price_interest: 'pro_price_interest',
+};
+
+export function productIntentNameForAnalyticsEvent(name: string): ProductIntentName | null {
+  return Object.hasOwn(PRODUCT_INTENT_BY_ANALYTICS_EVENT, name)
+    ? PRODUCT_INTENT_BY_ANALYTICS_EVENT[name]!
+    : null;
+}
+
+const productIntentsEnabled = (): boolean => typeof document !== 'undefined'
+  && document.documentElement?.dataset.productIntentsEnabled === 'true';
+
+function productIntentResponse(value: unknown): boolean {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const envelope = value as Record<string, unknown>;
+  if (Reflect.ownKeys(envelope).length !== 1 || !Object.hasOwn(envelope, 'data')
+    || !envelope.data || typeof envelope.data !== 'object' || Array.isArray(envelope.data)) return false;
+  const data = envelope.data as Record<string, unknown>;
+  return Reflect.ownKeys(data).length === 2
+    && data.accepted === true && typeof data.replayed === 'boolean';
+}
+
+/**
+ * Best-effort, untrusted directional measurement for signed-in users. Only a
+ * client-allowed coarse name and opaque UUID leave the browser; analytics
+ * detail is never forwarded. An ambiguous transport failure retries once with
+ * the same UUID. Durable-operation signals are emitted by the server instead.
+ */
+export async function recordProductIntentSignal(
+  name: ProductIntentName,
+  eventId = crypto.randomUUID(),
+): Promise<boolean> {
+  if (!productIntentsEnabled() || !signedIn()
+    || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(eventId)) return false;
+  const request = () => authenticatedJsonFetch<unknown>('/api/intents', {
+    method: 'POST', json: { eventId, name }, timeoutMs: 3_000,
+  });
+  try {
+    return productIntentResponse(await request());
+  } catch (cause) {
+    if (!(cause instanceof AuthenticatedJsonError)
+      || !['NETWORK_ERROR', 'REQUEST_TIMEOUT', 'REQUEST_FAILED'].includes(cause.code)) return false;
+    try { return productIntentResponse(await request()); } catch { return false; }
+  }
+}
+
+function dispatchProductIntentSignal(name: ProductIntentName): void {
+  if (!productIntentsEnabled()) return;
+  if (signedIn()) {
+    void recordProductIntentSignal(name);
+    return;
+  }
+  // A returning user's session may settle after the page module runs. Queue
+  // this one attempt only while Clerk itself is still loading; an already
+  // settled signed-out visitor never creates a first-party owner event.
+  if (!clerk()?.loaded && clerkScriptConfigured()) {
+    document.addEventListener('clerk:ready', () => {
+      if (signedIn()) void recordProductIntentSignal(name);
+    }, { once: true });
+  }
+}
+
 export function track(name: string, data?: Record<string, string>): boolean {
   const w = window as any;
+  const productIntent = productIntentNameForAnalyticsEvent(name);
+  if (productIntent) dispatchProductIntentSignal(productIntent);
   try {
     if (typeof w.zaraz?.track === 'function') { w.zaraz.track(name, data); return true; }
     if (typeof w.__cfBeacon?.trackEvent === 'function') { w.__cfBeacon.trackEvent(name, data); return true; }

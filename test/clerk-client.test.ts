@@ -7,6 +7,9 @@ import {
   consumeComposerDraftAfterAuth,
   observeClerkAuth,
   preserveComposerDraftForAuth,
+  productIntentNameForAnalyticsEvent,
+  recordProductIntentSignal,
+  track,
 } from '../site/src/lib/clerk-client.ts';
 
 const originals = {
@@ -30,6 +33,7 @@ function setBrowser(clerk: unknown = undefined): MemoryStorage {
   (globalThis as any).location = new URL('https://solvency.dev/build-planner/');
   (globalThis as any).sessionStorage = storage;
   (globalThis as any).document = {
+    documentElement: { dataset: { productIntentsEnabled: 'false' } },
     querySelector: () => null,
     addEventListener: () => {},
     removeEventListener: () => {},
@@ -43,6 +47,72 @@ afterEach(() => {
   (globalThis as any).location = originals.location;
   (globalThis as any).sessionStorage = originals.sessionStorage;
   globalThis.fetch = originals.fetch;
+});
+
+test('product-intent mapping is closed and never forwards analytics detail', () => {
+  assert.equal(productIntentNameForAnalyticsEvent('build_planner_view'), 'planner_started');
+  assert.equal(productIntentNameForAnalyticsEvent('build_quote_first_edit_valid'), 'valid_quote_created');
+  assert.equal(productIntentNameForAnalyticsEvent('build_export'), 'export_downloaded');
+  assert.equal(productIntentNameForAnalyticsEvent('build_pro_price_interest'), 'pro_price_interest');
+  assert.equal(productIntentNameForAnalyticsEvent('build_account_plan_save'), null);
+  assert.equal(productIntentNameForAnalyticsEvent('build_account_share_create'), null);
+  assert.equal(productIntentNameForAnalyticsEvent('build_account_alert_save'), null);
+  assert.equal(productIntentNameForAnalyticsEvent('build_account_share_revoke'), null);
+  assert.equal(productIntentNameForAnalyticsEvent('__proto__'), null);
+});
+
+test('first-party product intent retries one ambiguous request with the same opaque UUID', async () => {
+  const session = { id: 'session_1', async getToken() { return 'token'; } };
+  setBrowser({ loaded: true, user: { id: 'user_1' }, session });
+  (globalThis as any).document.documentElement.dataset.productIntentsEnabled = 'true';
+  const eventId = '00000000-0000-4000-8000-000000000001';
+  const bodies: string[] = [];
+  let calls = 0;
+  globalThis.fetch = async (_input, init) => {
+    calls += 1;
+    bodies.push(String(init?.body));
+    if (calls === 1) throw new TypeError('ambiguous network failure');
+    return Response.json({ data: { accepted: true, replayed: true } });
+  };
+  assert.equal(await recordProductIntentSignal('export_downloaded', eventId), true);
+  assert.equal(calls, 2);
+  assert.deepEqual(bodies.map((body) => JSON.parse(body)), [
+    { eventId, name: 'export_downloaded' },
+    { eventId, name: 'export_downloaded' },
+  ]);
+
+  calls = 0;
+  (globalThis as any).document.documentElement.dataset.productIntentsEnabled = 'false';
+  assert.equal(await recordProductIntentSignal('export_downloaded', eventId), false);
+  assert.equal(calls, 0);
+});
+
+test('planner-start intent waits for a returning user session to settle', async () => {
+  setBrowser();
+  (globalThis as any).document.documentElement.dataset.productIntentsEnabled = 'true';
+  (globalThis as any).document.querySelector = (selector: string) => selector === 'script[data-clerk-publishable-key]' ? {} : null;
+  let ready: (() => void) | undefined;
+  (globalThis as any).document.addEventListener = (name: string, callback: () => void) => {
+    if (name === 'clerk:ready') ready = callback;
+  };
+  const bodies: Array<Record<string, unknown>> = [];
+  globalThis.fetch = async (_input, init) => {
+    bodies.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+    return Response.json({ data: { accepted: true, replayed: false } }, { status: 201 });
+  };
+
+  assert.equal(track('build_planner_view', { path: '/build-planner/' }), false);
+  assert.equal(bodies.length, 0);
+  (globalThis as any).window.Clerk = {
+    loaded: true,
+    user: { id: 'user_1' },
+    session: { id: 'session_1', async getToken() { return 'token'; } },
+  };
+  ready?.();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(bodies.length, 1);
+  assert.deepEqual(Object.keys(bodies[0]!).sort(), ['eventId', 'name']);
+  assert.equal(bodies[0]!.name, 'planner_started');
 });
 
 test('auth observer settles immediately when Clerk is disabled', () => {
@@ -158,6 +228,11 @@ test('authenticated JSON fetch allowlists trusted 409 error headers without read
     ['VERSION_LIMIT', '100 versions'],
     ['VERSION_CONFLICT', 'changed since it was loaded'],
     ['IDEMPOTENCY_CONFLICT', 'earlier attempt'],
+    ['DUPLICATE_RESOURCE', 'Equivalent settings'],
+    ['SHARE_LIMIT', 'unlisted-link storage limit'],
+    ['ALERT_LIMIT', 'inactive alert-settings limit'],
+    ['OPERATION_LIMIT', 'operation-replay limit'],
+    ['RESOURCE_STATE_CHANGED', 'changed after the original request'],
   ] as const;
 
   for (const [code, messageFragment] of cases) {

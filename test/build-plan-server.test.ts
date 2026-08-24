@@ -34,6 +34,7 @@ const migration = [
   '../site/migrations/0001_build_plans.sql',
   '../site/migrations/0002_build_plan_invariants.sql',
   '../site/migrations/0003_build_plan_rate_limits.sql',
+  '../site/migrations/0006_product_intent_events.sql',
 ].map((path) => readFileSync(new URL(path, import.meta.url), 'utf8')).join('\n');
 
 class SqliteStatement implements D1PreparedStatementLike {
@@ -122,13 +123,24 @@ function context(
   request: Request,
   ownerUserId: string | undefined,
   params: Record<string, string> = {},
+  extraEnv: Record<string, string> = {},
 ): PagesContextLike {
   return {
     request,
-    env: { DB: db },
+    env: { DB: db, ...extraEnv },
     params,
     data: { requestId: 'req-handler', ...(ownerUserId ? { ownerUserId } : {}) },
     next: async () => apiError('req-handler', 404, 'RESOURCE_NOT_FOUND', 'Not found.'),
+  };
+}
+
+function rejectProductIntentQueries(db: D1DatabaseLike): D1DatabaseLike {
+  return {
+    prepare(query: string) {
+      if (query.includes('product_intent_events')) throw new Error('measurement unavailable');
+      return db.prepare(query);
+    },
+    batch<T>(statements: D1PreparedStatementLike[]) { return db.batch<T>(statements); },
   };
 }
 
@@ -486,5 +498,64 @@ describe('D1-owned immutable BuildPlan versions', () => {
     ));
     assert.equal(maxed.status, 409);
     assert.equal((await maxed.json() as { error: { code: string } }).error.code, 'VERSION_LIMIT');
+  });
+
+  test('confirms successful plan saves server-side without coupling measurement failures', async () => {
+    const db = new SqliteD1();
+    const plan = makePlan('Measured plan');
+    const enabled = { PRODUCT_INTENTS_ENABLED: 'true' };
+    const created = await handleBuildPlanCollection(context(
+      db,
+      planRequest(JSON.stringify(plan), { 'idempotency-key': 'intent-plan-create-01' }),
+      'user_account_intent',
+      {},
+      enabled,
+    ));
+    assert.equal(created.status, 201);
+    const createdBody = await created.json() as { data: { plan: { id: string } } };
+    const savedSignals = db.sqlite.prepare(
+      'SELECT event_name FROM product_intent_events WHERE owner_user_id = ?',
+    ).all('user_account_intent') as Array<{ event_name: string }>;
+    assert.deepEqual(savedSignals.map((row) => row.event_name), ['account_plan_saved']);
+
+    db.sqlite.prepare('DELETE FROM product_intent_events WHERE owner_user_id = ?').run('user_account_intent');
+    const appended = await handleBuildPlanVersions(context(
+      db,
+      planRequest(JSON.stringify(makePlan('Measured plan v2')), {
+        'idempotency-key': 'intent-plan-append-01', 'if-match': '"1"',
+      }),
+      'user_account_intent',
+      { planId: createdBody.data.plan.id },
+      enabled,
+    ));
+    assert.equal(appended.status, 201);
+    assert.equal(db.sqlite.prepare(
+      "SELECT COUNT(*) AS count FROM product_intent_events WHERE event_name = 'account_plan_saved'",
+    ).get()?.count, 1);
+
+    db.sqlite.prepare('DELETE FROM product_intent_events WHERE owner_user_id = ?').run('user_account_intent');
+    const stale = await handleBuildPlanVersions(context(
+      db,
+      planRequest(JSON.stringify(makePlan('Rejected stale version')), {
+        'idempotency-key': 'intent-plan-stale-001', 'if-match': '"1"',
+      }),
+      'user_account_intent',
+      { planId: createdBody.data.plan.id },
+      enabled,
+    ));
+    assert.equal(stale.status, 409);
+    assert.equal(db.sqlite.prepare('SELECT COUNT(*) AS count FROM product_intent_events').get()?.count, 0);
+
+    const degraded = new SqliteD1();
+    const stillSaved = await handleBuildPlanCollection(context(
+      rejectProductIntentQueries(degraded),
+      planRequest(JSON.stringify(plan), { 'idempotency-key': 'intent-plan-degraded-1' }),
+      'user_account_degraded',
+      {},
+      enabled,
+    ));
+    assert.equal(stillSaved.status, 201);
+    assert.equal(degraded.sqlite.prepare('SELECT COUNT(*) AS count FROM build_plans').get()?.count, 1);
+    assert.equal(degraded.sqlite.prepare('SELECT COUNT(*) AS count FROM product_intent_events').get()?.count, 0);
   });
 });

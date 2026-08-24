@@ -76,7 +76,10 @@ test('build planner accepts a free-form harness and exposes the paid workflow be
   assert.match(page, /Type any public, internal or custom harness/);
   assert.match(page, /Add model role/);
   assert.match(page, /custom or contracted token prices/);
-  assert.match(page, /Billing and entitlement are intentionally\s+not connected yet/);
+  assert.match(page, /Current access · open preview/);
+  assert.match(page, /No subscription or Pro entitlement is active/);
+  assert.match(page, /Build pricing, sensitivity, tab-only versions and local downloads work now/);
+  assert.match(page, /Unlisted-link delivery and monitoring remain settings-only prototypes/);
   assert.match(page, /Save in this tab/);
   assert.match(page, /Duplicate plan/);
   assert.match(page, /Preview storage[^.]+limited to this open tab/);
@@ -99,6 +102,20 @@ test('build planner accepts a free-form harness and exposes the paid workflow be
   assert.doesNotMatch(page, /xl:grid-cols-3/);
   assert.match(page, /id="b-share-save" disabled/);
   assert.match(page, /id="b-alert-save" disabled/);
+  assert.match(page, /id="b-share-save" disabled>Save settings in this tab/);
+  assert.match(page, /id="b-alert-save" disabled>Save inactive draft in this tab/);
+  assert.match(page, /Account shares and inactive alert settings work only after you sign in and select a saved account plan/);
+  assert.match(page, /Anyone with the bearer link can view the saved plan name, internal or custom harness inputs, model choices, usage assumptions and custom or contract rates/);
+  assert.match(page, /id="b-share-created" hidden/);
+  assert.match(page, /id="b-share-copy">Copy bearer URL/);
+  assert.match(page, /id="b-share-hide">Hide bearer URL/);
+  assert.match(page, /Existing bearer URLs are not returned/);
+  assert.match(page, /Inactive · no monitoring/);
+  assert.match(page, /StableAccountOperationKeys/);
+  assert.match(page, /parseAccountShareList/);
+  assert.match(page, /parseAccountAlertList/);
+  assert.match(page, /accountOperationRequestCurrent/);
+  assert.match(page, /b-operations-refresh/);
   assert.match(page, /build_quote_first_edit_valid/);
   assert.doesNotMatch(page, /build_quote_valid/);
   assert.match(page, /build-pro-price-interest/);
@@ -106,7 +123,7 @@ test('build planner accepts a free-form harness and exposes the paid workflow be
   assert.match(page, /Planned expiry:/);
   assert.match(page, /noticeReserve\s*=\s*160/);
   assert.match(page, /I’d consider Pro at \$19/);
-  assert.match(page, /Research signal only\. No checkout, trial or subscription/);
+  assert.match(page, /Research signal only\. No upgrade, checkout, trial or subscription/);
   assert.match(page, /PUBLIC_ACCOUNT_PLANS_ENABLED === 'true'/);
   assert.match(page, /Nothing from the editor is uploaded until you choose an account save action/);
   assert.match(page, /Preview safety limits are \{ACCOUNT_PLAN_PREVIEW_MAX_PLANS\} account plans and \{ACCOUNT_PLAN_PREVIEW_MAX_VERSIONS\} immutable versions per plan/);
@@ -125,6 +142,14 @@ test('build planner accepts a free-form harness and exposes the paid workflow be
   assert.match(page, /consumeComposerDraftAfterAuth/);
   assert.match(page, /Preview access does not guarantee final tier placement/);
   assert.doesNotMatch(page, /account-tier limits are not enforced yet/);
+  assert.match(page, /There is no upgrade or paid entitlement today/);
+  assert.match(page, /Available now · open preview/);
+  assert.match(page, /Keep the budget current/);
+  assert.match(page, /intended recurring value is re-planning, review and monitoring—not a paywall on public research/);
+  assert.match(page, /Higher limits are planned for Pro, but upgrades are not available yet/);
+  for (const id of ['b-account-error', 'b-export-error', 'b-share-error', 'b-alert-error']) {
+    assert.match(page, new RegExp(`id="${id}" role="alert" aria-atomic="true"`));
+  }
   assert.match(page, /id="b-name" maxlength=\{BUILD_PLAN_LIMITS\.maxPlanNameChars\}/);
   assert.match(page, /data-field="label"[^>]*maxlength=\{BUILD_PLAN_LIMITS\.maxRoleLabelChars\}/);
   assert.match(page, /data-field="calls"[^>]*max=\{BUILD_PLAN_LIMITS\.maxExpectedInvocations\}/);
@@ -154,7 +179,7 @@ test('privacy discloses bounded D1 throttling without implying request-content l
   assert.match(page, /one rate-limit counter row per verified Clerk account ID/);
   assert.match(page, /current minute bucket and a capped request count/);
   assert.match(page, /request contents are not logged in that row/);
-  assert.match(page, /per-account rate-limit counter, will be deleted within 30 days/);
+  assert.match(page, /per-account rate-limit records, will be deleted within 30 days/);
 });
 
 test('every model pair uses the one generated canonical compare path', () => {

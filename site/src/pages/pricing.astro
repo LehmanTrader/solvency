@@ -1,0 +1,170 @@
+---
+import Base from '../layouts/Base.astro';
+import Section from '../components/Section.astro';
+
+const comparison = [
+  {
+    feature: 'Public research, methodology and verified model catalog',
+    free: 'Included',
+    pro: 'Included — public evidence stays free',
+  },
+  {
+    feature: 'Calculator, model comparisons and shareable scenarios',
+    free: 'Included',
+    pro: 'Included',
+  },
+  {
+    feature: 'Build Composer for any public, internal or custom harness',
+    free: 'Open preview: mix models, edit assumptions and quote a build',
+    pro: 'Planned account workspace for recurring budget operations',
+  },
+  {
+    feature: 'Sensitivity, break-even and local JSON, CSV and PNG exports',
+    free: 'Included in the open preview',
+    pro: 'Included, with expanded review workflows planned',
+  },
+  {
+    feature: 'Saved plans and immutable version history',
+    free: 'Limited account preview when enabled',
+    pro: 'Higher plan, version and model-role limits planned',
+  },
+  {
+    feature: 'Custom rates and observed-usage profiles',
+    free: 'Quote custom rates in the current tab',
+    pro: 'Durable profiles planned',
+  },
+  {
+    feature: 'Unlisted review links and operational exports',
+    free: 'Settings preview only; no link is created today',
+    pro: 'Controlled sharing workflows planned',
+  },
+  {
+    feature: 'Model-price and budget monitoring',
+    free: 'Inactive draft only; no monitoring or email today',
+    pro: 'Monitoring for saved plans planned',
+  },
+];
+
+const launchDecisions = [
+  {
+    title: 'Trial',
+    copy: 'Decision pending. Before checkout, Solvency must state whether there is no trial or publish its exact length and first billing date.',
+  },
+  {
+    title: 'Cancellation',
+    copy: 'Decision pending. The cancellation method, effective date and remaining access must be published before a subscription can start.',
+  },
+  {
+    title: 'Refunds',
+    copy: 'Decision pending. Eligibility, request window and contact process must be added to the Terms before checkout.',
+  },
+  {
+    title: 'Tax',
+    copy: 'Decision pending. Checkout must say whether applicable tax is included or added and which currencies and regions are supported.',
+  },
+];
+---
+<Base title="Pricing — Free now, Pro planned — Solvency"
+      description="Solvency public research and calculators stay free. Compare the open Build Composer preview with a planned Pro workspace; billing is not live.">
+  <div class="wrap pt-8 md:pt-12">
+    <p class="eyebrow">Pricing</p>
+    <h1 class="h-display mt-3 max-w-3xl">Public evidence stays free.</h1>
+    <p class="lede mt-4 max-w-3xl">Research, methodology, verified model prices and the calculator are free to read and use. Pro is being designed for teams that repeatedly re-plan, review and monitor a multi-model build budget.</p>
+
+    <section class="card card-pad mt-8 grid gap-5 sm:grid-cols-[1fr_auto] sm:items-start" aria-labelledby="pricing-status-title">
+      <div class="max-w-3xl">
+        <p class="label">Launch status</p>
+        <h2 class="h-card mt-2" id="pricing-status-title">There is nothing to buy today.</h2>
+        <p class="mt-2 text-sm leading-relaxed">Billing is not live. There is no active checkout, trial, subscription, upgrade or paid entitlement. The Build Composer is an open product preview, and its current access and safety limits do not establish the final Free or Pro tiers.</p>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <a class="btn" href="/build-planner">Use the open Build Composer</a>
+          <a class="btn btn-quiet" href="#launch-decisions">Review launch decisions ↓</a>
+        </div>
+      </div>
+      <span class="pill pill-ink self-start justify-self-start">Billing off</span>
+    </section>
+
+    <Section id="plans" eyebrow="Packaging" title="Free now; Pro is a validation hypothesis" class="mt-20"
+      caption="The proposed price and feature boundary may change after recurring-value evidence is reviewed.">
+      <div class="grid gap-4 md:grid-cols-2">
+        <article class="card card-pad">
+          <p class="label">Free · available now</p>
+          <p class="tile-v mt-3">$0</p>
+          <p class="small mt-2">No payment method. Public pages do not require an account.</p>
+          <h3 class="h-card mt-6">Explore and price a build</h3>
+          <ul class="mt-3 list-disc pl-5 text-sm leading-relaxed">
+            <li>Read public research, methodology and verified model data</li>
+            <li>Use the calculator and model comparisons</li>
+            <li>Mix models under any named or custom harness in Build Composer</li>
+            <li>Run sensitivity and break-even analysis and download local exports</li>
+          </ul>
+          <p class="small mt-4">Account storage can appear only in the reviewed preview environment. Its limits are safeguards, not a promised Free allowance.</p>
+        </article>
+
+        <article class="card card-pad">
+          <p class="label">Pro · planned, not for sale</p>
+          <p class="tile-v mt-3">$19/month <span class="text-base font-normal text-[var(--color-muted)]">or $190/year</span></p>
+          <p class="small mt-2">Provisional USD price hypothesis. No plan can be purchased or reserved.</p>
+          <h3 class="h-card mt-6">Keep the budget current</h3>
+          <ul class="mt-3 list-disc pl-5 text-sm leading-relaxed">
+            <li>Higher plan, version and model-role limits</li>
+            <li>Durable custom-rate and observed-usage profiles</li>
+            <li>Named architecture history and expanded review workflows</li>
+            <li>Controlled unlisted links and operational exports</li>
+            <li>Model-price and budget monitoring for saved plans</li>
+          </ul>
+          <p class="small mt-4">The recurring hook is re-planning, review and monitoring—not access to public evidence.</p>
+        </article>
+      </div>
+    </Section>
+
+    <Section id="compare-tiers" eyebrow="Comparison" title="What is open now and what is planned"
+      caption="Every Pro item below is a product direction, not an available entitlement.">
+      <div class="hidden md:block tbl-wrap card">
+        <table class="tbl pricing-table">
+          <caption>Comparison of current free access and planned Solvency Pro features</caption>
+          <thead><tr><th scope="col">Capability</th><th scope="col">Free now</th><th scope="col">Pro planned</th></tr></thead>
+          <tbody>
+            {comparison.map((row) => (
+              <tr><th scope="row">{row.feature}</th><td>{row.free}</td><td>{row.pro}</td></tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div class="grid gap-3 md:hidden" aria-label="Comparison of current free access and planned Solvency Pro features">
+        {comparison.map((row) => (
+          <article class="card card-pad">
+            <h3 class="h-card">{row.feature}</h3>
+            <dl class="mt-4 grid gap-4">
+              <div><dt class="label">Free now</dt><dd class="mt-1 text-sm leading-relaxed">{row.free}</dd></div>
+              <div><dt class="label">Pro planned</dt><dd class="mt-1 text-sm leading-relaxed">{row.pro}</dd></div>
+            </dl>
+          </article>
+        ))}
+      </div>
+      <p class="small mt-3">“Planned” does not guarantee inclusion, timing or a final limit. Final entitlements will be enforced by the server before billing is enabled.</p>
+    </Section>
+
+    <Section id="launch-decisions" eyebrow="Before checkout" title="Terms that still need a launch decision"
+      caption="These items will be decided and published before any payment action is shown.">
+      <div class="tile-grid sm:grid-cols-2">
+        {launchDecisions.map((item) => (
+          <article class="tile">
+            <p class="label">{item.title}</p>
+            <p class="mt-2 text-sm leading-relaxed">{item.copy}</p>
+          </article>
+        ))}
+      </div>
+      <div class="card card-pad mt-4">
+        <h3 class="h-card">Required pre-checkout disclosure</h3>
+        <p class="mt-2 text-sm leading-relaxed max-w-3xl">A future purchase screen must show the final USD amount and billing cadence, automatic-renewal terms, trial treatment, cancellation timing, refund policy and tax treatment before payment is submitted. It must also link the then-current <a class="link" href="/terms">Terms</a> and <a class="link" href="/privacy">Privacy policy</a>.</p>
+      </div>
+    </Section>
+  </div>
+</Base>
+
+<style>
+  .pricing-table { min-width: 44rem; white-space: normal; }
+  .pricing-table th, .pricing-table td { width: 30%; vertical-align: top; line-height: 1.55; }
+  .pricing-table th:first-child { width: 40%; }
+</style>

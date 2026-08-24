@@ -25,16 +25,17 @@ const harnessExamples = [
       expected routing volume you enter.
     </p>
 
-    <div class="mt-6 card card-pad grid gap-4 sm:grid-cols-[1fr_auto] items-start">
+    <section class="mt-6 card card-pad grid gap-4 sm:grid-cols-[1fr_auto] items-start" aria-labelledby="composer-access-title">
       <div>
-        <p class="label">Paid workflow build-out</p>
-        <p class="mt-2 text-sm leading-relaxed text-[var(--color-body)] max-w-3xl">
-          All Composer controls are open during this preview. Billing and entitlement are intentionally
-          not connected yet; we are finishing and validating the paid workflow first.
-        </p>
+        <p class="label">Current access · open preview</p>
+        <h2 class="h-card mt-2" id="composer-access-title">No subscription or Pro entitlement is active.</h2>
+        <p class="small mt-2 max-w-3xl">Build pricing, sensitivity, tab-only versions and local downloads work now. Account plans appear only when the storage preview is enabled. {ACCOUNT_PLANS_ENABLED
+          ? 'A signed-in user can create and revoke unlisted links for a selected account plan and save inactive alert settings; no scheduled check or email is running.'
+          : 'Unlisted-link delivery and monitoring remain settings-only prototypes: no link, scheduled check or email is created.'}</p>
+        <a class="link inline-block mt-3" href="#packaging">Compare today’s preview with planned Pro ↓</a>
       </div>
       <span class="pill pill-ink">No checkout yet</span>
-    </div>
+    </section>
 
     <form class="mt-8 grid gap-6" id="composer-form" novalidate
           data-account-plans-enabled={ACCOUNT_PLANS_ENABLED ? 'true' : 'false'}
@@ -175,7 +176,8 @@ const harnessExamples = [
                 <div class="max-w-3xl">
                   <p class="label">Account storage · preview</p>
                   <h3 class="h-card mt-2" id="account-workspace-title">Account plans</h3>
-                  <p class="small mt-2">Account plans are free during this preview so you can reopen named versions later. Preview safety limits are {ACCOUNT_PLAN_PREVIEW_MAX_PLANS} account plans and {ACCOUNT_PLAN_PREVIEW_MAX_VERSIONS} immutable versions per plan. These are storage safeguards, not final Free/Pro entitlements; billing is not active. Nothing from the editor is uploaded until you choose an account save action.</p>
+                  <p class="small mt-2">Account plans are free during this preview so you can reopen named versions later. Preview safety limits are {ACCOUNT_PLAN_PREVIEW_MAX_PLANS} account plans and {ACCOUNT_PLAN_PREVIEW_MAX_VERSIONS} immutable versions per plan. These are storage safeguards, not final Free/Pro entitlements; billing is not active. Higher limits are planned for Pro, but upgrades are not available yet. Nothing from the editor is uploaded until you choose an account save action.</p>
+                  <a class="link inline-block mt-2" href="#packaging">See planned Pro limits ↓</a>
                 </div>
                 <span class="pill pill-ink" id="b-account-state" role="status" aria-live="polite" aria-atomic="true">Checking account…</span>
               </div>
@@ -222,7 +224,7 @@ const harnessExamples = [
                 </div>
               </div>
               <p class="small mt-3" id="b-account-status" role="status" aria-live="polite" aria-atomic="true"></p>
-              <p class="small mt-2 text-[var(--color-worse)]" id="b-account-error" role="alert"></p>
+              <p class="small mt-2 text-[var(--color-worse)]" id="b-account-error" role="alert" aria-atomic="true"></p>
             </section>
           )}
         </div>
@@ -278,13 +280,15 @@ const harnessExamples = [
       <section class="card overflow-hidden" id="build-operations" aria-labelledby="operations-title">
         <div class="card-head">
           <div><p class="label">Step 6 · preview</p><h2 class="h-card mt-1" id="operations-title">Export, share and monitor</h2></div>
-          <span class="pill pill-ink">Exports local · share and alerts preview</span>
+          <span class="pill pill-ink">{ACCOUNT_PLANS_ENABLED ? 'Exports local · account operations preview' : 'Exports local · share and alerts preview'}</span>
         </div>
         <div class="card-pad">
           <p class="text-sm leading-relaxed text-[var(--color-body)] max-w-4xl">
-            Downloads are created in this browser. These share and alert controls save drafts only in
-            this tab; no link is created, no plan is uploaded by these controls and no email is sent.
+            {ACCOUNT_PLANS_ENABLED
+              ? 'Downloads are created in this browser. Account shares and inactive alert settings work only after you sign in and select a saved account plan. Sharing exposes the selected immutable account version; no alert is monitored and no email is sent.'
+              : 'Downloads are created in this browser. These share and alert controls save drafts only in this tab; no link is created, no plan is uploaded by these controls and no email is sent.'}
           </p>
+          {ACCOUNT_PLANS_ENABLED && <button type="button" class="btn btn-quiet mt-3" id="b-operations-refresh" disabled>Refresh selected plan operations</button>}
 
           <div class="operation-grid mt-5">
             <article class="operation-card" aria-labelledby="export-title">
@@ -299,36 +303,53 @@ const harnessExamples = [
               <p class="small mt-3" id="b-export-ready">Current quote ready to export.</p>
               <p class="small mt-2">Review files before sharing: they can include internal harness names, usage assumptions and custom or contract rates you entered.</p>
               <p class="small mt-2" id="b-export-status" role="status" aria-live="polite"></p>
-              <p class="small mt-2 text-[var(--color-worse)]" id="b-export-error" role="alert"></p>
+              <p class="small mt-2 text-[var(--color-worse)]" id="b-export-error" role="alert" aria-atomic="true"></p>
             </article>
 
             <article class="operation-card" aria-labelledby="share-title">
               <p class="label">Unlisted link · preview</p>
-              <h3 class="h-card mt-2" id="share-title">Choose how a saved version would open</h3>
-              <p class="small mt-2">Unlisted links need authenticated storage. Anyone with a future link could view it. Preview the settings now; Solvency will not create or copy a link.</p>
+              <h3 class="h-card mt-2" id="share-title">{ACCOUNT_PLANS_ENABLED ? 'Share an immutable account version' : 'Choose how a saved version would open'}</h3>
+              <p class="small mt-2">{ACCOUNT_PLANS_ENABLED
+                ? 'Anyone with the bearer link can view the saved plan name, internal or custom harness inputs, model choices, usage assumptions and custom or contract rates. Create it only when that disclosure is appropriate.'
+                : 'Unlisted links need authenticated storage. Anyone with a future link could view it. Preview the settings now; Solvency will not create or copy a link.'}</p>
               <fieldset class="mt-4 grid gap-3">
                 <legend class="sr-only">Unlisted share draft settings</legend>
-                <label class="block"><span class="label">Version to share</span><select class="ctl ctl-row mt-2 w-full" id="b-share-version"><option value="">Save a version first</option></select></label>
+                <label class="block"><span class="label">Version to share</span><select class="ctl ctl-row mt-2 w-full" id="b-share-version"><option value="">{ACCOUNT_PLANS_ENABLED ? 'Select an account plan first' : 'Save a version first'}</option></select></label>
                 <div class="block"><span class="label">Access</span><p class="operation-fixed-value mt-2">Anyone with the unlisted link · view only</p></div>
                 <label class="block"><span class="label">Expiry</span><select class="ctl ctl-row mt-2 w-full" id="b-share-expiry"><option value="7">7 days</option><option value="30">30 days</option><option value="none">No expiry</option></select></label>
                 <label class="inline-flex items-center gap-2 min-h-11 text-sm text-[var(--color-ink)] cursor-pointer"><input type="checkbox" class="chk" id="b-share-export" checked /> Allow quote export</label>
               </fieldset>
               <div class="mt-3 flex flex-wrap gap-2">
-                <button type="button" class="btn" id="b-share-save" disabled>Save share draft</button>
-                <button type="button" class="btn btn-quiet" id="b-share-remove" hidden>Remove draft</button>
+                {ACCOUNT_PLANS_ENABLED
+                  ? <button type="button" class="btn" id="b-share-save" disabled>Create unlisted link</button>
+                  : <button type="button" class="btn" id="b-share-save" disabled>Save settings in this tab</button>}
+                <button type="button" class="btn btn-quiet" id="b-share-remove" hidden>{ACCOUNT_PLANS_ENABLED ? 'Revoke link' : 'Remove draft'}</button>
               </div>
-              <div class="operation-summary mt-3" id="b-share-summary"><p class="small">No share draft yet. Nothing has left this tab.</p></div>
-              <p class="small mt-2" id="b-share-status" role="status" aria-live="polite"></p>
-              <p class="small mt-2 text-[var(--color-worse)]" id="b-share-error" role="alert"></p>
+              {ACCOUNT_PLANS_ENABLED && (
+                <div class="operation-summary mt-3" id="b-share-created" hidden>
+                  <label class="label" for="b-share-url">New bearer URL · shown only after creation</label>
+                  <input class="ctl ctl-row mt-2 w-full" id="b-share-url" type="url" readonly autocomplete="off" spellcheck="false" />
+                  <div class="mt-2 flex flex-wrap gap-2">
+                    <button type="button" class="btn" id="b-share-copy">Copy bearer URL</button>
+                    <button type="button" class="btn btn-quiet" id="b-share-hide">Hide bearer URL</button>
+                  </div>
+                  <p class="small mt-2">Store it securely now. The account list never returns readable bearer tokens.</p>
+                </div>
+              )}
+              <div class="operation-summary mt-3" id="b-share-summary"><p class="small">{ACCOUNT_PLANS_ENABLED ? 'Select a signed-in account plan to load its unlisted links.' : 'No share draft yet. Nothing has left this tab.'}</p></div>
+              <p class="small mt-2" id="b-share-status" role="status" aria-live="polite" aria-atomic="true"></p>
+              <p class="small mt-2 text-[var(--color-worse)]" id="b-share-error" role="alert" aria-atomic="true"></p>
             </article>
 
             <article class="operation-card" aria-labelledby="alerts-title">
               <p class="label">Alerts · preview</p>
               <h3 class="h-card mt-2" id="alerts-title">Define what should trigger a re-check</h3>
-              <p class="small mt-2">Draft an alert for a saved version. Price monitoring and email delivery are not running yet.</p>
+              <p class="small mt-2">{ACCOUNT_PLANS_ENABLED
+                ? 'Save settings for an immutable account version. Every saved setting remains inactive: price monitoring, scheduled checks and email delivery are not running.'
+                : 'Draft an alert for a saved version. Price monitoring and email delivery are not running yet.'}</p>
               <fieldset class="mt-4 grid gap-3">
                 <legend class="sr-only">Alert draft settings</legend>
-                <label class="block"><span class="label">Version to monitor</span><select class="ctl ctl-row mt-2 w-full" id="b-alert-version"><option value="">Save a version first</option></select></label>
+                <label class="block"><span class="label">Version to re-check</span><select class="ctl ctl-row mt-2 w-full" id="b-alert-version"><option value="">{ACCOUNT_PLANS_ENABLED ? 'Select an account plan first' : 'Save a version first'}</option></select></label>
                 <label class="block"><span class="label">Trigger</span><select class="ctl ctl-row mt-2 w-full" id="b-alert-trigger">
                   <option value="model_price_change">A model price in this plan changes</option>
                   <option value="monthly_spend_above">Monthly spend exceeds</option>
@@ -337,25 +358,27 @@ const harnessExamples = [
                 </select></label>
                 <label class="block" id="b-alert-threshold-wrap" hidden><span class="label" id="b-alert-threshold-label">Threshold</span><span class="operation-threshold mt-2"><span id="b-alert-threshold-prefix"></span><input class="ctl ctl-row w-full" id="b-alert-threshold" type="number" min="0.01" step="0.1" aria-describedby="b-alert-error" /><span id="b-alert-threshold-suffix">%</span></span></label>
                 <label class="block" id="b-alert-baseline-wrap" hidden><span class="label">Comparison baseline</span><select class="ctl ctl-row mt-2 w-full" id="b-alert-baseline"><option value="">Choose a saved baseline</option></select></label>
-                <p class="small">Planned delivery: account email.</p>
+                <p class="small">{ACCOUNT_PLANS_ENABLED ? 'Status: inactive. No monitoring job or delivery channel is attached.' : 'Planned delivery: account email.'}</p>
               </fieldset>
-              <button type="button" class="btn mt-3" id="b-alert-save" disabled>Save alert draft</button>
-              <div class="mt-3 grid gap-2" id="b-alert-list"><p class="small">No alert drafts. Solvency is not monitoring this plan.</p></div>
-              <p class="small mt-2" id="b-alert-status" role="status" aria-live="polite"></p>
-              <p class="small mt-2 text-[var(--color-worse)]" id="b-alert-error" role="alert"></p>
+              {ACCOUNT_PLANS_ENABLED
+                ? <button type="button" class="btn mt-3" id="b-alert-save" disabled>Save inactive settings</button>
+                : <button type="button" class="btn mt-3" id="b-alert-save" disabled>Save inactive draft in this tab</button>}
+              <div class="mt-3 grid gap-2" id="b-alert-list"><p class="small">{ACCOUNT_PLANS_ENABLED ? 'Select a signed-in account plan to load inactive alert settings.' : 'No alert drafts. Solvency is not monitoring this plan.'}</p></div>
+              <p class="small mt-2" id="b-alert-status" role="status" aria-live="polite" aria-atomic="true"></p>
+              <p class="small mt-2 text-[var(--color-worse)]" id="b-alert-error" role="alert" aria-atomic="true"></p>
             </article>
           </div>
         </div>
       </section>
     </form>
 
-    <Section id="packaging" eyebrow="Packaging" title="What becomes Pro" class="mt-20"
-      caption={`The full workflow is being built before checkout. Preview access does not guarantee final tier placement; final tier entitlements are not active. Preview safety caps still apply: ${BUILD_PLAN_LIMITS.maxRoles} roles, ${ACCOUNT_PLAN_PREVIEW_MAX_PLANS} account plans and ${ACCOUNT_PLAN_PREVIEW_MAX_VERSIONS} versions per plan.`}>
+    <Section id="packaging" eyebrow="Packaging" title="Preview access now; recurring budget operations later" class="mt-20"
+      caption={`There is no upgrade or paid entitlement today. Preview access does not guarantee final tier placement. Safety caps still apply: ${BUILD_PLAN_LIMITS.maxRoles} roles, ${ACCOUNT_PLAN_PREVIEW_MAX_PLANS} account plans and ${ACCOUNT_PLAN_PREVIEW_MAX_VERSIONS} versions per plan.`}>
       <div class="grid gap-4 md:grid-cols-2">
-        <div class="card card-pad"><p class="label">Free · preview</p><h3 class="h-card mt-2">Experience the answer</h3><ul class="mt-3 text-sm leading-relaxed text-[var(--color-body)] list-disc pl-5"><li>Any harness name and current list-price models</li><li>Editable on-screen scenarios and local exports</li><li>Tab-only versions; account plans when the storage preview is available</li><li>Public research and verified catalog</li></ul></div>
-        <div class="card card-pad"><p class="label">Pro · planned $19/month</p><h3 class="h-card mt-2">Operate the budget</h3><ul class="mt-3 text-sm leading-relaxed text-[var(--color-body)] list-disc pl-5"><li>Higher future plan, version and role limits</li><li>Custom/contract pricing and observed-usage workflows</li><li>Expanded comparison and review workflows</li><li>Unlisted links, operational exports and price/budget monitoring</li></ul><div class="mt-5 border-t border-[var(--color-rule)] pt-4"><h4 class="text-sm font-semibold text-[var(--color-ink)]">Would this workflow be worth $19/month?</h4><button type="button" class="btn mt-3" id="b-pro-interest">I’d consider Pro at $19</button><p class="small mt-2">Research signal only. No checkout, trial or subscription.</p><p class="small mt-2" id="b-pro-interest-status" role="status" aria-live="polite"></p></div></div>
+        <div class="card card-pad"><p class="label">Available now · open preview</p><h3 class="h-card mt-2">Build and inspect the budget</h3><ul class="mt-3 text-sm leading-relaxed text-[var(--color-body)] list-disc pl-5"><li>Any harness name and mix of current catalog models</li><li>Editable usage, routing and custom-rate assumptions</li><li>Sensitivity, break-even, tab-only versions and local exports</li><li>Account plans only when the storage preview is enabled</li><li>Public research, methodology and verified catalog remain free</li></ul><p class="small mt-4">{ACCOUNT_PLANS_ENABLED ? 'The account preview can create and revoke unlisted links and persist inactive alert settings. No monitoring or email delivery is running.' : 'Unlisted-link delivery and monitoring are not available; their controls save settings only in this tab.'}</p></div>
+        <div class="card card-pad"><p class="label">Pro · planned $19/month hypothesis</p><h3 class="h-card mt-2">Keep the budget current</h3><ul class="mt-3 text-sm leading-relaxed text-[var(--color-body)] list-disc pl-5"><li>Higher plan, version and model-role limits</li><li>Durable custom/contract pricing and observed-usage profiles</li><li>Named architecture history, expanded comparisons and review workflows</li><li>Controlled share links and operational export workflows</li><li>Model-price and budget monitoring for saved plans</li></ul><p class="small mt-4">The intended recurring value is re-planning, review and monitoring—not a paywall on public research.</p><div class="mt-5 border-t border-[var(--color-rule)] pt-4"><h4 class="text-sm font-semibold text-[var(--color-ink)]">Would that recurring workflow be worth $19/month?</h4><button type="button" class="btn mt-3" id="b-pro-interest" aria-describedby="b-pro-interest-help">I’d consider Pro at $19</button><p class="small mt-2" id="b-pro-interest-help">Research signal only. No upgrade, checkout, trial or subscription.</p><p class="small mt-2" id="b-pro-interest-status" role="status" aria-live="polite" aria-atomic="true"></p></div></div>
       </div>
-      <p class="small mt-3">The price is a validation hypothesis. Checkout will be added only after the workflow, persistence and server entitlement boundary are ready.</p>
+      <p class="small mt-3">The price is a validation hypothesis. Checkout will be added only after recurring-value evidence is reviewed and a server-authoritative entitlement boundary is ready.</p>
     </Section>
   </div>
 
@@ -403,6 +426,14 @@ const harnessExamples = [
     type BuildAlertDraftV1, type BuildAlertTrigger, type BuildShareDraftV1, type ShareExpiryDays,
   } from '../lib/build-operations.ts';
   import {
+    StableAccountOperationKeys, accountShareUrl, copyAccountShareUrl,
+    inactiveAccountAlertSummary, parseAccountAlertList, parseAccountShareList,
+    parseCreatedAccountShare, parseDeletedAccountAlert, parseMutatedAccountAlert,
+    parseRevokedAccountShare,
+    type AccountBuildAlertTrigger, type AccountBuildPlanShare,
+    type InactiveAccountBuildPlanAlert,
+  } from '../lib/build-operations-client.ts';
+  import {
     AuthenticatedJsonError, authenticatedJsonFetch, clearComposerDraftForAuth,
     consumeComposerDraftAfterAuth, observeClerkAuth, openSignIn, openSignUp,
     preserveComposerDraftForAuth, signedIn, track, type ClerkAuthState,
@@ -446,6 +477,17 @@ const harnessExamples = [
   let conflictedAccountPlanId: string | null = null;
   let pendingAccountWrite: { operation: string; planJson: string; key: string } | null = null;
   let editorAnchorJson: string | null = null;
+  let accountShares: AccountBuildPlanShare[] = [];
+  let accountAlerts: InactiveAccountBuildPlanAlert[] = [];
+  let revealedAccountShare: { shareId: string; url: string } | null = null;
+  let revealedAccountShareTimer: ReturnType<typeof setTimeout> | null = null;
+  let editingAccountAlertId: string | null = null;
+  let operationListRequest: AbortController | null = null;
+  let operationMutationRequest: AbortController | null = null;
+  let operationGeneration = 0;
+  let activeOperationsPlanId: string | null = null;
+  let operationBusy: 'loading' | 'share-create' | 'share-revoke' | 'alert-save' | 'alert-delete' | null = null;
+  const operationKeys = new StableAccountOperationKeys();
   const byId = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
   const setText = (id: string, next: string) => { const target = byId(id); if (target.textContent !== next) target.textContent = next; };
   const value = (id: string) => (byId<HTMLInputElement>(id).value ?? '').normalize('NFC').trim();
@@ -488,6 +530,76 @@ const harnessExamples = [
     return Number.isNaN(date.valueOf()) ? 'date unavailable' : date.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
   };
 
+  function clearRevealedAccountShare() {
+    if (!accountPlansEnabled) return;
+    if (revealedAccountShareTimer !== null) clearTimeout(revealedAccountShareTimer);
+    revealedAccountShareTimer = null;
+    revealedAccountShare = null;
+    const input = byId<HTMLInputElement>('b-share-url'); input.value = '';
+    byId('b-share-created').hidden = true;
+  }
+
+  function showRevealedAccountShare(shareId: string, url: string) {
+    clearRevealedAccountShare();
+    revealedAccountShare = { shareId, url };
+    const input = byId<HTMLInputElement>('b-share-url'); input.value = url;
+    byId('b-share-created').hidden = false;
+    revealedAccountShareTimer = setTimeout(clearRevealedAccountShare, 60_000);
+  }
+
+  function resetAccountOperations(nextPlanId: string | null = null) {
+    if (!accountPlansEnabled) return;
+    operationGeneration += 1;
+    operationListRequest?.abort(); operationListRequest = null;
+    operationMutationRequest?.abort(); operationMutationRequest = null;
+    operationBusy = null;
+    activeOperationsPlanId = nextPlanId;
+    accountShares = []; accountAlerts = [];
+    editingAccountAlertId = null;
+    operationKeys.clear();
+    clearRevealedAccountShare();
+    byId('build-operations').removeAttribute('aria-busy');
+    byId('b-share-error').textContent = ''; byId('b-share-status').textContent = '';
+    byId('b-alert-error').textContent = ''; byId('b-alert-status').textContent = '';
+  }
+
+  function accountOperationsReady(planId = activeOperationsPlanId): planId is string {
+    return Boolean(accountPlansEnabled && planId && selectedAccountPlan?.plan.id === planId
+      && accountAuth.status === 'signed-in' && !accountSessionExpired
+      && conflictedAccountPlanId !== planId);
+  }
+
+  function syncSelectedAccountOperations(load = false) {
+    if (!accountPlansEnabled) return;
+    const planId = selectedAccountPlan?.plan.id ?? null;
+    const changed = planId !== activeOperationsPlanId;
+    if (changed) resetAccountOperations(planId);
+    renderOperationVersions();
+    if (load && accountOperationsReady(planId)) void loadAccountOperations(planId);
+  }
+
+  function setOperationBusy(next: typeof operationBusy) {
+    operationBusy = next;
+    if (!accountPlansEnabled) return;
+    const section = byId('build-operations');
+    if (next) section.setAttribute('aria-busy', 'true'); else section.removeAttribute('aria-busy');
+    syncOperationControls();
+  }
+
+  function setOperationError(target: 'share' | 'alert' | 'both', cause: unknown, fallback: string) {
+    if (!accountPlansEnabled) return;
+    const message = cause instanceof AuthenticatedJsonError ? `${cause.message} ${fallback}` : fallback;
+    if (target === 'share' || target === 'both') byId('b-share-error').textContent = message;
+    if (target === 'alert' || target === 'both') byId('b-alert-error').textContent = message;
+    if (cause instanceof AuthenticatedJsonError && cause.code === 'AUTH_REQUIRED') {
+      accountSessionExpired = true;
+      accountPlans = []; accountNextCursor = null; selectedAccountPlan = null;
+      conflictedAccountPlanId = null; pendingAccountWrite = null;
+      resetAccountOperations();
+      renderAccountShell(); renderAccountPlans(); renderOperationVersions();
+    }
+  }
+
   function setAccountStatus(message = '') {
     if (!accountPlansEnabled) return;
     byId('b-account-status').textContent = message;
@@ -501,6 +613,7 @@ const harnessExamples = [
       if (cause.code === 'AUTH_REQUIRED') {
         accountSessionExpired = true;
         accountPlans = []; accountNextCursor = null; selectedAccountPlan = null; conflictedAccountPlanId = null; pendingAccountWrite = null;
+        resetAccountOperations();
       } else if (cause.code === 'VERSION_CONFLICT') {
         conflictedAccountPlanId = selectedAccountPlan?.plan.id ?? null;
         pendingAccountWrite = null;
@@ -710,11 +823,14 @@ const harnessExamples = [
         if (!refreshed) {
           selectedAccountPlan = null;
           conflictedAccountPlanId = null;
+          resetAccountOperations();
         } else if (refreshed.currentVersion !== selectedAccountPlan.plan.currentVersion) {
           conflictedAccountPlanId = selectedAccountPlan.plan.id;
+          resetAccountOperations(selectedAccountPlan.plan.id);
         }
       }
       renderAccountPlans();
+      syncSelectedAccountOperations(false);
       setAccountStatus(conflictedAccountPlanId
         ? 'Account plans refreshed. Reload the selected plan’s versions before appending or deleting; the editor is unchanged.'
         : accountPlans.length ? `Loaded ${accountPlans.length} account plan${accountPlans.length === 1 ? '' : 's'}. The editor is unchanged.` : 'No account plans yet. The editor is unchanged.');
@@ -735,6 +851,7 @@ const harnessExamples = [
       const resource = parseAccountPlanResource(payload);
       if (!resource) throw new AuthenticatedJsonError('INVALID_RESPONSE');
       selectedAccountPlan = resource; conflictedAccountPlanId = null; upsertAccountPlan(resource.plan); renderAccountPlans();
+      syncSelectedAccountOperations(true);
       setAccountStatus(`Loaded ${resource.plan.name} version history. The editor is unchanged.`);
     } catch (cause) {
       if (request.controller.signal.aborted) return;
@@ -792,6 +909,7 @@ const harnessExamples = [
       const resource = parseAccountPlanResource(payload);
       if (!resource) throw new AuthenticatedJsonError('INVALID_RESPONSE');
       selectedAccountPlan = resource; conflictedAccountPlanId = null; upsertAccountPlan(resource.plan); renderAccountPlans();
+      syncSelectedAccountOperations(false);
       applyLoadedAccountVersion(resource, action);
     } catch (cause) {
       if (request.controller.signal.aborted) return;
@@ -836,7 +954,7 @@ const harnessExamples = [
       const resource = parseAccountPlanResource(payload);
       if (!resource) throw new AuthenticatedJsonError('INVALID_RESPONSE');
       pendingAccountWrite = null; selectedAccountPlan = resource; conflictedAccountPlanId = null; upsertAccountPlan(resource.plan);
-      editorAnchorJson = planJson; renderAccountPlans();
+      editorAnchorJson = planJson; renderAccountPlans(); syncSelectedAccountOperations(true);
       setAccountStatus(`Saved ${resource.selectedVersion.name} version ${resource.selectedVersion.version} to your account. Versions in this tab are unchanged.`);
       track('build_account_plan_save', { path: location.pathname, operation: target ? 'append_version' : 'create_plan' });
     } catch (cause) {
@@ -870,7 +988,7 @@ const harnessExamples = [
         throw new AuthenticatedJsonError('INVALID_RESPONSE');
       }
       accountPlans = accountPlans.filter((plan) => plan.id !== resource.plan.id);
-      selectedAccountPlan = null; conflictedAccountPlanId = null; pendingAccountWrite = null; renderAccountPlans();
+      selectedAccountPlan = null; conflictedAccountPlanId = null; pendingAccountWrite = null; resetAccountOperations(); renderAccountPlans(); renderOperationVersions();
       setAccountStatus(`Deleted ${resource.plan.name} and its account versions. The current editor and versions in this tab were not deleted.`);
       byId('b-account-status').setAttribute('tabindex', '-1'); byId('b-account-status').focus();
     } catch (cause) {
@@ -891,6 +1009,7 @@ const harnessExamples = [
     accountAuthKey = key; accountAuth = state; accountSessionExpired = false;
     accountGeneration += 1; accountRequest?.abort(); accountRequest = null; accountBusy = false;
     accountPlans = []; accountNextCursor = null; selectedAccountPlan = null; conflictedAccountPlanId = null; pendingAccountWrite = null;
+    resetAccountOperations();
     byId('b-account-error').textContent = '';
     if (state.status === 'signed-in') {
       const draft = consumeComposerDraftAfterAuth<unknown>();
@@ -913,6 +1032,269 @@ const harnessExamples = [
     }
     renderAccountShell(); renderAccountPlans();
     if (state.status === 'signed-in') void loadAccountPlans();
+  }
+
+  type AccountOperationRequest = {
+    controller: AbortController;
+    accountGeneration: number;
+    operationGeneration: number;
+    planId: string;
+  };
+
+  const accountOperationRequestCurrent = (
+    request: AccountOperationRequest,
+    kind: 'list' | 'mutation',
+  ) => !request.controller.signal.aborted
+    && request.accountGeneration === accountGeneration
+    && request.operationGeneration === operationGeneration
+    && activeOperationsPlanId === request.planId
+    && selectedAccountPlan?.plan.id === request.planId
+    && accountAuth.status === 'signed-in'
+    && (kind === 'list' ? operationListRequest : operationMutationRequest) === request.controller;
+
+  function startOperationList(planId: string): AccountOperationRequest {
+    operationListRequest?.abort();
+    const controller = new AbortController(); operationListRequest = controller;
+    clearRevealedAccountShare(); setOperationBusy('loading');
+    return { controller, planId, accountGeneration, operationGeneration };
+  }
+
+  function startOperationMutation(
+    planId: string,
+    busy: Exclude<typeof operationBusy, null | 'loading'>,
+  ): AccountOperationRequest | null {
+    if (!accountOperationsReady(planId) || operationBusy) return null;
+    operationListRequest?.abort(); operationListRequest = null;
+    const controller = new AbortController(); operationMutationRequest = controller;
+    setOperationBusy(busy);
+    return { controller, planId, accountGeneration, operationGeneration };
+  }
+
+  function finishOperationList(request: AccountOperationRequest) {
+    if (operationListRequest !== request.controller) return;
+    operationListRequest = null; setOperationBusy(null);
+  }
+
+  function finishOperationMutation(request: AccountOperationRequest) {
+    if (operationMutationRequest !== request.controller) return;
+    operationMutationRequest = null; setOperationBusy(null);
+  }
+
+  function operationRecordsMatchSelectedPlan(
+    planId: string,
+    shares: AccountBuildPlanShare[],
+    alerts: InactiveAccountBuildPlanAlert[],
+  ): boolean {
+    if (selectedAccountPlan?.plan.id !== planId) return false;
+    const versions = new Set(selectedAccountPlan.versions.map((version) => version.version));
+    return shares.every((share) => share.planId === planId && versions.has(share.version))
+      && alerts.every((alert) => alert.planId === planId && versions.has(alert.version)
+        && (alert.baselineVersion === null || versions.has(alert.baselineVersion)));
+  }
+
+  async function loadAccountOperations(planId = selectedAccountPlan?.plan.id ?? '') {
+    if (!accountOperationsReady(planId) || (operationBusy && operationBusy !== 'loading')) return;
+    byId('b-share-error').textContent = ''; byId('b-alert-error').textContent = '';
+    byId('b-share-status').textContent = 'Loading token-free unlisted-link records…';
+    byId('b-alert-status').textContent = 'Loading inactive alert settings…';
+    const request = startOperationList(planId);
+    try {
+      const encodedPlanId = encodeURIComponent(planId);
+      const [sharePayload, alertPayload] = await Promise.all([
+        authenticatedJsonFetch(`/api/build-plans/${encodedPlanId}/shares`, { signal: request.controller.signal }),
+        authenticatedJsonFetch(`/api/build-plans/${encodedPlanId}/alerts`, { signal: request.controller.signal }),
+      ]);
+      if (!accountOperationRequestCurrent(request, 'list')) return;
+      const shares = parseAccountShareList(sharePayload);
+      const alerts = parseAccountAlertList(alertPayload);
+      if (!shares || !alerts || !operationRecordsMatchSelectedPlan(planId, shares, alerts)) {
+        throw new AuthenticatedJsonError('INVALID_RESPONSE');
+      }
+      accountShares = shares; accountAlerts = alerts; operationKeys.clear();
+      renderShareDraft(); renderAlerts();
+      byId('b-share-status').textContent = shares.length
+        ? `Loaded ${shares.length} unlisted-link record${shares.length === 1 ? '' : 's'}. Existing bearer URLs are not returned.`
+        : 'No unlisted links exist for this account plan.';
+      byId('b-alert-status').textContent = alerts.length
+        ? `Loaded ${alerts.length} inactive alert setting${alerts.length === 1 ? '' : 's'}. No monitoring job or email delivery is active.`
+        : 'No alert settings exist for this account plan. Solvency is not monitoring it.';
+    } catch (cause) {
+      if (request.controller.signal.aborted) return;
+      setOperationError('both', cause, 'Couldn’t load these saved settings. Nothing was changed.');
+    } finally {
+      finishOperationList(request); renderShareDraft(); renderAlerts(); syncOperationControls();
+    }
+  }
+
+  async function createAccountShare() {
+    const resource = selectedAccountPlan; if (!resource) return;
+    const version = Number(byId<HTMLSelectElement>('b-share-version').value);
+    const rawExpiry = byId<HTMLSelectElement>('b-share-expiry').value;
+    const expiresInDays = rawExpiry === 'none' ? null : Number(rawExpiry);
+    const allowQuoteExport = byId<HTMLInputElement>('b-share-export').checked;
+    const versionExists = resource.versions.some((item) => item.version === version);
+    if (!versionExists || (expiresInDays !== null && expiresInDays !== 7 && expiresInDays !== 30)) {
+      byId('b-share-error').textContent = 'Choose a valid saved account version and expiry.'; return;
+    }
+    if (accountShares.some((share) => share.version === version && share.status === 'active')) {
+      byId('b-share-error').textContent = 'That account version already has an active unlisted link. Revoke it before creating another.'; return;
+    }
+    const body = { version, expiresInDays: expiresInDays as 7 | 30 | null, allowQuoteExport };
+    const fingerprint = JSON.stringify(body);
+    const operation = `share:create:${resource.plan.id}`;
+    const request = startOperationMutation(resource.plan.id, 'share-create'); if (!request) return;
+    clearRevealedAccountShare(); byId('b-share-error').textContent = ''; byId('b-share-status').textContent = 'Creating an unlisted bearer link…';
+    try {
+      const payload = await authenticatedJsonFetch(`/api/build-plans/${encodeURIComponent(resource.plan.id)}/shares`, {
+        method: 'POST', headers: { 'Idempotency-Key': operationKeys.key(operation, fingerprint) },
+        json: body, signal: request.controller.signal,
+      });
+      if (!accountOperationRequestCurrent(request, 'mutation')) return;
+      const created = parseCreatedAccountShare(payload);
+      const url = created ? accountShareUrl(created.path, location.origin) : null;
+      if (!created || !url || created.planId !== resource.plan.id || created.version !== version
+        || !operationRecordsMatchSelectedPlan(resource.plan.id, [created], [])) {
+        throw new AuthenticatedJsonError('INVALID_RESPONSE');
+      }
+      operationKeys.complete(operation, fingerprint);
+      const metadata: AccountBuildPlanShare = {
+        id: created.id, planId: created.planId, version: created.version,
+        allowQuoteExport: created.allowQuoteExport, expiresAt: created.expiresAt,
+        status: created.status, createdAt: created.createdAt,
+      };
+      accountShares = [metadata, ...accountShares.filter((share) => share.id !== metadata.id)];
+      renderShareDraft(); showRevealedAccountShare(metadata.id, url);
+      byId('b-share-status').textContent = 'Unlisted link created. Its bearer URL is shown above for 60 seconds; copy or hide it now.';
+      track('build_account_share_create', { path: location.pathname, expiry: rawExpiry, allow_export: String(allowQuoteExport) });
+    } catch (cause) {
+      if (request.controller.signal.aborted) return;
+      setOperationError('share', cause, 'The link was not confirmed. Retry with the same settings or refresh the token-free list.');
+    } finally { finishOperationMutation(request); renderShareDraft(); syncOperationControls(); }
+  }
+
+  async function revokeAccountShare(share: AccountBuildPlanShare) {
+    const resource = selectedAccountPlan;
+    if (!resource || share.planId !== resource.plan.id) return;
+    if (!confirm(`Revoke the unlisted link for account version ${share.version}? Anyone using that bearer URL will lose access. This does not delete the saved plan version.`)) {
+      byId('b-share-status').textContent = 'Revoke cancelled. The unlisted link is unchanged.'; return;
+    }
+    const fingerprint = '{}'; const operation = `share:revoke:${resource.plan.id}:${share.id}`;
+    const request = startOperationMutation(resource.plan.id, 'share-revoke'); if (!request) return;
+    byId('b-share-error').textContent = ''; byId('b-share-status').textContent = 'Revoking the unlisted link…';
+    try {
+      const payload = await authenticatedJsonFetch(`/api/build-plans/${encodeURIComponent(resource.plan.id)}/shares/${encodeURIComponent(share.id)}`, {
+        method: 'DELETE', headers: { 'Idempotency-Key': operationKeys.key(operation, fingerprint) },
+        json: {}, signal: request.controller.signal,
+      });
+      if (!accountOperationRequestCurrent(request, 'mutation')) return;
+      if (!parseRevokedAccountShare(payload, share.id)) throw new AuthenticatedJsonError('INVALID_RESPONSE');
+      operationKeys.complete(operation, fingerprint);
+      accountShares = accountShares.filter((item) => item.id !== share.id);
+      if (revealedAccountShare?.shareId === share.id) clearRevealedAccountShare();
+      renderShareDraft(); byId('b-share-status').textContent = 'Unlisted link revoked. The saved account version remains available.';
+      track('build_account_share_revoke', { path: location.pathname });
+    } catch (cause) {
+      if (request.controller.signal.aborted) return;
+      setOperationError('share', cause, 'The revoke was not confirmed. Retry or refresh the token-free list.');
+    } finally { finishOperationMutation(request); renderShareDraft(); syncOperationControls(); }
+  }
+
+  function readAccountAlertBody(): {
+    version: number;
+    trigger: AccountBuildAlertTrigger;
+    threshold: number | null;
+    baselineVersion: number | null;
+  } {
+    const resource = selectedAccountPlan;
+    const version = Number(byId<HTMLSelectElement>('b-alert-version').value);
+    const trigger = byId<HTMLSelectElement>('b-alert-trigger').value as AccountBuildAlertTrigger;
+    const allowedTriggers: AccountBuildAlertTrigger[] = [
+      'model_price_change', 'monthly_spend_above', 'monthly_spend_change_percent', 'baseline_delta_percent',
+    ];
+    if (!resource?.versions.some((item) => item.version === version) || !allowedTriggers.includes(trigger)) {
+      throw new Error('Choose a valid saved account version and trigger.');
+    }
+    const thresholdInput = byId<HTMLInputElement>('b-alert-threshold');
+    const threshold = trigger === 'model_price_change' ? null : numericInput(thresholdInput);
+    if (threshold !== null && (!Number.isFinite(threshold) || Object.is(threshold, -0) || threshold <= 0 || threshold > 1_000_000_000)) {
+      throw new Error('Enter a threshold greater than zero.');
+    }
+    const baselineVersion = trigger === 'baseline_delta_percent'
+      ? Number(byId<HTMLSelectElement>('b-alert-baseline').value) : null;
+    if (trigger === 'baseline_delta_percent'
+      && (!resource.versions.some((item) => item.version === baselineVersion) || baselineVersion === version)) {
+      throw new Error('Choose a different saved account version as the baseline.');
+    }
+    return { version, trigger, threshold, baselineVersion };
+  }
+
+  async function saveAccountAlert() {
+    const resource = selectedAccountPlan; if (!resource) return;
+    const error = byId('b-alert-error'); const threshold = byId<HTMLInputElement>('b-alert-threshold');
+    error.textContent = ''; threshold.removeAttribute('aria-invalid');
+    let body: ReturnType<typeof readAccountAlertBody>;
+    try { body = readAccountAlertBody(); }
+    catch (cause) {
+      error.textContent = cause instanceof Error ? cause.message : 'The inactive alert settings are invalid.';
+      if (/threshold/i.test(error.textContent)) { threshold.setAttribute('aria-invalid', 'true'); threshold.focus(); }
+      return;
+    }
+    const alertId = editingAccountAlertId;
+    const fingerprint = JSON.stringify(body);
+    const operation = alertId ? `alert:update:${resource.plan.id}:${alertId}` : `alert:create:${resource.plan.id}`;
+    const endpoint = alertId
+      ? `/api/build-plans/${encodeURIComponent(resource.plan.id)}/alerts/${encodeURIComponent(alertId)}`
+      : `/api/build-plans/${encodeURIComponent(resource.plan.id)}/alerts`;
+    const request = startOperationMutation(resource.plan.id, 'alert-save'); if (!request) return;
+    byId('b-alert-status').textContent = alertId ? 'Updating inactive alert settings…' : 'Saving inactive alert settings…';
+    try {
+      const payload = await authenticatedJsonFetch(endpoint, {
+        method: 'POST', headers: { 'Idempotency-Key': operationKeys.key(operation, fingerprint) },
+        json: body, signal: request.controller.signal,
+      });
+      if (!accountOperationRequestCurrent(request, 'mutation')) return;
+      const saved = parseMutatedAccountAlert(payload);
+      if (!saved || saved.planId !== resource.plan.id || saved.status !== 'inactive'
+        || (alertId !== null && saved.id !== alertId)
+        || !operationRecordsMatchSelectedPlan(resource.plan.id, [], [saved])) {
+        throw new AuthenticatedJsonError('INVALID_RESPONSE');
+      }
+      operationKeys.complete(operation, fingerprint);
+      accountAlerts = [saved, ...accountAlerts.filter((item) => item.id !== saved.id)];
+      resetAlertEditor(); renderAlerts();
+      byId('b-alert-status').textContent = 'Inactive alert settings saved. No monitoring job or email delivery was created.';
+      track('build_account_alert_save', { path: location.pathname, operation: alertId ? 'update' : 'create', trigger: body.trigger });
+    } catch (cause) {
+      if (request.controller.signal.aborted) return;
+      setOperationError('alert', cause, 'The settings were not confirmed. Retry unchanged settings or refresh.');
+    } finally { finishOperationMutation(request); renderAlerts(); syncOperationControls(); }
+  }
+
+  async function deleteAccountAlert(alert: InactiveAccountBuildPlanAlert) {
+    const resource = selectedAccountPlan;
+    if (!resource || alert.planId !== resource.plan.id) return;
+    if (!confirm(`Delete the inactive alert settings for account version ${alert.version}? No monitoring or email is running.`)) {
+      byId('b-alert-status').textContent = 'Delete cancelled. The inactive settings are unchanged.'; return;
+    }
+    const fingerprint = '{}'; const operation = `alert:delete:${resource.plan.id}:${alert.id}`;
+    const request = startOperationMutation(resource.plan.id, 'alert-delete'); if (!request) return;
+    byId('b-alert-error').textContent = ''; byId('b-alert-status').textContent = 'Deleting inactive alert settings…';
+    try {
+      const payload = await authenticatedJsonFetch(`/api/build-plans/${encodeURIComponent(resource.plan.id)}/alerts/${encodeURIComponent(alert.id)}`, {
+        method: 'DELETE', headers: { 'Idempotency-Key': operationKeys.key(operation, fingerprint) },
+        json: {}, signal: request.controller.signal,
+      });
+      if (!accountOperationRequestCurrent(request, 'mutation')) return;
+      if (!parseDeletedAccountAlert(payload, alert.id)) throw new AuthenticatedJsonError('INVALID_RESPONSE');
+      operationKeys.complete(operation, fingerprint);
+      accountAlerts = accountAlerts.filter((item) => item.id !== alert.id);
+      if (editingAccountAlertId === alert.id) resetAlertEditor();
+      renderAlerts(); byId('b-alert-status').textContent = 'Inactive alert settings deleted. No monitoring was active.';
+      track('build_account_alert_delete', { path: location.pathname });
+    } catch (cause) {
+      if (request.controller.signal.aborted) return;
+      setOperationError('alert', cause, 'The deletion was not confirmed. Retry or refresh.');
+    } finally { finishOperationMutation(request); renderAlerts(); syncOperationControls(); }
   }
 
   function renumber() {
@@ -1267,8 +1649,21 @@ const harnessExamples = [
     select.disabled = snapshots.length === 0;
   }
 
+  function fillAccountVersionSelect(id: string, placeholder: string) {
+    const select = byId<HTMLSelectElement>(id);
+    const previous = Number(select.value);
+    const versions = selectedAccountPlan?.versions ?? [];
+    select.replaceChildren();
+    const empty = document.createElement('option'); empty.value = ''; empty.textContent = placeholder; select.appendChild(empty);
+    for (const version of versions) {
+      const option = document.createElement('option'); option.value = String(version.version);
+      option.textContent = `${version.name} · v${version.version}`; select.appendChild(option);
+    }
+    if (versions.some((item) => item.version === previous)) select.value = String(previous);
+    else if (versions.length) select.value = String(versions[0].version);
+  }
+
   function syncOperationControls() {
-    const hasSnapshots = snapshots.length > 0;
     const shareVersion = byId<HTMLSelectElement>('b-share-version');
     const alertVersion = byId<HTMLSelectElement>('b-alert-version');
     const baseline = byId<HTMLSelectElement>('b-alert-baseline');
@@ -1278,6 +1673,37 @@ const harnessExamples = [
 
     for (const option of baseline.options) option.disabled = Boolean(option.value) && option.value === alertVersion.value;
     if (baseline.value && baseline.value === alertVersion.value) baseline.value = '';
+
+    if (accountPlansEnabled) {
+      const ready = accountOperationsReady() && operationBusy === null;
+      const shareVersionNumber = Number(shareVersion.value);
+      const selectedShareExists = accountShares.some((share) => share.version === shareVersionNumber && share.status === 'active');
+      const invalidBaseline = trigger === 'baseline_delta_percent'
+        && (!baseline.value || baseline.value === alertVersion.value);
+      for (const id of [
+        'b-share-version', 'b-share-expiry', 'b-share-export',
+        'b-alert-version', 'b-alert-trigger', 'b-alert-threshold', 'b-alert-baseline',
+      ]) byId<HTMLInputElement | HTMLSelectElement>(id).disabled = !ready;
+      shareSave.disabled = !ready || !shareVersion.value || selectedShareExists;
+      shareSave.title = !selectedAccountPlan
+        ? 'Sign in and select a saved account plan first.'
+        : conflictedAccountPlanId === selectedAccountPlan.plan.id
+          ? 'Reload the selected account plan before changing saved settings.'
+          : selectedShareExists ? 'This version already has an active unlisted link.'
+            : operationBusy ? 'Wait for the current account operation to finish.' : '';
+      alertSave.disabled = !ready || !alertVersion.value || invalidBaseline;
+      alertSave.title = !selectedAccountPlan
+        ? 'Sign in and select a saved account plan first.'
+        : invalidBaseline ? 'Choose a different saved account version as the baseline.'
+          : operationBusy ? 'Wait for the current account operation to finish.' : '';
+      byId<HTMLButtonElement>('b-operations-refresh').disabled = !ready;
+      for (const button of byId('build-operations').querySelectorAll<HTMLButtonElement>('[data-account-operation-action]')) {
+        button.disabled = !ready;
+      }
+      return;
+    }
+
+    const hasSnapshots = snapshots.length > 0;
 
     shareSave.disabled = !hasSnapshots || !shareVersion.value;
     shareSave.title = shareSave.disabled ? 'Save a valid plan version first.' : '';
@@ -1290,6 +1716,13 @@ const harnessExamples = [
   }
 
   function renderOperationVersions() {
+    if (accountPlansEnabled) {
+      fillAccountVersionSelect('b-share-version', 'Select an account plan first');
+      fillAccountVersionSelect('b-alert-version', 'Select an account plan first');
+      fillAccountVersionSelect('b-alert-baseline', 'Choose a saved baseline');
+      renderShareDraft(); renderAlerts(); syncOperationControls();
+      return;
+    }
     fillSnapshotSelect('b-share-version', 'Save a version first');
     fillSnapshotSelect('b-alert-version', 'Save a version first');
     fillSnapshotSelect('b-alert-baseline', 'Choose a saved baseline');
@@ -1398,9 +1831,44 @@ const harnessExamples = [
   function renderShareDraft() {
     const summary = byId('b-share-summary'); summary.replaceChildren();
     const remove = byId<HTMLButtonElement>('b-share-remove');
+    if (accountPlansEnabled) {
+      remove.hidden = true;
+      byId<HTMLButtonElement>('b-share-save').textContent = 'Create unlisted link';
+      if (!selectedAccountPlan) {
+        const empty = document.createElement('p'); empty.className = 'small';
+        empty.textContent = 'Select a signed-in account plan to load its unlisted links.'; summary.appendChild(empty); return;
+      }
+      if (!accountShares.length) {
+        const empty = document.createElement('p'); empty.className = 'small';
+        empty.textContent = operationBusy === 'loading'
+          ? 'Loading token-free unlisted-link records…'
+          : 'No unlisted links exist for this account plan.';
+        summary.appendChild(empty); return;
+      }
+      for (const share of accountShares) {
+        const version = selectedAccountPlan.versions.find((item) => item.version === share.version);
+        if (!version) continue;
+        const row = document.createElement('article'); row.className = 'operation-draft-row';
+        const copy = document.createElement('div'); copy.className = 'min-w-0';
+        const title = document.createElement('p'); title.className = 'text-sm font-semibold text-[var(--color-ink)]';
+        title.textContent = `${version.name} · v${version.version}`;
+        const meta = document.createElement('p'); meta.className = 'small mt-1';
+        meta.textContent = `${share.expiresAt ? `Expires ${accountDate(share.expiresAt)}` : 'No expiry'} · ${share.allowQuoteExport ? 'quote export allowed' : 'quote export off'} · created ${accountDate(share.createdAt)}`;
+        const pill = document.createElement('span'); pill.className = 'pill pill-ink mt-2';
+        pill.textContent = share.status === 'active' ? 'Active · bearer URL hidden' : 'Expired · bearer URL hidden';
+        copy.append(title, meta, pill);
+        const revoke = document.createElement('button'); revoke.type = 'button'; revoke.className = 'btn btn-quiet';
+        revoke.dataset.accountOperationAction = 'true'; revoke.textContent = share.status === 'active' ? 'Revoke' : 'Remove';
+        revoke.disabled = operationBusy !== null;
+        revoke.setAttribute('aria-label', `${share.status === 'active' ? 'Revoke' : 'Remove'} unlisted link for ${version.name} version ${version.version}`);
+        revoke.addEventListener('click', () => void revokeAccountShare(share));
+        row.append(copy, revoke); summary.appendChild(row);
+      }
+      return;
+    }
     if (!shareDraft) {
       const empty = document.createElement('p'); empty.className = 'small'; empty.textContent = 'No share draft yet. Nothing has left this tab.'; summary.appendChild(empty);
-      remove.hidden = true; byId<HTMLButtonElement>('b-share-save').textContent = 'Save share draft'; return;
+      remove.hidden = true; byId<HTMLButtonElement>('b-share-save').textContent = 'Save settings in this tab'; return;
     }
     const snapshot = snapshots.find((item) => item.snapshotId === shareDraft!.snapshotId);
     if (!snapshot) { shareDraft = null; renderShareDraft(); return; }
@@ -1409,7 +1877,7 @@ const harnessExamples = [
     const pill = document.createElement('span'); pill.className = 'pill pill-ink mt-2'; pill.textContent = 'Draft · no link';
     summary.append(title, meta, pill);
     remove.hidden = false; remove.setAttribute('aria-label', `Remove share draft for ${snapshot.plan.name} version ${snapshot.version}`);
-    byId<HTMLButtonElement>('b-share-save').textContent = 'Update share draft';
+    byId<HTMLButtonElement>('b-share-save').textContent = 'Update settings in this tab';
   }
 
   function renderAlertThreshold() {
@@ -1423,8 +1891,8 @@ const harnessExamples = [
   }
 
   function resetAlertEditor() {
-    editingAlertId = null;
-    byId<HTMLButtonElement>('b-alert-save').textContent = 'Save alert draft';
+    if (accountPlansEnabled) editingAccountAlertId = null; else editingAlertId = null;
+    byId<HTMLButtonElement>('b-alert-save').textContent = accountPlansEnabled ? 'Save inactive settings' : 'Save inactive draft in this tab';
     byId<HTMLSelectElement>('b-alert-trigger').value = 'model_price_change';
     byId<HTMLInputElement>('b-alert-threshold').value = '';
     byId<HTMLInputElement>('b-alert-threshold').removeAttribute('aria-invalid');
@@ -1434,6 +1902,52 @@ const harnessExamples = [
 
   function renderAlerts() {
     const list = byId('b-alert-list'); list.replaceChildren();
+    if (accountPlansEnabled) {
+      if (!selectedAccountPlan) {
+        const empty = document.createElement('p'); empty.className = 'small';
+        empty.textContent = 'Select a signed-in account plan to load inactive alert settings.'; list.appendChild(empty); return;
+      }
+      if (!accountAlerts.length) {
+        const empty = document.createElement('p'); empty.className = 'small';
+        empty.textContent = operationBusy === 'loading'
+          ? 'Loading inactive alert settings…'
+          : 'No alert settings exist for this account plan. Solvency is not monitoring it.';
+        list.appendChild(empty); return;
+      }
+      for (const alert of accountAlerts) {
+        const version = selectedAccountPlan.versions.find((item) => item.version === alert.version);
+        if (!version) continue;
+        const row = document.createElement('article'); row.className = 'operation-draft-row';
+        const copy = document.createElement('div'); copy.className = 'min-w-0';
+        const title = document.createElement('p'); title.className = 'text-sm font-semibold text-[var(--color-ink)]';
+        title.textContent = inactiveAccountAlertSummary(alert);
+        const meta = document.createElement('p'); meta.className = 'small mt-1';
+        meta.textContent = `${version.name} · v${version.version} · updated ${accountDate(alert.updatedAt)}`;
+        const pill = document.createElement('span'); pill.className = 'pill pill-ink mt-2'; pill.textContent = 'Inactive · no monitoring';
+        copy.append(title, meta, pill);
+        const actions = document.createElement('div'); actions.className = 'flex flex-wrap gap-1';
+        const edit = document.createElement('button'); edit.type = 'button'; edit.className = 'btn btn-quiet';
+        edit.dataset.accountOperationAction = 'true'; edit.textContent = 'Edit'; edit.disabled = operationBusy !== null;
+        edit.setAttribute('aria-label', `Edit inactive alert settings for ${version.name} version ${version.version}`);
+        edit.addEventListener('click', () => {
+          editingAccountAlertId = alert.id;
+          byId<HTMLSelectElement>('b-alert-version').value = String(alert.version);
+          byId<HTMLSelectElement>('b-alert-trigger').value = alert.trigger;
+          byId<HTMLInputElement>('b-alert-threshold').value = alert.threshold === null ? '' : String(alert.threshold);
+          byId<HTMLSelectElement>('b-alert-baseline').value = alert.baselineVersion === null ? '' : String(alert.baselineVersion);
+          byId<HTMLButtonElement>('b-alert-save').textContent = 'Update inactive settings';
+          byId('b-alert-error').textContent = '';
+          byId('b-alert-status').textContent = 'Editing inactive settings. No monitoring job or email delivery is active.';
+          renderAlertThreshold(); byId<HTMLButtonElement>('b-alert-save').focus();
+        });
+        const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'btn btn-quiet';
+        remove.dataset.accountOperationAction = 'true'; remove.textContent = 'Delete'; remove.disabled = operationBusy !== null;
+        remove.setAttribute('aria-label', `Delete inactive alert settings for ${version.name} version ${version.version}`);
+        remove.addEventListener('click', () => void deleteAccountAlert(alert));
+        actions.append(edit, remove); row.append(copy, actions); list.appendChild(row);
+      }
+      return;
+    }
     if (!alertDrafts.length) {
       const empty = document.createElement('p'); empty.className = 'small'; empty.textContent = 'No alert drafts. Solvency is not monitoring this plan.'; list.appendChild(empty); return;
     }
@@ -1449,8 +1963,8 @@ const harnessExamples = [
       edit.addEventListener('click', () => {
         editingAlertId = draft.alertId; byId<HTMLSelectElement>('b-alert-version').value = draft.snapshotId;
         byId<HTMLSelectElement>('b-alert-trigger').value = draft.trigger; byId<HTMLInputElement>('b-alert-threshold').value = draft.threshold === null ? '' : String(draft.threshold);
-        byId<HTMLSelectElement>('b-alert-baseline').value = draft.baselineSnapshotId ?? ''; byId<HTMLButtonElement>('b-alert-save').textContent = 'Update alert draft';
-        byId('b-alert-error').textContent = ''; byId('b-alert-status').textContent = 'Editing an inactive draft. Save changes to apply.';
+        byId<HTMLSelectElement>('b-alert-baseline').value = draft.baselineSnapshotId ?? ''; byId<HTMLButtonElement>('b-alert-save').textContent = 'Update inactive draft in this tab';
+        byId('b-alert-error').textContent = ''; byId('b-alert-status').textContent = 'Editing an inactive in-tab draft. Save changes in this tab.';
         renderAlertThreshold(); byId<HTMLButtonElement>('b-alert-save').focus();
       });
       const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'btn btn-quiet'; remove.textContent = 'Remove'; remove.setAttribute('aria-label', `Remove alert draft for ${snapshot.plan.name} version ${snapshot.version}`);
@@ -1582,11 +2096,16 @@ const harnessExamples = [
   function markOperationSettingsChanged(target: HTMLInputElement | HTMLSelectElement) {
     if (target.id.startsWith('b-share-')) {
       byId('b-share-error').textContent = '';
-      byId('b-share-status').textContent = snapshots.length ? 'Draft settings changed; save to apply.' : '';
+      byId('b-share-status').textContent = accountPlansEnabled
+        ? selectedAccountPlan ? 'Link settings changed; create only if the disclosure warning is appropriate.' : ''
+        : snapshots.length ? 'Draft settings changed; save to apply.' : '';
+      syncOperationControls();
     }
     if (target.id.startsWith('b-alert-')) {
       byId('b-alert-error').textContent = '';
-      byId('b-alert-status').textContent = snapshots.length ? 'Draft settings changed; save to apply.' : '';
+      byId('b-alert-status').textContent = accountPlansEnabled
+        ? selectedAccountPlan ? 'Inactive settings changed; save to apply. No monitoring or email is active.' : ''
+        : snapshots.length ? 'Draft settings changed; save to apply.' : '';
       byId<HTMLInputElement>('b-alert-threshold').removeAttribute('aria-invalid');
       if (target.id === 'b-alert-trigger') renderAlertThreshold();
       else syncOperationControls();
@@ -1661,6 +2180,26 @@ const harnessExamples = [
     byId('b-account-save').addEventListener('click', () => void saveAccountPlan(false));
     byId('b-account-save-new').addEventListener('click', () => void saveAccountPlan(true));
     byId('b-account-delete').addEventListener('click', () => void deleteAccountPlan());
+    byId('b-operations-refresh').addEventListener('click', () => void loadAccountOperations());
+    byId('b-share-copy').addEventListener('click', async () => {
+      const revealed = revealedAccountShare; if (!revealed) return;
+      const writer = navigator.clipboard?.writeText?.bind(navigator.clipboard);
+      const copied = writer ? await copyAccountShareUrl(revealed.url, location.origin, writer) : false;
+      if (revealedAccountShare !== revealed) return;
+      if (copied) {
+        clearRevealedAccountShare();
+        byId('b-share-status').textContent = 'Bearer URL copied and hidden. Store it securely; the account list cannot reveal it again.';
+        byId<HTMLButtonElement>('b-share-save').focus();
+      } else {
+        const input = byId<HTMLInputElement>('b-share-url'); input.focus(); input.select();
+        byId('b-share-status').textContent = 'Automatic copy is unavailable. The bearer URL is selected; copy it manually or hide it.';
+      }
+    });
+    byId('b-share-hide').addEventListener('click', () => {
+      clearRevealedAccountShare();
+      byId('b-share-status').textContent = 'Bearer URL hidden. The token-free account list cannot reveal it again.';
+      byId<HTMLButtonElement>('b-share-save').focus();
+    });
     byId('b-account-signin').addEventListener('click', () => {
       const preserved = preserveEditorBeforeAuth();
       openSignIn();
@@ -1693,6 +2232,7 @@ const harnessExamples = [
   }
 
   byId('b-share-save').addEventListener('click', () => {
+    if (accountPlansEnabled) { void createAccountShare(); return; }
     const error = byId('b-share-error'), status = byId('b-share-status'); error.textContent = ''; status.textContent = '';
     try {
       const rawExpiry = byId<HTMLSelectElement>('b-share-expiry').value;
@@ -1703,12 +2243,14 @@ const harnessExamples = [
     } catch (cause) { error.textContent = cause instanceof Error ? cause.message : 'Could not save the share draft.'; }
   });
   byId('b-share-remove').addEventListener('click', () => {
+    if (accountPlansEnabled) return;
     shareDraft = null; renderShareDraft(); byId('b-share-error').textContent = '';
     byId('b-share-status').textContent = 'Share draft removed. No remote link existed.'; byId<HTMLButtonElement>('b-share-save').focus();
   });
 
   byId('b-alert-trigger').addEventListener('change', () => markOperationSettingsChanged(byId<HTMLSelectElement>('b-alert-trigger')));
   byId('b-alert-save').addEventListener('click', () => {
+    if (accountPlansEnabled) { void saveAccountAlert(); return; }
     const error = byId('b-alert-error'), status = byId('b-alert-status'), threshold = byId<HTMLInputElement>('b-alert-threshold');
     error.textContent = ''; status.textContent = ''; threshold.removeAttribute('aria-invalid');
     try {
@@ -1720,7 +2262,7 @@ const harnessExamples = [
       });
       const existing = alertDrafts.findIndex((item) => item.alertId === draft.alertId);
       if (existing >= 0) alertDrafts.splice(existing, 1, draft); else alertDrafts.push(draft);
-      editingAlertId = null; byId<HTMLButtonElement>('b-alert-save').textContent = 'Save alert draft'; renderAlerts(); syncOperationControls();
+      editingAlertId = null; byId<HTMLButtonElement>('b-alert-save').textContent = 'Save inactive draft in this tab'; renderAlerts(); syncOperationControls();
       status.textContent = 'Alert draft saved in this tab. Monitoring and email are off.';
       track('build_alert_draft_save', { path: location.pathname, trigger });
     } catch (cause) {
@@ -1732,10 +2274,10 @@ const harnessExamples = [
   byId('b-pro-interest').addEventListener('click', () => {
     const status = byId('b-pro-interest-status');
     const emitted = track('build_pro_price_interest', { path: location.pathname, price_hypothesis: '19_monthly' });
-    if (signedIn()) status.textContent = emitted ? 'Thanks—this click was sent as a directional research signal. Nothing was charged.' : 'You are signed in, but analytics is unavailable. Nothing was charged.';
+    if (signedIn()) status.textContent = emitted ? 'Thanks—this click was sent as a directional research signal. No upgrade exists and nothing was charged.' : 'You are signed in, but analytics is unavailable. No upgrade exists and nothing was charged.';
     else {
       const opened = openSignUp('build-pro-price-interest', 'Share interest in Build Composer Pro at $19/month. No checkout or charge.');
-      status.textContent = opened ? 'Free-account sign-up opened. There is no checkout or charge.' : 'Sign-up is unavailable in this preview. There is no checkout or charge.';
+      status.textContent = opened ? 'Free-account sign-up opened. There is no upgrade, checkout or charge.' : 'Sign-up is unavailable in this preview. There is no upgrade, checkout or charge.';
     }
   });
 
@@ -1751,7 +2293,9 @@ const harnessExamples = [
   if (accountPlansEnabled) {
     renderAccountShell(); renderAccountPlans();
     const stopAccountAuth = observeClerkAuth(handleAccountAuth, { enabled: clerkEnabled });
-    addEventListener('pagehide', () => { stopAccountAuth(); accountRequest?.abort(); }, { once: true });
+    addEventListener('pagehide', () => {
+      stopAccountAuth(); accountRequest?.abort(); operationListRequest?.abort(); operationMutationRequest?.abort(); clearRevealedAccountShare();
+    }, { once: true });
   }
   renderAlertThreshold();
   track('build_planner_view', { path: location.pathname });

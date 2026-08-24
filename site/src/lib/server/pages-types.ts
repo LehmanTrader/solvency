@@ -1,11 +1,17 @@
 export interface BuildPlansEnv {
   DB: D1DatabaseLike;
   ACCOUNT_PLANS_ENABLED?: string;
+  ENTITLEMENTS_ENABLED?: string;
+  PRODUCT_INTENTS_ENABLED?: string;
+  STRIPE_WEBHOOK_ENABLED?: string;
   APP_ENV?: string;
   CLERK_SECRET_KEY?: string;
   CLERK_JWT_KEY?: string;
   CLERK_PUBLISHABLE_KEY?: string;
   CLERK_AUTHORIZED_PARTIES?: string;
+  BUILD_SHARE_TOKEN_SECRET?: string;
+  STRIPE_PRO_MONTHLY_PRICE_ID?: string;
+  STRIPE_PRO_ANNUAL_PRICE_ID?: string;
 }
 
 export interface ApiFunctionData {

@@ -1,0 +1,157 @@
+name: Deploy Preview
+
+# Required GitHub environment checklist (create `preview` before first use):
+# - Add a required reviewer and restrict deployment branches to `main`.
+# - Add environment variable PREVIEW_CLERK_PUBLISHABLE_KEY with a Clerk
+#   Development-instance `pk_test_...` key. The production repository variable
+#   is deliberately not used by this workflow.
+# - Make CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID available as repository
+#   or preview-environment secrets. The token needs Pages write and D1 read.
+# - Configure Clerk server credentials and a random, unpadded-base64url
+#   BUILD_SHARE_TOKEN_SECRET (at least 32 bytes before encoding) as Cloudflare
+#   Pages Preview secrets. Protect d1-functions-preview.solvency-ru5.pages.dev
+#   with Cloudflare Access, and create an Access service token for the smoke
+#   runner (`CF_ACCESS_CLIENT_ID` + `CF_ACCESS_CLIENT_SECRET`).
+# - Enable ACCOUNT_PLANS_ENABLED, ENTITLEMENTS_ENABLED and
+#   PRODUCT_INTENTS_ENABLED only after their controls and migrations are ready.
+# - Keep STRIPE_WEBHOOK_ENABLED false until a signed, size-bounded POST-only
+#   handler is deployed. Before Stripe sandbox testing, keep the hostname private
+#   but add an exact Access bypass (or separate public hostname) only for
+#   /api/stripe-webhook; that exception is safe only after raw-body Stripe
+#   signature verification exists.
+# This workflow never applies migrations, changes Pages variables/secrets or
+# enables any server-side runtime flag.
+
+on:
+  workflow_dispatch:
+    inputs:
+      authorization:
+        description: Select the deploy option only after preview review is complete
+        required: true
+        default: do-not-deploy
+        type: choice
+        options:
+          - do-not-deploy
+          - deploy-reviewed-preview
+
+concurrency:
+  group: deploy-preview-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy-preview:
+    runs-on: ubuntu-latest
+    environment: preview
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      - name: Require reviewed preview authorization
+        shell: bash
+        env:
+          PREVIEW_DEPLOY_AUTHORIZATION: ${{ inputs.authorization }}
+        run: |
+          set -euo pipefail
+          if [[ "$PREVIEW_DEPLOY_AUTHORIZATION" != "deploy-reviewed-preview" ]]; then
+            echo "Preview deployment was not explicitly authorized."
+            exit 1
+          fi
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "Preview deployments must use the current main branch."
+            exit 1
+          fi
+          if [[ ! "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "GitHub did not provide an exact commit SHA."
+            exit 1
+          fi
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+
+      - name: Verify checked-out commit and required configuration
+        shell: bash
+        env:
+          PREVIEW_CLERK_PUBLISHABLE_KEY: ${{ vars.PREVIEW_CLERK_PUBLISHABLE_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          if [[ "$(git rev-parse HEAD)" != "$GITHUB_SHA" ]]; then
+            echo "Checked-out commit does not match the workflow commit."
+            exit 1
+          fi
+          if [[ "$PREVIEW_CLERK_PUBLISHABLE_KEY" != pk_test_* ]]; then
+            echo "The preview environment requires a Clerk Development publishable key."
+            exit 1
+          fi
+          if [[ -z "$CLOUDFLARE_API_TOKEN" || -z "$CLOUDFLARE_ACCOUNT_ID" ]]; then
+            echo "Cloudflare preview deployment credentials are unavailable."
+            exit 1
+          fi
+
+      - name: Install site dependencies
+        working-directory: site
+        run: npm ci --no-audit --no-fund
+
+      # Root tests import site server modules, so the frozen site install must
+      # remain ahead of this step.
+      - name: Verify datasets, server boundaries and published figures
+        run: npm test
+
+      - name: Verify source coverage and staleness
+        run: npm run coverage
+
+      - name: Audit site and deployment dependencies
+        working-directory: site
+        run: npm audit --audit-level=high
+
+      - name: Build preview with account UI enabled
+        working-directory: site
+        env:
+          PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.PREVIEW_CLERK_PUBLISHABLE_KEY }}
+          PUBLIC_ACCOUNT_PLANS_ENABLED: 'true'
+          PUBLIC_PRODUCT_INTENTS_ENABLED: 'true'
+        run: npm run build
+
+      - name: Verify Pages Functions bundle
+        working-directory: site
+        run: npm run build:functions
+
+      # Wrangler exits zero when migrations are pending, so require its exact
+      # no-pending state instead of trusting the process status alone.
+      - name: Require a fully migrated Preview database
+        working-directory: site
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          NO_COLOR: '1'
+        run: |
+          set -euo pipefail
+          if ! migration_output="$(npx --no-install wrangler d1 migrations list solvency-build-plans-preview --env preview --remote 2>&1)"; then
+            printf '%s\n' "$migration_output"
+            exit 1
+          fi
+          printf '%s\n' "$migration_output"
+          if ! grep -Fq "No migrations to apply" <<< "$migration_output"; then
+            echo "Preview has pending migrations; this workflow will not apply them."
+            exit 1
+          fi
+
+      - name: Publish current commit to the isolated Preview branch
+        uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: site
+          packageManager: npm
+          wranglerVersion: '4.125.0'
+          command: >-
+            pages deploy dist
+            --project-name solvency
+            --branch d1-functions-preview
+            --commit-hash ${{ github.sha }}
+            --commit-dirty=false

@@ -1,6 +1,17 @@
 # Copy to .dev.vars for local Pages Functions testing. Never commit real keys.
 APP_ENV=development
+ACCOUNT_PLANS_ENABLED=false
+ENTITLEMENTS_ENABLED=false
+PRODUCT_INTENTS_ENABLED=false
+STRIPE_WEBHOOK_ENABLED=false
 CLERK_AUTHORIZED_PARTIES=http://localhost:8788
 CLERK_PUBLISHABLE_KEY=pk_test_replace_me
 CLERK_SECRET_KEY=sk_test_replace_me
 CLERK_JWT_KEY="-----BEGIN PUBLIC KEY-----\nreplace_me\n-----END PUBLIC KEY-----"
+# At least 32 random bytes encoded as unpadded base64url. Server-only: never
+# prefix with PUBLIC_ and never place the real value in source or GitHub vars.
+BUILD_SHARE_TOKEN_SECRET=<replace-with-32-random-bytes-as-base64url>
+# Non-secret Stripe Price IDs. Leave both absent until the sandbox product and
+# recurring monthly/yearly prices exist; incomplete configuration fails closed.
+STRIPE_PRO_MONTHLY_PRICE_ID=
+STRIPE_PRO_ANNUAL_PRICE_ID=

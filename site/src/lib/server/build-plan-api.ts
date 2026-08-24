@@ -12,6 +12,7 @@ import {
   sha256Hex,
   type StoreWriteResult,
 } from './build-plan-store.ts';
+import { recordServerConfirmedProductIntent } from './product-intent-api.ts';
 import type { PagesContextLike } from './pages-types.ts';
 
 const PLAN_ID = /^plan_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -131,7 +132,7 @@ export async function handleBuildPlanCollection(context: PagesContextLike): Prom
     const canonicalPlan = JSON.stringify(parsed.value.value);
     const requestHash = await sha256Hex(`create\n${canonicalPlan}`);
     try {
-      return writeResultResponse(id, await createOwnedBuildPlan(context.env.DB, {
+      const result = await createOwnedBuildPlan(context.env.DB, {
         ownerUserId,
         idempotencyKey: key,
         requestHash,
@@ -140,7 +141,9 @@ export async function handleBuildPlanCollection(context: PagesContextLike): Prom
         plan: parsed.value.value,
         quote: parsed.value.quote,
         now: parsed.now,
-      }));
+      });
+      if (result.ok) await recordServerConfirmedProductIntent(context, 'account_plan_saved');
+      return writeResultResponse(id, result);
     } catch {
       return apiError(id, 500, 'INTERNAL_ERROR', 'Build plan could not be saved.');
     }
@@ -206,7 +209,7 @@ export async function handleBuildPlanVersions(context: PagesContextLike): Promis
   const canonicalPlan = JSON.stringify(parsed.value.value);
   const requestHash = await sha256Hex(`append\n${planId}\n${expected}\n${canonicalPlan}`);
   try {
-    return writeResultResponse(id, await appendOwnedBuildPlanVersion(context.env.DB, {
+    const result = await appendOwnedBuildPlanVersion(context.env.DB, {
       ownerUserId,
       planId,
       expectedVersion: expected,
@@ -216,7 +219,9 @@ export async function handleBuildPlanVersions(context: PagesContextLike): Promis
       plan: parsed.value.value,
       quote: parsed.value.quote,
       now: parsed.now,
-    }));
+    });
+    if (result.ok) await recordServerConfirmedProductIntent(context, 'account_plan_saved');
+    return writeResultResponse(id, result);
   } catch {
     return apiError(id, 500, 'INTERNAL_ERROR', 'Build plan version could not be saved.');
   }

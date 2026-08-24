@@ -17,7 +17,7 @@ const url = new URL(Astro.url.pathname, site).href;
 const image = new URL(og, site).href;
 const path = Astro.url.pathname;
 const NAV = [
-  ['/', 'Calculator'], ['/build-planner', 'Build'], ['/models', 'Models'], ['/compare', 'Compare'],
+  ['/', 'Calculator'], ['/build-planner', 'Build'], ['/pricing', 'Pricing'], ['/models', 'Models'], ['/compare', 'Compare'],
   ['/harness', 'Harness'], ['/methodology', 'Methodology'], ['/research', 'Research'],
 ];
 const DEV = [['/data', 'Data (CC-BY)'], ['/embed', 'Embed'], ['/changelog', 'Changelog'],
@@ -25,9 +25,10 @@ const DEV = [['/data', 'Data (CC-BY)'], ['/embed', 'Embed'], ['/changelog', 'Cha
 const current = (href: string) => (href === '/' ? path === '/' : path.startsWith(href));
 const verified = models.reduce((a, m) => (m.last_verified > a ? m.last_verified : a), '');
 const aa = sources.find((s) => s.benchmark === 'aa-coding-agent-index');
+const PRODUCT_INTENTS_ENABLED = import.meta.env.PUBLIC_PRODUCT_INTENTS_ENABLED === 'true';
 ---
 <!doctype html>
-<html lang="en">
+<html lang="en" data-product-intents-enabled={PRODUCT_INTENTS_ENABLED ? 'true' : 'false'}>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />

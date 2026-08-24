@@ -21,7 +21,29 @@ jobs:
       contents: read
       deployments: write
     steps:
+      - name: Require current main as the production source
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "Production deployments must use the main branch."
+            exit 1
+          fi
+          if [[ ! "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "GitHub did not provide an exact commit SHA."
+            exit 1
+          fi
+
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Verify checked-out production commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$(git rev-parse HEAD)" != "$GITHUB_SHA" ]]; then
+            echo "Checked-out commit does not match the workflow commit."
+            exit 1
+          fi
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
@@ -38,18 +60,22 @@ jobs:
       - name: Verify datasets and published figures
         run: npm test
 
+      - name: Verify source coverage and staleness
+        run: npm run coverage
+
       - name: Audit site and deployment dependencies
         working-directory: site
         run: npm audit --audit-level=high
 
-      # Public by design (ships in page source). Set as a repository VARIABLE,
-      # not a secret: Settings -> Secrets and variables -> Actions -> Variables.
-      # When unset the calculator builds ungated.
+      # Production remains deliberately dark until the separate paid-launch
+      # checklist is approved. Do not make this a mutable repository variable:
+      # a dashboard edit must not expose account workflow UI accidentally.
       - name: Build site
         working-directory: site
         env:
           PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.PUBLIC_CLERK_PUBLISHABLE_KEY }}
-          PUBLIC_ACCOUNT_PLANS_ENABLED: ${{ vars.PUBLIC_ACCOUNT_PLANS_ENABLED }}
+          PUBLIC_ACCOUNT_PLANS_ENABLED: 'false'
+          PUBLIC_PRODUCT_INTENTS_ENABLED: 'false'
         run: npm run build
 
       - name: Verify Pages Functions bundle
@@ -64,4 +90,9 @@ jobs:
           workingDirectory: site
           packageManager: npm
           wranglerVersion: '4.125.0'
-          command: pages deploy dist --project-name solvency --branch main
+          command: >-
+            pages deploy dist
+            --project-name solvency
+            --branch main
+            --commit-hash ${{ github.sha }}
+            --commit-dirty=false

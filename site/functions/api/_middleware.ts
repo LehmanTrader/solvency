@@ -7,11 +7,42 @@ export const onRequest: PagesHandler = async (context) => {
   context.data.requestId = requestId;
   const finish = (response: Response) => withApiHeaders(response, requestId);
 
+  const requestUrl = new URL(context.request.url);
+  const pathname = requestUrl.pathname;
+  // Stripe cannot present a Clerk session, browser Origin, or Cloudflare
+  // Access service-token headers. The future exact webhook handler must cap and
+  // verify the untouched raw body with Stripe-Signature before parsing it. Keep
+  // this exception exact so adjacent API paths retain every account boundary.
+  if (pathname === '/api/stripe-webhook') {
+    if (context.env.STRIPE_WEBHOOK_ENABLED !== 'true') {
+      return finish(apiError(requestId, 503, 'SERVICE_UNAVAILABLE', 'Stripe webhook service is unavailable.'));
+    }
+    if (context.request.method !== 'POST') {
+      return finish(apiError(requestId, 405, 'METHOD_NOT_ALLOWED', 'Method is not allowed.', { allow: 'POST' }));
+    }
+    if (requestUrl.search !== '' || requestUrl.searchParams.size !== 0) {
+      return finish(apiError(requestId, 400, 'INVALID_REQUEST', 'Webhook URL must not include a query string.'));
+    }
+    try {
+      return finish(await context.next());
+    } catch {
+      return finish(apiError(requestId, 500, 'INTERNAL_ERROR', 'Webhook request could not be completed.'));
+    }
+  }
+
   if (!['GET', 'POST', 'DELETE'].includes(context.request.method)) {
     return finish(apiError(requestId, 405, 'METHOD_NOT_ALLOWED', 'Method is not allowed.', { allow: 'GET, POST, DELETE' }));
   }
-  if (context.env.ACCOUNT_PLANS_ENABLED !== 'true') {
-    return finish(apiError(requestId, 503, 'SERVICE_UNAVAILABLE', 'Account plan storage is unavailable.'));
+  const accountPlansRoute = pathname === '/api/build-plans' || pathname.startsWith('/api/build-plans/');
+  const entitlementRoute = pathname === '/api/entitlement';
+  const productIntentRoute = pathname === '/api/intents';
+  const featureEnabled = accountPlansRoute
+    ? context.env.ACCOUNT_PLANS_ENABLED === 'true'
+    : entitlementRoute
+      ? context.env.ENTITLEMENTS_ENABLED === 'true'
+      : productIntentRoute && context.env.PRODUCT_INTENTS_ENABLED === 'true';
+  if (!featureEnabled) {
+    return finish(apiError(requestId, 503, 'SERVICE_UNAVAILABLE', 'Account service is unavailable.'));
   }
   const configuration = clerkAuthConfiguration(context.env);
   if (!configuration || !context.env.DB) {
