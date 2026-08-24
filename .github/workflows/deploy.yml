@@ -27,14 +27,16 @@ jobs:
         with:
           node-version: '24'
 
-      # Guards the published figures: the report tests re-derive every table
-      # from the datasets, so a bad price edit fails here rather than shipping.
-      - name: Verify datasets and published figures
-        run: npm test
-
       - name: Install site dependencies
         working-directory: site
         run: npm ci --no-audit --no-fund
+
+      # Guards the published figures: the report tests re-derive every table
+      # from the datasets, so a bad price edit fails here rather than shipping.
+      # Some root tests import site server modules, so install their dependencies
+      # before starting the root test graph.
+      - name: Verify datasets and published figures
+        run: npm test
 
       - name: Audit site and deployment dependencies
         working-directory: site
