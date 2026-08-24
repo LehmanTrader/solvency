@@ -5,6 +5,36 @@ import type { PagesContextLike } from './pages-types.ts';
 export const PREVIEW_ACCOUNT_ERASURE_PATH = '/api/preview-account-erasure';
 export const PREVIEW_ACCOUNT_ERASURE_ORIGIN = 'https://d1-functions-preview.solvency-ru5.pages.dev';
 export const PREVIEW_ACCOUNT_ERASURE_CONFIRMATION = 'DELETE_MY_ISOLATED_PREVIEW_DATA';
+const EMPTY_BODY_MAX_EMPTY_CHUNKS = 8;
+
+async function requestBodyIsEmpty(request: Request): Promise<boolean> {
+  const contentLength = request.headers.get('content-length');
+  if (contentLength !== null && contentLength !== '0') return false;
+  if (request.body === null) return true;
+
+  const reader = request.body.getReader();
+  try {
+    // Cloudflare can expose a zero-byte HTTP body as a non-null stream. Read a
+    // small, hard-bounded number of chunks and accept only an immediate EOF;
+    // any payload, malformed chunk, read failure or pathological empty stream
+    // remains fail-closed.
+    for (let emptyChunks = 0; emptyChunks <= EMPTY_BODY_MAX_EMPTY_CHUNKS; emptyChunks += 1) {
+      const part = await reader.read();
+      if (part.done) return true;
+      if (!(part.value instanceof Uint8Array) || part.value.byteLength !== 0) {
+        await reader.cancel().catch(() => undefined);
+        return false;
+      }
+    }
+    await reader.cancel().catch(() => undefined);
+    return false;
+  } catch {
+    await reader.cancel().catch(() => undefined);
+    return false;
+  } finally {
+    reader.releaseLock();
+  }
+}
 
 export async function handlePreviewAccountErasure(context: PagesContextLike): Promise<Response> {
   const requestId = context.data.requestId ?? crypto.randomUUID();
@@ -23,8 +53,7 @@ export async function handlePreviewAccountErasure(context: PagesContextLike): Pr
   if (context.request.headers.get('x-preview-erasure-confirm') !== PREVIEW_ACCOUNT_ERASURE_CONFIRMATION) {
     return apiError(requestId, 400, 'INVALID_REQUEST', 'Preview account erasure confirmation is required.');
   }
-  const contentLength = context.request.headers.get('content-length');
-  if ((contentLength !== null && contentLength !== '0') || context.request.body !== null) {
+  if (!await requestBodyIsEmpty(context.request)) {
     return apiError(requestId, 400, 'INVALID_REQUEST', 'Preview account erasure does not accept a request body.');
   }
   const ownerUserId = context.data.ownerUserId;
