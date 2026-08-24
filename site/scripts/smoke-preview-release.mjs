@@ -1,3 +1,5 @@
+import { previewPageBoundaryFailure } from './lib/preview-page-boundary.mjs';
+
 const PREVIEW_ORIGIN = 'https://d1-functions-preview.solvency-ru5.pages.dev';
 const SHA256_COMMIT = /^[0-9a-f]{40}$/;
 const REQUEST_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -175,19 +177,17 @@ async function requireError(path, method, status, code, useAccess = true, allow 
   }
 }
 
-function attestPageBoundary(page, path) {
-  if (!page.includes(`<meta name="solvency-build-sha" content="${expectedBuildSha}">`)) {
-    fail(`${path} does not attest the exact deployed commit.`);
-  }
-  if (!page.includes(`data-clerk-publishable-key="${expectedClerkKey}"`)
-    || page.includes('data-clerk-publishable-key="pk_live_')
-    || !page.includes('data-account-plans-enabled="true"')
-    || !page.includes('data-product-intents-enabled="true"')) {
-    fail(`${path} does not expose the exact Preview client boundary.`);
-  }
+function attestPageBoundary(page, path, requireAccountPlans = false) {
+  const failure = previewPageBoundaryFailure(page, {
+    path,
+    expectedBuildSha,
+    expectedClerkKey,
+    requireAccountPlans,
+  });
+  if (failure) fail(failure);
 }
 
-async function requirePreviewPage(path) {
+async function requirePreviewPage(path, requireAccountPlans = false) {
   const response = await accessRequest(path);
   if (response.status !== 200
     || !response.headers.get('content-type')?.toLowerCase().startsWith('text/html')) {
@@ -195,7 +195,7 @@ async function requirePreviewPage(path) {
     fail(`${path} returned ${response.status} instead of Preview HTML.`);
   }
   const page = await boundedText(response);
-  attestPageBoundary(page, path);
+  attestPageBoundary(page, path, requireAccountPlans);
   return page;
 }
 
@@ -239,7 +239,7 @@ async function attestOnce() {
     requireAccessDenial('/api/billing-readiness'),
   ]);
 
-  await requirePreviewPage('/build-planner/');
+  await requirePreviewPage('/build-planner/', true);
   attestPricingUi(await requirePreviewPage('/pricing/'));
 
   await Promise.all([
