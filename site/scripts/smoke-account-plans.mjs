@@ -234,17 +234,43 @@ async function proveUnauthenticatedAccessDenial() {
 }
 
 async function accessRequest(path, { method = 'GET', accept = 'text/html, application/json' } = {}) {
-  return fetch(new URL(path, baseUrl), {
+  const response = await fetch(new URL(path, baseUrl), {
     method,
     headers: {
       Accept: accept,
       'Cache-Control': 'no-cache',
       ...cloudflareAccessHeaders,
     },
-    redirect: 'error',
+    redirect: 'manual',
     cache: 'no-store',
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
+
+  if ([301, 302, 303, 307, 308].includes(response.status)) {
+    const location = response.headers.get('location');
+    const redirectTarget = (() => {
+      if (!location) return 'a redirect with no Location header';
+      try {
+        const target = new URL(location, baseUrl);
+        const destination = `${target.hostname}${target.pathname}`;
+        if (target.hostname.endsWith('.cloudflareaccess.com')
+          && target.pathname.startsWith('/cdn-cgi/access/login/')) {
+          return `a Cloudflare Access login redirect at ${destination}`;
+        }
+        if (target.origin === baseUrl) {
+          return `a same-origin redirect to ${destination}`;
+        }
+        return `a cross-origin redirect to ${destination}`;
+      } catch {
+        return 'a redirect with an invalid Location header';
+      }
+    })();
+    const ray = response.headers.get('cf-ray') ?? 'NO_CF_RAY';
+    await response.body?.cancel().catch(() => undefined);
+    throw new Error(`${path} returned ${redirectTarget} (${response.status}, cf-ray ${ray}).`);
+  }
+
+  return response;
 }
 
 async function requireAuthBoundary(path) {

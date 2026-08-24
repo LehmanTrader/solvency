@@ -33,6 +33,12 @@ test('authenticated account smoke requires Access service credentials and always
   assert.match(source, /CF-Access-Client-Secret/);
   assert.match(source, /proveUnauthenticatedAccessDenial/);
   assert.match(source, /cloudflareaccess\.com/);
+  assert.match(source, /async function accessRequest[\s\S]*redirect: 'manual'/);
+  assert.match(source, /a Cloudflare Access login redirect/);
+  assert.match(source, /const destination = `\$\{target\.hostname\}\$\{target\.pathname\}`/);
+  assert.match(source, /target\.origin === baseUrl/);
+  assert.doesNotMatch(source, /baseUrl\.origin/);
+  assert.doesNotMatch(source, /target\.search/);
   assert.match(source, /\['\/', 'text\/html'\]/);
   assert.match(source, /\['\/api\/build-plans', 'application\/json'\]/);
   assert.match(source, /!response\.headers\.has\('x-error-code'\)/);
