@@ -248,6 +248,7 @@ jobs:
 
   smoke-preview:
     needs: [resolve-rollout, deploy-preview]
+    if: ${{ !cancelled() && needs.resolve-rollout.result == 'success' && needs.deploy-preview.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment:

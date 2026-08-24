@@ -238,6 +238,9 @@ exactJobCondition(providerJob,
 exactJobCondition(deployJob,
   "${{ !cancelled() && needs.resolve-rollout.result == 'success' && (needs.resolve-rollout.outputs.preview_stripe_enabled == 'false' || needs.stripe-config-preflight.result == 'success') }}",
   'deploy-preview');
+exactJobCondition(smokeJob,
+  "${{ !cancelled() && needs.resolve-rollout.result == 'success' && needs.deploy-preview.result == 'success' }}",
+  'smoke-preview');
 const buildStep = requiredStep(deploySteps, 'Build reviewed Preview artifact', 'deploy-preview');
 if (stepEnvironment(buildStep, 'PUBLIC_DEPLOYMENT_ENV', 'Build reviewed Preview artifact') !== "'preview'"
   || stepEnvironment(buildStep, 'PUBLIC_ACCOUNT_PLANS_ENABLED', 'Build reviewed Preview artifact')

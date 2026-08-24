@@ -193,6 +193,7 @@ test('preview deployment is staged, same-commit, credential-isolated and migrati
   assert.deepEqual(workflowSecrets(deployJob), ['CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_API_TOKEN']);
 
   assert.match(smokeJob, /^\s*needs: \[resolve-rollout, deploy-preview\]$/m);
+  assert.match(smokeJob, /^\s*if: \$\{\{ !cancelled\(\) && needs\.resolve-rollout\.result == 'success' && needs\.deploy-preview\.result == 'success' \}\}$/m);
   assert.match(smokeJob, /^\s*environment:\n\s+name: preview\n\s+deployment: false$/m);
   assert.match(smokeJob, /EXPECTED_BUILD_SHA: \$\{\{ github\.sha \}\}/);
   assert.deepEqual(workflowSecrets(smokeJob), [

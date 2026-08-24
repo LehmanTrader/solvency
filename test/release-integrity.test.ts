@@ -148,6 +148,7 @@ test('preview rollout resolves, conditionally preflights, deploys and always att
   assert.match(deployJob, /PUBLIC_STRIPE_SANDBOX_UI_ENABLED: \$\{\{ needs\.resolve-rollout\.outputs\.preview_sandbox_ui_enabled \}\}/);
 
   assert.match(smokeJob, /^\s*needs: \[resolve-rollout, deploy-preview\]$/m);
+  assert.match(smokeJob, /^\s*if: \$\{\{ !cancelled\(\) && needs\.resolve-rollout\.result == 'success' && needs\.deploy-preview\.result == 'success' \}\}$/m);
   assert.match(smokeJob, /timeout-minutes: 15/);
   assert.match(smokeJob, /ref: \$\{\{ github\.sha \}\}/);
   assert.match(smokeJob, /EXPECTED_BUILD_SHA: \$\{\{ github\.sha \}\}/);
