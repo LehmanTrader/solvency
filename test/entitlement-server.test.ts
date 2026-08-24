@@ -3,11 +3,17 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { deleteOwnedAccountData } from '../site/src/lib/server/account-data-store.ts';
+import {
+  acquireCheckoutAttempt,
+  completeCheckoutAttempt,
+  settleReconciledCheckoutSubscription,
+} from '../site/src/lib/server/checkout-attempt-store.ts';
 import { handleEntitlement } from '../site/src/lib/server/entitlement-api.ts';
 import {
   applyVerifiedBillingEvent,
   BILLING_EVENT_RETENTION_SECONDS,
   bindBillingCustomer,
+  getBoundBillingCustomerId,
   getOwnerEntitlement,
   normalizeBillingPriceItems,
   type ProPriceConfiguration,
@@ -25,6 +31,7 @@ const migration = [
   '../site/migrations/0004_billing_authority.sql',
   '../site/migrations/0005_build_plan_operations.sql',
   '../site/migrations/0006_product_intent_events.sql',
+  '../site/migrations/0007_billing_checkout_attempts.sql',
 ].map((path) => readFileSync(new URL(path, import.meta.url), 'utf8')).join('\n');
 
 class SqliteStatement implements D1PreparedStatementLike {
@@ -85,6 +92,9 @@ const NOW = 1_787_486_400;
 const RECEIVED = NOW + 5;
 const MONTHLY_PRICE_ID = 'price_0000000000000001';
 const ANNUAL_PRICE_ID = 'price_0000000000000002';
+const CHECKOUT_HASH_A = 'c'.repeat(64);
+const CHECKOUT_HASH_B = 'd'.repeat(64);
+const CHECKOUT_SESSION_A = 'cs_test_0000000000000091';
 const PRO_PRICES: ProPriceConfiguration = {
   monthlyPriceId: MONTHLY_PRICE_ID,
   annualPriceId: ANNUAL_PRICE_ID,
@@ -115,6 +125,48 @@ function event(overrides: Partial<VerifiedBillingEvent> = {}): VerifiedBillingEv
 
 function entitlement(db: D1DatabaseLike, ownerUserId: string, now = NOW) {
   return getOwnerEntitlement(db, ownerUserId, now, PRO_PRICES);
+}
+
+async function prepareReadyCheckout(
+  db: SqliteD1,
+  ownerUserId = 'user_account_alpha',
+  requestHash = CHECKOUT_HASH_A,
+  providerSessionId = CHECKOUT_SESSION_A,
+  startedAt = NOW - 4_000,
+) {
+  const acquired = await acquireCheckoutAttempt(db, {
+    ownerUserId,
+    requestHash,
+    now: startedAt,
+  });
+  if (!acquired.ok || acquired.status !== 'acquired') {
+    throw new Error('Checkout test setup failed to acquire.');
+  }
+  const completed = await completeCheckoutAttempt(db, {
+    ownerUserId,
+    requestHash,
+    now: startedAt + 1,
+    leaseToken: acquired.leaseToken,
+    providerSessionId,
+  });
+  if (!completed.ok) throw new Error('Checkout test setup failed to complete.');
+  return acquired;
+}
+
+async function acquirePreparedReconciliation(
+  db: SqliteD1,
+  lockExpiresAt: number,
+  requestHash = CHECKOUT_HASH_A,
+) {
+  const reconciliation = await acquireCheckoutAttempt(db, {
+    ownerUserId: 'user_account_alpha',
+    requestHash,
+    now: lockExpiresAt,
+  });
+  if (!reconciliation.ok || reconciliation.status !== 'reconcile') {
+    throw new Error('Checkout test setup failed to reconcile.');
+  }
+  return reconciliation;
 }
 
 function apiContext(
@@ -282,6 +334,9 @@ describe('server-authoritative entitlement boundary', () => {
     assert.equal(await bindBillingCustomer(db, 'user_account_beta', 'cus_0000000000000001', at), 'identity_conflict');
     assert.equal(await bindBillingCustomer(db, 'user_account_alpha', 'cus_0000000000000002', at), 'identity_conflict');
     assert.equal(await bindBillingCustomer(db, 'attacker', 'cus_0000000000000003', at), 'invalid');
+    assert.equal(await getBoundBillingCustomerId(db, 'user_account_alpha'), 'cus_0000000000000001');
+    assert.equal(await getBoundBillingCustomerId(db, 'user_account_beta'), null);
+    assert.equal(await getBoundBillingCustomerId(db, 'attacker'), null);
   });
 
   test('deduplicates events and rejects event-id reuse with different content', async () => {
@@ -438,6 +493,336 @@ describe('server-authoritative entitlement boundary', () => {
     });
     assert.equal(db.sqlite.prepare('SELECT COUNT(*) AS count FROM billing_events').get()?.count, 1);
     assert.equal((await entitlement(db, 'user_account_beta')).tier, 'free');
+
+    const unpaid = new SqliteD1();
+    await bindBillingCustomer(
+      unpaid, 'user_account_alpha', 'cus_0000000000000001', at,
+    );
+    assert.equal((await applyVerifiedBillingEvent(unpaid, event({ status: 'unpaid' }), RECEIVED)).ok, true);
+    assert.deepEqual(await applyVerifiedBillingEvent(unpaid, event({
+      eventId: 'evt_0000000000000101',
+      payloadHash: '1'.repeat(64),
+      subscriptionId: 'sub_0000000000000101',
+      status: 'active',
+      eventCreated: NOW + 3,
+    }), RECEIVED + 3), { ok: false, reason: 'identity_conflict' });
+    assert.equal(unpaid.sqlite.prepare(
+      'SELECT provider_subscription_id FROM billing_subscriptions',
+    ).get()?.provider_subscription_id, 'sub_0000000000000001');
+  });
+
+  test('retires only the exact subscription-bound pending receipt after authoritative terminal state', async () => {
+    const db = new SqliteD1();
+    const ownerUserId = 'user_account_alpha';
+    const customerId = 'cus_0000000000000001';
+    const subscriptionId = 'sub_0000000000000001';
+    await bindBillingCustomer(db, ownerUserId, customerId, '2026-08-23T12:00:00.000Z');
+    const first = await prepareReadyCheckout(db);
+    const reconciliation = await acquirePreparedReconciliation(db, first.lockExpiresAt);
+    assert.deepEqual(await settleReconciledCheckoutSubscription(db, {
+      ownerUserId,
+      requestHash: CHECKOUT_HASH_A,
+      reconciliationToken: reconciliation.reconciliationToken,
+      providerSessionId: CHECKOUT_SESSION_A,
+      providerCustomerId: customerId,
+      providerSubscriptionId: subscriptionId,
+      terminalRecovery: false,
+      providerExpiresAt: reconciliation.providerExpiresAt,
+      now: reconciliation.lockExpiresAt - 29,
+    }), { ok: true, status: 'pending_webhook' });
+    assert.deepEqual({ ...db.sqlite.prepare(
+      `SELECT state, provider_subscription_id
+         FROM billing_checkout_attempts WHERE owner_user_id = ?`,
+    ).get(ownerUserId) }, {
+      state: 'completed_pending_webhook',
+      provider_subscription_id: subscriptionId,
+    });
+
+    const active = event({ customerId, subscriptionId });
+    assert.equal((await applyVerifiedBillingEvent(db, active, RECEIVED)).ok, true);
+    assert.equal(db.sqlite.prepare(
+      'SELECT state FROM billing_checkout_attempts WHERE owner_user_id = ?',
+    ).get(ownerUserId)?.state, 'completed_pending_webhook');
+
+    assert.equal((await applyVerifiedBillingEvent(db, event({
+      eventId: 'evt_0000000000000200',
+      payloadHash: '1'.repeat(64),
+      customerId,
+      subscriptionId,
+      status: 'unpaid',
+      eventCreated: NOW + 5,
+    }), RECEIVED + 5)).ok, true);
+    assert.equal(db.sqlite.prepare(
+      'SELECT state FROM billing_checkout_attempts WHERE owner_user_id = ?',
+    ).get(ownerUserId)?.state, 'completed_pending_webhook');
+
+    const terminal = event({
+      eventId: 'evt_0000000000000201',
+      payloadHash: '2'.repeat(64),
+      eventType: 'customer.subscription.deleted',
+      customerId,
+      subscriptionId,
+      status: 'canceled',
+      eventCreated: NOW + 10,
+    });
+    const terminated = await applyVerifiedBillingEvent(db, terminal, RECEIVED + 10);
+    assert.equal(terminated.ok && terminated.applied, true);
+    assert.equal(db.sqlite.prepare(
+      'SELECT COUNT(*) AS count FROM billing_checkout_attempts WHERE owner_user_id = ?',
+    ).get(ownerUserId)?.count, 0);
+
+    const next = await acquireCheckoutAttempt(db, {
+      ownerUserId,
+      requestHash: CHECKOUT_HASH_B,
+      now: NOW + 20,
+    });
+    assert.equal(next.ok && next.status, 'acquired');
+    assert.ok(next.ok && next.status === 'acquired');
+    assert.notEqual(next.leaseToken, first.leaseToken);
+
+    assert.deepEqual(await applyVerifiedBillingEvent(db, terminal, RECEIVED + 11), {
+      ok: true, ownerUserId, replayed: true, applied: false,
+    });
+    assert.deepEqual({ ...db.sqlite.prepare(
+      `SELECT request_hash, lease_token, state, provider_subscription_id
+         FROM billing_checkout_attempts WHERE owner_user_id = ?`,
+    ).get(ownerUserId) }, {
+      request_hash: CHECKOUT_HASH_B,
+      lease_token: next.leaseToken,
+      state: 'creating',
+      provider_subscription_id: null,
+    });
+  });
+
+  test('terminal authority received before reconciliation atomically permits a fresh generation', async () => {
+    const db = new SqliteD1();
+    const ownerUserId = 'user_account_alpha';
+    const customerId = 'cus_0000000000000001';
+    const subscriptionId = 'sub_0000000000000001';
+    await bindBillingCustomer(db, ownerUserId, customerId, '2026-08-23T12:00:00.000Z');
+    const first = await prepareReadyCheckout(
+      db, ownerUserId, CHECKOUT_HASH_A, CHECKOUT_SESSION_A, NOW,
+    );
+    assert.equal((await applyVerifiedBillingEvent(db, event(), RECEIVED)).ok, true);
+    assert.equal((await applyVerifiedBillingEvent(db, event({
+      eventId: 'evt_0000000000000211',
+      payloadHash: '3'.repeat(64),
+      eventType: 'customer.subscription.deleted',
+      status: 'canceled',
+      eventCreated: NOW + 10,
+    }), RECEIVED + 10)).ok, true);
+    assert.equal(db.sqlite.prepare(
+      'SELECT state FROM billing_checkout_attempts WHERE owner_user_id = ?',
+    ).get(ownerUserId)?.state, 'ready');
+
+    const reconciliation = await acquirePreparedReconciliation(db, first.lockExpiresAt);
+    const settled = await settleReconciledCheckoutSubscription(db, {
+      ownerUserId,
+      requestHash: CHECKOUT_HASH_B,
+      reconciliationToken: reconciliation.reconciliationToken,
+      providerSessionId: CHECKOUT_SESSION_A,
+      providerCustomerId: customerId,
+      providerSubscriptionId: subscriptionId,
+      terminalRecovery: false,
+      providerExpiresAt: reconciliation.providerExpiresAt,
+      now: reconciliation.lockExpiresAt - 29,
+    });
+    assert.equal(settled.ok && settled.status, 'acquired');
+    assert.ok(settled.ok && settled.status === 'acquired');
+    assert.notEqual(settled.leaseToken, first.leaseToken);
+    assert.deepEqual({ ...db.sqlite.prepare(
+      `SELECT request_hash, lease_token, state, provider_session_id, provider_subscription_id
+         FROM billing_checkout_attempts WHERE owner_user_id = ?`,
+    ).get(ownerUserId) }, {
+      request_hash: CHECKOUT_HASH_B,
+      lease_token: settled.leaseToken,
+      state: 'creating',
+      provider_session_id: null,
+      provider_subscription_id: null,
+    });
+  });
+
+  test('terminal state changing after reconciliation lease is observed by the single settlement CAS', async () => {
+    const db = new SqliteD1();
+    const ownerUserId = 'user_account_alpha';
+    const customerId = 'cus_0000000000000001';
+    const subscriptionId = 'sub_0000000000000001';
+    await bindBillingCustomer(db, ownerUserId, customerId, '2026-08-23T12:00:00.000Z');
+    const first = await prepareReadyCheckout(
+      db, ownerUserId, CHECKOUT_HASH_A, CHECKOUT_SESSION_A, NOW,
+    );
+    assert.equal((await applyVerifiedBillingEvent(db, event(), RECEIVED)).ok, true);
+    const reconciliation = await acquirePreparedReconciliation(db, first.lockExpiresAt);
+    assert.equal((await applyVerifiedBillingEvent(db, event({
+      eventId: 'evt_0000000000000221',
+      payloadHash: '4'.repeat(64),
+      eventType: 'customer.subscription.deleted',
+      status: 'canceled',
+      eventCreated: first.lockExpiresAt,
+    }), first.lockExpiresAt + 1)).ok, true);
+
+    const settled = await settleReconciledCheckoutSubscription(db, {
+      ownerUserId,
+      requestHash: CHECKOUT_HASH_B,
+      reconciliationToken: reconciliation.reconciliationToken,
+      providerSessionId: CHECKOUT_SESSION_A,
+      providerCustomerId: customerId,
+      providerSubscriptionId: subscriptionId,
+      terminalRecovery: false,
+      providerExpiresAt: reconciliation.providerExpiresAt,
+      now: reconciliation.lockExpiresAt - 29,
+    });
+    assert.equal(settled.ok && settled.status, 'acquired');
+    assert.equal(db.sqlite.prepare(
+      'SELECT state FROM billing_checkout_attempts WHERE owner_user_id = ?',
+    ).get(ownerUserId)?.state, 'creating');
+  });
+
+  test('an aged ready receipt gets one exact reconciliation path after later terminal authority', async () => {
+    const db = new SqliteD1();
+    const ownerUserId = 'user_account_alpha';
+    const customerId = 'cus_0000000000000001';
+    const subscriptionId = 'sub_0000000000000001';
+    await bindBillingCustomer(db, ownerUserId, customerId, '2026-08-23T12:00:00.000Z');
+    const first = await prepareReadyCheckout(
+      db, ownerUserId, CHECKOUT_HASH_A, CHECKOUT_SESSION_A, NOW,
+    );
+    assert.equal((await applyVerifiedBillingEvent(db, event(), RECEIVED)).ok, true);
+    const agedAt = first.providerExpiresAt + 72 * 60 * 60;
+    assert.equal((await applyVerifiedBillingEvent(db, event({
+      eventId: 'evt_0000000000000241',
+      payloadHash: '8'.repeat(64),
+      eventType: 'customer.subscription.deleted',
+      status: 'canceled',
+      eventCreated: agedAt - 10,
+    }), agedAt - 5)).ok, true);
+
+    const reconciliation = await acquireCheckoutAttempt(db, {
+      ownerUserId,
+      requestHash: CHECKOUT_HASH_B,
+      now: agedAt,
+    });
+    assert.equal(reconciliation.ok && reconciliation.status, 'reconcile');
+    assert.ok(reconciliation.ok && reconciliation.status === 'reconcile');
+    assert.equal(reconciliation.terminalRecovery, true);
+    const settled = await settleReconciledCheckoutSubscription(db, {
+      ownerUserId,
+      requestHash: CHECKOUT_HASH_B,
+      reconciliationToken: reconciliation.reconciliationToken,
+      providerSessionId: CHECKOUT_SESSION_A,
+      providerCustomerId: customerId,
+      providerSubscriptionId: subscriptionId,
+      providerExpiresAt: reconciliation.providerExpiresAt,
+      terminalRecovery: true,
+      now: agedAt + 1,
+    });
+    assert.equal(settled.ok && settled.status, 'acquired');
+    assert.equal(db.sqlite.prepare(
+      'SELECT state FROM billing_checkout_attempts WHERE owner_user_id = ?',
+    ).get(ownerUserId)?.state, 'creating');
+  });
+
+  test('an aged terminal recovery quarantines a mismatched retrieved subscription', async () => {
+    const db = new SqliteD1();
+    const ownerUserId = 'user_account_alpha';
+    const customerId = 'cus_0000000000000001';
+    await bindBillingCustomer(db, ownerUserId, customerId, '2026-08-23T12:00:00.000Z');
+    const first = await prepareReadyCheckout(
+      db, ownerUserId, CHECKOUT_HASH_A, CHECKOUT_SESSION_A, NOW,
+    );
+    const agedAt = first.providerExpiresAt + 72 * 60 * 60;
+    assert.equal((await applyVerifiedBillingEvent(db, event({
+      eventId: 'evt_0000000000000251',
+      payloadHash: '9'.repeat(64),
+      eventType: 'customer.subscription.deleted',
+      status: 'canceled',
+      eventCreated: agedAt - 10,
+    }), agedAt - 5)).ok, true);
+    const reconciliation = await acquireCheckoutAttempt(db, {
+      ownerUserId,
+      requestHash: CHECKOUT_HASH_B,
+      now: agedAt,
+    });
+    assert.ok(reconciliation.ok && reconciliation.status === 'reconcile');
+    assert.equal(reconciliation.terminalRecovery, true);
+    assert.deepEqual(await settleReconciledCheckoutSubscription(db, {
+      ownerUserId,
+      requestHash: CHECKOUT_HASH_B,
+      reconciliationToken: reconciliation.reconciliationToken,
+      providerSessionId: CHECKOUT_SESSION_A,
+      providerCustomerId: customerId,
+      providerSubscriptionId: 'sub_0000000000000099',
+      providerExpiresAt: reconciliation.providerExpiresAt,
+      terminalRecovery: true,
+      now: agedAt + 1,
+    }), { ok: true, status: 'manual_review' });
+    assert.deepEqual({ ...db.sqlite.prepare(
+      `SELECT state, provider_session_id, provider_subscription_id
+         FROM billing_checkout_attempts WHERE owner_user_id = ?`,
+    ).get(ownerUserId) }, {
+      state: 'manual_review',
+      provider_session_id: CHECKOUT_SESSION_A,
+      provider_subscription_id: null,
+    });
+  });
+
+  test('stale and foreign terminal events cannot clear an exact newer subscription binding', async () => {
+    const db = new SqliteD1();
+    const ownerUserId = 'user_account_alpha';
+    const customerId = 'cus_0000000000000001';
+    const subscriptionId = 'sub_0000000000000001';
+    await bindBillingCustomer(db, ownerUserId, customerId, '2026-08-23T12:00:00.000Z');
+    await bindBillingCustomer(db, 'user_account_beta', 'cus_0000000000000002', '2026-08-23T12:00:00.000Z');
+    const first = await prepareReadyCheckout(db);
+    const reconciliation = await acquirePreparedReconciliation(db, first.lockExpiresAt);
+    assert.equal((await settleReconciledCheckoutSubscription(db, {
+      ownerUserId,
+      requestHash: CHECKOUT_HASH_A,
+      reconciliationToken: reconciliation.reconciliationToken,
+      providerSessionId: CHECKOUT_SESSION_A,
+      providerCustomerId: customerId,
+      providerSubscriptionId: subscriptionId,
+      terminalRecovery: false,
+      providerExpiresAt: reconciliation.providerExpiresAt,
+      now: reconciliation.lockExpiresAt - 29,
+    })).ok, true);
+
+    const oldTerminal = event({
+      eventId: 'evt_0000000000000231',
+      payloadHash: '5'.repeat(64),
+      eventType: 'customer.subscription.deleted',
+      subscriptionId: 'sub_0000000000000002',
+      status: 'canceled',
+    });
+    assert.equal((await applyVerifiedBillingEvent(db, oldTerminal, RECEIVED)).ok, true);
+    assert.equal(db.sqlite.prepare(
+      'SELECT state FROM billing_checkout_attempts WHERE owner_user_id = ?',
+    ).get(ownerUserId)?.state, 'completed_pending_webhook');
+
+    assert.equal((await applyVerifiedBillingEvent(db, event({
+      eventId: 'evt_0000000000000232',
+      payloadHash: '6'.repeat(64),
+      subscriptionId,
+      eventCreated: NOW + 10,
+    }), RECEIVED + 10)).ok, true);
+    assert.deepEqual(await applyVerifiedBillingEvent(db, oldTerminal, RECEIVED + 11), {
+      ok: true, ownerUserId, replayed: true, applied: false,
+    });
+    assert.deepEqual(await applyVerifiedBillingEvent(db, event({
+      eventId: 'evt_0000000000000233',
+      payloadHash: '7'.repeat(64),
+      customerId: 'cus_0000000000000002',
+      subscriptionId,
+      status: 'canceled',
+      eventCreated: NOW + 20,
+    }), RECEIVED + 20), { ok: false, reason: 'identity_conflict' });
+    assert.deepEqual({ ...db.sqlite.prepare(
+      `SELECT state, provider_subscription_id
+         FROM billing_checkout_attempts WHERE owner_user_id = ?`,
+    ).get(ownerUserId) }, {
+      state: 'completed_pending_webhook',
+      provider_subscription_id: subscriptionId,
+    });
   });
 
   test('prunes normalized replay rows by age without retaining raw payloads', async () => {

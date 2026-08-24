@@ -59,8 +59,8 @@ const statusNote = [a, b].filter((m) => m.status !== 'current').map((m) => `${m.
             <button id="k-share" type="button" class="btn btn-copy" aria-live="polite">Copy link</button>
             {CLERK_ENABLED && <button id="k-save" type="button" class="btn" data-analytics="save-scenario" aria-live="polite">Save scenario</button>}
             {CLERK_ENABLED
-              ? <button id="k-download" type="button" class="btn" data-analytics="pro-download" aria-describedby="k-pro">Export table <span id="k-pro" class="pill pill-ink ml-1">Pro soon</span></button>
-              : <span class="small">Table export is planned for Pro.</span>}
+              ? <button id="k-download" type="button" class="btn" data-analytics="pro-download" aria-describedby="k-export-status">Export compare table <span id="k-export-status" class="pill pill-ink ml-1">Planned</span></button>
+              : <span class="small">Compare-table export is not available yet. Build Composer local exports are available now.</span>}
           </div>
         </div>
         <div class="card overflow-hidden"><div class="tbl-wrap"><table class="tbl tbl-compare">
@@ -132,10 +132,11 @@ const statusNote = [a, b].filter((m) => m.status !== 'current').map((m) => `${m.
   tierEl.addEventListener('input', render);
   volEl.addEventListener('input', render);
 
-  // share and save (docs/landing-spec.md §3: copy is free, save and export hard-gate)
+  // Copy is public, Save scenario uses a free account, and compare-table export
+  // remains an unavailable interest prompt rather than a paid entitlement.
   wireCopy(document.getElementById('k-share') as HTMLButtonElement, () => location.href);
   wireSave(document.getElementById('k-save') as HTMLButtonElement | null, 'Save scenario', () => `${tierEl.value} · ${Number(volEl.value).toLocaleString()}/mo`);
-  document.getElementById('k-download')?.addEventListener('click', () => openSignUp('pro-download', 'Table export is coming with Pro. Create a free account to be notified when it ships.'));
+  document.getElementById('k-download')?.addEventListener('click', () => openSignUp('pro-download', 'Compare-table export is not available yet. Create a free account to share interest. Build Composer JSON, CSV and PNG downloads are available now without Pro.'));
 
   // drag the volume marker: pointer x → log volume
   let dragging = false;

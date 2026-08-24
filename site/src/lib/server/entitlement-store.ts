@@ -90,7 +90,8 @@ const SUBSCRIPTION_EVENT_TYPES = new Set([
   'customer.subscription.updated',
   'customer.subscription.deleted',
 ]);
-const TERMINAL_STATUSES = new Set<BillingSubscriptionStatus>(['unpaid', 'incomplete_expired', 'canceled']);
+/** Only statuses that conclusively end the subscription may authorize replacement. */
+const TERMINAL_STATUSES = new Set<BillingSubscriptionStatus>(['incomplete_expired', 'canceled']);
 
 function validUnixSeconds(value: number): boolean {
   return Number.isSafeInteger(value) && value >= 0 && value <= 253_402_300_799;
@@ -210,6 +211,26 @@ export async function bindBillingCustomer(
   }
 }
 
+/**
+ * Resolve only the provider customer already bound to this verified owner.
+ * Checkout and Portal callers must never accept either identifier from the
+ * browser or from webhook metadata.
+ */
+export async function getBoundBillingCustomerId(
+  db: D1DatabaseLike,
+  ownerUserId: string,
+): Promise<string | null> {
+  if (!OWNER_ID.test(ownerUserId)) return null;
+  const row = await db.prepare(
+    `SELECT owner_user_id, provider_customer_id
+       FROM billing_customers
+      WHERE owner_user_id = ?`,
+  ).bind(ownerUserId).first<CustomerRow>();
+  return row?.owner_user_id === ownerUserId && CUSTOMER_ID.test(row.provider_customer_id)
+    ? row.provider_customer_id
+    : null;
+}
+
 function freeEntitlement(): OwnerEntitlement {
   return {
     tier: 'free', active: false, source: 'none', status: 'none',
@@ -272,6 +293,47 @@ async function replayOrConflict(
 }
 
 /**
+ * Retire only the safety generation bound to the exact subscription whose
+ * current authoritative reducer state is terminal. The owner/customer joins
+ * prevent a foreign event from clearing another account, while the persisted
+ * subscription ID prevents an old terminal replay from clearing a newer
+ * Checkout generation.
+ */
+async function retireExactTerminalCheckoutAttempt(
+  db: D1DatabaseLike,
+  ownerUserId: string,
+  value: VerifiedBillingEvent,
+): Promise<void> {
+  if (!TERMINAL_STATUSES.has(value.status)) return;
+  const result = await db.prepare(
+    `DELETE FROM billing_checkout_attempts
+      WHERE owner_user_id = ?
+        AND state = 'completed_pending_webhook'
+        AND provider_subscription_id = ?
+        AND EXISTS (
+          SELECT 1
+            FROM billing_customers c
+            JOIN billing_subscriptions s
+              ON s.owner_user_id = c.owner_user_id
+             AND s.provider_customer_id = c.provider_customer_id
+           WHERE c.owner_user_id = billing_checkout_attempts.owner_user_id
+             AND c.provider_customer_id = ?
+             AND s.provider_subscription_id = ?
+             AND s.status IN ('incomplete_expired', 'canceled')
+        )`,
+  ).bind(
+    ownerUserId,
+    value.subscriptionId,
+    value.customerId,
+    value.subscriptionId,
+  ).run();
+  const changes = result.meta?.changes ?? 0;
+  if (result.success !== true || (changes !== 0 && changes !== 1)) {
+    throw new Error('Terminal Checkout receipt retirement failed.');
+  }
+}
+
+/**
  * Applies only an already signature-verified and normalized provider event.
  * The provider customer must have been bound by authenticated checkout code.
  */
@@ -283,7 +345,12 @@ export async function applyVerifiedBillingEvent(
   if (!validEvent(value, receivedAt)) return { ok: false, reason: 'invalid' };
   const normalizedPrice = normalizeBillingPriceItems(value.priceItems);
   const replay = await replayOrConflict(db, value);
-  if (replay) return replay;
+  if (replay) {
+    if (replay.ok) {
+      await retireExactTerminalCheckoutAttempt(db, replay.ownerUserId, value);
+    }
+    return replay;
+  }
   const customer = await db.prepare(
     `SELECT owner_user_id, provider_customer_id
        FROM billing_customers
@@ -381,7 +448,7 @@ export async function applyVerifiedBillingEvent(
          WHERE billing_subscriptions.provider_customer_id = excluded.provider_customer_id
            AND (
              billing_subscriptions.provider_subscription_id = excluded.provider_subscription_id
-             OR billing_subscriptions.status IN ('unpaid', 'incomplete_expired', 'canceled')
+             OR billing_subscriptions.status IN ('incomplete_expired', 'canceled')
            )
            AND (
              billing_subscriptions.last_event_created < excluded.last_event_created
@@ -480,5 +547,6 @@ export async function applyVerifiedBillingEvent(
       return { ok: false, reason: 'identity_conflict' };
     }
   }
+  await retireExactTerminalCheckoutAttempt(db, customer.owner_user_id, value);
   return { ok: true, ownerUserId: customer.owner_user_id, replayed: false, applied };
 }

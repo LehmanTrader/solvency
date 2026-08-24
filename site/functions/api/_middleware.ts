@@ -39,15 +39,28 @@ export const onRequest: PagesHandler = async (context) => {
   const entitlementRoute = pathname === '/api/entitlement';
   const productIntentRoute = pathname === '/api/intents';
   const previewAccountErasureRoute = pathname === '/api/preview-account-erasure';
+  const stripeCheckoutRoute = pathname === '/api/checkout';
+  const stripePortalRoute = pathname === '/api/billing-portal';
   const featureEnabled = accountPlansRoute
     ? context.env.ACCOUNT_PLANS_ENABLED === 'true'
     : entitlementRoute
       ? context.env.ENTITLEMENTS_ENABLED === 'true'
       : productIntentRoute
         ? context.env.PRODUCT_INTENTS_ENABLED === 'true'
-        : previewAccountErasureRoute
-          && context.env.APP_ENV === 'preview'
-          && context.env.PREVIEW_ACCOUNT_ERASURE_ENABLED === 'true';
+        : stripeCheckoutRoute
+          ? context.env.STRIPE_CHECKOUT_ENABLED === 'true'
+          : stripePortalRoute
+            ? context.env.STRIPE_PORTAL_ENABLED === 'true'
+            : previewAccountErasureRoute
+              && context.env.APP_ENV === 'preview'
+              && context.env.PREVIEW_ACCOUNT_ERASURE_ENABLED === 'true'
+              // The destructive Preview smoke route cannot coexist with any
+              // provider-backed billing surface. A real account-deletion flow
+              // needs a durable deletion tombstone and provider reconciliation
+              // before its final D1 cascade.
+              && context.env.STRIPE_CHECKOUT_ENABLED !== 'true'
+              && context.env.STRIPE_PORTAL_ENABLED !== 'true'
+              && context.env.STRIPE_WEBHOOK_ENABLED !== 'true';
   if (!featureEnabled) {
     return finish(apiError(requestId, 503, 'SERVICE_UNAVAILABLE', 'Account service is unavailable.'));
   }

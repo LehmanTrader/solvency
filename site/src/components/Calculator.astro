@@ -92,8 +92,9 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
         </div>
       </div>
       <p class="small mt-3 pt-3 border-t border-[var(--color-rule)]">
-        <span class="text-[var(--color-ink)]">Pro (soon):</span> export CSV/JSON · price-change alerts · your own prices
-        {CLERK_ENABLED && <>{' '}→ <button id="c-notify" type="button" class="link-btn" data-analytics="pro-notify">Notify me</button></>}
+        Build Composer already includes per-plan custom prices and local exports.
+        <span class="text-[var(--color-ink)]"> Planned Pro value:</span> reusable cross-plan profiles and active price/budget monitoring—neither is available yet.
+        {CLERK_ENABLED && <>{' '}→ <button id="c-notify" type="button" class="link-btn" data-analytics="pro-notify">Share interest</button></>}
       </p>
     </div>
 
@@ -372,7 +373,7 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
   $('c-gate-signin')?.addEventListener('click', gateSignUp);
   $('c-gate-skip')?.addEventListener('click', () => closeGate(true));
   gateCard.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); closeGate(true); } });
-  $('c-notify')?.addEventListener('click', () => openSignUp('pro-notify', 'Get notified when Pro ships: export, alerts, your own prices.'));
+  $('c-notify')?.addEventListener('click', () => openSignUp('pro-notify', 'Create a free account to share interest in reusable profiles and active price/budget monitoring. Both are planned and unavailable today; nothing will be purchased or reserved.'));
   wireSave($<HTMLButtonElement>('c-save'), 'Save scenario', scenarioName);
   onClerk(() => { if (signedIn()) { demo = null; gateCard.classList.add('hidden'); document.body.removeAttribute('data-gate-open'); } });
 

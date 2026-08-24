@@ -17,8 +17,8 @@ const comparison = [
   },
   {
     feature: 'Build Composer for any public, internal or custom harness',
-    free: 'Open preview: mix models, edit assumptions and quote a build',
-    pro: 'Planned account workspace for recurring budget operations',
+    free: 'Open preview: mix models, edit assumptions and quote a build within the 24-role safety cap',
+    pro: 'Same 24-role safety cap, with higher finite account plan/version allowances and recurring workflow tools planned',
   },
   {
     feature: 'Sensitivity, break-even and local JSON, CSV and PNG exports',
@@ -27,23 +27,23 @@ const comparison = [
   },
   {
     feature: 'Saved plans and immutable version history',
-    free: 'Limited account preview when enabled',
-    pro: 'Higher plan, version and model-role limits planned',
+    free: 'Free-account Preview: up to 20 plans and 100 immutable versions per plan when enabled',
+    pro: 'Higher finite plan/version allowances planned; final numbers are not set',
   },
   {
     feature: 'Custom rates and observed-usage profiles',
-    free: 'Quote custom rates in the current tab',
-    pro: 'Durable profiles planned',
+    free: 'Edit custom or contract rates now; Preview account saves preserve them inside each plan',
+    pro: 'Reusable cross-plan rate and observed-usage profile management planned',
   },
   {
-    feature: 'Unlisted review links and operational exports',
-    free: 'Settings preview only; no link is created today',
-    pro: 'Controlled sharing workflows planned',
+    feature: 'Local exports and controlled review links',
+    free: 'JSON, CSV and PNG downloads now; Free-account Preview can create controlled unlisted links when enabled',
+    pro: 'Expanded review, permissions and operational workflows planned',
   },
   {
     feature: 'Model-price and budget monitoring',
-    free: 'Inactive draft only; no monitoring or email today',
-    pro: 'Monitoring for saved plans planned',
+    free: 'Free-account Preview can save inactive settings only; no monitoring or email is delivered',
+    pro: 'Active monitoring and delivery planned; it will not be sold until it exists',
   },
 ];
 
@@ -97,10 +97,10 @@ const launchDecisions = [
           <ul class="mt-3 list-disc pl-5 text-sm leading-relaxed">
             <li>Read public research, methodology and verified model data</li>
             <li>Use the calculator and model comparisons</li>
-            <li>Mix models under any named or custom harness in Build Composer</li>
-            <li>Run sensitivity and break-even analysis and download local exports</li>
+            <li>Mix models under any named or custom harness in Build Composer, within the 24-role safety cap</li>
+            <li>Enter custom or contract rates, run sensitivity and break-even analysis, and download local JSON, CSV and PNG exports</li>
           </ul>
-          <p class="small mt-4">Account storage can appear only in the reviewed preview environment. Its limits are safeguards, not a promised Free allowance.</p>
+          <p class="small mt-4">When the Free-account Preview is enabled, it currently supports up to 20 plans, 100 immutable versions per plan and controlled unlisted links. It can save inactive alert settings, but it does not monitor prices or send email. These are preview safeguards, not promised final tier allowances.</p>
         </article>
 
         <article class="card card-pad" id="pricing-pro-interest" data-clerk-enabled={CLERK_ENABLED ? 'true' : 'false'}>
@@ -109,11 +109,11 @@ const launchDecisions = [
           <p class="small mt-2">Provisional USD price hypothesis. No plan can be purchased or reserved.</p>
           <h3 class="h-card mt-6">Keep the budget current</h3>
           <ul class="mt-3 list-disc pl-5 text-sm leading-relaxed">
-            <li>Higher plan, version and model-role limits</li>
-            <li>Durable custom-rate and observed-usage profiles</li>
-            <li>Named architecture history and expanded review workflows</li>
-            <li>Controlled unlisted links and operational exports</li>
-            <li>Model-price and budget monitoring for saved plans</li>
+            <li>Higher finite plan and version allowances; the 24-role safety cap remains</li>
+            <li>Reusable cross-plan custom-rate and observed-usage profiles</li>
+            <li>Expanded architecture comparison and review workflows</li>
+            <li>Additional permissions and controls for unlisted review links</li>
+            <li>Active model-price and budget monitoring, only after delivery exists</li>
           </ul>
           <p class="small mt-4">The recurring hook is re-planning, review and monitoring—not access to public evidence.</p>
           <div class="mt-5 border-t border-[var(--color-rule)] pt-4">

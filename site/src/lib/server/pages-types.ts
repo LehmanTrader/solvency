@@ -4,6 +4,8 @@ export interface BuildPlansEnv {
   ENTITLEMENTS_ENABLED?: string;
   PRODUCT_INTENTS_ENABLED?: string;
   PREVIEW_ACCOUNT_ERASURE_ENABLED?: string;
+  STRIPE_CHECKOUT_ENABLED?: string;
+  STRIPE_PORTAL_ENABLED?: string;
   STRIPE_WEBHOOK_ENABLED?: string;
   APP_ENV?: string;
   CLERK_SECRET_KEY?: string;
@@ -11,6 +13,8 @@ export interface BuildPlansEnv {
   CLERK_PUBLISHABLE_KEY?: string;
   CLERK_AUTHORIZED_PARTIES?: string;
   BUILD_SHARE_TOKEN_SECRET?: string;
+  STRIPE_SECRET_KEY?: string;
+  STRIPE_WEBHOOK_SECRET?: string;
   STRIPE_PRO_MONTHLY_PRICE_ID?: string;
   STRIPE_PRO_ANNUAL_PRICE_ID?: string;
 }

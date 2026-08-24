@@ -34,6 +34,28 @@ test('privacy discloses unlisted-link, inactive-alert and deletion behavior', ()
   assert.match(privacy, /product-intent and per-account rate-limit records/);
   assert.match(privacy, /product-intent row expires after 90 days/);
   assert.match(privacy, /pruned on that account's next product-intent write or when the account is erased/);
+  assert.match(privacy, /Billing is not currently available/);
+  assert.match(privacy, /test mode, does not create a real charge/);
+  assert.match(privacy, /does not receive or store your complete card number or card security code/);
+  assert.match(privacy, /Browser-supplied customer IDs, price IDs, amounts and entitlement claims are not trusted/);
+  assert.match(privacy, /one owner-linked checkout-attempt row containing a SHA-256 request hash/);
+  assert.match(privacy, /random generation token, state, bounded expiry times, a nullable short reconciliation token/);
+  assert.match(privacy, /server-bound customer identifier, server-selected product price and billing cadence, quantity and checkout mode, fixed return URLs, and a short session expiry/);
+  assert.match(privacy, /only after successful Stripe Session creation and durable receipt/);
+  assert.match(privacy, /also stores the exact Stripe Subscription ID/);
+  assert.doesNotMatch(privacy, /sends Stripe only the server-selected product price/);
+  assert.match(privacy, /does not store the raw browser idempotency key or hosted Checkout URL/);
+  assert.match(privacy, /not replaced merely because its 32-minute Stripe Session expiry passes/);
+  assert.match(privacy, /remains blocked through a three-minute grace/);
+  assert.match(privacy, /Before 72 hours, an exact expired Session with no subscription permits a fresh generation/);
+  assert.match(privacy, /matches that exact subscription and customer to current <code>canceled<\/code> or <code>incomplete_expired<\/code> authority/);
+  assert.match(privacy, /<code>unpaid<\/code> remains blocked/);
+  assert.match(privacy, /one narrowly authorized exact-Session check is allowed only when current D1 authority already proves a terminal subscription/);
+  assert.match(privacy, /Any mismatch or inconclusive aged result requires manual review/);
+  assert.match(privacy, /Stale creating attempts also require manual review/);
+  assert.doesNotMatch(privacy, /short-lived checkout-attempt/);
+  assert.match(privacy, /normalized webhook receipts for up to 90 days/);
+  assert.match(privacy, /<tr><td>Stripe<\/td>/);
 });
 
 test('terms explain bearer-link responsibility and never imply alert delivery', () => {

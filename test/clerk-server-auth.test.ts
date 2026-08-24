@@ -275,6 +275,83 @@ describe('networkless Clerk server authentication', () => {
     assert.equal(adjacent.request.bodyUsed, false);
   });
 
+  test('Checkout and Portal are independently disabled before auth, D1, next or body access', async () => {
+    for (const [path, flag] of [
+      ['/api/checkout', 'STRIPE_CHECKOUT_ENABLED'],
+      ['/api/billing-portal', 'STRIPE_PORTAL_ENABLED'],
+    ] as const) {
+      for (const configured of [undefined, 'false']) {
+        const database = new RateDatabase();
+        const request = new Request(`https://solvency.dev${path}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{"must":"remain unread"}',
+        });
+        const context = middlewareContext(request, database);
+        context.env.ACCOUNT_PLANS_ENABLED = 'true';
+        context.env[flag] = configured;
+        let nextCalls = 0;
+        context.next = async () => { nextCalls += 1; return new Response(null, { status: 204 }); };
+
+        const response = await apiMiddleware(context);
+        assert.equal(response.status, 503);
+        assert.equal(response.headers.get('x-error-code'), 'SERVICE_UNAVAILABLE');
+        assert.equal(nextCalls, 0);
+        assert.equal(request.bodyUsed, false);
+        assert.equal(database.prepareCalls.length, 0);
+        assert.equal(database.rateLimitBinds.length, 0);
+      }
+    }
+  });
+
+  test('enabled Checkout and Portal retain exact-origin Clerk auth and owner rate limits', async () => {
+    for (const [path, flag] of [
+      ['/api/checkout', 'STRIPE_CHECKOUT_ENABLED'],
+      ['/api/billing-portal', 'STRIPE_PORTAL_ENABLED'],
+    ] as const) {
+      const database = new RateDatabase();
+      const context = middlewareContext(bearerRequest(
+        signSession(),
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Origin: 'https://solvency.dev',
+            'Sec-Fetch-Site': 'same-origin',
+          },
+          body: '{}',
+        },
+        `https://solvency.dev${path}`,
+      ), database);
+      context.env.ACCOUNT_PLANS_ENABLED = 'false';
+      context.env.ENTITLEMENTS_ENABLED = 'false';
+      context.env[flag] = 'true';
+
+      const response = await apiMiddleware(context);
+      assert.equal(response.status, 200);
+      assert.deepEqual(await response.json(), { ownerUserId: 'user_account_alpha' });
+      assert.equal(database.rateLimitBinds.length, 1);
+      assert.equal(database.rateLimitBinds[0]?.[0], 'user_account_alpha');
+
+      const unauthenticatedDatabase = new RateDatabase();
+      const unauthenticatedRequest = new Request(`https://solvency.dev${path}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Origin: 'https://solvency.dev',
+          'Sec-Fetch-Site': 'same-origin',
+        },
+        body: '{}',
+      });
+      const unauthenticated = middlewareContext(unauthenticatedRequest, unauthenticatedDatabase);
+      unauthenticated.env[flag] = 'true';
+      const denied = await apiMiddleware(unauthenticated);
+      assert.equal(denied.status, 401);
+      assert.equal(denied.headers.get('x-error-code'), 'AUTH_REQUIRED');
+      assert.equal(unauthenticatedDatabase.rateLimitBinds.length, 0);
+    }
+  });
+
   test('entitlement reads use their own rollout flag while retaining verified-owner auth and rate limits', async () => {
     const database = new RateDatabase();
     const enabled = middlewareContext(bearerRequest(
@@ -391,6 +468,41 @@ describe('networkless Clerk server authentication', () => {
       const rejected = await apiMiddleware(denied);
       assert.equal(rejected.status, 503);
       assert.equal(deniedDatabase.rateLimitBinds.length, 0);
+    }
+  });
+
+  test('preview account erasure fails closed while any Stripe surface is enabled', async () => {
+    const previewOrigin = 'https://d1-functions-preview.solvency-ru5.pages.dev';
+    for (const stripeFlag of [
+      'STRIPE_CHECKOUT_ENABLED',
+      'STRIPE_PORTAL_ENABLED',
+      'STRIPE_WEBHOOK_ENABLED',
+    ] as const) {
+      const database = new RateDatabase();
+      const context = middlewareContext(bearerRequest(
+        signSession({ azp: previewOrigin }),
+        {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            Origin: previewOrigin,
+            'Sec-Fetch-Site': 'same-origin',
+          },
+        },
+        `${previewOrigin}/api/preview-account-erasure`,
+      ), database);
+      context.env.APP_ENV = 'preview';
+      context.env.CLERK_AUTHORIZED_PARTIES = previewOrigin;
+      context.env.PREVIEW_ACCOUNT_ERASURE_ENABLED = 'true';
+      context.env[stripeFlag] = 'true';
+      let nextCalls = 0;
+      context.next = async () => { nextCalls += 1; return new Response(null, { status: 204 }); };
+
+      const response = await apiMiddleware(context);
+      assert.equal(response.status, 503, stripeFlag);
+      assert.equal(response.headers.get('x-error-code'), 'SERVICE_UNAVAILABLE', stripeFlag);
+      assert.equal(nextCalls, 0, stripeFlag);
+      assert.equal(database.rateLimitBinds.length, 0, stripeFlag);
     }
   });
 

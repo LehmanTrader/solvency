@@ -61,11 +61,22 @@ test('mobile auth does not render the fixed context strip', () => {
   assert.match(client, /max-width:\s*639px/);
 });
 
-test('pre-launch export copy says that Pro is not yet available', () => {
+test('compare-page copy separates its unavailable table export from current free Composer exports', () => {
   const page = read('site/src/pages/compare/[pair].astro');
-  assert.match(page, /Export table/);
-  assert.match(page, /Pro soon/);
+  assert.match(page, /Export compare table/);
+  assert.match(page, />Planned<\/span>/);
+  assert.match(page, /Build Composer JSON, CSV and PNG downloads are available now without Pro/);
+  assert.doesNotMatch(page, /Pro soon|Table export is planned for Pro/);
   assert.doesNotMatch(page, />Download table /);
+});
+
+test('calculator copy keeps current custom prices and exports free while planned Pro remains unavailable', () => {
+  const page = read('site/src/components/Calculator.astro');
+  assert.match(page, /Build Composer already includes per-plan custom prices and local exports/);
+  assert.match(page, /Planned Pro value:<\/span> reusable cross-plan profiles and active price\/budget monitoring—neither is available yet/);
+  assert.match(page, />Share interest<\/button>/);
+  assert.match(page, /Both are planned and unavailable today; nothing will be purchased or reserved/);
+  assert.doesNotMatch(page, /Pro \(soon\):[^\n]*export|Notify me|Get notified when Pro ships/);
 });
 
 test('compact chart compare links include their visible “vs” label in the accessible name', () => {

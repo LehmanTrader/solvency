@@ -12,6 +12,8 @@ const closedRoutes = [
   { method: 'GET', path: '/api/entitlement' },
   { method: 'GET', path: '/api/intents' },
   { method: 'DELETE', path: '/api/preview-account-erasure' },
+  { method: 'POST', path: '/api/checkout' },
+  { method: 'POST', path: '/api/billing-portal' },
   { method: 'POST', path: '/api/stripe-webhook' },
   { method: 'GET', path: `/shared-build-plans/sv1_${'A'.repeat(43)}` },
 ];

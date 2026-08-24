@@ -31,7 +31,7 @@ test('the immutable migration manifest covers every SQL file with its exact dige
     cwd: join(ROOT, 'site'), encoding: 'utf8', timeout: 10_000,
   });
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
-  assert.match(result.stdout, /Verified 6 immutable migration checksums/);
+  assert.match(result.stdout, /Verified 7 immutable migration checksums/);
 });
 
 test('both deploy workflows verify migrations, stamp the SHA, and reject a dirty build tree', () => {
@@ -66,7 +66,8 @@ test('production deploy attests exact source SHA and every dark route after publ
   for (const path of [
     '/pricing/', '/build-planner/', '/models/', '/research/',
     '/api/build-plans', '/api/entitlement', '/api/intents',
-    '/api/preview-account-erasure', '/api/stripe-webhook',
+    '/api/preview-account-erasure', '/api/checkout', '/api/billing-portal',
+    '/api/stripe-webhook',
     '/shared-build-plans/',
   ]) assert.ok(script.includes(path), `missing production attestation for ${path}`);
   assert.match(script, /response\.status !== 503/);
@@ -106,7 +107,22 @@ test('the tracked operations runbook covers rollback, recovery and the exact red
   assert.match(runbook, /wrangler d1 time-travel info/);
   assert.match(runbook, /wrangler d1 time-travel restore/);
   assert.match(runbook, /wrangler pages deployment tail/);
-  assert.match(runbook, /aggregate outcome counters for applied,/);
+  assert.match(runbook, /billing_webhook_outcome/);
+  assert.match(runbook, /applied,[\s\S]*replayed,\s*stale,\s*ignored,\s*signature-rejected,\s*payload-rejected and retryable/);
+  assert.match(runbook, /Migration `0007_billing_checkout_attempts\.sql` must be applied/);
+  assert.match(runbook, /Limit customers[\s\S]*to one subscription/);
+  assert.match(runbook, /both an `active` and an `unpaid` test subscription are redirected/);
+  assert.match(runbook, /required backstop for the final D1 subscription-check-to-Stripe-create race/);
+  assert.match(runbook, /provider expiry 32 minutes in the future and a crash-safe[\s\S]*lock lasting 35 minutes/);
+  assert.match(runbook, /never\s+stores the raw browser idempotency key or hosted Checkout[\s\S]*URL/);
+  assert.match(runbook, /Before the 72-hour[\s\S]*only an exact `expired` Session with no subscription may directly/);
+  assert.match(runbook, /exact owner, bound customer and retrieved subscription is[\s\S]*`canceled` or `incomplete_expired`/);
+  assert.match(runbook, /`unpaid` is not terminal[\s\S]*for replacement/);
+  assert.match(runbook, /one narrow recovery path[\s\S]*same atomic\s+acquisition UPDATE proves current D1 authority/);
+  assert.match(runbook, /expired Session with no subscription,[\s\S]*moves the aged receipt to `manual_review`/);
+  assert.match(runbook, /Status 408, 409, 404, 422,[\s\S]*ambiguous and[\s\S]*retain the generation/);
+  assert.match(runbook, /Alert immediately on any `checkout_manual_review` outcome/);
+  assert.match(runbook, /Do not[\s\S]*treat `checkout_pending_webhook` as the same incident/);
   for (const event of [
     'customer.subscription.created',
     'customer.subscription.updated',

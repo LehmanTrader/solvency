@@ -4,6 +4,8 @@ ACCOUNT_PLANS_ENABLED=false
 ENTITLEMENTS_ENABLED=false
 PRODUCT_INTENTS_ENABLED=false
 PREVIEW_ACCOUNT_ERASURE_ENABLED=false
+STRIPE_CHECKOUT_ENABLED=false
+STRIPE_PORTAL_ENABLED=false
 STRIPE_WEBHOOK_ENABLED=false
 CLERK_AUTHORIZED_PARTIES=http://localhost:8788
 CLERK_PUBLISHABLE_KEY=pk_test_replace_me
@@ -16,3 +18,7 @@ BUILD_SHARE_TOKEN_SECRET=<replace-with-32-random-bytes-as-base64url>
 # recurring monthly/yearly prices exist; incomplete configuration fails closed.
 STRIPE_PRO_MONTHLY_PRICE_ID=
 STRIPE_PRO_ANNUAL_PRICE_ID=
+# Server-only Stripe credentials. Keep absent until the local adapter matrix is
+# green and a separate test-mode sandbox hookup is approved.
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=

@@ -25,6 +25,10 @@
     {
       "name": "0006_product_intent_events.sql",
       "sha256": "a623e1210e038232cd8dbcb9bb0cea061a073f11686aee49682d92919a76eb01"
+    },
+    {
+      "name": "0007_billing_checkout_attempts.sql",
+      "sha256": "cd535679287c90ade59ba7a40898cf6e4f554066ebbbb30136fe8b84ef846a2b"
     }
   ]
 }

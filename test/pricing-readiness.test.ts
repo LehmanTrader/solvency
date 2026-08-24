@@ -25,10 +25,14 @@ test('pricing page separates what is free now from planned Pro', () => {
   assert.match(page, /<dt class="label">Free now<\/dt>/);
   assert.match(page, /<dt class="label">Pro planned<\/dt>/);
   assert.match(page, /any named or custom harness/);
-  assert.match(page, /Higher plan, version and model-role limits/);
-  assert.match(page, /Durable custom-rate and observed-usage profiles/);
-  assert.match(page, /Controlled unlisted links and operational exports/);
-  assert.match(page, /Model-price and budget monitoring/);
+  assert.match(page, /24-role safety cap/);
+  assert.match(page, /up to 20 plans and 100 immutable versions per plan/);
+  assert.match(page, /Reusable cross-plan custom-rate and observed-usage profiles/);
+  assert.match(page, /JSON, CSV and PNG downloads now/);
+  assert.match(page, /Free-account Preview can create controlled unlisted links when enabled/);
+  assert.match(page, /inactive settings only; no monitoring or email is delivered/);
+  assert.match(page, /Active model-price and budget monitoring, only after delivery exists/);
+  assert.doesNotMatch(page, /Unlimited roles|generic exports[^\n]*Pro/i);
   assert.match(page, /re-planning, review and monitoring—not access to public evidence/);
 });
 
