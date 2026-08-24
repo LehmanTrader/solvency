@@ -73,3 +73,30 @@ test('deployment actions are immutable and installs are frozen', () => {
   assert.match(workflow, /run: npm ci --no-audit --no-fund/);
   assert.match(workflow, /^\s*environment: production$/m);
 });
+
+test('paid-workflow previews never fabricate private links, monitoring or unsafe export markup', () => {
+  const page = read('site/src/pages/build-planner.astro');
+  const exports = read('site/src/lib/build-export.ts');
+  const operations = read('site/src/lib/build-operations.ts');
+  const ignores = read('.gitignore');
+  assert.doesNotMatch(page, /navigator\.clipboard|Notification\.requestPermission|insertAdjacentHTML|innerHTML/);
+  assert.doesNotMatch(exports, /foreignObject|<script|fetch\(|https?:\/\//);
+  assert.doesNotMatch(operations, /fetch\(|unsafeMetadata|(?:recipient|email|shareUrl|href)\s*[:=]/);
+  assert.match(page, /No link was created or copied/);
+  assert.match(page, /Monitoring and email are off/);
+  assert.match(exports, /spreadsheetSafeText/);
+  assert.match(exports, /MAX_BUILD_EXPORT_ROLES\s*=\s*24/);
+  assert.match(ignores, /\.dev\.vars/);
+  assert.match(ignores, /\.env\.\*/);
+});
+
+test('planner analytics disclosure and payloads exclude raw build inputs', () => {
+  const page = read('site/src/pages/build-planner.astro');
+  const privacy = read('site/src/pages/privacy.astro');
+  assert.match(privacy, /cookieless product analytics/);
+  assert.match(privacy, /do not include plan or harness names, model selections, token counts, entered prices or thresholds/);
+  assert.match(privacy, /coarse Build Composer interaction events/);
+  assert.doesNotMatch(page, /track\([^\n]+(?:plan\.name|harness\.name|modelId|threshold)/);
+  assert.match(page, /build_quote_first_edit_valid/);
+  assert.match(page, /price_hypothesis: '19_monthly'/);
+});

@@ -15,6 +15,7 @@ const updated = '2026-08-23';
     <h2>What is collected, and why</h2>
     <h3>Reading the site</h3>
     <p>Nothing that identifies you. Pages are static files served by Cloudflare. Cloudflare Web Analytics records aggregate page views (page URL, referrer, browser type, country) without cookies, without fingerprinting and without storing IP addresses against visits. Cloudflare's own network logs, which may include your IP address, are governed by <a href="https://www.cloudflare.com/privacypolicy/" rel="noopener">Cloudflare's privacy policy</a>.</p>
+    <p>On the Build Composer, cookieless product analytics may also record coarse interactions: opening the planner; adding a role; making a first edit that leaves a valid quote; saving, duplicating, restoring or choosing a baseline version; the export format; role count; whether any custom rate is present; an unlisted-link draft's expiry and export setting; an alert draft's trigger type; and a directional response to the $19/month price question. These events include the page path. They do not include plan or harness names, model selections, token counts, entered prices or thresholds, downloaded file contents, account details or email addresses.</p>
     <p>Your light/dark theme choice is stored in your browser's local storage and never sent anywhere.</p>
     <p>Fonts are served from solvency.dev itself; no font request goes to a third party.</p>
 
@@ -38,7 +39,7 @@ const updated = '2026-08-23';
     <table>
       <thead><tr><th>Service</th><th>Role</th><th>Data</th></tr></thead>
       <tbody>
-        <tr><td>Cloudflare</td><td>Hosting, CDN, cookieless analytics</td><td>Request logs, aggregate page views</td></tr>
+        <tr><td>Cloudflare</td><td>Hosting, CDN, cookieless analytics</td><td>Request logs, aggregate page views and coarse Build Composer interaction events described above</td></tr>
         <tr><td>Clerk</td><td>Authentication and free-account metadata</td><td>Email, name, OAuth profile, session, sign-in security logs, signup intent, scenario URLs</td></tr>
         <tr><td>Google, GitHub</td><td>Optional sign-in providers</td><td>Share your basic profile with Clerk when you choose them</td></tr>
       </tbody>
@@ -51,7 +52,7 @@ const updated = '2026-08-23';
     <p>You can see, correct or delete your account data at any time. Email <a href="mailto:robertdhanda@gmail.com">robertdhanda@gmail.com</a> from the address on the account and it will be deleted within 30 days, including from Clerk. Residents of the EU, UK, California and other jurisdictions with data-protection law have the rights those laws grant, including access, correction, deletion and portability; the same email address handles all of them.</p>
 
     <h2>Retention</h2>
-    <p>Account data is kept while the account exists and deleted on request. Aggregate analytics are kept indefinitely; they contain nothing that identifies you.</p>
+    <p>Account data is kept while the account exists and deleted on request. Aggregate page-view and product-interaction analytics are kept indefinitely; they contain no account identifier or raw Build Composer inputs.</p>
 
     <h2>Children</h2>
     <p>Solvency is not directed at children under 16 and does not knowingly collect their data.</p>

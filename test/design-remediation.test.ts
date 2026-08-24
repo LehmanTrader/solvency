@@ -85,6 +85,31 @@ test('build planner accepts a free-form harness and exposes the paid workflow be
   assert.match(page, /common attempted-build volume/);
   assert.match(page, /analyzeBuildSensitivity/);
   assert.match(page, /breakEvenBuildPlans/);
+  assert.doesNotMatch(page, /prices the graph you enter/i);
+  assert.match(page, /id="build-operations"/);
+  assert.match(page, /Export, share and monitor/);
+  assert.match(page, /id="b-export-json"[^>]*>Download JSON/);
+  assert.match(page, /id="b-export-csv"[^>]*>Download CSV/);
+  assert.match(page, /id="b-export-png"[^>]*>Download PNG/);
+  assert.match(page, /no link is created, no plan is uploaded and no email is sent/i);
+  assert.match(page, /Draft · no link/);
+  assert.match(page, /Draft · off/);
+  assert.match(page, /Unlisted link · preview/);
+  assert.match(page, /Anyone with the unlisted link · view only/);
+  assert.doesNotMatch(page, /xl:grid-cols-3/);
+  assert.match(page, /id="b-share-save" disabled/);
+  assert.match(page, /id="b-alert-save" disabled/);
+  assert.match(page, /build_quote_first_edit_valid/);
+  assert.doesNotMatch(page, /build_quote_valid/);
+  assert.match(page, /build-pro-price-interest/);
+  assert.match(page, /directional research signal/);
+  assert.match(page, /Planned expiry:/);
+  assert.match(page, /noticeReserve\s*=\s*160/);
+  assert.match(page, /I’d consider Pro at \$19/);
+  assert.match(page, /Research signal only\. No checkout, trial or subscription/);
+  for (const event of ['build-add-role', 'build-save-version', 'build-duplicate']) {
+    assert.equal(page.match(new RegExp(event, 'g'))?.length, 1, `${event} should have one instrumentation path`);
+  }
 });
 
 test('every model pair uses the one generated canonical compare path', () => {

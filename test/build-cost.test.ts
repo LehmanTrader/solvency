@@ -40,6 +40,27 @@ describe('BuildPlanV1 multi-model quote engine', () => {
     assert.ok(Math.abs(quote.roles[1].costPerBuildAttemptUsd - 0.042) < 1e-12);
     assert.ok(Math.abs(quote.buildAttemptCostUsd! - 1.642) < 1e-12);
     assert.ok(Math.abs(quote.monthlyCostUsd! - 183.2) < 1e-12);
+
+    const catalogModel = models.find((model) => model.model_id === plan().roles[0].modelId)!;
+    assert.deepEqual([
+      quote.roles[0].appliedInputPerMtok,
+      quote.roles[0].appliedCacheReadPerMtok,
+      quote.roles[0].appliedCacheWritePerMtok,
+      quote.roles[0].appliedOutputPerMtok,
+    ], [
+      catalogModel.input_per_mtok,
+      catalogModel.cached_input_per_mtok ?? catalogModel.input_per_mtok,
+      0,
+      catalogModel.output_per_mtok,
+    ]);
+    const usage = plan().roles[0].usagePerInvocation;
+    const independentlyDerived = (
+      usage.uncachedInputTokens * quote.roles[0].appliedInputPerMtok
+      + usage.cacheReadTokens * quote.roles[0].appliedCacheReadPerMtok
+      + usage.cacheWriteTokens * quote.roles[0].appliedCacheWritePerMtok
+      + usage.outputTokens * quote.roles[0].appliedOutputPerMtok
+    ) / 1_000_000;
+    assert.equal(independentlyDerived, quote.roles[0].costPerInvocationUsd);
   });
 
   test('accepts any free-form harness name without an allowlist or special case', () => {
@@ -82,6 +103,13 @@ describe('BuildPlanV1 multi-model quote engine', () => {
     };
     const quote = quoteBuildPlan(p, models);
     assert.equal(quote.roles[0].priceBasis, 'contract');
+    assert.equal(quote.roles[0].priceAssertionOrigin, 'user_asserted');
+    assert.deepEqual([
+      quote.roles[0].appliedInputPerMtok,
+      quote.roles[0].appliedCacheReadPerMtok,
+      quote.roles[0].appliedCacheWritePerMtok,
+      quote.roles[0].appliedOutputPerMtok,
+    ], [1, 0.1, 0, 2]);
     assert.equal(quote.roles[0].costPerBuildAttemptUsd, 0.12);
     assert.ok(Math.abs(quote.buildAttemptCostUsd! - 0.262) < 1e-12);
   });
@@ -139,5 +167,43 @@ describe('BuildPlanV1 multi-model quote engine', () => {
     const quote = quoteBuildPlan(p, models);
     assert.equal(quote.valid, false);
     assert.ok(quote.errors.some((e) => /explicit custom cache-read price/.test(e)));
+  });
+
+  test('exports conservative assertion origins for legacy plans and validates explicit verification claims', () => {
+    const legacy = plan();
+    legacy.endToEndSuccess = { rate: 0.8, basis: 'published_system_run' };
+    const legacyQuote = quoteBuildPlan(legacy, models);
+    assert.equal(legacyQuote.valid, true);
+    assert.equal(legacyQuote.harnessAssertionOrigin, 'user_asserted');
+    assert.equal(legacyQuote.successAssertionOrigin, 'user_asserted');
+    assert.equal(legacyQuote.roles[0].usageAssertionOrigin, 'solvency_template');
+    assert.equal(legacyQuote.roles[0].priceAssertionOrigin, 'source_verified');
+
+    const verified = plan();
+    verified.harness.assertionOrigin = 'source_verified';
+    verified.harness.sourceUrl = 'https://example.com/harness';
+    verified.harness.lastVerified = '2026-08-23';
+    verified.roles[0].usagePerInvocation.assertionOrigin = 'source_verified';
+    verified.roles[0].usagePerInvocation.sourceUrl = 'https://example.com/usage';
+    verified.roles[0].usagePerInvocation.lastVerified = '2026-08-23';
+    verified.roles[0].priceOverride = {
+      inputPerMtok: 1, outputPerMtok: 2, basis: 'contract', assertionOrigin: 'source_verified',
+      sourceUrl: 'https://example.com/contract', lastVerified: '2026-08-23',
+    };
+    verified.endToEndSuccess = {
+      rate: 0.8, basis: 'measured_by_user', assertionOrigin: 'source_verified',
+      sourceUrl: 'https://example.com/success', lastVerified: '2026-08-23',
+    };
+    const verifiedQuote = quoteBuildPlan(verified, models);
+    assert.equal(verifiedQuote.valid, true);
+    assert.equal(verifiedQuote.harnessAssertionOrigin, 'source_verified');
+    assert.equal(verifiedQuote.successAssertionOrigin, 'source_verified');
+    assert.equal(verifiedQuote.roles[0].usageAssertionOrigin, 'source_verified');
+    assert.equal(verifiedQuote.roles[0].priceAssertionOrigin, 'source_verified');
+
+    delete verified.roles[0].usagePerInvocation.lastVerified;
+    const unsupportedClaim = quoteBuildPlan(verified, models);
+    assert.equal(unsupportedClaim.valid, false);
+    assert.ok(unsupportedClaim.errors.some((error) => /source-verified inputs require/.test(error)));
   });
 });

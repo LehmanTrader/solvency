@@ -16,7 +16,8 @@ const harnessExamples = [
     <h1 class="h-page mt-3">Budget any agent stack.</h1>
     <p class="mt-4 lede max-w-3xl">
       Name any harness—or your own custom harness—then assign a model, expected calls and token
-      profile to every orchestrator, worker or fallback role. The quote prices the graph you enter.
+      profile to every orchestrator, worker or fallback role. The quote prices the role mix and
+      expected routing volume you enter.
     </p>
 
     <div class="mt-6 card card-pad grid gap-4 sm:grid-cols-[1fr_auto] items-start">
@@ -56,7 +57,7 @@ const harnessExamples = [
             <select class="ctl ctl-row mt-2 w-full" id="b-harness-basis">
               <option value="user_supplied">User supplied</option>
               <option value="solvency_template">Solvency template</option>
-              <option value="published">Published measurement</option>
+              <option value="published">Published measurement · user asserted</option>
             </select>
           </label>
           <label class="block">
@@ -87,8 +88,8 @@ const harnessExamples = [
             <span class="label">Success-rate basis</span>
             <select class="ctl ctl-row mt-2 w-full" id="b-success-basis">
               <option value="user_assumption">User assumption</option>
-              <option value="measured_by_user">Measured by you</option>
-              <option value="published_system_run">Published system run</option>
+              <option value="measured_by_user">Measured by you · user asserted</option>
+              <option value="published_system_run">Published system run · user asserted</option>
             </select>
           </label>
         </div>
@@ -99,7 +100,7 @@ const harnessExamples = [
           <div><p class="label">Step 2</p><h2 class="h-section mt-1" id="roles-title">Model roles and routing volume</h2></div>
           <button type="button" class="btn" id="b-add-role" data-analytics="build-add-role">Add model role +</button>
         </div>
-        <p class="small mt-2 max-w-3xl">Expected calls can be fractional: eight worker tasks routed 75% to one pool become 6 expected calls per build attempt.</p>
+        <p class="small mt-2 max-w-3xl">Expected calls can be fractional: eight worker tasks routed 75% to one pool become 6 expected calls per build attempt. Preview safety limit: 24 roles.</p>
         <div class="mt-4 grid gap-4" id="b-roles"></div>
       </section>
 
@@ -114,7 +115,7 @@ const harnessExamples = [
           </div>
           <div class="card-pad border-t border-[var(--color-rule)]" id="b-messages" aria-live="polite"></div>
           <div class="px-5 py-3 border-t border-[var(--color-rule)] flex flex-wrap gap-2">
-            <button type="button" class="btn" id="b-export" data-analytics="build-export-json">Export quote JSON</button>
+            <a class="btn" href="#build-operations">Export options ↓</a>
             <button type="button" class="btn" id="b-save-version" data-analytics="build-save-version">Save version</button>
             <button type="button" class="btn" id="b-duplicate" data-analytics="build-duplicate">Duplicate plan</button>
           </div>
@@ -207,13 +208,86 @@ const harnessExamples = [
           </div>
         </div>
       </section>
+
+      <section class="card overflow-hidden" id="build-operations" aria-labelledby="operations-title">
+        <div class="card-head">
+          <div><p class="label">Step 6 · preview</p><h2 class="h-card mt-1" id="operations-title">Export, share and monitor</h2></div>
+          <span class="pill pill-ink">No server storage</span>
+        </div>
+        <div class="card-pad">
+          <p class="text-sm leading-relaxed text-[var(--color-body)] max-w-4xl">
+            Downloads are created in this browser. Share and alert settings are drafts saved only in
+            this tab; no link is created, no plan is uploaded and no email is sent.
+          </p>
+
+          <div class="operation-grid mt-5">
+            <article class="operation-card" aria-labelledby="export-title">
+              <p class="label">Export</p>
+              <h3 class="h-card mt-2" id="export-title">Take the quote with you</h3>
+              <p class="small mt-2">Generated locally from the current plan and quote. Missing completed-build cost stays Missing; it is never estimated.</p>
+              <div class="mt-4 grid gap-2">
+                <button type="button" class="btn" id="b-export-json">Download JSON</button>
+                <button type="button" class="btn" id="b-export-csv">Download CSV</button>
+                <button type="button" class="btn" id="b-export-png">Download PNG</button>
+              </div>
+              <p class="small mt-3" id="b-export-ready">Current quote ready to export.</p>
+              <p class="small mt-2">Review files before sharing: they can include internal harness names, usage assumptions and custom or contract rates you entered.</p>
+              <p class="small mt-2" id="b-export-status" role="status" aria-live="polite"></p>
+              <p class="small mt-2 text-[var(--color-worse)]" id="b-export-error" role="alert"></p>
+            </article>
+
+            <article class="operation-card" aria-labelledby="share-title">
+              <p class="label">Unlisted link · preview</p>
+              <h3 class="h-card mt-2" id="share-title">Choose how a saved version would open</h3>
+              <p class="small mt-2">Unlisted links need authenticated storage. Anyone with a future link could view it. Preview the settings now; Solvency will not create or copy a link.</p>
+              <fieldset class="mt-4 grid gap-3">
+                <legend class="sr-only">Unlisted share draft settings</legend>
+                <label class="block"><span class="label">Version to share</span><select class="ctl ctl-row mt-2 w-full" id="b-share-version"><option value="">Save a version first</option></select></label>
+                <div class="block"><span class="label">Access</span><p class="operation-fixed-value mt-2">Anyone with the unlisted link · view only</p></div>
+                <label class="block"><span class="label">Expiry</span><select class="ctl ctl-row mt-2 w-full" id="b-share-expiry"><option value="7">7 days</option><option value="30">30 days</option><option value="none">No expiry</option></select></label>
+                <label class="inline-flex items-center gap-2 min-h-11 text-sm text-[var(--color-ink)] cursor-pointer"><input type="checkbox" class="chk" id="b-share-export" checked /> Allow quote export</label>
+              </fieldset>
+              <div class="mt-3 flex flex-wrap gap-2">
+                <button type="button" class="btn" id="b-share-save" disabled>Save share draft</button>
+                <button type="button" class="btn btn-quiet" id="b-share-remove" hidden>Remove draft</button>
+              </div>
+              <div class="operation-summary mt-3" id="b-share-summary"><p class="small">No share draft yet. Nothing has left this tab.</p></div>
+              <p class="small mt-2" id="b-share-status" role="status" aria-live="polite"></p>
+              <p class="small mt-2 text-[var(--color-worse)]" id="b-share-error" role="alert"></p>
+            </article>
+
+            <article class="operation-card" aria-labelledby="alerts-title">
+              <p class="label">Alerts · preview</p>
+              <h3 class="h-card mt-2" id="alerts-title">Define what should trigger a re-check</h3>
+              <p class="small mt-2">Draft an alert for a saved version. Price monitoring and email delivery are not running yet.</p>
+              <fieldset class="mt-4 grid gap-3">
+                <legend class="sr-only">Alert draft settings</legend>
+                <label class="block"><span class="label">Version to monitor</span><select class="ctl ctl-row mt-2 w-full" id="b-alert-version"><option value="">Save a version first</option></select></label>
+                <label class="block"><span class="label">Trigger</span><select class="ctl ctl-row mt-2 w-full" id="b-alert-trigger">
+                  <option value="model_price_change">A model price in this plan changes</option>
+                  <option value="monthly_spend_above">Monthly spend exceeds</option>
+                  <option value="monthly_spend_change_percent">Monthly spend changes by</option>
+                  <option value="baseline_delta_percent">Selected version exceeds a baseline by</option>
+                </select></label>
+                <label class="block" id="b-alert-threshold-wrap" hidden><span class="label" id="b-alert-threshold-label">Threshold</span><span class="operation-threshold mt-2"><span id="b-alert-threshold-prefix"></span><input class="ctl ctl-row w-full" id="b-alert-threshold" type="number" min="0.01" step="0.1" aria-describedby="b-alert-error" /><span id="b-alert-threshold-suffix">%</span></span></label>
+                <label class="block" id="b-alert-baseline-wrap" hidden><span class="label">Comparison baseline</span><select class="ctl ctl-row mt-2 w-full" id="b-alert-baseline"><option value="">Choose a saved baseline</option></select></label>
+                <p class="small">Planned delivery: account email.</p>
+              </fieldset>
+              <button type="button" class="btn mt-3" id="b-alert-save" disabled>Save alert draft</button>
+              <div class="mt-3 grid gap-2" id="b-alert-list"><p class="small">No alert drafts. Solvency is not monitoring this plan.</p></div>
+              <p class="small mt-2" id="b-alert-status" role="status" aria-live="polite"></p>
+              <p class="small mt-2 text-[var(--color-worse)]" id="b-alert-error" role="alert"></p>
+            </article>
+          </div>
+        </div>
+      </section>
     </form>
 
     <Section id="packaging" eyebrow="Packaging" title="What becomes Pro" class="mt-20"
-      caption="The full workflow is being built before checkout. Limits are not enforced during the preview.">
+      caption="The full workflow is being built before checkout. Account-tier limits are not enforced yet; the 24-role browser safety cap still applies.">
       <div class="grid gap-4 md:grid-cols-2">
         <div class="card card-pad"><p class="label">Free</p><h3 class="h-card mt-2">Experience the answer</h3><ul class="mt-3 text-sm leading-relaxed text-[var(--color-body)] list-disc pl-5"><li>Any harness name</li><li>Two model roles at list prices</li><li>One editable on-screen scenario</li><li>Public research and verified catalog</li></ul></div>
-        <div class="card card-pad"><p class="label">Pro · planned $19/month</p><h3 class="h-card mt-2">Operate the budget</h3><ul class="mt-3 text-sm leading-relaxed text-[var(--color-body)] list-disc pl-5"><li>Unlimited role mixes and plan versions</li><li>Custom/contract prices and observed usage</li><li>Scenario deltas, sensitivity and break-even views</li><li>Private links, exports and price/budget alerts</li></ul></div>
+        <div class="card card-pad"><p class="label">Pro · planned $19/month</p><h3 class="h-card mt-2">Operate the budget</h3><ul class="mt-3 text-sm leading-relaxed text-[var(--color-body)] list-disc pl-5"><li>Expanded role mixes and plan versions</li><li>Custom/contract prices and observed usage</li><li>Scenario deltas, sensitivity and break-even views</li><li>Unlisted links, exports and price/budget alerts</li></ul><div class="mt-5 border-t border-[var(--color-rule)] pt-4"><h4 class="text-sm font-semibold text-[var(--color-ink)]">Would this workflow be worth $19/month?</h4><button type="button" class="btn mt-3" id="b-pro-interest">I’d consider Pro at $19</button><p class="small mt-2">Research signal only. No checkout, trial or subscription.</p><p class="small mt-2" id="b-pro-interest-status" role="status" aria-live="polite"></p></div></div>
       </div>
       <p class="small mt-3">The price is a validation hypothesis. Checkout will be added only after the workflow, persistence and server entitlement boundary are ready.</p>
     </Section>
@@ -232,7 +306,7 @@ const harnessExamples = [
         <label class="block"><span class="label">Role type</span><select class="ctl ctl-row mt-2 w-full" data-field="kind"><option value="orchestrator">Orchestrator</option><option value="worker">Worker / subagent</option><option value="other">Other / fallback</option></select></label>
         <label class="block sm:col-span-2"><span class="label">Model</span><select class="ctl ctl-row mt-2 w-full" data-field="model">{currentModels.map((model) => <option value={model.model_id} data-input={model.input_per_mtok} data-cache={model.cached_input_per_mtok ?? ''} data-output={model.output_per_mtok}>{model.display_name} · {model.provider}</option>)}</select></label>
         <label class="block"><span class="label">Expected calls / build</span><input class="ctl ctl-row mt-2 w-full" data-field="calls" type="number" min="0.01" step="0.25" value="1" /></label>
-        <label class="block"><span class="label">Usage basis</span><select class="ctl ctl-row mt-2 w-full" data-field="usage-basis"><option value="template_assumption">Template assumption</option><option value="user_supplied">User supplied</option><option value="measured">Measured</option></select></label>
+        <label class="block"><span class="label">Usage basis</span><select class="ctl ctl-row mt-2 w-full" data-field="usage-basis"><option value="template_assumption">Template assumption</option><option value="user_supplied">User supplied</option><option value="measured">Measured · user asserted</option></select></label>
         <label class="block"><span class="label">Fresh input / call</span><input class="ctl ctl-row mt-2 w-full" data-field="fresh" type="number" min="0" step="100" value="20000" /></label>
         <label class="block"><span class="label">Cache read / call</span><input class="ctl ctl-row mt-2 w-full" data-field="cache" type="number" min="0" step="100" value="0" /></label>
         <label class="block"><span class="label">Output / call</span><input class="ctl ctl-row mt-2 w-full" data-field="output" type="number" min="0" step="100" value="2000" /></label>
@@ -253,7 +327,15 @@ const harnessExamples = [
   import { quoteBuildPlan, type BuildPlanV1, type BuildRoleV1 } from '../lib/build-cost.ts';
   import { compareBuildQuotes, createBuildSnapshot, duplicateBuildSnapshot, type BuildSnapshotV1 } from '../lib/build-workspace.ts';
   import { analyzeBuildSensitivity, breakEvenBuildPlans, type SensitivityAxis } from '../lib/build-sensitivity.ts';
-  import { track } from '../lib/clerk-client.ts';
+  import {
+    MAX_BUILD_EXPORT_ROLES, buildExportCsv, buildExportFilename, buildExportJson, buildExportSummary,
+    type BuildExportFormat,
+  } from '../lib/build-export.ts';
+  import {
+    alertSummary, createAlertDraft, createShareDraft,
+    type BuildAlertDraftV1, type BuildAlertTrigger, type BuildShareDraftV1, type ShareExpiryDays,
+  } from '../lib/build-operations.ts';
+  import { openSignUp, signedIn, track } from '../lib/clerk-client.ts';
 
   const form = document.getElementById('composer-form') as HTMLFormElement;
   const rolesEl = document.getElementById('b-roles')!;
@@ -263,6 +345,10 @@ const harnessExamples = [
   let currentPlanId = crypto.randomUUID();
   let baselineSnapshotId: string | null = null;
   const snapshots: BuildSnapshotV1[] = [];
+  let shareDraft: BuildShareDraftV1 | null = null;
+  const alertDrafts: BuildAlertDraftV1[] = [];
+  let editingAlertId: string | null = null;
+  let editedValidQuoteTracked = false;
   const byId = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
   const setText = (id: string, next: string) => { const target = byId(id); if (target.textContent !== next) target.textContent = next; };
   const value = (id: string) => (byId<HTMLInputElement>(id).value ?? '').trim();
@@ -277,6 +363,9 @@ const harnessExamples = [
       remove.disabled = rolesEl.children.length <= 1;
       remove.setAttribute('aria-label', `Remove role ${index + 1}: ${field<HTMLInputElement>(role, 'label').value || 'unnamed role'}`);
     });
+    const add = byId<HTMLButtonElement>('b-add-role');
+    add.disabled = rolesEl.children.length >= MAX_BUILD_EXPORT_ROLES;
+    add.title = add.disabled ? `Preview safety limit: ${MAX_BUILD_EXPORT_ROLES} roles.` : '';
   }
 
   function seedCustomPrices(role: Element) {
@@ -289,6 +378,7 @@ const harnessExamples = [
   }
 
   function addRole(seed: Partial<BuildRoleV1> = {}) {
+    if (rolesEl.children.length >= MAX_BUILD_EXPORT_ROLES) return;
     const fragment = template.content.cloneNode(true) as DocumentFragment;
     const role = fragment.querySelector<HTMLElement>('[data-role]')!;
     role.dataset.roleId = seed.roleId ?? `role-${crypto.randomUUID()}`;
@@ -318,6 +408,7 @@ const harnessExamples = [
 
   function readRole(role: HTMLElement): BuildRoleV1 {
     const custom = field<HTMLInputElement>(role, 'custom-toggle').checked;
+    const usageBasis = field<HTMLSelectElement>(role, 'usage-basis').value as BuildRoleV1['usagePerInvocation']['basis'];
     return {
       roleId: role.dataset.roleId!,
       kind: field<HTMLSelectElement>(role, 'kind').value as BuildRoleV1['kind'],
@@ -329,30 +420,38 @@ const harnessExamples = [
         cacheReadTokens: Number(field<HTMLInputElement>(role, 'cache').value),
         cacheWriteTokens: 0,
         outputTokens: Number(field<HTMLInputElement>(role, 'output').value),
-        basis: field<HTMLSelectElement>(role, 'usage-basis').value as BuildRoleV1['usagePerInvocation']['basis'],
+        basis: usageBasis,
+        assertionOrigin: usageBasis === 'template_assumption' ? 'solvency_template' : 'user_asserted',
       },
       priceOverride: custom ? {
         inputPerMtok: field<HTMLInputElement>(role, 'custom-input').value === '' ? Number.NaN : Number(field<HTMLInputElement>(role, 'custom-input').value),
         cacheReadPerMtok: field<HTMLInputElement>(role, 'custom-cache').value === '' ? undefined : Number(field<HTMLInputElement>(role, 'custom-cache').value),
         outputPerMtok: field<HTMLInputElement>(role, 'custom-output').value === '' ? Number.NaN : Number(field<HTMLInputElement>(role, 'custom-output').value),
         basis: field<HTMLSelectElement>(role, 'custom-basis').value as NonNullable<BuildRoleV1['priceOverride']>['basis'],
+        assertionOrigin: 'user_asserted',
       } : undefined,
     };
   }
 
   function readPlan(): BuildPlanV1 {
     const successText = value('b-success');
+    const harnessBasis = value('b-harness-basis') as BuildPlanV1['harness']['configBasis'];
     return {
       schemaVersion: 1,
       name: value('b-name'),
       workload: { buildsPerMonth: number('b-volume'), volumeBasis: value('b-volume-basis') as BuildPlanV1['workload']['volumeBasis'] },
       harness: {
         name: value('b-harness'), version: value('b-version') || null,
-        configBasis: value('b-harness-basis') as BuildPlanV1['harness']['configBasis'],
+        configBasis: harnessBasis,
+        assertionOrigin: harnessBasis === 'solvency_template' ? 'solvency_template' : 'user_asserted',
         fixedCostPerBuildAttemptUsd: number('b-overhead'), fixedMonthlyCostUsd: number('b-fixed'),
       },
       roles: [...rolesEl.querySelectorAll<HTMLElement>('[data-role]')].map(readRole),
-      endToEndSuccess: successText ? { rate: Number(successText) / 100, basis: value('b-success-basis') as NonNullable<BuildPlanV1['endToEndSuccess']>['basis'] } : undefined,
+      endToEndSuccess: successText ? {
+        rate: Number(successText) / 100,
+        basis: value('b-success-basis') as NonNullable<BuildPlanV1['endToEndSuccess']>['basis'],
+        assertionOrigin: 'user_asserted',
+      } : undefined,
     };
   }
 
@@ -468,6 +567,7 @@ const harnessExamples = [
       restore.addEventListener('click', () => { currentPlanId = snapshot.planId; applyPlan(snapshot.plan); byId('b-workspace-message').textContent = `Restored ${snapshot.plan.name} version ${snapshot.version}.`; track('build-restore-version', { path: location.pathname }); });
       actions.append(baseline, restore); row.append(copy, actions); list.appendChild(row);
     }
+    renderOperationVersions();
 
     const baseline = snapshots.find((item) => item.snapshotId === baselineSnapshotId);
     const cells = [byId('b-delta-attempt'), byId('b-delta-solved'), byId('b-delta-month')];
@@ -488,6 +588,214 @@ const harnessExamples = [
     renderAnalysis(baseline);
   }
 
+  const snapshotLabel = (snapshot: BuildSnapshotV1) => `${snapshot.plan.name} · v${snapshot.version}`;
+
+  function fillSnapshotSelect(id: string, placeholder: string) {
+    const select = byId<HTMLSelectElement>(id);
+    const previous = select.value;
+    select.replaceChildren();
+    const empty = document.createElement('option'); empty.value = ''; empty.textContent = placeholder; select.appendChild(empty);
+    for (const snapshot of snapshots) {
+      const option = document.createElement('option'); option.value = snapshot.snapshotId; option.textContent = snapshotLabel(snapshot); select.appendChild(option);
+    }
+    if (snapshots.some((item) => item.snapshotId === previous)) select.value = previous;
+    else if (snapshots.length) select.value = snapshots.at(-1)!.snapshotId;
+    select.disabled = snapshots.length === 0;
+  }
+
+  function syncOperationControls() {
+    const hasSnapshots = snapshots.length > 0;
+    const shareVersion = byId<HTMLSelectElement>('b-share-version');
+    const alertVersion = byId<HTMLSelectElement>('b-alert-version');
+    const baseline = byId<HTMLSelectElement>('b-alert-baseline');
+    const shareSave = byId<HTMLButtonElement>('b-share-save');
+    const alertSave = byId<HTMLButtonElement>('b-alert-save');
+    const trigger = byId<HTMLSelectElement>('b-alert-trigger').value as BuildAlertTrigger;
+
+    for (const option of baseline.options) option.disabled = Boolean(option.value) && option.value === alertVersion.value;
+    if (baseline.value && baseline.value === alertVersion.value) baseline.value = '';
+
+    shareSave.disabled = !hasSnapshots || !shareVersion.value;
+    shareSave.title = shareSave.disabled ? 'Save a valid plan version first.' : '';
+    const invalidBaseline = trigger === 'baseline_delta_percent'
+      && (!baseline.value || baseline.value === alertVersion.value);
+    alertSave.disabled = !hasSnapshots || !alertVersion.value || invalidBaseline;
+    alertSave.title = !hasSnapshots
+      ? 'Save a valid plan version first.'
+      : invalidBaseline ? 'Choose a different saved version as the baseline.' : '';
+  }
+
+  function renderOperationVersions() {
+    fillSnapshotSelect('b-share-version', 'Save a version first');
+    fillSnapshotSelect('b-alert-version', 'Save a version first');
+    fillSnapshotSelect('b-alert-baseline', 'Choose a saved baseline');
+    if (shareDraft) byId<HTMLSelectElement>('b-share-version').value = shareDraft.snapshotId;
+    renderShareDraft();
+    renderAlerts();
+    syncOperationControls();
+  }
+
+  const cleanCanvasText = (text: string) => text.replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ').replace(/\s+/g, ' ').trim();
+  function fitCanvasText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string {
+    const clean = cleanCanvasText(text);
+    if (ctx.measureText(clean).width <= maxWidth) return clean;
+    let result = clean;
+    while (result.length && ctx.measureText(`${result}…`).width > maxWidth) result = result.slice(0, -1);
+    return `${result}…`;
+  }
+  function wrapCanvasText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, maxLines: number): string[] {
+    const words = cleanCanvasText(text).split(' ').filter(Boolean);
+    const lines: string[] = [];
+    let line = '';
+    for (const word of words) {
+      const next = line ? `${line} ${word}` : word;
+      if (ctx.measureText(next).width <= maxWidth || !line) line = next;
+      else { lines.push(line); line = word; if (lines.length === maxLines - 1) break; }
+    }
+    if (line && lines.length < maxLines) lines.push(line);
+    const original = words.join(' ');
+    if (lines.join(' ') !== original && lines.length) lines[lines.length - 1] = fitCanvasText(ctx, `${lines.at(-1)}…`, maxWidth);
+    return lines;
+  }
+
+  function downloadBlob(blob: Blob, filename: string) {
+    const href = URL.createObjectURL(blob);
+    const anchor = document.createElement('a'); anchor.href = href; anchor.download = filename; anchor.hidden = true;
+    document.body.appendChild(anchor); anchor.click(); anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(href), 0);
+  }
+
+  async function buildPngBlob(plan: BuildPlanV1, quote: ReturnType<typeof quoteBuildPlan>): Promise<Blob> {
+    const summary = buildExportSummary(plan, quote);
+    const width = 1200;
+    const noticeReserve = 160;
+    const height = Math.min(2200, 700 + summary.roles.length * 48 + noticeReserve);
+    const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height;
+    const ctx = canvas.getContext('2d'); if (!ctx) throw new Error('PNG rendering is unavailable in this browser.');
+    ctx.fillStyle = '#0A0C0D'; ctx.fillRect(0, 0, width, height);
+    ctx.strokeStyle = '#2C3338'; ctx.lineWidth = 2; ctx.strokeRect(48, 48, width - 96, height - 96);
+    ctx.fillStyle = '#E0A02E'; ctx.fillRect(72, 74, 7, 28);
+    ctx.fillStyle = '#F4F1EA'; ctx.font = '700 22px ui-monospace, monospace'; ctx.fillText('SOLVENCY · BUILD QUOTE', 96, 98);
+    ctx.fillStyle = '#A7ADB3'; ctx.font = '16px ui-monospace, monospace'; ctx.fillText(`Generated ${new Date(summary.quotedAt).toISOString()} · ${summary.engineVersion}`, 72, 132);
+    ctx.fillStyle = '#F4F1EA'; ctx.font = '700 38px system-ui, sans-serif'; ctx.fillText(fitCanvasText(ctx, summary.planName, 1056), 72, 188);
+    ctx.fillStyle = '#A7ADB3'; ctx.font = '18px ui-monospace, monospace'; ctx.fillText(fitCanvasText(ctx, `Harness: ${summary.harness}`, 1056), 72, 222);
+
+    summary.metrics.forEach((metric, index) => {
+      const col = index % 2, row = Math.floor(index / 2), x = 72 + col * 540, y = 260 + row * 116;
+      ctx.fillStyle = '#111519'; ctx.fillRect(x, y, 516, 92); ctx.strokeStyle = '#2C3338'; ctx.strokeRect(x, y, 516, 92);
+      ctx.fillStyle = '#A7ADB3'; ctx.font = '14px ui-monospace, monospace'; ctx.fillText(metric.label.toUpperCase(), x + 18, y + 28);
+      ctx.fillStyle = metric.value.startsWith('Missing') ? '#B8A47A' : '#F4F1EA'; ctx.font = '700 24px ui-monospace, monospace'; ctx.fillText(fitCanvasText(ctx, metric.value, 480), x + 18, y + 64);
+    });
+
+    const rolesY = 516;
+    ctx.fillStyle = '#A7ADB3'; ctx.font = '14px ui-monospace, monospace';
+    ctx.fillText('ROLE', 72, rolesY); ctx.fillText('MODEL', 380, rolesY); ctx.fillText('CALLS', 760, rolesY); ctx.fillText('COST / BUILD', 900, rolesY);
+    ctx.strokeStyle = '#2C3338'; ctx.beginPath(); ctx.moveTo(72, rolesY + 14); ctx.lineTo(1128, rolesY + 14); ctx.stroke();
+    summary.roles.forEach((role, index) => {
+      const y = rolesY + 52 + index * 48;
+      ctx.fillStyle = '#F4F1EA'; ctx.font = '17px ui-monospace, monospace'; ctx.fillText(fitCanvasText(ctx, role.label, 280), 72, y);
+      ctx.fillStyle = '#CCD0D2'; ctx.fillText(fitCanvasText(ctx, role.modelName, 350), 380, y);
+      ctx.fillText(role.expectedInvocations.toLocaleString('en-US', { maximumFractionDigits: 2 }), 760, y);
+      ctx.fillStyle = '#F4F1EA'; ctx.fillText(role.costPerBuildAttempt, 900, y);
+      ctx.fillStyle = '#727B82'; ctx.font = '12px ui-monospace, monospace'; ctx.fillText(fitCanvasText(ctx, `${role.priceBasis.replaceAll('_', ' ')} · usage ${role.usageBasis.replaceAll('_', ' ')}${role.priceLastVerified ? ` · verified ${role.priceLastVerified}` : ''}`, 1056), 72, y + 19);
+    });
+    const footerY = rolesY + 78 + summary.roles.length * 48;
+    ctx.fillStyle = '#A7ADB3'; ctx.font = '14px system-ui, sans-serif';
+    let y = footerY;
+    for (const notice of summary.notices) {
+      for (const line of wrapCanvasText(ctx, notice, 1056, 2)) { ctx.fillText(line, 72, y); y += 20; }
+      y += 6;
+    }
+    return await new Promise<Blob>((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('Could not encode the PNG file.')), 'image/png'));
+  }
+
+  async function exportCurrent(format: BuildExportFormat) {
+    const status = byId('b-export-status'), error = byId('b-export-error'); status.textContent = ''; error.textContent = '';
+    for (const id of ['b-export-json', 'b-export-csv', 'b-export-png']) byId<HTMLButtonElement>(id).setAttribute('aria-busy', 'true');
+    try {
+      const plan = readPlan();
+      const quote = quoteBuildPlan(plan, models);
+      if (!quote.valid) throw new Error('Fix the quote errors above before exporting.');
+      if (format === 'json') downloadBlob(new Blob([buildExportJson(plan, quote)], { type: 'application/json;charset=utf-8' }), buildExportFilename(plan.name, format));
+      else if (format === 'csv') downloadBlob(new Blob([buildExportCsv(plan, quote)], { type: 'text/csv;charset=utf-8' }), buildExportFilename(plan.name, format));
+      else downloadBlob(await buildPngBlob(plan, quote), buildExportFilename(plan.name, format));
+      status.textContent = `Downloaded ${format.toUpperCase()}. The file was generated locally.`;
+      track('build_export', { path: location.pathname, format, role_count: String(plan.roles.length), custom_prices: String(plan.roles.some((role) => Boolean(role.priceOverride))) });
+    } catch (cause) {
+      error.textContent = cause instanceof Error ? `${cause.message} Nothing was uploaded.` : `Couldn’t create the ${format.toUpperCase()} file. Nothing was uploaded. Try again.`;
+    } finally {
+      for (const id of ['b-export-json', 'b-export-csv', 'b-export-png']) byId<HTMLButtonElement>(id).removeAttribute('aria-busy');
+    }
+  }
+
+  function renderShareDraft() {
+    const summary = byId('b-share-summary'); summary.replaceChildren();
+    const remove = byId<HTMLButtonElement>('b-share-remove');
+    if (!shareDraft) {
+      const empty = document.createElement('p'); empty.className = 'small'; empty.textContent = 'No share draft yet. Nothing has left this tab.'; summary.appendChild(empty);
+      remove.hidden = true; byId<HTMLButtonElement>('b-share-save').textContent = 'Save share draft'; return;
+    }
+    const snapshot = snapshots.find((item) => item.snapshotId === shareDraft!.snapshotId);
+    if (!snapshot) { shareDraft = null; renderShareDraft(); return; }
+    const title = document.createElement('p'); title.className = 'text-sm font-semibold text-[var(--color-ink)]'; title.textContent = snapshotLabel(snapshot);
+    const meta = document.createElement('p'); meta.className = 'small mt-1'; meta.textContent = `${shareDraft.expiresInDays ? `Planned expiry: ${shareDraft.expiresInDays} days after link creation` : 'Planned expiry: none'} · ${shareDraft.allowQuoteExport ? 'quote export allowed' : 'quote export off'}`;
+    const pill = document.createElement('span'); pill.className = 'pill pill-ink mt-2'; pill.textContent = 'Draft · no link';
+    summary.append(title, meta, pill);
+    remove.hidden = false; remove.setAttribute('aria-label', `Remove share draft for ${snapshot.plan.name} version ${snapshot.version}`);
+    byId<HTMLButtonElement>('b-share-save').textContent = 'Update share draft';
+  }
+
+  function renderAlertThreshold() {
+    const trigger = byId<HTMLSelectElement>('b-alert-trigger').value as BuildAlertTrigger;
+    const thresholdWrap = byId('b-alert-threshold-wrap'), baselineWrap = byId('b-alert-baseline-wrap');
+    thresholdWrap.hidden = trigger === 'model_price_change'; baselineWrap.hidden = trigger !== 'baseline_delta_percent';
+    byId('b-alert-threshold-prefix').textContent = trigger === 'monthly_spend_above' ? '$' : '';
+    byId('b-alert-threshold-suffix').textContent = trigger === 'monthly_spend_above' ? 'USD' : '%';
+    byId('b-alert-threshold-label').textContent = trigger === 'monthly_spend_above' ? 'Monthly threshold' : 'Change threshold';
+    syncOperationControls();
+  }
+
+  function resetAlertEditor() {
+    editingAlertId = null;
+    byId<HTMLButtonElement>('b-alert-save').textContent = 'Save alert draft';
+    byId<HTMLSelectElement>('b-alert-trigger').value = 'model_price_change';
+    byId<HTMLInputElement>('b-alert-threshold').value = '';
+    byId<HTMLInputElement>('b-alert-threshold').removeAttribute('aria-invalid');
+    byId<HTMLSelectElement>('b-alert-baseline').value = '';
+    renderAlertThreshold();
+  }
+
+  function renderAlerts() {
+    const list = byId('b-alert-list'); list.replaceChildren();
+    if (!alertDrafts.length) {
+      const empty = document.createElement('p'); empty.className = 'small'; empty.textContent = 'No alert drafts. Solvency is not monitoring this plan.'; list.appendChild(empty); return;
+    }
+    for (const draft of alertDrafts) {
+      const snapshot = snapshots.find((item) => item.snapshotId === draft.snapshotId); if (!snapshot) continue;
+      const row = document.createElement('article'); row.className = 'operation-draft-row';
+      const copy = document.createElement('div'); copy.className = 'min-w-0';
+      const title = document.createElement('p'); title.className = 'text-sm font-semibold text-[var(--color-ink)]'; title.textContent = alertSummary(draft, snapshot.quote);
+      const meta = document.createElement('p'); meta.className = 'small mt-1'; meta.textContent = snapshotLabel(snapshot);
+      const pill = document.createElement('span'); pill.className = 'pill pill-ink mt-2'; pill.textContent = 'Draft · off'; copy.append(title, meta, pill);
+      const actions = document.createElement('div'); actions.className = 'flex flex-wrap gap-1';
+      const edit = document.createElement('button'); edit.type = 'button'; edit.className = 'btn btn-quiet'; edit.textContent = 'Edit'; edit.setAttribute('aria-label', `Edit alert draft for ${snapshot.plan.name} version ${snapshot.version}`);
+      edit.addEventListener('click', () => {
+        editingAlertId = draft.alertId; byId<HTMLSelectElement>('b-alert-version').value = draft.snapshotId;
+        byId<HTMLSelectElement>('b-alert-trigger').value = draft.trigger; byId<HTMLInputElement>('b-alert-threshold').value = draft.threshold === null ? '' : String(draft.threshold);
+        byId<HTMLSelectElement>('b-alert-baseline').value = draft.baselineSnapshotId ?? ''; byId<HTMLButtonElement>('b-alert-save').textContent = 'Update alert draft';
+        byId('b-alert-error').textContent = ''; byId('b-alert-status').textContent = 'Editing an inactive draft. Save changes to apply.';
+        renderAlertThreshold(); byId<HTMLButtonElement>('b-alert-save').focus();
+      });
+      const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'btn btn-quiet'; remove.textContent = 'Remove'; remove.setAttribute('aria-label', `Remove alert draft for ${snapshot.plan.name} version ${snapshot.version}`);
+      remove.addEventListener('click', () => {
+        alertDrafts.splice(alertDrafts.findIndex((item) => item.alertId === draft.alertId), 1);
+        if (editingAlertId === draft.alertId) resetAlertEditor();
+        renderAlerts(); byId('b-alert-status').textContent = 'Alert draft removed. No monitoring was active.'; byId<HTMLButtonElement>('b-alert-save').focus();
+      });
+      actions.append(edit, remove); row.append(copy, actions); list.appendChild(row);
+    }
+  }
+
   function applyPlan(plan: BuildPlanV1) {
     byId<HTMLInputElement>('b-name').value = plan.name;
     byId<HTMLInputElement>('b-harness').value = plan.harness.name;
@@ -506,6 +814,8 @@ const harnessExamples = [
 
   function render() {
     if (!rolesEl.children.length) return;
+    byId('b-export-status').textContent = '';
+    byId('b-export-error').textContent = '';
     lastPlan = readPlan();
     lastQuote = quoteBuildPlan(lastPlan, models);
     byId('b-role-count').textContent = `${lastPlan.roles.length} role${lastPlan.roles.length === 1 ? '' : 's'}`;
@@ -549,14 +859,33 @@ const harnessExamples = [
     const successLi = document.createElement('li'); successLi.textContent = lastPlan.endToEndSuccess
       ? `Whole-system success: ${(lastPlan.endToEndSuccess.rate * 100).toFixed(1)}% · ${lastPlan.endToEndSuccess.basis.replaceAll('_', ' ')}`
       : 'Whole-system success: not supplied; solved-build cost is intentionally missing.'; ledger.appendChild(successLi);
-    byId<HTMLButtonElement>('b-export').disabled = !lastQuote.valid;
+    for (const id of ['b-export-json', 'b-export-csv', 'b-export-png']) byId<HTMLButtonElement>(id).disabled = !lastQuote.valid;
+    byId('b-export-ready').textContent = lastQuote.valid ? 'Current quote ready to export.' : 'Fix the quote errors above before exporting.';
     byId<HTMLButtonElement>('b-save-version').disabled = !lastQuote.valid;
     byId<HTMLButtonElement>('b-duplicate').disabled = !lastQuote.valid;
     renderWorkspace();
   }
 
+  function markOperationSettingsChanged(target: HTMLInputElement | HTMLSelectElement) {
+    if (target.id.startsWith('b-share-')) {
+      byId('b-share-error').textContent = '';
+      byId('b-share-status').textContent = snapshots.length ? 'Draft settings changed; save to apply.' : '';
+    }
+    if (target.id.startsWith('b-alert-')) {
+      byId('b-alert-error').textContent = '';
+      byId('b-alert-status').textContent = snapshots.length ? 'Draft settings changed; save to apply.' : '';
+      byId<HTMLInputElement>('b-alert-threshold').removeAttribute('aria-invalid');
+      if (target.id === 'b-alert-trigger') renderAlertThreshold();
+      else syncOperationControls();
+    }
+  }
+
   form.addEventListener('input', (event) => {
     const target = event.target as HTMLInputElement | HTMLSelectElement;
+    if (target.closest('#build-operations')) {
+      markOperationSettingsChanged(target);
+      return;
+    }
     const role = target.closest('[data-role]');
     if (role && target.matches('[data-field="label"]')) renumber();
     if (role && target.matches('[data-field="custom-toggle"]')) {
@@ -569,22 +898,22 @@ const harnessExamples = [
       seedCustomPrices(role);
     }
     render();
+    if (!editedValidQuoteTracked && lastQuote.valid) {
+      editedValidQuoteTracked = true;
+      track('build_quote_first_edit_valid', { path: location.pathname, role_count: String(lastPlan.roles.length), custom_prices: String(lastPlan.roles.some((item) => Boolean(item.priceOverride))) });
+    }
   });
-  byId('b-add-role').addEventListener('click', () => { addRole(); track('build-add-role', { path: location.pathname }); });
-  byId('b-export').addEventListener('click', () => {
-    if (!lastQuote.valid) return;
-    const blob = new Blob([JSON.stringify({ plan: lastPlan, quote: lastQuote }, null, 2) + '\n'], { type: 'application/json' });
-    const href = URL.createObjectURL(blob); const a = document.createElement('a');
-    a.href = href; a.download = `${lastPlan.name.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() || 'build-plan'}-quote.json`;
-    a.click(); URL.revokeObjectURL(href); track('build-export-json', { path: location.pathname });
-  });
+  byId('b-add-role').addEventListener('click', () => addRole());
+  byId('b-export-json').addEventListener('click', () => exportCurrent('json'));
+  byId('b-export-csv').addEventListener('click', () => exportCurrent('csv'));
+  byId('b-export-png').addEventListener('click', () => exportCurrent('png'));
   byId('b-save-version').addEventListener('click', () => {
     if (!lastQuote.valid) return;
     const snapshot = createBuildSnapshot(snapshots, currentPlanId, crypto.randomUUID(), lastPlan, models);
     snapshots.push(snapshot);
     baselineSnapshotId ??= snapshot.snapshotId;
     byId('b-workspace-message').textContent = `Saved ${snapshot.plan.name} version ${snapshot.version} in this tab.`;
-    renderWorkspace(); track('build-save-version', { path: location.pathname });
+    renderWorkspace();
   });
   byId('b-duplicate').addEventListener('click', () => {
     if (!lastQuote.valid) return;
@@ -597,7 +926,54 @@ const harnessExamples = [
     currentPlanId = newPlanId;
     applyPlan(duplicate.plan);
     byId('b-workspace-message').textContent = `Duplicated ${source.plan.name}; the original is now the comparison baseline.`;
-    renderWorkspace(); track('build-duplicate', { path: location.pathname });
+    renderWorkspace();
+  });
+
+  byId('b-share-save').addEventListener('click', () => {
+    const error = byId('b-share-error'), status = byId('b-share-status'); error.textContent = ''; status.textContent = '';
+    try {
+      const rawExpiry = byId<HTMLSelectElement>('b-share-expiry').value;
+      const expiry = rawExpiry === 'none' ? null : Number(rawExpiry) as ShareExpiryDays;
+      shareDraft = createShareDraft(snapshots, byId<HTMLSelectElement>('b-share-version').value, expiry, byId<HTMLInputElement>('b-share-export').checked);
+      renderShareDraft(); status.textContent = 'Share settings saved in this tab. No link was created or copied.';
+      track('build_share_draft_save', { path: location.pathname, expiry: rawExpiry, allow_export: String(shareDraft.allowQuoteExport) });
+    } catch (cause) { error.textContent = cause instanceof Error ? cause.message : 'Could not save the share draft.'; }
+  });
+  byId('b-share-remove').addEventListener('click', () => {
+    shareDraft = null; renderShareDraft(); byId('b-share-error').textContent = '';
+    byId('b-share-status').textContent = 'Share draft removed. No remote link existed.'; byId<HTMLButtonElement>('b-share-save').focus();
+  });
+
+  byId('b-alert-trigger').addEventListener('change', () => markOperationSettingsChanged(byId<HTMLSelectElement>('b-alert-trigger')));
+  byId('b-alert-save').addEventListener('click', () => {
+    const error = byId('b-alert-error'), status = byId('b-alert-status'), threshold = byId<HTMLInputElement>('b-alert-threshold');
+    error.textContent = ''; status.textContent = ''; threshold.removeAttribute('aria-invalid');
+    try {
+      const trigger = byId<HTMLSelectElement>('b-alert-trigger').value as BuildAlertTrigger;
+      const draft = createAlertDraft(snapshots, {
+        alertId: editingAlertId ?? crypto.randomUUID(), snapshotId: byId<HTMLSelectElement>('b-alert-version').value,
+        trigger, threshold: trigger === 'model_price_change' ? null : Number(threshold.value),
+        baselineSnapshotId: byId<HTMLSelectElement>('b-alert-baseline').value || null,
+      });
+      const existing = alertDrafts.findIndex((item) => item.alertId === draft.alertId);
+      if (existing >= 0) alertDrafts.splice(existing, 1, draft); else alertDrafts.push(draft);
+      editingAlertId = null; byId<HTMLButtonElement>('b-alert-save').textContent = 'Save alert draft'; renderAlerts(); syncOperationControls();
+      status.textContent = 'Alert draft saved in this tab. Monitoring and email are off.';
+      track('build_alert_draft_save', { path: location.pathname, trigger });
+    } catch (cause) {
+      error.textContent = cause instanceof Error ? cause.message : 'Could not save the alert draft.';
+      if (/threshold/i.test(error.textContent)) { threshold.setAttribute('aria-invalid', 'true'); threshold.focus(); }
+    }
+  });
+
+  byId('b-pro-interest').addEventListener('click', () => {
+    const status = byId('b-pro-interest-status');
+    const emitted = track('build_pro_price_interest', { path: location.pathname, price_hypothesis: '19_monthly' });
+    if (signedIn()) status.textContent = emitted ? 'Thanks—this click was sent as a directional research signal. Nothing was charged.' : 'You are signed in, but analytics is unavailable. Nothing was charged.';
+    else {
+      const opened = openSignUp('build-pro-price-interest', 'Share interest in Build Composer Pro at $19/month. No checkout or charge.');
+      status.textContent = opened ? 'Free-account sign-up opened. There is no checkout or charge.' : 'Sign-up is unavailable in this preview. There is no checkout or charge.';
+    }
   });
 
   addRole({
@@ -608,6 +984,8 @@ const harnessExamples = [
     roleId: 'worker-pool', kind: 'worker', label: 'Worker pool', modelId: 'gpt-5.6-luna', expectedInvocationsPerBuildAttempt: 6,
     usagePerInvocation: { uncachedInputTokens: 20000, cacheReadTokens: 30000, cacheWriteTokens: 0, outputTokens: 2000, basis: 'template_assumption' },
   });
+  renderAlertThreshold();
+  track('build_planner_view', { path: location.pathname });
 </script>
 
 <style is:global>
@@ -628,10 +1006,21 @@ const harnessExamples = [
   .analysis-metrics dd, .break-even-inputs dd { margin-top: .3rem; overflow-wrap: anywhere; font-family: var(--font-mono); font-size: .9rem; color: var(--color-ink); }
   .break-even-inputs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; min-width: min(100%, 25rem); padding: 1px; background: var(--color-rule); }
   .break-even-inputs > div { padding: .75rem; background: var(--color-panel-2); }
+  .operation-grid { display: grid; gap: 1rem; }
+  .operation-card { min-width: 0; padding: 1rem; border: 1px solid var(--color-rule); background: var(--color-panel-2); }
+  .operation-fixed-value { min-height: 2.75rem; padding: .72rem .8rem; border: 1px solid var(--color-rule); background: var(--color-panel); font-family: var(--font-mono); font-size: .78rem; line-height: 1.45; color: var(--color-body); }
+  .operation-summary { min-width: 0; padding: .8rem; border: 1px solid var(--color-rule); background: var(--color-panel); overflow-wrap: anywhere; }
+  .operation-threshold { display: flex; align-items: center; gap: .45rem; font-family: var(--font-mono); color: var(--color-muted); }
+  .operation-threshold .ctl { min-width: 0; }
+  .operation-draft-row { display: flex; align-items: flex-start; justify-content: space-between; gap: .75rem; padding: .8rem; border: 1px solid var(--color-rule); background: var(--color-panel); overflow-wrap: anywhere; }
+  @media (min-width: 1024px) { .operation-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
   @media (max-width: 639px) {
     .role-editor .card-head { align-items: stretch; }
     .role-editor .role-label { width: 100%; }
     #b-breakdown td, #b-breakdown th { white-space: nowrap; }
     .snapshot-row { align-items: flex-start; flex-direction: column; }
+    .operation-card .btn { width: 100%; }
+    .operation-draft-row { flex-direction: column; }
+    .operation-draft-row > .flex { width: 100%; }
   }
 </style>

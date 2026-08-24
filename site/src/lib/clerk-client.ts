@@ -49,7 +49,7 @@ const urls = () => ({ afterSignInUrl: location.href, afterSignUpUrl: location.hr
  * are countable in Clerk's user list. Never use unsafeMetadata for authorization:
  * it is client-writable conversion analytics, not an entitlement source.
  */
-export type Intent = 'gate' | 'save' | 'pro-notify' | 'pro-download';
+export type Intent = 'gate' | 'save' | 'pro-notify' | 'pro-download' | 'build-pro-price-interest';
 
 /**
  * Where the strip goes: hard against Clerk's card, above it when the viewport
@@ -112,9 +112,10 @@ function showContext(text: string): void {
  * unsafeMetadata (with the scenario URL) and `context` is the strip's text.
  */
 export const openSignUp = (intent: Intent = 'gate', context?: string) => {
-  const c = clerk(); if (!c?.openSignUp) return;
+  const c = clerk(); if (!c?.openSignUp) return false;
   if (context) showContext(context);
   c.openSignUp({ ...urls(), appearance: clerkAppearance(), unsafeMetadata: { intent, scenario: location.href } });
+  return true;
 };
 export const openSignIn = () => clerk()?.openSignIn?.({ ...urls(), appearance: clerkAppearance() });
 
@@ -123,12 +124,13 @@ export const openSignIn = () => clerk()?.openSignIn?.({ ...urls(), appearance: c
  * present (Cloudflare Zaraz `zaraz.track`, or a beacon exposing trackEvent).
  * Silent when neither is loaded.
  */
-export function track(name: string, data?: Record<string, string>): void {
+export function track(name: string, data?: Record<string, string>): boolean {
   const w = window as any;
   try {
-    if (typeof w.zaraz?.track === 'function') w.zaraz.track(name, data);
-    else if (typeof w.__cfBeacon?.trackEvent === 'function') w.__cfBeacon.trackEvent(name, data);
+    if (typeof w.zaraz?.track === 'function') { w.zaraz.track(name, data); return true; }
+    if (typeof w.__cfBeacon?.trackEvent === 'function') { w.__cfBeacon.trackEvent(name, data); return true; }
   } catch { /* analytics must never break the page */ }
+  return false;
 }
 export function wireAnalytics(): void {
   document.addEventListener('click', (e) => {
