@@ -200,20 +200,29 @@ async function requirePreviewPage(path, requireAccountPlans = false) {
 }
 
 function attestPricingUi(page) {
-  const markers = [
+  // The checkout API routes appear in the customer ProCheckout card as soon
+  // as the Checkout stage is enabled; the sandbox console markers appear only
+  // at the separate operator-UI stage.
+  const consoleMarkers = [
     'id="stripe-sandbox-console"',
     'Stripe test-mode billing harness',
-    '/api/checkout',
-    '/api/billing-portal',
     `data-preview-origin="${PREVIEW_ORIGIN}"`,
   ];
+  for (const marker of ['/api/checkout', '/api/billing-portal']) {
+    if (state.checkout && !page.includes(marker)) {
+      fail(`/pricing/ is missing enabled Stripe marker ${JSON.stringify(marker)}.`);
+    }
+    if (!state.checkout && page.includes(marker)) {
+      fail(`/pricing/ contains dark Stripe marker ${JSON.stringify(marker)}.`);
+    }
+  }
   if (!state.ui) {
-    for (const marker of markers) {
+    for (const marker of consoleMarkers) {
       if (page.includes(marker)) fail(`/pricing/ contains dark Stripe marker ${JSON.stringify(marker)}.`);
     }
     return;
   }
-  for (const marker of markers) {
+  for (const marker of consoleMarkers) {
     if (!page.includes(marker)) fail(`/pricing/ is missing enabled Stripe marker ${JSON.stringify(marker)}.`);
   }
   for (const buttonId of ['stripe-sandbox-month', 'stripe-sandbox-year', 'stripe-sandbox-portal', 'stripe-sandbox-refresh']) {
