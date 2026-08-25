@@ -19,26 +19,47 @@ const harnessExamples = [
       description="Price any agent harness or custom orchestration: assign different models to orchestrator and worker roles, enter routing volume and token usage, and see cost per build and monthly spend.">
   <div class="wrap pt-8 md:pt-12" id="build-planner">
     <p class="eyebrow">Build Composer · preview</p>
-    <h1 class="h-page mt-3">Budget any agent stack.</h1>
+    <div class="mt-3 flex flex-wrap items-center gap-3">
+      <h1 class="h-page">Budget any agent stack.</h1>
+      <span class="pill pill-ink" id="composer-access-badge">PREVIEW · no checkout yet</span>
+    </div>
     <p class="mt-4 lede max-w-3xl">
       Name any harness—or your own custom harness—then assign a model, expected calls and token
       profile to every orchestrator, worker or fallback role. The quote prices the role mix and
       expected routing volume you enter.
     </p>
 
-    <section class="mt-6 card card-pad grid gap-4 sm:grid-cols-[1fr_auto] items-start" aria-labelledby="composer-access-title">
-      <div>
-        <p class="label">Current access · open preview</p>
-        <h2 class="h-card mt-2" id="composer-access-title">No subscription or Pro entitlement is active.</h2>
-        <p class="small mt-2 max-w-3xl">Build pricing, sensitivity, tab-only versions and local downloads work now. Account plans appear only when the storage preview is enabled. {ACCOUNT_PLANS_ENABLED
-          ? 'A signed-in user can create and revoke unlisted links for a selected account plan and save inactive alert settings; no scheduled check or email is running.'
-          : 'Unlisted-link delivery and monitoring remain settings-only prototypes: no link, scheduled check or email is created.'}</p>
-        <a class="link inline-block mt-3" href="#packaging">Compare today’s preview with planned Pro ↓</a>
+    <div class="mt-6 tile-grid grid-cols-3" id="b-answer-strip" aria-live="polite" aria-atomic="false">
+      <div class="tile"><p class="label">Per build attempt</p><p class="tile-v" id="b-strip-attempt">—</p></div>
+      <div class="tile"><p class="label">Per month</p><p class="tile-v" id="b-strip-month">—</p></div>
+      <div class="tile">
+        <p class="label">Per completed build</p>
+        <p class="tile-v" id="b-strip-solved">Missing</p>
+        <p class="tile-n" id="b-strip-solved-note">Supply a whole-system success rate</p>
+        <a class="tile-n link" id="b-strip-solved-link" href="#b-success">Add a success rate →</a>
       </div>
-      <span class="pill pill-ink">No checkout yet</span>
-    </section>
+    </div>
 
-    <form class="mt-8 grid gap-6" id="composer-form" novalidate
+    <p class="mt-6 small max-w-3xl">
+      One form prices any stack: a public harness or one you haven't named yet. Assign a model to every orchestrator, worker and fallback role, enter custom or contract rates, then see per-attempt cost, monthly spend, a sensitivity range and break-even against a saved baseline — every number tagged with where it came from: verified catalog price, template default, or your own assumption.
+    </p>
+    <p class="mt-3 small max-w-3xl" id="composer-access-detail">
+      <strong class="text-[var(--color-ink)]">Current access · open preview:</strong>{' '}
+      <span id="composer-access-title">No subscription or Pro entitlement is active.</span>{' '}
+      Build pricing, sensitivity, tab-only versions and local downloads work now. Account plans appear only when the storage preview is enabled.{' '}
+      {ACCOUNT_PLANS_ENABLED
+        ? 'A signed-in user can create and revoke unlisted links for a selected account plan and save inactive alert settings; no scheduled check or email is running.'
+        : 'Unlisted-link delivery and monitoring remain settings-only prototypes: no link, scheduled check or email is created.'}
+      {' '}<a class="link" href="#packaging">Compare today’s preview with planned Pro ↓</a>
+    </p>
+
+    <div class="mt-6 flex flex-wrap gap-2" role="group" aria-label="Quick-start harness presets">
+      {harnessExamples.map((name) => (
+        <button type="button" class="btn btn-quiet" data-harness-chip={name}>{name === 'Custom harness' ? 'Custom' : name}</button>
+      ))}
+    </div>
+
+    <form class="mt-6 grid gap-6" id="composer-form" novalidate
           data-account-plans-enabled={ACCOUNT_PLANS_ENABLED ? 'true' : 'false'}
           data-clerk-enabled={CLERK_ENABLED ? 'true' : 'false'}>
       <section class="card overflow-hidden" aria-labelledby="harness-title">
@@ -46,28 +67,16 @@ const harnessExamples = [
           <div><p class="label">Step 1</p><h2 class="h-card mt-1" id="harness-title">Harness and workload</h2></div>
           <p class="small">Free-form: presets are suggestions, not restrictions.</p>
         </div>
-        <div class="card-pad grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          <label class="block sm:col-span-2">
+        <div class="card-pad grid gap-5 sm:grid-cols-2">
+          <label class="block">
             <span class="label">Plan name</span>
             <input class="ctl ctl-row mt-2 w-full" id="b-name" maxlength={BUILD_PLAN_LIMITS.maxPlanNameChars} value="Fable orchestrator + lower-cost workers" />
           </label>
-          <label class="block sm:col-span-2">
+          <label class="block">
             <span class="label">Harness name</span>
             <input class="ctl ctl-row mt-2 w-full" id="b-harness" list="harness-examples" maxlength={BUILD_PLAN_LIMITS.maxHarnessNameChars} value="Custom harness" autocomplete="off" />
             <datalist id="harness-examples">{harnessExamples.map((name) => <option value={name} />)}</datalist>
             <span class="small block mt-1">Type any public, internal or custom harness.</span>
-          </label>
-          <label class="block">
-            <span class="label">Harness version</span>
-            <input class="ctl ctl-row mt-2 w-full" id="b-version" maxlength={BUILD_PLAN_LIMITS.maxHarnessVersionChars} placeholder="optional" />
-          </label>
-          <label class="block">
-            <span class="label">Configuration basis</span>
-            <select class="ctl ctl-row mt-2 w-full" id="b-harness-basis">
-              <option value="user_supplied">User supplied</option>
-              <option value="solvency_template">Solvency template</option>
-              <option value="published">Published measurement · user asserted</option>
-            </select>
           </label>
           <label class="block">
             <span class="label">Build volume / month</span>
@@ -80,28 +89,45 @@ const harnessExamples = [
               <option value="successful_builds">Successful builds</option>
             </select>
           </label>
-          <label class="block">
-            <span class="label">Harness overhead / attempt</span>
-            <span class="money-input mt-2"><span>$</span><input class="ctl ctl-row w-full" id="b-overhead" type="number" min="0" max={BUILD_PLAN_LIMITS.maxFixedCostUsd} step="any" value="0" /></span>
-          </label>
-          <label class="block">
-            <span class="label">Fixed harness cost / month</span>
-            <span class="money-input mt-2"><span>$</span><input class="ctl ctl-row w-full" id="b-fixed" type="number" min="0" max={BUILD_PLAN_LIMITS.maxFixedCostUsd} step="any" value="0" /></span>
-          </label>
-          <label class="block lg:col-span-2">
-            <span class="label">End-to-end system success</span>
-            <span class="percent-input mt-2"><input class="ctl ctl-row w-full" id="b-success" type="number" min="0.01" max="100" step="any" placeholder="Not supplied" /><span>%</span></span>
-            <span class="small block mt-1">Optional. Must describe the whole configured system—not individual model benchmarks.</span>
-          </label>
-          <label class="block lg:col-span-2">
-            <span class="label">Success-rate basis</span>
-            <select class="ctl ctl-row mt-2 w-full" id="b-success-basis">
-              <option value="user_assumption">User assumption</option>
-              <option value="measured_by_user">Measured by you · user asserted</option>
-              <option value="published_system_run">Published system run · user asserted</option>
-            </select>
-          </label>
         </div>
+        <details class="disc px-5 py-3 border-t border-[var(--color-rule)]" id="b-harness-details">
+          <summary>Fine-tune harness assumptions</summary>
+          <div class="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            <label class="block">
+              <span class="label">Harness version</span>
+              <input class="ctl ctl-row mt-2 w-full" id="b-version" maxlength={BUILD_PLAN_LIMITS.maxHarnessVersionChars} placeholder="optional" />
+            </label>
+            <label class="block">
+              <span class="label">Configuration basis</span>
+              <select class="ctl ctl-row mt-2 w-full" id="b-harness-basis">
+                <option value="user_supplied">User supplied</option>
+                <option value="solvency_template">Solvency template</option>
+                <option value="published">Published measurement · user asserted</option>
+              </select>
+            </label>
+            <label class="block">
+              <span class="label">Harness overhead / attempt</span>
+              <span class="money-input mt-2"><span>$</span><input class="ctl ctl-row w-full" id="b-overhead" type="number" min="0" max={BUILD_PLAN_LIMITS.maxFixedCostUsd} step="any" value="0" /></span>
+            </label>
+            <label class="block">
+              <span class="label">Fixed harness cost / month</span>
+              <span class="money-input mt-2"><span>$</span><input class="ctl ctl-row w-full" id="b-fixed" type="number" min="0" max={BUILD_PLAN_LIMITS.maxFixedCostUsd} step="any" value="0" /></span>
+            </label>
+            <label class="block lg:col-span-2">
+              <span class="label">End-to-end system success</span>
+              <span class="percent-input mt-2"><input class="ctl ctl-row w-full" id="b-success" type="number" min="0.01" max="100" step="any" placeholder="Not supplied" /><span>%</span></span>
+              <span class="small block mt-1">Optional. Must describe the whole configured system—not individual model benchmarks.</span>
+            </label>
+            <label class="block lg:col-span-2">
+              <span class="label">Success-rate basis</span>
+              <select class="ctl ctl-row mt-2 w-full" id="b-success-basis">
+                <option value="user_assumption">User assumption</option>
+                <option value="measured_by_user">Measured by you · user asserted</option>
+                <option value="published_system_run">Published system run · user asserted</option>
+              </select>
+            </label>
+          </div>
+        </details>
       </section>
 
       <section aria-labelledby="roles-title">
@@ -118,15 +144,23 @@ const harnessExamples = [
           <div class="card-head"><div><p class="label">Step 3</p><h2 class="h-card mt-1" id="quote-title">Build quote</h2></div><span class="pill pill-ink" id="b-role-count">0 roles</span></div>
           <div class="tile-grid grid-cols-2" aria-live="polite" aria-atomic="false">
             <div class="tile"><p class="label">Per build attempt</p><p class="tile-v" id="b-attempt">—</p><p class="tile-n">Harness overhead + every expected role call</p></div>
-            <div class="tile"><p class="label">Per completed build</p><p class="tile-v" id="b-solved">Missing</p><p class="tile-n" id="b-solved-note">Supply a whole-system success rate</p></div>
+            <div class="tile">
+              <p class="label">Per completed build</p>
+              <p class="tile-v" id="b-solved">Missing</p>
+              <p class="tile-n" id="b-solved-note">Supply a whole-system success rate</p>
+              <a class="tile-n link" id="b-solved-link" href="#b-success">Add a success rate →</a>
+            </div>
             <div class="tile"><p class="label">Monthly spend</p><p class="tile-v" id="b-month">—</p><p class="tile-n" id="b-month-note">At the workload above</p></div>
             <div class="tile"><p class="label">Attempted builds / month</p><p class="tile-v" id="b-attempts">—</p><p class="tile-n">Derived only when inputs permit</p></div>
           </div>
           <div class="card-pad border-t border-[var(--color-rule)]" id="b-messages" aria-live="polite"></div>
-          <div class="px-5 py-3 border-t border-[var(--color-rule)] flex flex-wrap gap-2">
-            <a class="btn" href="#build-operations">Export options ↓</a>
-            <button type="button" class="btn" id="b-save-version" data-analytics="build-save-version">Save in this tab</button>
-            <button type="button" class="btn" id="b-duplicate" data-analytics="build-duplicate">Duplicate plan</button>
+          <div class="border-t border-[var(--color-rule)]">
+            <p class="small px-5 pt-3">Save this version to compare it against the next architecture you try — that comparison is what versioning and the break-even check are for.</p>
+            <div class="px-5 py-3 flex flex-wrap gap-2">
+              <a class="btn" href="#build-operations">Export options ↓</a>
+              <button type="button" class="btn" id="b-save-version" data-analytics="build-save-version">Save in this tab</button>
+              <button type="button" class="btn" id="b-duplicate" data-analytics="build-duplicate">Duplicate plan</button>
+            </div>
           </div>
         </div>
 
@@ -142,6 +176,7 @@ const harnessExamples = [
           </div>
           <div class="card card-pad">
             <h3 class="h-card">Assumption and provenance ledger</h3>
+            <p class="small mt-2 max-w-3xl">Every number above is tagged with where it came from — a verified catalog price, a template default, or something you entered — so a reviewer can see exactly which figures are fact and which are assumptions.</p>
             <ul class="mt-3 ledger" id="b-ledger"></ul>
           </div>
         </div>
@@ -233,7 +268,7 @@ const harnessExamples = [
 
       <section class="card overflow-hidden" aria-labelledby="sensitivity-title">
         <div class="card-head">
-          <div><p class="label">Step 5 · preview</p><h2 class="h-card mt-1" id="sensitivity-title">Sensitivity and break-even</h2></div>
+          <div><p class="label">Step 5 · preview</p><h2 class="h-card mt-1" id="sensitivity-title">Sensitivity and break-even</h2><p class="small mt-1 max-w-md">Before you commit to a stack, see what a swing in call volume, token size, token price or success rate does to the bill — without re-entering the plan.</p></div>
           <span class="pill pill-ink">Hypothetical</span>
         </div>
         <div class="card-pad grid gap-8">
@@ -291,11 +326,11 @@ const harnessExamples = [
           </p>
           {ACCOUNT_PLANS_ENABLED && <button type="button" class="btn btn-quiet mt-3" id="b-operations-refresh" disabled>Refresh selected plan operations</button>}
 
-          <div class="operation-grid mt-5">
+          <div class="grid gap-4 lg:grid-cols-[1fr_2fr] items-start mt-5">
             <article class="operation-card" aria-labelledby="export-title">
               <p class="label">Export</p>
               <h3 class="h-card mt-2" id="export-title">Take the quote with you</h3>
-              <p class="small mt-2">Generated locally from the current plan and quote. Missing completed-build cost stays Missing; it is never estimated.</p>
+              <p class="small mt-2">Generated locally from the current plan and quote. Missing completed-build cost stays Missing; it is never estimated. Each export carries the same provenance tags shown above, so anyone you send it to can see what is fact and what is a guess.</p>
               <div class="mt-4 grid gap-2">
                 <button type="button" class="btn" id="b-export-json">Download JSON</button>
                 <button type="button" class="btn" id="b-export-csv">Download CSV</button>
@@ -307,6 +342,9 @@ const harnessExamples = [
               <p class="small mt-2 text-[var(--color-worse)]" id="b-export-error" role="alert" aria-atomic="true"></p>
             </article>
 
+            <details class="disc card card-pad" id="b-step6-preview">
+            <summary>Draft settings for planned Pro monitoring and sharing (preview-only)</summary>
+            <div class="mt-4 grid gap-4 lg:grid-cols-2">
             <article class="operation-card" aria-labelledby="share-title">
               <p class="label">Unlisted link · preview</p>
               <h3 class="h-card mt-2" id="share-title">{ACCOUNT_PLANS_ENABLED ? 'Share an immutable account version' : 'Choose how a saved version would open'}</h3>
@@ -368,6 +406,8 @@ const harnessExamples = [
               <p class="small mt-2" id="b-alert-status" role="status" aria-live="polite" aria-atomic="true"></p>
               <p class="small mt-2 text-[var(--color-worse)]" id="b-alert-error" role="alert" aria-atomic="true"></p>
             </article>
+            </div>
+            </details>
           </div>
         </div>
       </section>
@@ -377,7 +417,7 @@ const harnessExamples = [
       caption={`There is no upgrade or paid entitlement today. Preview access does not guarantee final tier placement. Safety caps still apply: ${BUILD_PLAN_LIMITS.maxRoles} roles, ${ACCOUNT_PLAN_PREVIEW_MAX_PLANS} account plans and ${ACCOUNT_PLAN_PREVIEW_MAX_VERSIONS} versions per plan.`}>
       <div class="grid gap-4 md:grid-cols-2">
         <div class="card card-pad"><p class="label">Available now · open preview</p><h3 class="h-card mt-2">Build and inspect the budget</h3><ul class="mt-3 text-sm leading-relaxed text-[var(--color-body)] list-disc pl-5"><li>Any harness name and mix of current catalog models</li><li>Editable usage, routing and custom-rate assumptions</li><li>Sensitivity, break-even, tab-only versions and local exports</li><li>Account plans only when the storage preview is enabled</li><li>Public research, methodology and verified catalog remain free</li></ul><p class="small mt-4">{ACCOUNT_PLANS_ENABLED ? 'The account preview can create and revoke unlisted links and persist inactive alert settings. No monitoring or email delivery is running.' : 'Unlisted-link delivery and monitoring are not available; their controls save settings only in this tab.'}</p></div>
-        <div class="card card-pad"><p class="label">Pro · planned $19/month hypothesis</p><h3 class="h-card mt-2">Keep the budget current</h3><ul class="mt-3 text-sm leading-relaxed text-[var(--color-body)] list-disc pl-5"><li>Higher plan, version and model-role limits</li><li>Durable custom/contract pricing and observed-usage profiles</li><li>Named architecture history, expanded comparisons and review workflows</li><li>Controlled share links and operational export workflows</li><li>Model-price and budget monitoring for saved plans</li></ul><p class="small mt-4">The intended recurring value is re-planning, review and monitoring—not a paywall on public research.</p><div class="mt-5 border-t border-[var(--color-rule)] pt-4"><h4 class="text-sm font-semibold text-[var(--color-ink)]">Would that recurring workflow be worth $19/month?</h4><button type="button" class="btn mt-3" id="b-pro-interest" aria-describedby="b-pro-interest-help b-pro-interest-status" disabled>I’d consider Pro at $19</button><p class="small mt-2" id="b-pro-interest-help">Requires a free account so one person counts once. Research signal only—no upgrade, checkout, trial, subscription or charge.</p><p class="small mt-2" id="b-pro-interest-status" role="status" aria-live="polite" aria-atomic="true">{!PRODUCT_INTENTS_ENABLED ? 'Account-based research measurement is unavailable in this build. No interest can be submitted or charged.' : CLERK_ENABLED ? 'Free-account sign-up is loading.' : 'Free-account sign-up is unavailable in this build.'}</p></div></div>
+        <div class="card card-pad"><p class="label">Pro · planned $19/month hypothesis</p><h3 class="h-card mt-2">Keep the budget current</h3><ul class="mt-3 text-sm leading-relaxed text-[var(--color-body)] list-disc pl-5"><li>Higher plan, version and model-role limits</li><li>Durable custom/contract pricing and observed-usage profiles</li><li>Named architecture history, expanded comparisons and review workflows</li><li>Controlled share links and operational export workflows</li><li>Model-price and budget monitoring for saved plans</li></ul><p class="small mt-4">The intended recurring value is re-planning, review and monitoring—not a paywall on public research. Solvency prices cost per completed task, not token price—the same principle as the calculator. Pro applies it continuously to the plans you save, instead of once at quote time.</p><div class="mt-5 border-t border-[var(--color-rule)] pt-4"><h4 class="text-sm font-semibold text-[var(--color-ink)]">Would that recurring workflow be worth $19/month?</h4><button type="button" class="btn mt-3" id="b-pro-interest" aria-describedby="b-pro-interest-help b-pro-interest-status" disabled>I’d consider Pro at $19</button><p class="small mt-2" id="b-pro-interest-help">Requires a free account so one person counts once. Research signal only—no upgrade, checkout, trial, subscription or charge.</p><p class="small mt-2" id="b-pro-interest-status" role="status" aria-live="polite" aria-atomic="true">{!PRODUCT_INTENTS_ENABLED ? 'Account-based research measurement is unavailable in this build. No interest can be submitted or charged.' : CLERK_ENABLED ? 'Free-account sign-up is loading.' : 'Free-account sign-up is unavailable in this build.'}</p></div></div>
       </div>
       <p class="small mt-3">The price is a validation hypothesis. Checkout will be added only after recurring-value evidence is reviewed and a server-authoritative entitlement boundary is ready.</p>
     </Section>
@@ -396,18 +436,23 @@ const harnessExamples = [
         <label class="block"><span class="label">Role type</span><select class="ctl ctl-row mt-2 w-full" data-field="kind"><option value="orchestrator">Orchestrator</option><option value="worker">Worker / subagent</option><option value="other">Other / fallback</option></select></label>
         <label class="block sm:col-span-2"><span class="label">Model</span><select class="ctl ctl-row mt-2 w-full" data-field="model">{currentModels.map((model) => <option value={model.model_id} data-input={model.input_per_mtok} data-cache={model.cached_input_per_mtok ?? ''} data-output={model.output_per_mtok}>{model.display_name} · {model.provider}</option>)}</select></label>
         <label class="block"><span class="label">Expected calls / build</span><input class="ctl ctl-row mt-2 w-full" data-field="calls" type="number" min="0.01" max={BUILD_PLAN_LIMITS.maxExpectedInvocations} step="any" value="1" /></label>
-        <label class="block"><span class="label">Usage basis</span><select class="ctl ctl-row mt-2 w-full" data-field="usage-basis"><option value="template_assumption">Template assumption</option><option value="user_supplied">User supplied</option><option value="measured">Measured · user asserted</option></select></label>
-        <label class="block"><span class="label">Fresh input / call</span><input class="ctl ctl-row mt-2 w-full" data-field="fresh" type="number" min="0" max={BUILD_PLAN_LIMITS.maxTokensPerInvocation} step="any" value="20000" /></label>
-        <label class="block"><span class="label">Cache read / call</span><input class="ctl ctl-row mt-2 w-full" data-field="cache" type="number" min="0" max={BUILD_PLAN_LIMITS.maxTokensPerInvocation} step="any" value="0" /></label>
-        <label class="block"><span class="label">Output / call</span><input class="ctl ctl-row mt-2 w-full" data-field="output" type="number" min="0" max={BUILD_PLAN_LIMITS.maxTokensPerInvocation} step="any" value="2000" /></label>
-        <label class="sm:col-span-2 lg:col-span-4 inline-flex items-center gap-2 min-h-11 text-sm text-[var(--color-ink)] cursor-pointer"><input type="checkbox" class="chk" data-field="custom-toggle" /> Use custom or contracted token prices for this role</label>
-        <div class="custom-prices sm:col-span-2 lg:col-span-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-4" hidden>
-          <label class="block"><span class="label">Custom rate basis</span><select class="ctl ctl-row mt-2 w-full" data-field="custom-basis"><option value="user_supplied">User supplied</option><option value="contract">Contract</option></select></label>
-          <label class="block"><span class="label">Custom input / M</span><span class="money-input mt-2"><span>$</span><input class="ctl ctl-row w-full" data-field="custom-input" type="number" min="0" max={BUILD_PLAN_LIMITS.maxPricePerMtokUsd} step="any" /></span></label>
-          <label class="block"><span class="label">Custom cache read / M</span><span class="money-input mt-2"><span>$</span><input class="ctl ctl-row w-full" data-field="custom-cache" type="number" min="0" max={BUILD_PLAN_LIMITS.maxPricePerMtokUsd} step="any" /></span></label>
-          <label class="block"><span class="label">Custom output / M</span><span class="money-input mt-2"><span>$</span><input class="ctl ctl-row w-full" data-field="custom-output" type="number" min="0" max={BUILD_PLAN_LIMITS.maxPricePerMtokUsd} step="any" /></span></label>
-        </div>
       </div>
+      <details class="disc px-5 py-3 border-t border-[var(--color-rule)]">
+        <summary>Token profile and pricing</summary>
+        <div class="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <label class="block"><span class="label">Usage basis</span><select class="ctl ctl-row mt-2 w-full" data-field="usage-basis"><option value="template_assumption">Template assumption</option><option value="user_supplied">User supplied</option><option value="measured">Measured · user asserted</option></select></label>
+          <label class="block"><span class="label">Fresh input / call</span><input class="ctl ctl-row mt-2 w-full" data-field="fresh" type="number" min="0" max={BUILD_PLAN_LIMITS.maxTokensPerInvocation} step="any" value="20000" /></label>
+          <label class="block"><span class="label">Cache read / call</span><input class="ctl ctl-row mt-2 w-full" data-field="cache" type="number" min="0" max={BUILD_PLAN_LIMITS.maxTokensPerInvocation} step="any" value="0" /></label>
+          <label class="block"><span class="label">Output / call</span><input class="ctl ctl-row mt-2 w-full" data-field="output" type="number" min="0" max={BUILD_PLAN_LIMITS.maxTokensPerInvocation} step="any" value="2000" /></label>
+          <label class="sm:col-span-2 lg:col-span-4 inline-flex items-center gap-2 min-h-11 text-sm text-[var(--color-ink)] cursor-pointer"><input type="checkbox" class="chk" data-field="custom-toggle" /> Use custom or contracted token prices for this role</label>
+          <div class="custom-prices sm:col-span-2 lg:col-span-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-4" hidden>
+            <label class="block"><span class="label">Custom rate basis</span><select class="ctl ctl-row mt-2 w-full" data-field="custom-basis"><option value="user_supplied">User supplied</option><option value="contract">Contract</option></select></label>
+            <label class="block"><span class="label">Custom input / M</span><span class="money-input mt-2"><span>$</span><input class="ctl ctl-row w-full" data-field="custom-input" type="number" min="0" max={BUILD_PLAN_LIMITS.maxPricePerMtokUsd} step="any" /></span></label>
+            <label class="block"><span class="label">Custom cache read / M</span><span class="money-input mt-2"><span>$</span><input class="ctl ctl-row w-full" data-field="custom-cache" type="number" min="0" max={BUILD_PLAN_LIMITS.maxPricePerMtokUsd} step="any" /></span></label>
+            <label class="block"><span class="label">Custom output / M</span><span class="money-input mt-2"><span>$</span><input class="ctl ctl-row w-full" data-field="custom-output" type="number" min="0" max={BUILD_PLAN_LIMITS.maxPricePerMtokUsd} step="any" /></span></label>
+          </div>
+        </div>
+      </details>
     </article>
   </template>
 </Base>
@@ -1489,6 +1534,8 @@ const harnessExamples = [
       const descriptions = new Set((control.getAttribute('aria-describedby') ?? '').split(/\s+/).filter(Boolean));
       descriptions.add(errorId);
       control.setAttribute('aria-describedby', [...descriptions].join(' '));
+      const details = control.closest<HTMLDetailsElement>('details');
+      if (details && !details.open) details.open = true;
     }
   }
 
@@ -2028,9 +2075,16 @@ const harnessExamples = [
     byId('b-solved').textContent = 'Missing';
     byId('b-solved').classList.add('missing');
     byId('b-solved-note').textContent = 'Resolve the plan errors below';
+    byId('b-solved-link').hidden = true;
     byId('b-month').textContent = 'Missing';
     byId('b-month-note').textContent = 'No quote is calculated from invalid inputs';
     byId('b-attempts').textContent = 'Missing';
+    byId('b-strip-attempt').textContent = 'Missing';
+    byId('b-strip-solved').textContent = 'Missing';
+    byId('b-strip-solved').classList.add('missing');
+    byId('b-strip-solved-note').textContent = 'Resolve the plan errors below';
+    byId('b-strip-solved-link').hidden = true;
+    byId('b-strip-month').textContent = 'Missing';
 
     const messages = byId('b-messages'); messages.replaceChildren();
     const list = document.createElement('ul');
@@ -2072,13 +2126,21 @@ const harnessExamples = [
     lastQuote = validated.quote;
     lastDraftValid = true;
     byId('b-role-count').textContent = `${lastPlan.roles.length} role${lastPlan.roles.length === 1 ? '' : 's'}`;
+    const solvedMissing = lastQuote.variableCostPerSuccessfulBuildUsd === null;
     byId('b-attempt').textContent = money(lastQuote.buildAttemptCostUsd);
     byId('b-solved').textContent = money(lastQuote.variableCostPerSuccessfulBuildUsd);
-    byId('b-solved').classList.toggle('missing', lastQuote.variableCostPerSuccessfulBuildUsd === null);
-    byId('b-solved-note').textContent = lastQuote.variableCostPerSuccessfulBuildUsd === null ? 'Success rate not supplied' : 'Variable spend ÷ whole-system success';
+    byId('b-solved').classList.toggle('missing', solvedMissing);
+    byId('b-solved-note').textContent = solvedMissing ? 'Success rate not supplied' : 'Variable spend ÷ whole-system success';
+    byId('b-solved-link').hidden = !solvedMissing;
     byId('b-month').textContent = money(lastQuote.monthlyCostUsd);
     byId('b-month-note').textContent = lastQuote.monthlyCostUsd === null ? 'Successful-build volume needs a success rate' : 'Variable + fixed harness spend';
     byId('b-attempts').textContent = lastQuote.attemptedBuildsPerMonth === null ? 'Missing' : lastQuote.attemptedBuildsPerMonth.toLocaleString(undefined, { maximumFractionDigits: 1 });
+    byId('b-strip-attempt').textContent = money(lastQuote.buildAttemptCostUsd);
+    byId('b-strip-solved').textContent = money(lastQuote.variableCostPerSuccessfulBuildUsd);
+    byId('b-strip-solved').classList.toggle('missing', solvedMissing);
+    byId('b-strip-solved-note').textContent = solvedMissing ? 'Success rate not supplied' : 'Variable spend ÷ whole-system success';
+    byId('b-strip-solved-link').hidden = !solvedMissing;
+    byId('b-strip-month').textContent = money(lastQuote.monthlyCostUsd);
 
     const messages = byId('b-messages'); messages.replaceChildren();
     const lines = lastQuote.errors.length ? lastQuote.errors : lastQuote.warnings;
@@ -2174,6 +2236,27 @@ const harnessExamples = [
     render();
   });
   byId('b-add-role').addEventListener('click', () => addRole());
+
+  function focusSuccessField() {
+    const input = byId<HTMLInputElement>('b-success');
+    const details = input.closest<HTMLDetailsElement>('details');
+    if (details && !details.open) details.open = true;
+    input.focus();
+    input.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+  byId('b-solved-link').addEventListener('click', (event) => { event.preventDefault(); focusSuccessField(); });
+  byId('b-strip-solved-link').addEventListener('click', (event) => { event.preventDefault(); focusSuccessField(); });
+
+  for (const chip of document.querySelectorAll<HTMLButtonElement>('[data-harness-chip]')) {
+    chip.addEventListener('click', () => {
+      const harnessInput = byId<HTMLInputElement>('b-harness');
+      harnessInput.value = chip.dataset.harnessChip!;
+      harnessInput.dispatchEvent(new Event('input', { bubbles: true }));
+      harnessInput.dispatchEvent(new Event('change', { bubbles: true }));
+      byId<HTMLInputElement>('b-volume').focus();
+    });
+  }
+
   byId('b-export-json').addEventListener('click', () => exportCurrent('json'));
   byId('b-export-csv').addEventListener('click', () => exportCurrent('csv'));
   byId('b-export-png').addEventListener('click', () => exportCurrent('png'));
@@ -2401,5 +2484,11 @@ const harnessExamples = [
   /* "No baseline" wraps mid-word in a 3-up grid below ~360px; one column reads clean */
   @media (max-width: 359px) {
     .b-delta-grid { grid-template-columns: minmax(0, 1fr); }
+  }
+  /* the answer strip's dollar figures clip in a 3-up grid below ~480px; drop to
+     two columns and let the completed-build tile (value + note + link) span both */
+  @media (max-width: 479px) {
+    #b-answer-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #b-answer-strip .tile:nth-child(3) { grid-column: span 2; }
   }
 </style>
