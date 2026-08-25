@@ -71,7 +71,7 @@ test('current rollout state passes and exposes only non-secret workflow outputs'
     'preview_portal_enabled=false',
     'preview_checkout_enabled=false',
     'preview_sandbox_ui_enabled=false',
-    'preview_webhook_access_mode=protected',
+    'preview_webhook_access_mode=exact-path-bypass',
     'preview_destructive_smoke_enabled=false',
     '',
   ].join('\n'));
@@ -111,8 +111,6 @@ test('fully ordered Preview Stripe state passes only with erasure off and the te
     'PREVIEW_ACCOUNT_ERASURE_ENABLED = "false"\nSTRIPE_CHECKOUT_ENABLED = "true"\nSTRIPE_PORTAL_ENABLED = "true"\nSTRIPE_WEBHOOK_ENABLED = "true"\nAPP_ENV = "preview"');
   replace(directory, 'site/preview-rollout.json',
     '"stripeSandboxUiEnabled": false', '"stripeSandboxUiEnabled": true');
-  replace(directory, 'site/preview-rollout.json',
-    '"webhookAccessMode": "protected"', '"webhookAccessMode": "exact-path-bypass"');
   addPreviewStripeIdentifiers(directory);
   const result = run(directory, true);
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
