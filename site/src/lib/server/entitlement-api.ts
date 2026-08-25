@@ -1,7 +1,35 @@
 import { apiError, apiJson } from './api-http.ts';
 import { getOwnerEntitlement } from './entitlement-store.ts';
-import type { PagesContextLike } from './pages-types.ts';
+import type { BuildPlansEnv, D1DatabaseLike, PagesContextLike } from './pages-types.ts';
 import { logServerError } from './safe-server-log.ts';
+
+/**
+ * Server-authoritative Pro gate for mutating account-plan endpoints. Fails
+ * CLOSED to free on any entitlement-lookup failure (malformed state, a D1
+ * error, a network throw) so storage or provider trouble can never widen
+ * access. Never call this for read or delete handlers — a lapsed subscriber
+ * must keep read/export/delete access to data they already own.
+ */
+export async function ownerHasActivePro(
+  db: D1DatabaseLike,
+  ownerUserId: string,
+  env: Pick<BuildPlansEnv, 'STRIPE_PRO_MONTHLY_PRICE_ID' | 'STRIPE_PRO_ANNUAL_PRICE_ID'>,
+): Promise<boolean> {
+  try {
+    const entitlement = await getOwnerEntitlement(
+      db,
+      ownerUserId,
+      Math.floor(Date.now() / 1000),
+      {
+        monthlyPriceId: env.STRIPE_PRO_MONTHLY_PRICE_ID,
+        annualPriceId: env.STRIPE_PRO_ANNUAL_PRICE_ID,
+      },
+    );
+    return entitlement.tier === 'pro' && entitlement.active;
+  } catch {
+    return false;
+  }
+}
 
 export async function handleEntitlement(context: PagesContextLike): Promise<Response> {
   const requestId = context.data.requestId ?? crypto.randomUUID();

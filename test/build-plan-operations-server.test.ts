@@ -29,6 +29,7 @@ import {
   updateOwnedBuildPlanAlert,
 } from '../site/src/lib/server/build-plan-operations-store.ts';
 import { sha256Hex } from '../site/src/lib/server/build-plan-store.ts';
+import { applyVerifiedBillingEvent, bindBillingCustomer } from '../site/src/lib/server/entitlement-store.ts';
 import type {
   D1DatabaseLike, D1PreparedStatementLike, D1ResultLike, PagesContextLike,
 } from '../site/src/lib/server/pages-types.ts';
@@ -36,9 +37,54 @@ import type {
 const migration = [
   '../site/migrations/0001_build_plans.sql',
   '../site/migrations/0002_build_plan_invariants.sql',
+  '../site/migrations/0004_billing_authority.sql',
   '../site/migrations/0005_build_plan_operations.sql',
   '../site/migrations/0006_product_intent_events.sql',
 ].map((path) => readFileSync(new URL(path, import.meta.url), 'utf8')).join('\n');
+
+const PRO_MONTHLY_PRICE_ID = 'price_0000000000000001';
+const PRO_ANNUAL_PRICE_ID = 'price_0000000000000002';
+const PRO_ENV = {
+  STRIPE_PRO_MONTHLY_PRICE_ID: PRO_MONTHLY_PRICE_ID,
+  STRIPE_PRO_ANNUAL_PRICE_ID: PRO_ANNUAL_PRICE_ID,
+};
+
+let proGrantCounter = 0;
+
+/** Grants the given owner an active Pro entitlement through the same
+ * verified-billing-event path production traffic uses, so gated HTTP
+ * handlers recognize it exactly as they would a real Stripe subscription. */
+async function grantOwnerPro(db: D1DatabaseLike, ownerUserId: string): Promise<void> {
+  proGrantCounter += 1;
+  const suffix = String(proGrantCounter).padStart(16, '0');
+  const bound = await bindBillingCustomer(db, ownerUserId, `cus_${suffix}`, '2026-08-23T12:00:00.000Z');
+  if (bound !== 'bound' && bound !== 'replayed') throw new Error(`Pro grant test setup failed to bind customer: ${bound}`);
+  const applied = await applyVerifiedBillingEvent(db, {
+    eventId: `evt_${suffix}`,
+    eventType: 'customer.subscription.updated',
+    payloadHash: suffix.padStart(64, '0'),
+    customerId: `cus_${suffix}`,
+    subscriptionId: `sub_${suffix}`,
+    priceItems: [{ priceId: PRO_MONTHLY_PRICE_ID, quantity: 1, currency: 'usd', interval: 'month' }],
+    status: 'active',
+    currentPeriodEnd: 4_102_444_800, // 2100-01-01T00:00:00Z: past any real test-run clock
+    cancelAtPeriodEnd: false,
+    eventCreated: 1_700_000_000,
+  }, 1_700_000_010);
+  if (!applied.ok || !applied.applied) throw new Error('Pro grant test setup failed to apply the billing event.');
+}
+
+/** Fails entitlement lookups the way a real D1 outage would, without
+ * touching any other query the handler under test issues. */
+function rejectBillingQueries(db: D1DatabaseLike): D1DatabaseLike {
+  return {
+    prepare(query: string) {
+      if (query.includes('billing_subscriptions')) throw new Error('billing storage unavailable');
+      return db.prepare(query);
+    },
+    batch<T>(statements: D1PreparedStatementLike[]) { return db.batch<T>(statements); },
+  };
+}
 
 class SqliteStatement implements D1PreparedStatementLike {
   private readonly database: DatabaseSync;
@@ -417,6 +463,7 @@ describe('durable unlisted build-plan links', () => {
 
   test('serializes create races and fails a replay closed after token-secret rotation', async () => {
     const db = new SqliteD1();
+    await grantOwnerPro(db, OWNER_A);
     const firstPlan = planId(4);
     seedPlan(db, OWNER_A, firstPlan);
     const url = `https://solvency.dev/api/build-plans/${firstPlan}/shares`;
@@ -427,7 +474,7 @@ describe('durable unlisted build-plan links', () => {
       jsonRequest(url, 'POST', body, key),
       OWNER_A,
       { planId: firstPlan },
-      { BUILD_SHARE_TOKEN_SECRET: secret },
+      { BUILD_SHARE_TOKEN_SECRET: secret, ...PRO_ENV },
     ));
     const [one, two] = await Promise.all([invoke(SHARE_SECRET), invoke(SHARE_SECRET)]);
     assert.deepEqual([one.status, two.status].sort(), [200, 201]);
@@ -625,6 +672,7 @@ describe('durable inactive alert settings', () => {
 
   test('handlers bound bodies and refuse delivery claims, unknown fields and invalid thresholds', async () => {
     const db = new SqliteD1();
+    await grantOwnerPro(db, OWNER_A);
     const firstPlan = planId(13);
     seedPlan(db, OWNER_A, firstPlan, 2);
     const url = `https://solvency.dev/api/build-plans/${firstPlan}/alerts`;
@@ -636,7 +684,7 @@ describe('durable inactive alert settings', () => {
     ] as const) {
       const response = await handleBuildPlanAlertCollection(context(
         db, jsonRequest(url, 'POST', body, `handler-alert-${Math.random().toString(16).padEnd(16, '0')}`),
-        OWNER_A, { planId: firstPlan },
+        OWNER_A, { planId: firstPlan }, PRO_ENV,
       ));
       assert.equal(response.status, expectedStatus);
     }
@@ -646,6 +694,7 @@ describe('durable inactive alert settings', () => {
       jsonRequest(url, 'POST', { version: 1, trigger: 'model_price_change', padding: 'x'.repeat(5_000) }, 'handler-alert-huge-1'),
       OWNER_A,
       { planId: firstPlan },
+      PRO_ENV,
     ));
     assert.equal(huge.status, 413);
 
@@ -656,6 +705,7 @@ describe('durable inactive alert settings', () => {
       }, 'handler-alert-valid-1'),
       OWNER_A,
       { planId: firstPlan },
+      PRO_ENV,
     ));
     assert.equal(valid.status, 201);
     const data = (await valid.json() as { data: { id: string; status: string } }).data;
@@ -687,9 +737,10 @@ describe('durable inactive alert settings', () => {
 describe('server-confirmed operation measurement', () => {
   test('emits only after successful share and inactive-alert saves and stays best-effort', async () => {
     const db = new SqliteD1();
+    await grantOwnerPro(db, OWNER_A);
     const firstPlan = planId(50);
     seedPlan(db, OWNER_A, firstPlan, 2);
-    const enabled = { BUILD_SHARE_TOKEN_SECRET: SHARE_SECRET, PRODUCT_INTENTS_ENABLED: 'true' };
+    const enabled = { BUILD_SHARE_TOKEN_SECRET: SHARE_SECRET, PRODUCT_INTENTS_ENABLED: 'true', ...PRO_ENV };
 
     const shareUrl = `https://solvency.dev/api/build-plans/${firstPlan}/shares`;
     const shared = await handleBuildPlanShareCollection(context(
@@ -753,6 +804,7 @@ describe('server-confirmed operation measurement', () => {
     assert.equal(db.sqlite.prepare('SELECT COUNT(*) AS count FROM product_intent_events').get()?.count, 0);
 
     const degraded = new SqliteD1();
+    await grantOwnerPro(degraded, OWNER_A);
     const degradedPlan = planId(51);
     seedPlan(degraded, OWNER_A, degradedPlan, 1);
     const unavailable = rejectProductIntentQueries(degraded);
@@ -999,5 +1051,166 @@ describe('operation quotas, retention and cascades', () => {
     const example = readFileSync(new URL('../site/.dev.vars.example', import.meta.url), 'utf8');
     const placeholder = /^BUILD_SHARE_TOKEN_SECRET=(.*)$/m.exec(example)?.[1];
     assert.equal(validBuildPlanShareSecret(placeholder), false);
+  });
+});
+
+describe('Pro entitlement gates share and alert-settings mutations', () => {
+  test('denies free-tier share/alert create and alert update with PRO_REQUIRED while list, revoke and delete stay open', async () => {
+    const db = new SqliteD1();
+    const firstPlan = planId(500);
+    seedPlan(db, OWNER_A, firstPlan, 2);
+
+    const shareUrl = `https://solvency.dev/api/build-plans/${firstPlan}/shares`;
+    const freeShareCreate = await handleBuildPlanShareCollection(context(
+      db,
+      jsonRequest(shareUrl, 'POST', { version: 1, expiresInDays: 7, allowQuoteExport: true }, 'free-share-create-0001'),
+      OWNER_A,
+      { planId: firstPlan },
+      { BUILD_SHARE_TOKEN_SECRET: SHARE_SECRET },
+    ));
+    assert.equal(freeShareCreate.status, 403);
+    assert.equal((await freeShareCreate.json() as { error: { code: string } }).error.code, 'PRO_REQUIRED');
+    assert.equal(db.sqlite.prepare('SELECT COUNT(*) AS count FROM build_plan_shares').get()?.count, 0);
+
+    const alertUrl = `https://solvency.dev/api/build-plans/${firstPlan}/alerts`;
+    const freeAlertCreate = await handleBuildPlanAlertCollection(context(
+      db,
+      jsonRequest(alertUrl, 'POST', {
+        version: 1, trigger: 'model_price_change', threshold: null, baselineVersion: null,
+      }, 'free-alert-create-0001'),
+      OWNER_A,
+      { planId: firstPlan },
+    ));
+    assert.equal(freeAlertCreate.status, 403);
+    assert.equal((await freeAlertCreate.json() as { error: { code: string } }).error.code, 'PRO_REQUIRED');
+    assert.equal(db.sqlite.prepare('SELECT COUNT(*) AS count FROM build_plan_alert_settings').get()?.count, 0);
+
+    // Seed a share and an alert directly through the store (bypassing the
+    // gated HTTP create path) so list/revoke/delete can be exercised against
+    // real, pre-existing data — the way a lapsed subscriber's account looks.
+    const seededShare = await createShare(db, { planId: firstPlan, shareIndex: 500 });
+    assert.equal(seededShare.result.ok, true);
+    const seededAlert = await createAlert(db, { planId: firstPlan, alertIndex: 500 });
+    assert.equal(seededAlert.ok, true);
+
+    const shareList = await handleBuildPlanShareCollection(context(
+      db, new Request(shareUrl), OWNER_A, { planId: firstPlan },
+    ));
+    assert.equal(shareList.status, 200);
+    assert.equal((await shareList.json() as { data: unknown[] }).data.length, 1);
+
+    const alertList = await handleBuildPlanAlertCollection(context(
+      db, new Request(alertUrl), OWNER_A, { planId: firstPlan },
+    ));
+    assert.equal(alertList.status, 200);
+    assert.equal((await alertList.json() as { data: unknown[] }).data.length, 1);
+
+    const freeAlertUpdate = await handleBuildPlanAlertResource(context(
+      db,
+      jsonRequest(`${alertUrl}/${alertId(500)}`, 'POST', {
+        version: 2, trigger: 'monthly_spend_above', threshold: 250, baselineVersion: null,
+      }, 'free-alert-update-0001'),
+      OWNER_A,
+      { planId: firstPlan, alertId: alertId(500) },
+    ));
+    assert.equal(freeAlertUpdate.status, 403);
+    assert.equal((await freeAlertUpdate.json() as { error: { code: string } }).error.code, 'PRO_REQUIRED');
+
+    const revoked = await handleBuildPlanShareResource(context(
+      db,
+      jsonRequest(`${shareUrl}/${shareId(500)}`, 'DELETE', undefined, 'free-share-revoke-0001'),
+      OWNER_A,
+      { planId: firstPlan, shareId: shareId(500) },
+    ));
+    assert.equal(revoked.status, 200);
+
+    const deleted = await handleBuildPlanAlertResource(context(
+      db,
+      jsonRequest(`${alertUrl}/${alertId(500)}`, 'DELETE', undefined, 'free-alert-delete-0001'),
+      OWNER_A,
+      { planId: firstPlan, alertId: alertId(500) },
+    ));
+    assert.equal(deleted.status, 200);
+  });
+
+  test('allows Pro-tier owners to create shares, create inactive alert settings and update them', async () => {
+    const db = new SqliteD1();
+    await grantOwnerPro(db, OWNER_A);
+    const firstPlan = planId(501);
+    seedPlan(db, OWNER_A, firstPlan, 2);
+
+    const shareUrl = `https://solvency.dev/api/build-plans/${firstPlan}/shares`;
+    const proShareCreate = await handleBuildPlanShareCollection(context(
+      db,
+      jsonRequest(shareUrl, 'POST', { version: 1, expiresInDays: 7, allowQuoteExport: true }, 'pro-share-create-0001'),
+      OWNER_A,
+      { planId: firstPlan },
+      { BUILD_SHARE_TOKEN_SECRET: SHARE_SECRET, ...PRO_ENV },
+    ));
+    assert.equal(proShareCreate.status, 201);
+
+    const alertUrl = `https://solvency.dev/api/build-plans/${firstPlan}/alerts`;
+    const proAlertCreate = await handleBuildPlanAlertCollection(context(
+      db,
+      jsonRequest(alertUrl, 'POST', {
+        version: 1, trigger: 'model_price_change', threshold: null, baselineVersion: null,
+      }, 'pro-alert-create-0001'),
+      OWNER_A,
+      { planId: firstPlan },
+      PRO_ENV,
+    ));
+    assert.equal(proAlertCreate.status, 201);
+    const alertData = (await proAlertCreate.json() as { data: { id: string } }).data;
+
+    const proAlertUpdate = await handleBuildPlanAlertResource(context(
+      db,
+      jsonRequest(`${alertUrl}/${alertData.id}`, 'POST', {
+        version: 2, trigger: 'monthly_spend_above', threshold: 250, baselineVersion: null,
+      }, 'pro-alert-update-0001'),
+      OWNER_A,
+      { planId: firstPlan, alertId: alertData.id },
+      PRO_ENV,
+    ));
+    assert.equal(proAlertUpdate.status, 201);
+  });
+
+  test('fails closed to PRO_REQUIRED (never 500 and never open to Pro) when the entitlement lookup itself errors', async () => {
+    const db = new SqliteD1();
+    await grantOwnerPro(db, OWNER_A);
+    const firstPlan = planId(502);
+    seedPlan(db, OWNER_A, firstPlan, 2);
+    const broken = rejectBillingQueries(db);
+
+    const shareCreate = await handleBuildPlanShareCollection(context(
+      broken,
+      jsonRequest(
+        `https://solvency.dev/api/build-plans/${firstPlan}/shares`,
+        'POST',
+        { version: 1, expiresInDays: 7, allowQuoteExport: true },
+        'broken-share-create-0001',
+      ),
+      OWNER_A,
+      { planId: firstPlan },
+      { BUILD_SHARE_TOKEN_SECRET: SHARE_SECRET, ...PRO_ENV },
+    ));
+    assert.equal(shareCreate.status, 403);
+    assert.equal((await shareCreate.json() as { error: { code: string } }).error.code, 'PRO_REQUIRED');
+    assert.equal(db.sqlite.prepare('SELECT COUNT(*) AS count FROM build_plan_shares').get()?.count, 0);
+
+    const alertCreate = await handleBuildPlanAlertCollection(context(
+      broken,
+      jsonRequest(
+        `https://solvency.dev/api/build-plans/${firstPlan}/alerts`,
+        'POST',
+        { version: 1, trigger: 'model_price_change', threshold: null, baselineVersion: null },
+        'broken-alert-create-0001',
+      ),
+      OWNER_A,
+      { planId: firstPlan },
+      PRO_ENV,
+    ));
+    assert.equal(alertCreate.status, 403);
+    assert.equal((await alertCreate.json() as { error: { code: string } }).error.code, 'PRO_REQUIRED');
+    assert.equal(db.sqlite.prepare('SELECT COUNT(*) AS count FROM build_plan_alert_settings').get()?.count, 0);
   });
 });

@@ -25,6 +25,7 @@ import {
   MAX_OWNED_BUILD_PLANS,
   sha256Hex,
 } from '../site/src/lib/server/build-plan-store.ts';
+import { applyVerifiedBillingEvent, bindBillingCustomer } from '../site/src/lib/server/entitlement-store.ts';
 import type {
   D1DatabaseLike, D1PreparedStatementLike, D1ResultLike, PagesContextLike,
 } from '../site/src/lib/server/pages-types.ts';
@@ -34,8 +35,53 @@ const migration = [
   '../site/migrations/0001_build_plans.sql',
   '../site/migrations/0002_build_plan_invariants.sql',
   '../site/migrations/0003_build_plan_rate_limits.sql',
+  '../site/migrations/0004_billing_authority.sql',
   '../site/migrations/0006_product_intent_events.sql',
 ].map((path) => readFileSync(new URL(path, import.meta.url), 'utf8')).join('\n');
+
+const PRO_MONTHLY_PRICE_ID = 'price_0000000000000001';
+const PRO_ANNUAL_PRICE_ID = 'price_0000000000000002';
+const PRO_ENV = {
+  STRIPE_PRO_MONTHLY_PRICE_ID: PRO_MONTHLY_PRICE_ID,
+  STRIPE_PRO_ANNUAL_PRICE_ID: PRO_ANNUAL_PRICE_ID,
+};
+
+let proGrantCounter = 0;
+
+/** Grants the given owner an active Pro entitlement through the same
+ * verified-billing-event path production traffic uses, so gated HTTP
+ * handlers recognize it exactly as they would a real Stripe subscription. */
+async function grantOwnerPro(db: D1DatabaseLike, ownerUserId: string): Promise<void> {
+  proGrantCounter += 1;
+  const suffix = String(proGrantCounter).padStart(16, '0');
+  const bound = await bindBillingCustomer(db, ownerUserId, `cus_${suffix}`, '2026-08-23T12:00:00.000Z');
+  if (bound !== 'bound' && bound !== 'replayed') throw new Error(`Pro grant test setup failed to bind customer: ${bound}`);
+  const applied = await applyVerifiedBillingEvent(db, {
+    eventId: `evt_${suffix}`,
+    eventType: 'customer.subscription.updated',
+    payloadHash: suffix.padStart(64, '0'),
+    customerId: `cus_${suffix}`,
+    subscriptionId: `sub_${suffix}`,
+    priceItems: [{ priceId: PRO_MONTHLY_PRICE_ID, quantity: 1, currency: 'usd', interval: 'month' }],
+    status: 'active',
+    currentPeriodEnd: 4_102_444_800, // 2100-01-01T00:00:00Z: past any real test-run clock
+    cancelAtPeriodEnd: false,
+    eventCreated: 1_700_000_000,
+  }, 1_700_000_010);
+  if (!applied.ok || !applied.applied) throw new Error('Pro grant test setup failed to apply the billing event.');
+}
+
+/** Fails entitlement lookups the way a real D1 outage would, without
+ * touching any other query the handler under test issues. */
+function rejectBillingQueries(db: D1DatabaseLike): D1DatabaseLike {
+  return {
+    prepare(query: string) {
+      if (query.includes('billing_subscriptions')) throw new Error('billing storage unavailable');
+      return db.prepare(query);
+    },
+    batch<T>(statements: D1PreparedStatementLike[]) { return db.batch<T>(statements); },
+  };
+}
 
 class SqliteStatement implements D1PreparedStatementLike {
   private readonly database: DatabaseSync;
@@ -429,10 +475,13 @@ describe('D1-owned immutable BuildPlan versions', () => {
     assert.equal(db.sqlite.prepare('SELECT COUNT(*) AS count FROM build_plan_versions v JOIN build_plans p ON p.id = v.plan_id WHERE p.owner_user_id = ?').get('user_account_quota')?.count, MAX_OWNED_BUILD_PLANS);
     assert.equal(db.sqlite.prepare('SELECT COUNT(*) AS count FROM build_plan_requests WHERE owner_user_id = ?').get('user_account_quota')?.count, MAX_OWNED_BUILD_PLANS);
 
+    await grantOwnerPro(db, 'user_account_quota');
     const overHttp = await handleBuildPlanCollection(context(
       db,
       planRequest(JSON.stringify(plan), { 'idempotency-key': 'quota-handler-over-01' }),
       'user_account_quota',
+      {},
+      PRO_ENV,
     ));
     assert.equal(overHttp.status, 409);
     assert.equal((await overHttp.json() as { error: { code: string } }).error.code, 'PLAN_LIMIT');
@@ -446,6 +495,7 @@ describe('D1-owned immutable BuildPlan versions', () => {
 
   test('HTTP handlers reject quote envelopes and persist only a server-recomputed quote', async () => {
     const db = new SqliteD1();
+    await grantOwnerPro(db, 'user_account_alpha');
     const plan = makePlan();
     const headers = {
       'content-type': 'application/json',
@@ -453,10 +503,10 @@ describe('D1-owned immutable BuildPlan versions', () => {
       'x-user-id': 'user_account_beta',
     };
     const forged = { ...plan, quote: { valid: true, monthlyCostUsd: 0 } };
-    const rejected = await handleBuildPlanCollection(context(db, planRequest(JSON.stringify(forged), headers), 'user_account_alpha'));
+    const rejected = await handleBuildPlanCollection(context(db, planRequest(JSON.stringify(forged), headers), 'user_account_alpha', {}, PRO_ENV));
     assert.equal(rejected.status, 422);
 
-    const created = await handleBuildPlanCollection(context(db, planRequest(JSON.stringify(plan), headers), 'user_account_alpha'));
+    const created = await handleBuildPlanCollection(context(db, planRequest(JSON.stringify(plan), headers), 'user_account_alpha', {}, PRO_ENV));
     assert.equal(created.status, 201);
     const body = await created.json() as { data: { plan: { id: string; currentVersion: number }; selectedVersion: { quote: { valid: boolean; monthlyCostUsd: number } } } };
     assert.equal(body.data.plan.currentVersion, 1);
@@ -477,7 +527,7 @@ describe('D1-owned immutable BuildPlan versions', () => {
       'if-match': '"1"',
     });
     const appended = await handleBuildPlanVersions(context(
-      db, appendRequest, 'user_account_alpha', { planId: body.data.plan.id },
+      db, appendRequest, 'user_account_alpha', { planId: body.data.plan.id }, PRO_ENV,
     ));
     assert.equal(appended.status, 201);
     const appendedBody = await appended.json() as { data: { plan: { currentVersion: number } } };
@@ -488,7 +538,7 @@ describe('D1-owned immutable BuildPlan versions', () => {
       'if-match': '"1"',
     });
     const stale = await handleBuildPlanVersions(context(
-      db, staleRequest, 'user_account_alpha', { planId: body.data.plan.id },
+      db, staleRequest, 'user_account_alpha', { planId: body.data.plan.id }, PRO_ENV,
     ));
     assert.equal(stale.status, 409);
 
@@ -513,7 +563,7 @@ describe('D1-owned immutable BuildPlan versions', () => {
       'if-match': `"${MAX_BUILD_PLAN_VERSIONS}"`,
     });
     const maxed = await handleBuildPlanVersions(context(
-      db, maxedRequest, 'user_account_alpha', { planId: body.data.plan.id },
+      db, maxedRequest, 'user_account_alpha', { planId: body.data.plan.id }, PRO_ENV,
     ));
     assert.equal(maxed.status, 409);
     assert.equal((await maxed.json() as { error: { code: string } }).error.code, 'VERSION_LIMIT');
@@ -521,8 +571,9 @@ describe('D1-owned immutable BuildPlan versions', () => {
 
   test('confirms successful plan saves server-side without coupling measurement failures', async () => {
     const db = new SqliteD1();
+    await grantOwnerPro(db, 'user_account_intent');
     const plan = makePlan('Measured plan');
-    const enabled = { PRODUCT_INTENTS_ENABLED: 'true' };
+    const enabled = { PRODUCT_INTENTS_ENABLED: 'true', ...PRO_ENV };
     const created = await handleBuildPlanCollection(context(
       db,
       planRequest(JSON.stringify(plan), { 'idempotency-key': 'intent-plan-create-01' }),
@@ -566,6 +617,7 @@ describe('D1-owned immutable BuildPlan versions', () => {
     assert.equal(db.sqlite.prepare('SELECT COUNT(*) AS count FROM product_intent_events').get()?.count, 0);
 
     const degraded = new SqliteD1();
+    await grantOwnerPro(degraded, 'user_account_degraded');
     const stillSaved = await handleBuildPlanCollection(context(
       rejectProductIntentQueries(degraded),
       planRequest(JSON.stringify(plan), { 'idempotency-key': 'intent-plan-degraded-1' }),
@@ -576,5 +628,115 @@ describe('D1-owned immutable BuildPlan versions', () => {
     assert.equal(stillSaved.status, 201);
     assert.equal(degraded.sqlite.prepare('SELECT COUNT(*) AS count FROM build_plans').get()?.count, 1);
     assert.equal(degraded.sqlite.prepare('SELECT COUNT(*) AS count FROM product_intent_events').get()?.count, 0);
+  });
+});
+
+describe('Pro entitlement gates account-plan mutations', () => {
+  test('denies free-tier create and version-append with PRO_REQUIRED while list, read and delete stay open', async () => {
+    const db = new SqliteD1();
+    const plan = makePlan();
+    const now = '2026-08-23T12:00:00.000Z';
+    const quote = quoteBuildPlan(plan, models, now);
+
+    const freeCreate = await handleBuildPlanCollection(context(
+      db, planRequest(JSON.stringify(plan), { 'idempotency-key': 'free-create-0001' }), 'user_account_free_tier',
+    ));
+    assert.equal(freeCreate.status, 403);
+    assert.equal((await freeCreate.json() as { error: { code: string } }).error.code, 'PRO_REQUIRED');
+    assert.equal(freeCreate.headers.get('x-error-code'), 'PRO_REQUIRED');
+    assert.equal(db.sqlite.prepare('SELECT COUNT(*) AS count FROM build_plans').get()?.count, 0);
+
+    // Seed a plan for the free-tier owner directly through the store (bypassing
+    // the gated HTTP create path) so read/delete can be exercised against real,
+    // pre-existing data — the way a lapsed subscriber's account would look.
+    const seeded = await createOwnedBuildPlan(db, {
+      ownerUserId: 'user_account_free_tier', idempotencyKey: 'free-seed-000001',
+      requestHash: await sha256Hex('free-seed'), planId: 'plan_facecafe-0000-4000-8000-000000000001',
+      versionId: 'version_facecafe-0000-4000-8000-000000000001', plan, quote, now,
+    });
+    assert.equal(seeded.ok, true);
+    if (!seeded.ok) return;
+
+    const freeAppend = await handleBuildPlanVersions(context(
+      db,
+      planRequest(JSON.stringify(makePlan('Free tier append attempt')), {
+        'idempotency-key': 'free-append-0001', 'if-match': '"1"',
+      }),
+      'user_account_free_tier',
+      { planId: seeded.resource.plan.id },
+    ));
+    assert.equal(freeAppend.status, 403);
+    assert.equal((await freeAppend.json() as { error: { code: string } }).error.code, 'PRO_REQUIRED');
+    assert.equal(seeded.resource.plan.currentVersion, 1);
+
+    const freeList = await handleBuildPlanCollection(context(
+      db, new Request('https://solvency.dev/api/build-plans'), 'user_account_free_tier',
+    ));
+    assert.equal(freeList.status, 200);
+    assert.equal((await freeList.json() as { data: unknown[] }).data.length, 1);
+
+    const freeRead = await handleBuildPlanResource(context(
+      db,
+      new Request(`https://solvency.dev/api/build-plans/${seeded.resource.plan.id}`),
+      'user_account_free_tier',
+      { planId: seeded.resource.plan.id },
+    ));
+    assert.equal(freeRead.status, 200);
+
+    const freeDelete = await handleBuildPlanResource(context(
+      db,
+      new Request(`https://solvency.dev/api/build-plans/${seeded.resource.plan.id}`, {
+        method: 'DELETE', headers: { 'if-match': '"1"' },
+      }),
+      'user_account_free_tier',
+      { planId: seeded.resource.plan.id },
+    ));
+    assert.equal(freeDelete.status, 200);
+    assert.equal(db.sqlite.prepare('SELECT COUNT(*) AS count FROM build_plans').get()?.count, 0);
+  });
+
+  test('allows Pro-tier owners to create plans and append versions', async () => {
+    const db = new SqliteD1();
+    await grantOwnerPro(db, 'user_account_pro_tier');
+    const plan = makePlan('Pro tier plan');
+
+    const created = await handleBuildPlanCollection(context(
+      db,
+      planRequest(JSON.stringify(plan), { 'idempotency-key': 'pro-create-000001' }),
+      'user_account_pro_tier',
+      {},
+      PRO_ENV,
+    ));
+    assert.equal(created.status, 201);
+    const createdBody = await created.json() as { data: { plan: { id: string; currentVersion: number } } };
+    assert.equal(createdBody.data.plan.currentVersion, 1);
+
+    const appended = await handleBuildPlanVersions(context(
+      db,
+      planRequest(JSON.stringify(makePlan('Pro tier plan v2')), {
+        'idempotency-key': 'pro-append-000001', 'if-match': '"1"',
+      }),
+      'user_account_pro_tier',
+      { planId: createdBody.data.plan.id },
+      PRO_ENV,
+    ));
+    assert.equal(appended.status, 201);
+    assert.equal((await appended.json() as { data: { plan: { currentVersion: number } } }).data.plan.currentVersion, 2);
+  });
+
+  test('fails closed to PRO_REQUIRED (never 500 and never open to Pro) when the entitlement lookup itself errors', async () => {
+    const db = new SqliteD1();
+    await grantOwnerPro(db, 'user_account_broken_lookup');
+    const broken = rejectBillingQueries(db);
+    const create = await handleBuildPlanCollection(context(
+      broken,
+      planRequest(JSON.stringify(makePlan('Should never save')), { 'idempotency-key': 'broken-create-0001' }),
+      'user_account_broken_lookup',
+      {},
+      PRO_ENV,
+    ));
+    assert.equal(create.status, 403);
+    assert.equal((await create.json() as { error: { code: string } }).error.code, 'PRO_REQUIRED');
+    assert.equal(db.sqlite.prepare('SELECT COUNT(*) AS count FROM build_plans').get()?.count, 0);
   });
 });

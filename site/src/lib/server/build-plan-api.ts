@@ -1,6 +1,7 @@
 import { models } from '../data.ts';
 import { BUILD_PLAN_LIMITS, validateBuildPlanJson, type BuildPlanFailure } from '../build-plan-schema.ts';
 import { apiError, apiJson, readBoundedPlanBody } from './api-http.ts';
+import { ownerHasActivePro } from './entitlement-api.ts';
 import {
   appendOwnedBuildPlanVersion,
   createOwnedBuildPlan,
@@ -24,6 +25,22 @@ function requestId(context: PagesContextLike): string {
 
 function owner(context: PagesContextLike): string | null {
   return context.data.ownerUserId ?? null;
+}
+
+/**
+ * Gates a mutating account-plan endpoint behind an active Pro entitlement.
+ * Read (list/load) and delete handlers must never call this — export-on-churn
+ * for a lapsed subscriber is a trust requirement, not just a nicety.
+ */
+async function requireProForMutation(
+  context: PagesContextLike,
+  requestIdValue: string,
+  ownerUserId: string,
+): Promise<Response | null> {
+  const active = await ownerHasActivePro(context.env.DB, ownerUserId, context.env);
+  return active
+    ? null
+    : apiError(requestIdValue, 403, 'PRO_REQUIRED', 'An active Pro subscription is required for this action.');
 }
 
 function routePlanId(context: PagesContextLike): string | null {
@@ -125,6 +142,8 @@ export async function handleBuildPlanCollection(context: PagesContextLike): Prom
   }
 
   if (context.request.method === 'POST') {
+    const proFailure = await requireProForMutation(context, id, ownerUserId);
+    if (proFailure) return proFailure;
     const key = idempotencyKey(context.request);
     if (!key) return apiError(id, 400, 'INVALID_REQUEST', 'A valid Idempotency-Key header is required.');
     const parsed = await validateRequestPlan(context);
@@ -198,6 +217,8 @@ export async function handleBuildPlanVersions(context: PagesContextLike): Promis
   if (context.request.method !== 'POST') {
     return apiError(id, 405, 'METHOD_NOT_ALLOWED', 'Method is not allowed.', { allow: 'POST' });
   }
+  const proFailure = await requireProForMutation(context, id, ownerUserId);
+  if (proFailure) return proFailure;
   const planId = routePlanId(context);
   if (!planId) return apiError(id, 404, 'RESOURCE_NOT_FOUND', 'Build plan was not found.');
   const key = idempotencyKey(context.request);

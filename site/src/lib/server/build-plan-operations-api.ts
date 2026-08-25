@@ -1,5 +1,6 @@
 import { apiJson } from './api-http.ts';
 import { sha256Hex } from './build-plan-store.ts';
+import { ownerHasActivePro } from './entitlement-api.ts';
 import {
   createOwnedBuildPlanAlert,
   createOwnedBuildPlanShare,
@@ -40,6 +41,7 @@ type OperationErrorCode =
   | 'METHOD_NOT_ALLOWED'
   | 'IDEMPOTENCY_CONFLICT'
   | 'DUPLICATE_RESOURCE'
+  | 'PRO_REQUIRED'
   | 'SHARE_LIMIT'
   | 'ALERT_LIMIT'
   | 'OPERATION_LIMIT'
@@ -253,6 +255,23 @@ function idempotencyKey(request: Request): string | null {
   return value && IDEMPOTENCY_KEY.test(value) ? value : null;
 }
 
+/**
+ * Gates a mutating account-plan-operation endpoint (share creation,
+ * alert-settings save) behind an active Pro entitlement. Read (list) and
+ * delete/revoke handlers must never call this — a lapsed subscriber keeps
+ * read and delete access to data they already own.
+ */
+async function requireProForMutation(
+  context: PagesContextLike,
+  requestIdValue: string,
+  ownerUserId: string,
+): Promise<Response | null> {
+  const active = await ownerHasActivePro(context.env.DB, ownerUserId, context.env);
+  return active
+    ? null
+    : operationError(requestIdValue, 403, 'PRO_REQUIRED', 'An active Pro subscription is required for this action.');
+}
+
 function noQueryParameters(request: Request): boolean {
   return [...new URL(request.url).searchParams.keys()].length === 0;
 }
@@ -454,6 +473,8 @@ export async function handleBuildPlanShareCollection(context: PagesContextLike):
   if (context.request.method !== 'POST') {
     return operationError(id, 405, 'METHOD_NOT_ALLOWED', 'Method is not allowed.', 'GET, POST');
   }
+  const proFailure = await requireProForMutation(context, id, owned.ownerUserId);
+  if (proFailure) return proFailure;
   const key = idempotencyKey(context.request);
   if (!key) return operationError(id, 400, 'INVALID_REQUEST', 'A valid Idempotency-Key header is required.');
   const parsed = await readOperationJson(context.request, id);
@@ -579,6 +600,8 @@ export async function handleBuildPlanAlertCollection(context: PagesContextLike):
   if (context.request.method !== 'POST') {
     return operationError(id, 405, 'METHOD_NOT_ALLOWED', 'Method is not allowed.', 'GET, POST');
   }
+  const proFailure = await requireProForMutation(context, id, owned.ownerUserId);
+  if (proFailure) return proFailure;
   const key = idempotencyKey(context.request);
   if (!key) return operationError(id, 400, 'INVALID_REQUEST', 'A valid Idempotency-Key header is required.');
   const parsed = await readOperationJson(context.request, id);
@@ -628,6 +651,8 @@ export async function handleBuildPlanAlertResource(context: PagesContextLike): P
   if (context.request.method !== 'POST') {
     return operationError(id, 405, 'METHOD_NOT_ALLOWED', 'Method is not allowed.', 'POST, DELETE');
   }
+  const proFailure = await requireProForMutation(context, id, owned.ownerUserId);
+  if (proFailure) return proFailure;
   const parsed = await readOperationJson(context.request, id);
   if (!parsed.ok) return parsed.response;
   const body = parseAlertBody(parsed.value);
