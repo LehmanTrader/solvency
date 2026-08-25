@@ -94,11 +94,11 @@ test('production deploy attests exact source SHA and every dark route after publ
     '/api/stripe-webhook',
     '/shared-build-plans/',
   ]) assert.ok(script.includes(path), `missing production attestation for ${path}`);
-  assert.match(script, /response\.status !== 503/);
+  assert.match(script, /response\.status !== status/);
   assert.match(script, /x-error-code/);
   assert.match(script, /cache-control/);
-  assert.match(script, /data-account-plans-enabled="false"/);
-  assert.match(script, /data-product-intents-enabled="false"/);
+  assert.match(script, /data-account-plans-enabled="\$\{publicPlans\}"/);
+  assert.match(script, /data-product-intents-enabled="\$\{publicIntents\}"/);
   assert.match(script, /data-clerk-publishable-key="pk_live_/);
   assert.match(script, /csp\.split\(productionClerkOrigin\)\.length - 1 !== 2/);
   assert.match(script, /csp\.includes\('\.clerk\.accounts\.dev'\)/);
