@@ -708,17 +708,8 @@ export async function handleBillingReadiness(
     || requestUrl.search !== '' || requestUrl.searchParams.size !== 0) {
     return apiError(id, 400, 'INVALID_REQUEST', 'Billing readiness request is invalid.');
   }
-  // Temporary readiness diagnostic: fixed enum/boolean fields only — never a
-  // configured value, identifier, header or payload. Remove once the Preview
-  // rollout's readiness path is proven.
-  const diagnostic = (stage: string, extra: Record<string, boolean | string> = {}) => {
-    console.error(JSON.stringify({ event: 'billing_readiness_diagnostic', stage, ...extra }));
-  };
   const ownerUserId = context.data.ownerUserId;
-  if (!ownerUserId || !OWNER_ID.test(ownerUserId)) {
-    diagnostic('owner_missing');
-    return billingUnavailable(id);
-  }
+  if (!ownerUserId || !OWNER_ID.test(ownerUserId)) return billingUnavailable(id);
   const webhookEnabled = context.env.STRIPE_WEBHOOK_ENABLED === 'true';
   const portalEnabled = context.env.STRIPE_PORTAL_ENABLED === 'true';
   const checkoutEnabled = context.env.STRIPE_CHECKOUT_ENABLED === 'true';
@@ -729,25 +720,13 @@ export async function handleBillingReadiness(
       : 'webhook';
   if (!webhookEnabled && !portalEnabled && !checkoutEnabled) return billingUnavailable(id);
   const runtime = stripeRuntimeConfiguration(context.env, requiredStage);
-  if (!runtime) {
-    diagnostic('runtime_configuration_null', {
-      api: stripeApiConfiguration(context.env) !== null,
-      portal: stripePortalConfiguration(context.env) !== null,
-      prices: stripeProPriceConfiguration(context.env) !== null,
-      webhook_ready: stripeWebhookConfigurationReady(context.env),
-    });
-    return billingUnavailable(id);
-  }
+  if (!runtime) return billingUnavailable(id);
   try {
     const stripe = createStripeApi(runtime.stripe, dependencies.fetch);
     const binding = await stripe.verifyAccountBinding();
-    if (!binding.ok) {
-      diagnostic('binding_failed', { reason: binding.reason });
-      return billingUnavailable(id);
-    }
+    if (!binding.ok) return billingUnavailable(id);
     return apiJson({ data: { ready: true } });
   } catch {
-    diagnostic('binding_threw');
     return billingUnavailable(id);
   }
 }
