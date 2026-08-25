@@ -437,6 +437,12 @@ export function clerkAppearance() {
       card: { border: `1px solid ${token('--color-rule')}`, boxShadow: 'none' },
       formButtonPrimary: { fontFamily: token('--font-mono'), fontWeight: 700, textTransform: 'none' },
       footer: { background: token('--color-panel-2') },
+      // GitHub's near-black mark disappears on the dark panels; invert it to
+      // white there. Light theme keeps the original mark.
+      socialButtonsProviderIcon__github:
+        document.documentElement.getAttribute('data-theme') !== 'light'
+          ? { filter: 'invert(1)' }
+          : {},
     },
   };
 }
