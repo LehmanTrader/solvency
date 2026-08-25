@@ -14,13 +14,13 @@ migrations_dir = "./migrations"
 [vars]
 # Server-side rollout gate. Keep false until auth secrets, quotas, throttling,
 # migrations, privacy copy and authenticated smoke tests are all in place.
-ACCOUNT_PLANS_ENABLED = "false"
-ENTITLEMENTS_ENABLED = "false"
-PRODUCT_INTENTS_ENABLED = "false"
+ACCOUNT_PLANS_ENABLED = "true"
+ENTITLEMENTS_ENABLED = "true"
+PRODUCT_INTENTS_ENABLED = "true"
 PREVIEW_ACCOUNT_ERASURE_ENABLED = "false"
 STRIPE_CHECKOUT_ENABLED = "false"
 STRIPE_PORTAL_ENABLED = "false"
-STRIPE_WEBHOOK_ENABLED = "false"
+STRIPE_WEBHOOK_ENABLED = "true"
 APP_ENV = "production"
 CLERK_AUTHORIZED_PARTIES = "https://solvency.dev"
 STRIPE_ACCOUNT_ID = "acct_1U8LX8C2D9EnnEHG"

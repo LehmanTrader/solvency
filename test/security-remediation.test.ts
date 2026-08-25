@@ -115,12 +115,12 @@ test('deployment actions are immutable and installs are frozen', () => {
   const section = (heading: string) => wrangler.split(`[${heading}]\n`, 2)[1]?.split(/\n(?=\[)/, 1)[0] ?? '';
   const productionVars = section('vars');
   const previewVars = section('env.preview.vars');
-  assert.match(productionVars, /^ACCOUNT_PLANS_ENABLED = "false"$/m);
-  assert.match(productionVars, /^ENTITLEMENTS_ENABLED = "false"$/m);
-  assert.match(productionVars, /^PRODUCT_INTENTS_ENABLED = "false"$/m);
+  assert.match(productionVars, /^ACCOUNT_PLANS_ENABLED = "true"$/m);
+  assert.match(productionVars, /^ENTITLEMENTS_ENABLED = "true"$/m);
+  assert.match(productionVars, /^PRODUCT_INTENTS_ENABLED = "true"$/m);
   assert.match(productionVars, /^STRIPE_CHECKOUT_ENABLED = "false"$/m);
   assert.match(productionVars, /^STRIPE_PORTAL_ENABLED = "false"$/m);
-  assert.match(productionVars, /^STRIPE_WEBHOOK_ENABLED = "false"$/m);
+  assert.match(productionVars, /^STRIPE_WEBHOOK_ENABLED = "true"$/m);
   assert.match(previewVars, /^ACCOUNT_PLANS_ENABLED = "true"$/m);
   assert.match(previewVars, /^ENTITLEMENTS_ENABLED = "true"$/m);
   assert.match(previewVars, /^PRODUCT_INTENTS_ENABLED = "true"$/m);
