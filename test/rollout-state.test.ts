@@ -61,13 +61,13 @@ function withFixture(task: (directory: string) => void) {
 test('current rollout state passes and exposes only non-secret workflow outputs', () => withFixture((directory) => {
   const result = run(directory, true);
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
-  assert.match(result.stdout, /Preview Stripe dark, account erasure disabled, sandbox UI false/);
+  assert.match(result.stdout, /Preview Stripe staged, account erasure disabled, sandbox UI false/);
   assert.equal(readFileSync(result.outputPath, 'utf8'), [
-    'preview_stripe_enabled=false',
+    'preview_stripe_enabled=true',
     'preview_account_plans_enabled=true',
     'preview_product_intents_enabled=true',
     'preview_erasure_enabled=false',
-    'preview_webhook_enabled=false',
+    'preview_webhook_enabled=true',
     'preview_portal_enabled=false',
     'preview_checkout_enabled=false',
     'preview_sandbox_ui_enabled=false',
@@ -82,15 +82,15 @@ test('rollout verifier rejects production billing and unsafe Preview stage order
     ['production Stripe', (directory) => replace(directory, 'site/wrangler.toml',
       'STRIPE_WEBHOOK_ENABLED = "false"', 'STRIPE_WEBHOOK_ENABLED = "true"'), /\[vars\]\.STRIPE_WEBHOOK_ENABLED must remain false/],
     ['erasure plus webhook', (directory) => replace(directory, 'site/wrangler.toml',
-      'PREVIEW_ACCOUNT_ERASURE_ENABLED = "false"\nSTRIPE_CHECKOUT_ENABLED = "false"\nSTRIPE_PORTAL_ENABLED = "false"\nSTRIPE_WEBHOOK_ENABLED = "false"\nAPP_ENV = "preview"',
+      'PREVIEW_ACCOUNT_ERASURE_ENABLED = "false"\nSTRIPE_CHECKOUT_ENABLED = "false"\nSTRIPE_PORTAL_ENABLED = "false"\nSTRIPE_WEBHOOK_ENABLED = "true"\nAPP_ENV = "preview"',
       'PREVIEW_ACCOUNT_ERASURE_ENABLED = "true"\nSTRIPE_CHECKOUT_ENABLED = "false"\nSTRIPE_PORTAL_ENABLED = "false"\nSTRIPE_WEBHOOK_ENABLED = "true"\nAPP_ENV = "preview"'),
     /account erasure must be false/],
     ['portal before webhook', (directory) => replace(directory, 'site/wrangler.toml',
-      'PREVIEW_ACCOUNT_ERASURE_ENABLED = "false"\nSTRIPE_CHECKOUT_ENABLED = "false"\nSTRIPE_PORTAL_ENABLED = "false"\nSTRIPE_WEBHOOK_ENABLED = "false"\nAPP_ENV = "preview"',
+      'PREVIEW_ACCOUNT_ERASURE_ENABLED = "false"\nSTRIPE_CHECKOUT_ENABLED = "false"\nSTRIPE_PORTAL_ENABLED = "false"\nSTRIPE_WEBHOOK_ENABLED = "true"\nAPP_ENV = "preview"',
       'PREVIEW_ACCOUNT_ERASURE_ENABLED = "false"\nSTRIPE_CHECKOUT_ENABLED = "false"\nSTRIPE_PORTAL_ENABLED = "true"\nSTRIPE_WEBHOOK_ENABLED = "false"\nAPP_ENV = "preview"'),
     /billing portal requires the signed webhook path/],
     ['Checkout before portal', (directory) => replace(directory, 'site/wrangler.toml',
-      'PREVIEW_ACCOUNT_ERASURE_ENABLED = "false"\nSTRIPE_CHECKOUT_ENABLED = "false"\nSTRIPE_PORTAL_ENABLED = "false"\nSTRIPE_WEBHOOK_ENABLED = "false"\nAPP_ENV = "preview"',
+      'PREVIEW_ACCOUNT_ERASURE_ENABLED = "false"\nSTRIPE_CHECKOUT_ENABLED = "false"\nSTRIPE_PORTAL_ENABLED = "false"\nSTRIPE_WEBHOOK_ENABLED = "true"\nAPP_ENV = "preview"',
       'PREVIEW_ACCOUNT_ERASURE_ENABLED = "false"\nSTRIPE_CHECKOUT_ENABLED = "true"\nSTRIPE_PORTAL_ENABLED = "false"\nSTRIPE_WEBHOOK_ENABLED = "true"\nAPP_ENV = "preview"'),
     /Checkout requires both webhook processing and the billing portal/],
     ['sandbox UI before Checkout', (directory) => replace(directory, 'site/preview-rollout.json',
@@ -107,7 +107,7 @@ test('rollout verifier rejects production billing and unsafe Preview stage order
 });
 
 test('fully ordered Preview Stripe state passes only with erasure off and the test UI explicit', () => withFixture((directory) => {
-  replace(directory, 'site/wrangler.toml', 'PREVIEW_ACCOUNT_ERASURE_ENABLED = "false"\nSTRIPE_CHECKOUT_ENABLED = "false"\nSTRIPE_PORTAL_ENABLED = "false"\nSTRIPE_WEBHOOK_ENABLED = "false"\nAPP_ENV = "preview"',
+  replace(directory, 'site/wrangler.toml', 'PREVIEW_ACCOUNT_ERASURE_ENABLED = "false"\nSTRIPE_CHECKOUT_ENABLED = "false"\nSTRIPE_PORTAL_ENABLED = "false"\nSTRIPE_WEBHOOK_ENABLED = "true"\nAPP_ENV = "preview"',
     'PREVIEW_ACCOUNT_ERASURE_ENABLED = "false"\nSTRIPE_CHECKOUT_ENABLED = "true"\nSTRIPE_PORTAL_ENABLED = "true"\nSTRIPE_WEBHOOK_ENABLED = "true"\nAPP_ENV = "preview"');
   replace(directory, 'site/preview-rollout.json',
     '"stripeSandboxUiEnabled": false', '"stripeSandboxUiEnabled": true');
