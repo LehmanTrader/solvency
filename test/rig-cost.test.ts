@@ -5,6 +5,8 @@ import {
   localPassRateComparable,
   escalationBlend,
   subscriptionBreakEven,
+  cappedSubscriptionCostPerSolved,
+  breakEvenScan,
   RIG_QUOTE_BASIS,
   type RigSpecV1,
   type LocalModelV1,
@@ -314,5 +316,119 @@ describe('subscriptionBreakEven', () => {
       { amortizationPerMonthUsd: 5, electricityPerAttemptUsd: NaN, passRate: 0.7 },
       { usdPerMonth: 200, passRate: 0.9 },
     ).kind, 'undefined');
+  });
+
+  test('uncapped behavior is unchanged through the extended signature', () => {
+    // Same scenario as the crossover test above, but calling through the
+    // widened subscription type with no cap fields supplied at all: the
+    // result must be byte-identical to the pre-cap behavior.
+    const rigSide = { amortizationPerMonthUsd: 5, electricityPerAttemptUsd: 0.01, passRate: 0.7 };
+    const sub = { usdPerMonth: 200, passRate: 0.9 };
+    const out = subscriptionBreakEven(rigSide, sub);
+    assert.equal(out.kind, 'crossover');
+    const threshold = (sub.usdPerMonth * rigSide.passRate) / sub.passRate;
+    const expectedV = (threshold - rigSide.amortizationPerMonthUsd) / rigSide.electricityPerAttemptUsd;
+    if (out.kind !== 'crossover') throw new Error('unreachable');
+    assert.ok(Math.abs(out.tasksPerMonth - expectedV) < 1e-6);
+  });
+});
+
+describe('cappedSubscriptionCostPerSolved', () => {
+  test('no cap: matches the uncapped flat-fee formula', () => {
+    const sub = { usdPerMonth: 200, passRate: 0.9 };
+    const cost = cappedSubscriptionCostPerSolved(sub, 500);
+    const expected = 200 / (500 * 0.9);
+    assert.ok(Math.abs(cost! - expected) < 1e-12);
+  });
+
+  test('multi_seat: cost at exactly the cap equals a single seat, uncapped-equivalent value', () => {
+    const sub = { usdPerMonth: 100, passRate: 0.8, tasksPerMonthCap: 50, scaling: 'multi_seat' as const };
+    const cost = cappedSubscriptionCostPerSolved(sub, 50);
+    const expected = (1 * 100) / (50 * 0.8);
+    assert.ok(Math.abs(cost! - expected) < 1e-12);
+  });
+
+  test('multi_seat: crossing one task past the cap jumps to a second seat', () => {
+    const sub = { usdPerMonth: 100, passRate: 0.8, tasksPerMonthCap: 50, scaling: 'multi_seat' as const };
+    const cost = cappedSubscriptionCostPerSolved(sub, 51);
+    const expected = (2 * 100) / (51 * 0.8);
+    assert.ok(Math.abs(cost! - expected) < 1e-12);
+    // The seat jump strictly raises cost/solved relative to what one more
+    // linear step from the cap would have predicted.
+    assert.ok(cost! > cappedSubscriptionCostPerSolved(sub, 50)!);
+  });
+
+  test('multi_seat: hand-computed value mid-window (three seats stacked)', () => {
+    const sub = { usdPerMonth: 100, passRate: 0.8, tasksPerMonthCap: 50, scaling: 'multi_seat' as const };
+    const cost = cappedSubscriptionCostPerSolved(sub, 125);
+    // ceil(125/50) = 3 seats; 3*100 / (125*0.8) = 300/100 = 3
+    assert.ok(Math.abs(cost! - 3) < 1e-12);
+  });
+
+  test('hard_cap: value at or below the cap matches the uncapped formula; above it returns null', () => {
+    const sub = { usdPerMonth: 100, passRate: 0.8, tasksPerMonthCap: 50, scaling: 'hard_cap' as const };
+    const atCap = cappedSubscriptionCostPerSolved(sub, 50);
+    const expected = 100 / (50 * 0.8);
+    assert.ok(Math.abs(atCap! - expected) < 1e-12);
+
+    const belowCap = cappedSubscriptionCostPerSolved(sub, 30);
+    assert.ok(Math.abs(belowCap! - 100 / (30 * 0.8)) < 1e-12);
+
+    assert.equal(cappedSubscriptionCostPerSolved(sub, 51), null, 'a hard-capped tier cannot serve above its cap, never extrapolate');
+    assert.equal(cappedSubscriptionCostPerSolved(sub, 1000), null);
+  });
+
+  test('guards: non-finite/invalid inputs all return null', () => {
+    const okSub = { usdPerMonth: 100, passRate: 0.8, tasksPerMonthCap: 50, scaling: 'multi_seat' as const };
+    assert.equal(cappedSubscriptionCostPerSolved(okSub, NaN), null, 'non-finite volume');
+    assert.equal(cappedSubscriptionCostPerSolved(okSub, Infinity), null, 'non-finite volume');
+    assert.equal(cappedSubscriptionCostPerSolved(okSub, 0), null, 'zero volume');
+    assert.equal(cappedSubscriptionCostPerSolved(okSub, -10), null, 'negative volume');
+    assert.equal(cappedSubscriptionCostPerSolved({ ...okSub, passRate: 0 }, 100), null, 'passRate must be > 0');
+    assert.equal(cappedSubscriptionCostPerSolved({ ...okSub, passRate: 1.2 }, 100), null, 'passRate must be <= 1');
+    assert.equal(cappedSubscriptionCostPerSolved({ ...okSub, passRate: NaN }, 100), null, 'non-finite passRate');
+    assert.equal(cappedSubscriptionCostPerSolved({ ...okSub, tasksPerMonthCap: 0 }, 100), null, 'cap must be > 0');
+    assert.equal(cappedSubscriptionCostPerSolved({ ...okSub, tasksPerMonthCap: -5 }, 100), null, 'cap must be > 0');
+    assert.equal(cappedSubscriptionCostPerSolved({ ...okSub, usdPerMonth: -1 }, 100), null, 'usdPerMonth must be >= 0');
+  });
+});
+
+describe('breakEvenScan', () => {
+  test('a capped multi_seat subscription loses to the rig at high volume (sawtooth floor)', () => {
+    // Local floor e/p_l = 0.001/0.8 = 0.00125. Subscription's per-seat floor
+    // S/(cap*p_c) = 20/(50*0.8) = 0.5, far above the local floor, so once
+    // amortization has diluted enough local must eventually win and stay won.
+    const rigSide = { amortizationPerMonthUsd: 100, electricityPerAttemptUsd: 0.001, passRate: 0.8 };
+    const sub = { usdPerMonth: 20, passRate: 0.8, tasksPerMonthCap: 50, scaling: 'multi_seat' as const };
+    const out = breakEvenScan(rigSide, sub);
+    assert.ok(out.kind === 'crossover' || out.kind === 'mixed', `expected crossover or mixed, got ${out.kind}`);
+    const firstWin = out.kind === 'crossover' ? out.tasksPerMonth : out.kind === 'mixed' ? out.firstLocalWin : NaN;
+    assert.ok(Number.isFinite(firstWin) && firstWin > 0);
+
+    const localCostPerSolved = (V: number) => (rigSide.amortizationPerMonthUsd / V + rigSide.electricityPerAttemptUsd) / rigSide.passRate;
+    const subCostPerSolved = (V: number) => cappedSubscriptionCostPerSolved(sub, V)!;
+
+    // Directly re-derive the log-spaced grid step the default scan uses
+    // (1 to 1e6 over 400 points) to find the point immediately before the
+    // reported first win, and assert the relation actually flips there.
+    const steps = 400;
+    const logRatio = (Math.log(1e6) - Math.log(1)) / (steps - 1);
+    const oneStepBelow = Math.exp(Math.log(firstWin) - logRatio);
+
+    assert.ok(localCostPerSolved(firstWin) < subCostPerSolved(firstWin), 'local should be cheaper at the reported first-win volume');
+    assert.ok(localCostPerSolved(oneStepBelow) >= subCostPerSolved(oneStepBelow), 'the grid step below should not yet have local cheaper');
+  });
+
+  test('guards: invalid rig inputs return undefined', () => {
+    const sub = { usdPerMonth: 20, passRate: 0.8, tasksPerMonthCap: 50, scaling: 'multi_seat' as const };
+    assert.equal(breakEvenScan({ amortizationPerMonthUsd: 5, electricityPerAttemptUsd: 0.01, passRate: 0 }, sub).kind, 'undefined');
+    assert.equal(breakEvenScan({ amortizationPerMonthUsd: -5, electricityPerAttemptUsd: 0.01, passRate: 0.7 }, sub).kind, 'undefined');
+    assert.equal(breakEvenScan({ amortizationPerMonthUsd: 5, electricityPerAttemptUsd: NaN, passRate: 0.7 }, sub).kind, 'undefined');
+  });
+
+  test('guards: a subscription that is invalid at every scanned volume also returns undefined', () => {
+    const rigSide = { amortizationPerMonthUsd: 5, electricityPerAttemptUsd: 0.01, passRate: 0.7 };
+    const brokenSub = { usdPerMonth: 200, passRate: 0 }; // invalid pass rate: null at every volume
+    assert.equal(breakEvenScan(rigSide, brokenSub).kind, 'undefined');
   });
 });

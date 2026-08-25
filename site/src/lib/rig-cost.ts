@@ -331,6 +331,54 @@ export function escalationBlend(
 }
 
 /**
+ * 'multi_seat': the tier has a hard per-seat/per-tier task cap, but the buyer
+ * is assumed to stack additional seats/tiers to cover any volume above it —
+ * cost/solved is a sawtooth of usdPerMonth*ceil(V/cap)/(V*p_c). 'hard_cap':
+ * the tier simply cannot serve volume above its cap; no stacking assumption
+ * is made, and cost/solved is undefined (null) above the cap. Default is
+ * 'multi_seat' since most real subscription tiers can be stacked.
+ */
+export type SubscriptionScaling = 'multi_seat' | 'hard_cap';
+
+/**
+ * Cost per solved task for a subscription with an optional usage cap.
+ * No cap (tasksPerMonthCap null/absent): plain flat-fee dilution,
+ * usdPerMonth/(V*p_c) — identical to the uncapped math subscriptionBreakEven
+ * has always used. With a cap under 'multi_seat', the buyer is modelled as
+ * stacking ceil(V/cap) seats/tiers to cover the volume, so cost/solved is
+ * ceil(V/cap)*usdPerMonth/(V*p_c) — this is a documented assumption, not a
+ * measured fact: real multi-seat pricing may include per-seat discounts this
+ * model does not capture. With a cap under 'hard_cap', any volume above the
+ * cap returns null: the tier cannot serve it, and this function never
+ * extrapolates a served cost past that limit.
+ */
+export function cappedSubscriptionCostPerSolved(
+  subscription: {
+    usdPerMonth: number;
+    passRate: number;
+    tasksPerMonthCap?: number | null;
+    scaling?: SubscriptionScaling;
+  },
+  tasksPerMonth: number,
+): number | null {
+  const { usdPerMonth: S, passRate: pc, tasksPerMonthCap: cap = null, scaling = 'multi_seat' } = subscription;
+  const validRate = (v: number) => Number.isFinite(v) && v > 0 && v <= 1;
+  const validCost = (v: number) => Number.isFinite(v) && v >= 0;
+  if (!validCost(S) || !validRate(pc) || !Number.isFinite(tasksPerMonth) || tasksPerMonth <= 0) return null;
+
+  if (cap === null || cap === undefined) return S / (tasksPerMonth * pc);
+  if (!Number.isFinite(cap) || cap <= 0) return null;
+
+  if (scaling === 'hard_cap') {
+    if (tasksPerMonth > cap) return null;
+    return S / (tasksPerMonth * pc);
+  }
+
+  const seats = Math.ceil(tasksPerMonth / cap);
+  return (seats * S) / (tasksPerMonth * pc);
+}
+
+/**
  * Local cost per solved task at monthly volume V is (A/V + e)/p_l: hardware
  * amortization A dilutes with volume, electricity e is a true per-task
  * marginal cost that never dilutes. Subscription cost per solved task is
@@ -340,10 +388,23 @@ export function escalationBlend(
  * is whether a low-volume regime exists where local is still cheaper, i.e.
  * whether amortization A starts out below the tie threshold S*p_l/p_c.
  * Solving (A + eV)/p_l = S/p_c for V gives the crossover volume below.
+ *
+ * This closed form assumes an uncapped flat fee. The subscription parameter
+ * accepts the same optional tasksPerMonthCap/scaling fields as
+ * cappedSubscriptionCostPerSolved for type convenience (a caller may reuse
+ * one subscription object across both this function and breakEvenScan), but
+ * this function ignores them: a cap turns subscription cost/solved into a
+ * sawtooth with its own nonzero floor, which has no single closed-form
+ * crossover. Use breakEvenScan for cap-aware analysis.
  */
 export function subscriptionBreakEven(
   rig: { amortizationPerMonthUsd: number; electricityPerAttemptUsd: number; passRate: number },
-  subscription: { usdPerMonth: number; passRate: number },
+  subscription: {
+    usdPerMonth: number;
+    passRate: number;
+    tasksPerMonthCap?: number | null;
+    scaling?: SubscriptionScaling;
+  },
 ):
   | { kind: 'crossover'; tasksPerMonth: number }
   | { kind: 'local_always_cheaper' }
@@ -372,4 +433,77 @@ export function subscriptionBreakEven(
   if (A >= threshold) return { kind: 'subscription_always_cheaper' };
 
   return { kind: 'crossover', tasksPerMonth: (threshold - A) / e };
+}
+
+/**
+ * A capped subscription's cost/solved is a sawtooth (cappedSubscriptionCostPerSolved,
+ * 'multi_seat'), so there is no single closed-form crossover the way there is
+ * in subscriptionBreakEven. This numerically scans log-spaced monthly volumes
+ * from 1 to maxTasksPerMonth (default 1e6, default 400 steps) and compares
+ * local cost/solved (A/V + e)/p_l against the capped subscription cost/solved
+ * at each point, reporting the first volume where local becomes cheaper.
+ * 'crossover' means local wins from that point on for the rest of the
+ * scanned range (single-crossing); 'mixed' means the sawtooth's seat jumps
+ * cause the relation to flip more than once, and firstLocalWin is only the
+ * first such volume, not a guarantee that local stays cheaper above it.
+ * A hard_cap subscription is excluded from the comparison at any volume it
+ * cannot serve (null), rather than treated as infinitely expensive there.
+ */
+export function breakEvenScan(
+  rig: { amortizationPerMonthUsd: number; electricityPerAttemptUsd: number; passRate: number },
+  subscription: {
+    usdPerMonth: number;
+    passRate: number;
+    tasksPerMonthCap?: number | null;
+    scaling?: SubscriptionScaling;
+  },
+  opts?: { maxTasksPerMonth?: number; steps?: number },
+):
+  | { kind: 'crossover'; tasksPerMonth: number }
+  | { kind: 'local_always_cheaper' }
+  | { kind: 'subscription_always_cheaper' }
+  | { kind: 'mixed'; firstLocalWin: number }
+  | { kind: 'undefined' } {
+  const { amortizationPerMonthUsd: A, electricityPerAttemptUsd: e, passRate: pl } = rig;
+  const validRate = (v: number) => Number.isFinite(v) && v > 0 && v <= 1;
+  const validCost = (v: number) => Number.isFinite(v) && v >= 0;
+  if (!validCost(A) || !validCost(e) || !validRate(pl)) return { kind: 'undefined' };
+
+  const maxTasksPerMonth = opts?.maxTasksPerMonth ?? 1_000_000;
+  const steps = opts?.steps ?? 400;
+  if (!Number.isFinite(maxTasksPerMonth) || maxTasksPerMonth <= 1 || !Number.isInteger(steps) || steps < 2) {
+    return { kind: 'undefined' };
+  }
+
+  const logMin = Math.log(1);
+  const logMax = Math.log(maxTasksPerMonth);
+  const localCostPerSolved = (V: number) => (A / V + e) / pl;
+
+  let sawLocalWin = false;
+  let sawSubWin = false;
+  let firstLocalWin: number | null = null;
+  let flips = 0;
+  let prevLocalCheaper: boolean | null = null;
+
+  for (let i = 0; i < steps; i++) {
+    const t = i / (steps - 1);
+    const V = Math.exp(logMin + t * (logMax - logMin));
+    const subCost = cappedSubscriptionCostPerSolved(subscription, V);
+    if (subCost === null) continue; // subscription cannot serve this volume: excluded, never extrapolated
+    const localCheaper = localCostPerSolved(V) < subCost;
+    if (localCheaper) {
+      sawLocalWin = true;
+      if (firstLocalWin === null) firstLocalWin = V;
+    } else {
+      sawSubWin = true;
+    }
+    if (prevLocalCheaper !== null && localCheaper !== prevLocalCheaper) flips++;
+    prevLocalCheaper = localCheaper;
+  }
+
+  if (!sawLocalWin && !sawSubWin) return { kind: 'undefined' };
+  if (!sawLocalWin) return { kind: 'subscription_always_cheaper' };
+  if (!sawSubWin) return { kind: 'local_always_cheaper' };
+  if (flips <= 1) return { kind: 'crossover', tasksPerMonth: firstLocalWin! };
+  return { kind: 'mixed', firstLocalWin: firstLocalWin! };
 }
