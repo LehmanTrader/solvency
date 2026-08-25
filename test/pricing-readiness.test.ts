@@ -107,6 +107,7 @@ test('the live checkout surface exists only inside ProCheckout, gated by the exa
 
   assert.match(component, /id="pro-checkout"/);
   assert.match(component, /btn-accent/);
+  assert.match(component, /id="pro-checkout-choice"/);
   assert.match(component, /id="pro-checkout-month"[^>]*disabled>Upgrade to Pro/);
   assert.match(component, /id="pro-checkout-year"[^>]*disabled>Upgrade to Pro/);
   assert.match(component, /id="pro-checkout-portal"[^>]*disabled>Manage billing/);
@@ -114,6 +115,11 @@ test('the live checkout surface exists only inside ProCheckout, gated by the exa
   assert.match(component, /script is:inline type="module"/);
   assert.match(component, /#pro-checkout-month:disabled/);
   assert.match(component, /#pro-checkout-year:disabled/);
+
+  // Owner ask: once subscribed, the buy controls give way to a status block.
+  // Hidden by default so a not-yet-confirmed visitor gets today's buy card.
+  assert.match(component, /id="pro-checkout-subscribed" hidden>/);
+  assert.match(component, /id="pro-checkout-subscribed-status"[^>]*>You're subscribed — Pro is active\.</);
 
   // Required pre-payment disclosure: amount/cadence, auto-renewal,
   // cancellation, refund and tax treatment, each marked as a Phase 3
@@ -135,7 +141,83 @@ test('the live checkout surface exists only inside ProCheckout, gated by the exa
   assert.match(client, /Checkout is not available right now\./);
   assert.doesNotMatch(client, /innerHTML|window\.open|unsafeMetadata|sessionStorage|localStorage/);
 
+  // Subscribed-state lookup: GET /api/entitlement, treated as not-pro on any
+  // shape mismatch (tier/active/billingInterval only — the envelope carries
+  // more fields this card never reads).
+  assert.match(client, /\/api\/entitlement/);
+  assert.match(client, /function entitlementSubscription/);
+  assert.match(client, /data\.tier !== 'free' && data\.tier !== 'pro'/);
+  assert.match(client, /typeof data\.active !== 'boolean'/);
+
   // Build-flag plumbing: hardcoded dark in production, derived in preview.
+  assert.match(production, /PUBLIC_STRIPE_CHECKOUT_ENABLED: 'false'/);
+  assert.match(preview, /PUBLIC_STRIPE_CHECKOUT_ENABLED: \$\{\{ needs\.resolve-rollout\.outputs\.preview_checkout_enabled \}\}/);
+});
+
+test('a signed-in Pro subscriber sees "already subscribed" instead of the buy controls', () => {
+  const client = read('site/src/scripts/pro-checkout-runtime.js');
+  // Default (unknown/loading) render always matches today's buy state: the
+  // choice group and Manage billing stay driven by the same readiness gate
+  // used before this change, and `subscription` starts null (not-pro).
+  assert.match(client, /let subscription = null;/);
+  assert.match(client, /const isSubscribed = \(\) => subscription\?\.tier === 'pro' && subscription\?\.active === true;/);
+  assert.match(client, /choice\.hidden = pro;/);
+  assert.match(client, /subscribed\.hidden = !pro;/);
+  assert.match(client, /month\.disabled = !ready \|\| pro;/);
+  assert.match(client, /year\.disabled = !ready \|\| pro;/);
+  // Manage billing (`portal`) stays enabled/visible in the subscribed state.
+  assert.match(client, /portal\.disabled = !ready;/);
+  assert.match(client, /You're subscribed — Pro is active\.\$\{interval\}/);
+  assert.match(client, /Billed monthly\./);
+  assert.match(client, /Billed yearly\./);
+  // Re-evaluated on every fresh sign-in (a page load after Stripe Checkout
+  // returns is exactly a fresh sign-in observation) and reset to not-pro on
+  // sign-out, never carried over to a different signed-in user optimistically.
+  assert.match(client, /if \(state\.userId === previousUserId\)/);
+  assert.match(client, /if \(state\.status !== 'signed-in'\) \{/);
+  assert.match(client, /subscriptionRequestId \+= 1;/);
+  assert.match(client, /if \(requestId !== subscriptionRequestId\) return; \/\/ superseded by a later auth change/);
+});
+
+test('Manage billing moves into the account menu, gated by the same checkout flag as ProCheckout', () => {
+  const base = read('site/src/layouts/Base.astro');
+  const menu = read('site/src/scripts/manage-billing-menu-runtime.js');
+  const production = read('.github/workflows/deploy.yml');
+  const preview = read('.github/workflows/deploy-preview.yml');
+
+  // Base.astro renders every page, so it computes its own copy of the exact
+  // flag const (mirroring pricing.astro/ProCheckout.astro) and Astro resolves
+  // it at build time: the whole <script> tag, and every string in it, is
+  // absent from a dark build (see verify-production-artifact-dark.mjs).
+  assert.match(base, /const CHECKOUT_UI_ENABLED = import\.meta\.env\.PUBLIC_STRIPE_CHECKOUT_ENABLED === 'true';/);
+  assert.match(base, /import manageBillingMenuRuntime from '\.\.\/scripts\/manage-billing-menu-runtime\.js\?raw';/);
+  assert.match(base, /\{CHECKOUT_UI_ENABLED && <script is:inline type="module" set:html=\{manageBillingMenuRuntime\}><\/script>\}/);
+  assert.equal(base.match(/manageBillingMenuRuntime/g)?.length, 2, 'imported once, rendered once, both inside the flag gate');
+
+  // The always-present header script (unconditional in every build) mounts
+  // through the shared, re-invokable helper instead of a one-shot call, so a
+  // theme toggle and the flag-gated custom menu item share one mount path.
+  assert.match(base, /mountUserButtonThemed, observeThemeChange \} from '\.\.\/lib\/clerk-client\.ts';/);
+  assert.match(base, /if \(on && c && !u\.hasChildNodes\(\)\) mountUserButtonThemed\(u\);/);
+  assert.match(base, /const stopTheme = observeThemeChange\(/);
+  assert.doesNotMatch(base, /clerkAppearance/);
+
+  // The menu runtime is self-contained (same reason as pro-checkout-runtime.js:
+  // an inlined raw-text module script cannot resolve a relative .ts import),
+  // duplicates the Idempotency-Key + bearer pattern for exactly one POST, and
+  // hands the click handler to the always-present script via a window global
+  // rather than mounting the UserButton itself.
+  assert.match(menu, /\/api\/billing-portal/);
+  assert.match(menu, /'Idempotency-Key': `solvency-portal-menu-v1-\$\{crypto\.randomUUID\(\)\}`/);
+  assert.match(menu, /Authorization: `Bearer \$\{bearer\}`/);
+  assert.match(menu, /label: 'Manage billing'/);
+  assert.match(menu, /window\.__solvencyUserButtonMountExtras = \(\) => \(\{/);
+  assert.match(menu, /customMenuItems: \[/);
+  // Error/503 (or any malformed response) lands somewhere billing status is
+  // visible, never a silent no-op.
+  assert.match(menu, /location\.assign\('\/pricing#pro'\)/);
+  assert.doesNotMatch(menu, /innerHTML|window\.open|unsafeMetadata|sessionStorage|localStorage/);
+
   assert.match(production, /PUBLIC_STRIPE_CHECKOUT_ENABLED: 'false'/);
   assert.match(preview, /PUBLIC_STRIPE_CHECKOUT_ENABLED: \$\{\{ needs\.resolve-rollout\.outputs\.preview_checkout_enabled \}\}/);
 });

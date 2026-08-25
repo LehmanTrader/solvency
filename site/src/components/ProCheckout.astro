@@ -27,6 +27,16 @@
  * Clerk session bearer token and a valid `Idempotency-Key` header
  * (`/^[A-Za-z0-9._:-]{16,128}$/`) — see pro-checkout-runtime.js.
  *
+ * A signed-in user's subscribed state (#pro-checkout-choice hidden,
+ * #pro-checkout-subscribed shown) is read from GET /api/entitlement ->
+ * site/src/lib/server/entitlement-api.ts, which on success returns 200
+ * { data: OwnerEntitlement } (site/src/lib/server/entitlement-store.ts) —
+ * `{ tier: 'free'|'pro', active, source, status, billingInterval, ... }`.
+ * Any fetch error (auth failure, network, malformed response) or a result
+ * that is not exactly `tier: 'pro'` and `active: true` is treated as
+ * not-subscribed. This bearer-authenticated GET reuses authenticatedJsonFetch,
+ * exactly like createCheckout/createPortal below.
+ *
  * The client runtime is imported as raw text (`?raw`) and rendered through
  * `<script is:inline set:html>`, exactly like StripeSandbox.astro /
  * stripe-sandbox-runtime.js: when this component is not instantiated, Astro
@@ -76,9 +86,12 @@ const DISCLOSURE = [
   </ul>
   <p class="small mt-3">Roadmap, not sold as active features: a re-priced digest email, local-hardware comparison, reusable rate profiles, usage import and an API. Model-price and budget monitoring (alerts) is not sold until it exists.</p>
 
-  <div class="mt-5 grid gap-2 sm:grid-cols-2" role="group" aria-label="Subscribe to Solvency Pro">
+  <div class="mt-5 grid gap-2 sm:grid-cols-2" role="group" aria-label="Subscribe to Solvency Pro" id="pro-checkout-choice">
     <button type="button" class="btn btn-accent min-w-0 w-full whitespace-normal text-center" id="pro-checkout-month" disabled>Upgrade to Pro — $19/month</button>
     <button type="button" class="btn btn-accent min-w-0 w-full whitespace-normal text-center" id="pro-checkout-year" disabled>Upgrade to Pro — $190/year</button>
+  </div>
+  <div class="mt-5" id="pro-checkout-subscribed" hidden>
+    <p class="small" id="pro-checkout-subscribed-status" role="status" aria-live="polite" aria-atomic="true">You're subscribed — Pro is active.</p>
   </div>
   <button type="button" class="btn btn-quiet mt-3" id="pro-checkout-portal" disabled>Manage billing</button>
   <p class="small mt-3" id="pro-checkout-status" role="status" aria-live="polite" aria-atomic="true">Account controls are loading.</p>

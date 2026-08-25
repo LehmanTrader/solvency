@@ -220,6 +220,38 @@ async function createPortal() {
   return url;
 }
 
+/**
+ * Validates only the fields this card needs from GET /api/entitlement's
+ * `{ data: OwnerEntitlement }` envelope (entitlement-store.ts). Unlike
+ * checkoutRedirectUrl this does not require an exact key set on `data`:
+ * OwnerEntitlement carries several more fields (source, status,
+ * currentPeriodEnd, cancelAtPeriodEnd) this card never reads.
+ */
+export function entitlementSubscription(value) {
+  if (!exactObject(value, ['data'])) return null;
+  const data = value.data;
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return null;
+  if (data.tier !== 'free' && data.tier !== 'pro') return null;
+  if (typeof data.active !== 'boolean') return null;
+  if (data.billingInterval !== 'month' && data.billingInterval !== 'year' && data.billingInterval !== null) return null;
+  return { tier: data.tier, active: data.active, billingInterval: data.billingInterval };
+}
+
+/**
+ * Owner ask: once a signed-in user's Pro subscription is active, the buy
+ * controls disappear and the card says so instead. Any lookup failure —
+ * network, auth, a malformed payload — is treated as not-subscribed, never
+ * as subscribed: a free visitor must never see the subscribed state, even
+ * briefly.
+ */
+async function fetchSubscription() {
+  try {
+    return entitlementSubscription(await authenticatedJsonFetch('/api/entitlement', { timeoutMs: 10_000 }));
+  } catch {
+    return null;
+  }
+}
+
 function currentAuthState() {
   const clerk = window.Clerk;
   if (!clerk?.loaded || document.documentElement.dataset.clerkUiReady !== 'true') {
@@ -317,14 +349,37 @@ export function bootProCheckout() {
   const portal = document.getElementById('pro-checkout-portal');
   const status = document.getElementById('pro-checkout-status');
   const error = document.getElementById('pro-checkout-error');
-  if (![month, year, portal, status, error].every(Boolean)) return;
+  const choice = document.getElementById('pro-checkout-choice');
+  const subscribed = document.getElementById('pro-checkout-subscribed');
+  const subscribedStatus = document.getElementById('pro-checkout-subscribed-status');
+  if (![month, year, portal, status, error, choice, subscribed, subscribedStatus].every(Boolean)) return;
   const controls = [month, year, portal];
   let authState = { status: 'checking' };
   let busy = false;
+  // Default is always today's buy state (choice shown, subscribed hidden);
+  // this only ever moves free -> pro, never the reverse, so a free visitor
+  // can never see a "subscribed" flash. See fetchSubscription's own doc.
+  let subscription = null;
+  let subscriptionRequestId = 0;
+
+  const isSubscribed = () => subscription?.tier === 'pro' && subscription?.active === true;
 
   const renderControls = () => {
     const ready = (authState.status === 'signed-in' || authState.status === 'signed-out') && !busy;
-    for (const control of controls) control.disabled = !ready;
+    const pro = isSubscribed();
+    month.disabled = !ready || pro;
+    year.disabled = !ready || pro;
+    portal.disabled = !ready;
+    choice.hidden = pro;
+    subscribed.hidden = !pro;
+    if (pro) {
+      const interval = subscription.billingInterval === 'month'
+        ? ' Billed monthly.'
+        : subscription.billingInterval === 'year'
+          ? ' Billed yearly.'
+          : '';
+      subscribedStatus.textContent = `You're subscribed — Pro is active.${interval}`;
+    }
     if (busy) return;
     status.textContent = authState.status === 'checking'
       ? 'Account controls are loading.'
@@ -363,8 +418,33 @@ export function bootProCheckout() {
   portal.addEventListener('click', () => { void run(portal, createPortal); });
 
   const stop = observeAuth((state) => {
+    const previousUserId = authState.status === 'signed-in' ? authState.userId : null;
     authState = state;
+    if (state.status !== 'signed-in') {
+      // Signed out (or never signed in): never show subscribed to a visitor
+      // we cannot currently verify. Invalidate any in-flight lookup so a
+      // late response cannot resurrect a stale subscribed state later.
+      subscription = null;
+      subscriptionRequestId += 1;
+      renderControls();
+      return;
+    }
+    if (state.userId === previousUserId) {
+      // Same user re-emitted (e.g. a token refresh): keep whatever this
+      // card already knows and just re-render.
+      renderControls();
+      return;
+    }
+    // A fresh sign-in (first load, or a different account taking over this
+    // session): render today's buy state immediately, then confirm.
+    subscription = null;
     renderControls();
+    const requestId = ++subscriptionRequestId;
+    void fetchSubscription().then((result) => {
+      if (requestId !== subscriptionRequestId) return; // superseded by a later auth change
+      subscription = result;
+      renderControls();
+    });
   }, root.dataset.clerkEnabled === 'true');
   addEventListener('pagehide', stop, { once: true });
 }

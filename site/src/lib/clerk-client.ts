@@ -441,6 +441,66 @@ export function clerkAppearance() {
   };
 }
 
+/**
+ * Extra `mountUserButton` options registered by a flag-gated, self-contained
+ * runtime script (e.g. site/src/scripts/manage-billing-menu-runtime.js,
+ * inlined via `?raw`+`set:html` only when PUBLIC_STRIPE_CHECKOUT_ENABLED is
+ * 'true'). Such a script cannot import this module — see the header comment
+ * in pro-checkout-runtime.js — so it hands data across the window global
+ * instead. Absent in every other build: `mountUserButtonThemed` below then
+ * mounts with no extras, exactly like today.
+ */
+function userButtonMountExtras(): Record<string, unknown> {
+  try {
+    const hook = (window as any).__solvencyUserButtonMountExtras;
+    if (typeof hook !== 'function') return {};
+    const extras = hook();
+    return extras && typeof extras === 'object' && !Array.isArray(extras) ? extras : {};
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Mounts (or re-mounts) Clerk's UserButton with theme-derived `appearance`,
+ * the same appearance forwarded to the nested "Manage account" UserProfile
+ * modal via `userProfileProps`, plus any extras from `userButtonMountExtras`.
+ * Safe to call repeatedly on the same container: an already-mounted button
+ * is unmounted first, so a light/dark theme change can re-invoke this to
+ * re-theme an open popover instead of leaving it stuck on the load-time theme.
+ */
+export function mountUserButtonThemed(container: HTMLElement): void {
+  const c = clerk();
+  if (!c?.mountUserButton) return;
+  if (container.hasChildNodes()) {
+    try { c.unmountUserButton?.(container); } catch { /* best-effort remount */ }
+    container.replaceChildren();
+  }
+  const appearance = clerkAppearance();
+  try {
+    c.mountUserButton(container, {
+      appearance,
+      userProfileProps: { appearance },
+      ...userButtonMountExtras(),
+    });
+  } catch { /* leave the container empty rather than throw into the caller */ }
+}
+
+/**
+ * Re-invokes `onChange` whenever the page's `data-theme` attribute changes
+ * (the header theme toggle, or the early localStorage-restore script).
+ * clerk-js only reads a fresh `appearance` at mount/open time — there is no
+ * live-update API — so callers re-theme by re-mounting or re-opening.
+ */
+export function observeThemeChange(onChange: () => void): () => void {
+  if (typeof MutationObserver === 'undefined' || typeof document === 'undefined') return () => {};
+  const observer = new MutationObserver((mutations) => {
+    if (mutations.some((mutation) => mutation.attributeName === 'data-theme')) onChange();
+  });
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  return () => observer.disconnect();
+}
+
 const urls = () => ({ afterSignInUrl: location.href, afterSignUpUrl: location.href });
 
 /**

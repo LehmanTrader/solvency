@@ -4,6 +4,7 @@ import { CF_BEACON_TOKEN } from '../lib/site-config.ts';
 import Logo from '../components/Logo.astro';
 import { CLERK_ENABLED, CLERK_PUBLISHABLE_KEY, CLERK_FRONTEND_API } from '../lib/clerk.ts';
 import { models, sources } from '../lib/data.ts';
+import manageBillingMenuRuntime from '../scripts/manage-billing-menu-runtime.js?raw';
 interface Props {
   title: string;
   description: string;
@@ -27,6 +28,14 @@ const aa = sources.find((s) => s.benchmark === 'aa-coding-agent-index');
 const PRODUCT_INTENTS_ENABLED = import.meta.env.PUBLIC_PRODUCT_INTENTS_ENABLED === 'true';
 const buildShaInput = import.meta.env.PUBLIC_BUILD_SHA ?? '';
 const BUILD_SHA = /^[0-9a-f]{40}$/.test(buildShaInput) ? buildShaInput : 'local';
+// Moves "Manage billing" off the public site and into the account menu (see
+// manage-billing-menu-runtime.js). Dark (false) on the same schedule as
+// ProCheckout.astro / pricing.astro's CHECKOUT_UI_ENABLED — deploy.yml pins
+// this to 'false', deploy-preview.yml wires it from resolve-rollout. Astro
+// resolves this at build time, so the flag-off page render never includes
+// the conditional script below and dist/ never contains its
+// /api/billing-portal literal (see scripts/verify-production-artifact-dark.mjs).
+const CHECKOUT_UI_ENABLED = import.meta.env.PUBLIC_STRIPE_CHECKOUT_ENABLED === 'true';
 ---
 <!doctype html>
 <html lang="en" data-product-intents-enabled={PRODUCT_INTENTS_ENABLED ? 'true' : 'false'}>
@@ -99,8 +108,9 @@ const BUILD_SHA = /^[0-9a-f]{40}$/.test(buildShaInput) ? buildShaInput : 'local'
           <p id="auth-readiness" class="sr-only" role="status" aria-live="polite" aria-atomic="true">Account controls are loading.</p>
         </div>
       )}
+      {CHECKOUT_UI_ENABLED && <script is:inline type="module" set:html={manageBillingMenuRuntime}></script>}
       <script>
-        import { observeClerkAuth, openSignIn, openSignUp, clerkAppearance, wireAnalytics } from '../lib/clerk-client.ts';
+        import { observeClerkAuth, openSignIn, openSignUp, wireAnalytics, mountUserButtonThemed, observeThemeChange } from '../lib/clerk-client.ts';
         wireAnalytics();
         const b = document.getElementById('auth-signup') as HTMLButtonElement | null;
         const s = document.getElementById('auth-signin') as HTMLButtonElement | null;
@@ -133,10 +143,17 @@ const BUILD_SHA = /^[0-9a-f]{40}$/.test(buildShaInput) ? buildShaInput : 'local'
             const c = (window as any).Clerk;
             const on = state.status === 'signed-in';
             b.classList.toggle('hidden', on); s.style.display = on ? 'none' : ''; u.classList.toggle('hidden', !on);
-            if (on && c && !u.hasChildNodes()) c.mountUserButton(u, { appearance: clerkAppearance() });
+            if (on && c && !u.hasChildNodes()) mountUserButtonThemed(u);
             if (!on && c && u.hasChildNodes()) { c.unmountUserButton(u); u.replaceChildren(); }
           }, { enabled: true });
-          addEventListener('pagehide', stop, { once: true });
+          // clerk-js only reads `appearance` at mount/open time; re-mount the
+          // popover so a light/dark toggle re-themes it instead of leaving it
+          // stuck on the theme that was active when the user signed in.
+          const stopTheme = observeThemeChange(() => {
+            if (u.classList.contains('hidden') || !u.hasChildNodes()) return;
+            mountUserButtonThemed(u);
+          });
+          addEventListener('pagehide', () => { stop(); stopTheme(); }, { once: true });
         }
       </script>
     </div>

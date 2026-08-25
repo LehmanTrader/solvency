@@ -5,7 +5,9 @@ import {
   COMPOSER_AUTH_DRAFT_MAX_BYTES,
   authenticatedJsonFetch,
   consumeComposerDraftAfterAuth,
+  mountUserButtonThemed,
   observeClerkAuth,
+  observeThemeChange,
   openSignIn,
   openSignUp,
   preserveComposerDraftForAuth,
@@ -341,6 +343,64 @@ test('authenticated JSON fetch allowlists trusted 409 error headers without read
     assert.equal(error.message.includes('sensitive'), false);
     return true;
   });
+});
+
+test('mountUserButtonThemed mounts with theme-derived appearance, forwards window-registered extras, and remounts idempotently', () => {
+  setThemeTokens();
+  const mounts: any[] = [];
+  let unmounts = 0;
+  let replaceChildrenCalls = 0;
+  setBrowser({
+    mountUserButton(_container: unknown, options: unknown) { mounts.push(options); },
+    unmountUserButton() { unmounts += 1; },
+  });
+  (globalThis as any).window.__solvencyUserButtonMountExtras = () => ({
+    customMenuItems: [{ label: 'Manage billing' }],
+  });
+
+  let hasChildren = false;
+  const container: any = {
+    hasChildNodes: () => hasChildren,
+    replaceChildren: () => { replaceChildrenCalls += 1; },
+  };
+
+  mountUserButtonThemed(container);
+  assert.equal(mounts.length, 1);
+  assert.equal(unmounts, 0);
+  assert.deepEqual(mounts[0].customMenuItems, [{ label: 'Manage billing' }]);
+  assert.equal(mounts[0].appearance.variables.colorBackground, '#111111');
+  assert.deepEqual(mounts[0].userProfileProps, { appearance: mounts[0].appearance });
+
+  // A second mount on an already-populated container (e.g. after a theme
+  // toggle) unmounts and clears first, so the popover picks up fresh colors
+  // instead of staying stuck on the theme active when it first mounted.
+  hasChildren = true;
+  mountUserButtonThemed(container);
+  assert.equal(unmounts, 1);
+  assert.equal(replaceChildrenCalls, 1);
+  assert.equal(mounts.length, 2);
+});
+
+test('mountUserButtonThemed omits extras with no window hook and never throws on a broken one', () => {
+  setThemeTokens();
+  const mounts: any[] = [];
+  setBrowser({ mountUserButton(_container: unknown, options: unknown) { mounts.push(options); } });
+  const container: any = { hasChildNodes: () => false, replaceChildren: () => {} };
+
+  mountUserButtonThemed(container);
+  assert.deepEqual(Object.keys(mounts[0]).sort(), ['appearance', 'userProfileProps']);
+
+  (globalThis as any).window.__solvencyUserButtonMountExtras = () => { throw new Error('boom'); };
+  assert.doesNotThrow(() => mountUserButtonThemed(container));
+  assert.deepEqual(Object.keys(mounts[1]).sort(), ['appearance', 'userProfileProps']);
+});
+
+test('observeThemeChange is a safe no-op outside a DOM environment', () => {
+  setBrowser();
+  let called = 0;
+  const stop = observeThemeChange(() => { called += 1; });
+  assert.doesNotThrow(() => stop());
+  assert.equal(called, 0);
 });
 
 test('Composer auth draft storage is bounded, JSON-safe and one-shot', () => {
