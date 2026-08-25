@@ -8,6 +8,11 @@ import { CLERK_ENABLED } from '../lib/clerk.ts';
 const currentModels = models.filter((model) => model.status === 'current');
 const ACCOUNT_PLANS_ENABLED = import.meta.env.PUBLIC_ACCOUNT_PLANS_ENABLED === 'true';
 const PRODUCT_INTENTS_ENABLED = import.meta.env.PUBLIC_PRODUCT_INTENTS_ENABLED === 'true';
+// Launch-day demo-mode soft gating. Same flag pricing.astro's ProCheckout
+// reads; dark (false) until the paid-launch checklist is approved. Free
+// visitors get a 2-role demo with every Pro control visible-but-gated; Pro
+// unlocks everything. Off, this page renders and behaves exactly as before.
+const CHECKOUT_UI_ENABLED = import.meta.env.PUBLIC_STRIPE_CHECKOUT_ENABLED === 'true';
 const ACCOUNT_PLAN_PREVIEW_MAX_PLANS = 20;
 const ACCOUNT_PLAN_PREVIEW_MAX_VERSIONS = 100;
 const harnessExamples = [
@@ -21,7 +26,7 @@ const harnessExamples = [
     <p class="eyebrow">Build Composer · preview</p>
     <div class="mt-3 flex flex-wrap items-center gap-3">
       <h1 class="h-page">Budget any agent stack.</h1>
-      <span class="pill pill-ink" id="composer-access-badge">PREVIEW · no checkout yet</span>
+      <span class="pill pill-ink" id="composer-access-badge">{CHECKOUT_UI_ENABLED ? 'FREE DEMO · 2 roles' : 'PREVIEW · no checkout yet'}</span>
     </div>
     <p class="mt-4 lede max-w-3xl">
       Name any harness—or your own custom harness—then assign a model, expected calls and token
@@ -45,7 +50,9 @@ const harnessExamples = [
     </p>
     <p class="mt-3 small max-w-3xl" id="composer-access-detail">
       <strong class="text-[var(--color-ink)]">Current access · open preview:</strong>{' '}
-      <span id="composer-access-title">No subscription or Pro entitlement is active.</span>{' '}
+      <span id="composer-access-title">{CHECKOUT_UI_ENABLED
+        ? 'Free demo — 2 roles at catalog list prices. Pro unlocks the full Composer.'
+        : 'No subscription or Pro entitlement is active.'}</span>{' '}
       Build pricing, sensitivity, tab-only versions and local downloads work now. Account plans appear only when the storage preview is enabled.{' '}
       {ACCOUNT_PLANS_ENABLED
         ? 'A signed-in user can create and revoke unlisted links for a selected account plan and save inactive alert settings; no scheduled check or email is running.'
@@ -61,7 +68,8 @@ const harnessExamples = [
 
     <form class="mt-6 grid gap-6" id="composer-form" novalidate
           data-account-plans-enabled={ACCOUNT_PLANS_ENABLED ? 'true' : 'false'}
-          data-clerk-enabled={CLERK_ENABLED ? 'true' : 'false'}>
+          data-clerk-enabled={CLERK_ENABLED ? 'true' : 'false'}
+          data-checkout-ui-enabled={CHECKOUT_UI_ENABLED ? 'true' : 'false'}>
       <section class="card overflow-hidden" aria-labelledby="harness-title">
         <div class="card-head">
           <div><p class="label">Step 1</p><h2 class="h-card mt-1" id="harness-title">Harness and workload</h2></div>
@@ -421,6 +429,17 @@ const harnessExamples = [
       </div>
       <p class="small mt-3">The price is a validation hypothesis. Checkout will be added only after recurring-value evidence is reviewed and a server-authoritative entitlement boundary is ready.</p>
     </Section>
+
+    {CHECKOUT_UI_ENABLED && (
+      <div class="demo-gate-toast" id="b-demo-gate" hidden role="status" aria-live="polite">
+        <p class="demo-gate-title">This is a Pro control</p>
+        <p class="demo-gate-detail" id="b-demo-gate-detail"></p>
+        <div class="demo-gate-actions">
+          <a class="btn btn-accent" href="/pricing#pro">See Pro plans</a>
+          <button type="button" class="btn btn-quiet" id="b-demo-gate-dismiss">Dismiss</button>
+        </div>
+      </div>
+    )}
   </div>
 
   <template id="b-role-template">
@@ -501,6 +520,7 @@ const harnessExamples = [
   let editedValidQuoteTracked = false;
   const accountPlansEnabled = form.dataset.accountPlansEnabled === 'true';
   const clerkEnabled = form.dataset.clerkEnabled === 'true';
+  const CHECKOUT_UI_ENABLED = form.dataset.checkoutUiEnabled === 'true';
   const accountPlanMaxPlans = 20;
   const accountPlanMaxVersions = 100;
   type AccountPlanSummary = { id: string; name: string; currentVersion: number; createdAt: string; updatedAt: string };
@@ -591,6 +611,121 @@ const harnessExamples = [
     if (!isAccountVersionSummary(selected) || typeof selected.planId !== 'string'
       || !isRecord(selected.plan) || !isRecord(selected.quote)) return null;
     return resource as AccountPlanResource;
+  }
+
+  // Launch-day demo-mode soft gating. Everything below is inert unless
+  // CHECKOUT_UI_ENABLED is true (wiring happens only in the init block at the
+  // bottom of this script). Defaulting to 'unknown' fails closed to the Free
+  // demo — a client tier is never trusted; the durable assets it fronts
+  // (saves, shares, alerts) are already enforced server-side.
+  type DemoTier = 'unknown' | 'free' | 'pro';
+  let demoTier: DemoTier = 'unknown';
+  let demoEntitlementRequest: AbortController | null = null;
+  let demoAuthGeneration = 0;
+  const demoLocked = () => CHECKOUT_UI_ENABLED && demoTier !== 'pro';
+  const demoGateEl = CHECKOUT_UI_ENABLED ? byId<HTMLElement>('b-demo-gate') : null;
+
+  function isEntitlementPayload(input: unknown): input is { data: { tier: 'free' | 'pro'; active: boolean } } {
+    if (!isRecord(input) || !isRecord(input.data)) return false;
+    const data = input.data;
+    return (data.tier === 'free' || data.tier === 'pro') && typeof data.active === 'boolean';
+  }
+
+  function renderDemoGateState() {
+    if (!CHECKOUT_UI_ENABLED) return;
+    byId<HTMLElement>('build-planner').classList.toggle('demo-gate-locked', demoLocked());
+    const pro = demoTier === 'pro';
+    setText('composer-access-badge', pro ? 'PRO · full Composer' : 'FREE DEMO · 2 roles');
+    setText('composer-access-title', pro
+      ? 'Pro is active. Every Build Composer capability below is unlocked.'
+      : 'Free demo — 2 roles at catalog list prices. Pro unlocks the full Composer.');
+  }
+
+  async function refreshDemoEntitlement() {
+    if (!CHECKOUT_UI_ENABLED) return;
+    demoAuthGeneration += 1;
+    const generation = demoAuthGeneration;
+    demoEntitlementRequest?.abort();
+    const controller = new AbortController();
+    demoEntitlementRequest = controller;
+    try {
+      const payload = await authenticatedJsonFetch('/api/entitlement', { signal: controller.signal });
+      if (generation !== demoAuthGeneration) return;
+      demoTier = isEntitlementPayload(payload) && payload.data.tier === 'pro' && payload.data.active ? 'pro' : 'free';
+    } catch {
+      // Any transport failure, 503, signed-out or non-Pro response fails
+      // closed to the Free demo — never to an unlocked state.
+      if (generation !== demoAuthGeneration) return;
+      demoTier = 'free';
+    } finally {
+      if (generation === demoAuthGeneration) { demoEntitlementRequest = null; renderDemoGateState(); }
+    }
+  }
+
+  function handleDemoAuth(state: ClerkAuthState) {
+    if (!CHECKOUT_UI_ENABLED || state.status === 'checking') return;
+    void refreshDemoEntitlement();
+  }
+
+  function showDemoGatePrompt(detail: string) {
+    if (!CHECKOUT_UI_ENABLED || !demoGateEl) return;
+    byId('b-demo-gate-detail').textContent = detail;
+    demoGateEl.hidden = false;
+  }
+
+  function hideDemoGatePrompt() {
+    if (!demoGateEl) return;
+    demoGateEl.hidden = true;
+  }
+
+  const DEMO_GATE_DESCRIPTIONS: Record<string, string> = {
+    'b-add-role': 'Model more than two roles in one stack.',
+    'b-export-json': 'Export this quote as JSON.',
+    'b-export-csv': 'Export this quote as CSV.',
+    'b-export-png': 'Export this quote as a PNG.',
+    'b-save-version': 'Save a version to compare architectures.',
+    'b-duplicate': 'Duplicate this plan to try a variant.',
+    'b-account-save': 'Save this plan to your account.',
+    'b-account-save-new': 'Save this plan as a new account plan.',
+    'b-account-delete': 'Delete a saved account plan.',
+    'b-share-save': 'Create a share link for a saved version.',
+    'b-alert-save': 'Set a price or budget alert for a saved version.',
+  };
+
+  function demoGateDetail(target: Element): string {
+    if (target.matches('[data-field="custom-toggle"]')) return 'Set custom or contracted token prices for this role.';
+    return DEMO_GATE_DESCRIPTIONS[target.id] ?? 'Unlock this Build Composer control.';
+  }
+
+  const DEMO_GATED_SELECTOR = [
+    '#b-add-role', '[data-field="custom-toggle"]',
+    '#b-export-json', '#b-export-csv', '#b-export-png',
+    '#b-save-version', '#b-duplicate',
+    '#b-account-save', '#b-account-save-new', '#b-account-delete',
+    '#b-share-save', '#b-alert-save',
+  ].join(', ');
+
+  function handleDemoGateClick(event: MouseEvent) {
+    if (!demoLocked()) return;
+    const target = (event.target as Element).closest<HTMLElement>(DEMO_GATED_SELECTOR);
+    if (!target) return;
+    if (target.id === 'b-add-role' && rolesEl.children.length < 2) return;
+    event.preventDefault();
+    event.stopPropagation();
+    showDemoGatePrompt(demoGateDetail(target));
+  }
+
+  function guardDemoSensitivityControl(id: string, detail: string) {
+    const el = byId<HTMLInputElement | HTMLSelectElement>(id);
+    let lastGoodValue = el.value;
+    const guard = (event: Event) => {
+      if (!demoLocked()) { lastGoodValue = el.value; return; }
+      event.stopPropagation();
+      if (el.value !== lastGoodValue) el.value = lastGoodValue;
+      showDemoGatePrompt(detail);
+    };
+    el.addEventListener('input', guard);
+    el.addEventListener('change', guard);
   }
 
   const canonicalPlanJson = (plan: BuildPlanV1) => JSON.stringify(plan);
@@ -2434,6 +2569,17 @@ const harnessExamples = [
       stopAccountAuth(); accountRequest?.abort(); operationListRequest?.abort(); operationMutationRequest?.abort(); clearRevealedAccountShare();
     }, { once: true });
   }
+  if (CHECKOUT_UI_ENABLED) {
+    form.addEventListener('click', handleDemoGateClick, true);
+    guardDemoSensitivityControl('b-sens-axis', 'Change what the sensitivity analysis varies.');
+    guardDemoSensitivityControl('b-sens-range', 'Widen or narrow the sensitivity range.');
+    byId<HTMLButtonElement>('b-demo-gate-dismiss').addEventListener('click', hideDemoGatePrompt);
+    document.addEventListener('keydown', (event) => { if (event.key === 'Escape') hideDemoGatePrompt(); });
+    renderDemoGateState();
+    const stopDemoAuth = observeClerkAuth(handleDemoAuth, { enabled: clerkEnabled });
+    addEventListener('pagehide', () => { stopDemoAuth(); demoEntitlementRequest?.abort(); }, { once: true });
+  }
+
   renderAlertThreshold();
   track('build_planner_view', { path: location.pathname });
 </script>
@@ -2491,4 +2637,25 @@ const harnessExamples = [
     #b-answer-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     #b-answer-strip .tile:nth-child(3) { grid-column: span 2; }
   }
+
+  /* Launch-day demo-mode soft gating: markup renders only when
+     CHECKOUT_UI_ENABLED is true, so these rules are dark by default. */
+  #build-planner.demo-gate-locked label:has(> input[data-field="custom-toggle"]) {
+    opacity: .55; transition: opacity .12s;
+  }
+  #build-planner.demo-gate-locked label:has(> input[data-field="custom-toggle"]):hover { opacity: .85; }
+  .demo-gate-toast {
+    position: fixed; z-index: 9000; left: 1rem; right: 1rem; bottom: 1rem;
+    max-width: 26rem; margin-inline: auto; padding: 1rem 1.15rem;
+    border: 1px solid var(--color-rule-strong); border-left: 3px solid var(--color-accent);
+    background: var(--color-panel); box-shadow: 0 8px 24px rgb(0 0 0 / .25);
+  }
+  .demo-gate-toast[hidden] { display: none; }
+  .demo-gate-title {
+    font-family: var(--font-mono); font-size: .68rem; font-weight: 700;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--color-accent);
+  }
+  .demo-gate-detail { margin-top: .4rem; font-size: .85rem; line-height: 1.5; color: var(--color-body); }
+  .demo-gate-actions { margin-top: .8rem; display: flex; flex-wrap: wrap; gap: .5rem; }
+  @media (min-width: 640px) { .demo-gate-toast { left: auto; margin-inline: 0; } }
 </style>

@@ -14,46 +14,60 @@ const STRIPE_SANDBOX_UI_ENABLED = import.meta.env.PUBLIC_DEPLOYMENT_ENV === 'pre
 // output. See ProCheckout.astro for the gated rendering it controls.
 const CHECKOUT_UI_ENABLED = import.meta.env.PUBLIC_STRIPE_CHECKOUT_ENABLED === 'true';
 
+// Approved launch packaging. Free/Pro cells below describe the packaging
+// decision, not a change to Build Composer's own enforcement: build-planner
+// is out of scope for this change and today remains an open preview at the
+// 24-role safety cap for everyone, in both flag states — see the footnote
+// under the table. Rows whose truth depends on whether Pro can actually be
+// bought are conditioned on CHECKOUT_UI_ENABLED, the same flag the status
+// and interest blocks above condition on.
+const proPlanned = (activeCopy: string, plannedCopy: string) => CHECKOUT_UI_ENABLED ? activeCopy : plannedCopy;
+
 const comparison = [
   {
-    feature: 'Public research, methodology and verified model catalog',
+    feature: 'Research notes, leaderboard, model pages, methodology and compare',
     free: 'Included',
     pro: 'Included — public evidence stays free',
   },
   {
-    feature: 'Calculator, model comparisons and shareable scenarios',
+    feature: 'Single-model calculator and copy-link',
     free: 'Included',
     pro: 'Included',
   },
   {
-    feature: 'Build Composer for any public, internal or custom harness',
-    free: 'Open preview: mix models, edit assumptions and quote a build within the 24-role safety cap',
-    pro: 'Same 24-role safety cap, with higher finite account plan/version allowances and recurring workflow tools planned',
+    feature: 'Build Composer',
+    free: 'Demo: 2 roles, verified catalog list prices only, with the live quote',
+    pro: proPlanned('Full Composer: up to 24 roles, with custom or contract rates', 'Planned: full Composer, up to 24 roles, with custom or contract rates'),
   },
   {
-    feature: 'Sensitivity, break-even and local JSON, CSV and PNG exports',
-    free: 'Included in the open preview',
-    pro: 'Included, with expanded review workflows planned',
+    feature: 'Sensitivity, break-even and scenario deltas',
+    free: 'Not in the demo',
+    pro: proPlanned('Included', 'Planned'),
   },
   {
-    feature: 'Saved plans and immutable version history',
-    free: 'Free-account Preview: up to 20 plans and 100 immutable versions per plan when enabled',
-    pro: 'Higher finite plan/version allowances planned; final numbers are not set',
+    feature: 'Saved plans and versioned account history',
+    free: 'Not in the demo — nothing is saved',
+    pro: proPlanned('Versioned account saves: 20 plans, 100 versions per plan', 'Planned: versioned account saves, 20 plans and 100 versions per plan'),
   },
   {
-    feature: 'Custom rates and observed-usage profiles',
-    free: 'Edit custom or contract rates now; Preview account saves preserve them inside each plan',
-    pro: 'Reusable cross-plan rate and observed-usage profile management planned',
+    feature: 'Unlisted share links and local exports (JSON, CSV, PNG)',
+    free: 'Not in the demo',
+    pro: proPlanned('Included', 'Planned'),
   },
   {
-    feature: 'Local exports and controlled review links',
-    free: 'JSON, CSV and PNG downloads now; Free-account Preview can create controlled unlisted links when enabled',
-    pro: 'Expanded review, permissions and operational workflows planned',
+    feature: 'Founding rate lock',
+    free: '—',
+    pro: proPlanned('Your rate never increases while subscribed', 'Planned: your rate would never increase while subscribed'),
   },
   {
-    feature: 'Model-price and budget monitoring',
-    free: 'Free-account Preview can save inactive settings only; no monitoring or email is delivered',
-    pro: 'Active monitoring and delivery planned: recheck a saved plan when a model price changes, monthly spend crosses a threshold, or a version drifts from its baseline. Not sold until it exists',
+    feature: 'Model-price and budget monitoring (alerts)',
+    free: 'Not sold until it exists',
+    pro: 'Not sold until it exists',
+  },
+  {
+    feature: 'Re-priced digest email, local-hardware comparison, rate profiles, usage import, API',
+    free: 'Not included',
+    pro: 'Roadmap — planned, never sold as an active feature',
   },
 ];
 
@@ -83,6 +97,7 @@ const launchDecisions = [
     <h1 class="h-display mt-3 max-w-3xl">Public evidence stays free.</h1>
     <p class="lede mt-4 max-w-3xl">Research, methodology, verified model prices and the calculator are free to read and use. Pro is being designed for teams that repeatedly re-plan, review and monitor a multi-model build budget.</p>
     <p class="lede mt-2 max-w-3xl">Solvency prices everything — the calculator, the frontier chart and Build Composer — the same way: cost per completed task, verified against a source. Pro is that same math applied to the plans you save.</p>
+    <p class="lede mt-2 max-w-3xl">Solvency takes no money from model vendors; the paid tier is what funds its independent benchmark runs.</p>
 
     {!CHECKOUT_UI_ENABLED && (
       <section class="card card-pad mt-8 grid gap-5 sm:grid-cols-[1fr_auto] sm:items-start" aria-labelledby="pricing-status-title">
@@ -112,12 +127,13 @@ const launchDecisions = [
           <p class="small mt-2">No payment method. Public pages do not require an account.</p>
           <h3 class="h-card mt-6">Explore and price a build</h3>
           <ul class="mt-3 list-disc pl-5 text-sm leading-relaxed">
-            <li>Read public research, methodology and verified model data</li>
-            <li>Use the calculator and model comparisons</li>
-            <li>Mix models under any named or custom harness in Build Composer, within the 24-role safety cap</li>
-            <li>Enter custom or contract rates, run sensitivity and break-even analysis, and download local JSON, CSV and PNG exports</li>
+            <li>Read every research note, the leaderboard, model pages, methodology and compare</li>
+            <li>Use the single-model calculator, and copy a link to any view</li>
+            <li>Try Build Composer as a 2-role demo — verified catalog list prices only, with the same live quote math as Pro</li>
           </ul>
-          <p class="small mt-4">When the Free-account Preview is enabled, it currently supports up to 20 plans, 100 immutable versions per plan and controlled unlisted links. It can save inactive alert settings, but it does not monitor prices or send email. These are preview safeguards, not promised final tier allowances.</p>
+          {!CHECKOUT_UI_ENABLED && (
+            <p class="small mt-4">The Build Composer demo is the approved Free packaging; it is not enforced during the open preview. Today the preview still runs the full 24-role editor, custom rates, sensitivity, break-even, saves and exports for everyone, until launch.</p>
+          )}
         </article>
 
         {!CHECKOUT_UI_ENABLED && (
@@ -127,13 +143,14 @@ const launchDecisions = [
             <p class="small mt-2">Provisional USD price hypothesis. No plan can be purchased or reserved.</p>
             <h3 class="h-card mt-6">Keep the budget current</h3>
             <ul class="mt-3 list-disc pl-5 text-sm leading-relaxed">
-              <li>Higher finite plan and version allowances; the 24-role safety cap remains</li>
-              <li>Reusable cross-plan custom-rate and observed-usage profiles</li>
-              <li>Expanded architecture comparison and review workflows</li>
-              <li>Additional permissions and controls for unlisted review links</li>
-              <li>Active model-price and budget monitoring, only after delivery exists</li>
+              <li>Full Composer: up to 24 roles, with custom or contract rates</li>
+              <li>Sensitivity, break-even and scenario deltas</li>
+              <li>Versioned account saves: 20 plans, 100 versions per plan</li>
+              <li>Unlisted share links and JSON, CSV and PNG exports</li>
+              <li>Founding rate lock: your rate never increases while subscribed</li>
             </ul>
-            <p class="small mt-4">The recurring hook is re-planning, review and monitoring—not access to public evidence.</p>
+            <p class="small mt-4">Roadmap, not sold as active features: a re-priced digest email, local-hardware comparison, reusable rate profiles, usage import and an API. Model-price and budget monitoring (alerts) is not sold until it exists.</p>
+            <p class="small mt-2">The recurring hook is re-planning, review and monitoring—not access to public evidence.</p>
             <div class="mt-5 border-t border-[var(--color-rule)] pt-4">
               <h4 class="text-sm font-semibold text-[var(--color-ink)]">Would that recurring workflow be worth $19/month?</h4>
               <button type="button" class="btn mt-3" id="pricing-pro-interest-button" aria-describedby="pricing-pro-interest-help pricing-pro-interest-status" disabled>I’d consider Pro at $19</button>
@@ -147,7 +164,9 @@ const launchDecisions = [
     </Section>
 
     <Section id="compare-tiers" eyebrow="Comparison" title="What is open now and what is planned"
-      caption="Every Pro item below is a product direction, not an available entitlement.">
+      caption={CHECKOUT_UI_ENABLED
+        ? 'Pro items below are active once you subscribe; roadmap items are still a product direction, not an available entitlement.'
+        : 'Every Pro item below is a product direction, not an available entitlement.'}>
       <div class="hidden md:block tbl-wrap card">
         <table class="tbl pricing-table">
           <caption>Comparison of current free access and planned Solvency Pro features</caption>
@@ -170,7 +189,9 @@ const launchDecisions = [
           </article>
         ))}
       </div>
-      <p class="small mt-3">“Planned” does not guarantee inclusion, timing or a final limit. Final entitlements will be enforced by the server before billing is enabled.</p>
+      <p class="small mt-3">“Planned” does not guarantee inclusion, timing or a final limit. {CHECKOUT_UI_ENABLED
+        ? 'Account saves, versions and share links are enforced by the server; Composer demo limits are enforced in the page and backed by the same server checks for anything saved or shared.'
+        : 'Final entitlements will be enforced by the server before billing is enabled. The Free demo cap above is the approved packaging, not yet enforced: Build Composer remains an open preview at the 24-role safety cap for everyone until launch.'}</p>
     </Section>
 
     <Section id="launch-decisions" eyebrow="Before public checkout" title="Terms that still need a launch decision"

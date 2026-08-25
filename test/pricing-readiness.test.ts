@@ -24,18 +24,43 @@ test('pricing page separates what is free now from planned Pro', () => {
   assert.match(page, /grid gap-3 md:hidden/);
   assert.match(page, /<dt class="label">Free now<\/dt>/);
   assert.match(page, /<dt class="label">Pro planned<\/dt>/);
-  assert.match(page, /any named or custom harness/);
   assert.match(page, /24-role safety cap/);
-  assert.match(page, /up to 20 plans and 100 immutable versions per plan/);
-  assert.match(page, /Reusable cross-plan custom-rate and observed-usage profiles/);
-  assert.match(page, /JSON, CSV and PNG downloads now/);
-  assert.match(page, /Free-account Preview can create controlled unlisted links when enabled/);
-  assert.match(page, /inactive settings only; no monitoring or email is delivered/);
-  assert.match(page, /Active model-price and budget monitoring, only after delivery exists/);
-  assert.match(page, /recheck a saved plan when a model price changes, monthly spend crosses a threshold, or a version drifts from its baseline\. Not sold until it exists/);
+  assert.match(page, /2-role demo/);
+  assert.match(page, /verified catalog list prices only, with the live quote|verified catalog list prices only, with the same live quote/);
+  assert.match(page, /Full Composer: up to 24 roles, with custom or contract rates/);
+  assert.match(page, /Sensitivity, break-even and scenario deltas/);
+  assert.match(page, /Versioned account saves: 20 plans, 100 versions per plan/);
+  assert.match(page, /Unlisted share links and JSON, CSV and PNG exports/);
+  assert.match(page, /Founding rate lock: your rate never increases while subscribed/);
   assert.doesNotMatch(page, /Unlimited roles|generic exports[^\n]*Pro/i);
   assert.match(page, /re-planning, review and monitoring—not access to public evidence/);
   assert.match(page, /Solvency prices everything — the calculator, the frontier chart and Build Composer — the same way: cost per completed task, verified against a source\. Pro is that same math applied to the plans you save\./);
+});
+
+test('pricing names the roadmap items as planned and alerts as not sold until it exists', () => {
+  const page = read('site/src/pages/pricing.astro');
+  const component = read('site/src/components/ProCheckout.astro');
+  const roadmapItems = /re-priced digest email, local-hardware comparison, reusable rate profiles, usage import and an API/;
+  assert.match(page, roadmapItems);
+  assert.match(component, roadmapItems);
+  assert.match(page, /Roadmap, not sold as active features/);
+  assert.match(component, /Roadmap, not sold as active features/);
+  assert.match(page, /Roadmap — planned, never sold as an active feature/);
+  // Alerts are never sold as an active feature: pinned in both comparison columns plus the Pro tile.
+  const alertCount = (page.match(/Not sold until it exists/g) ?? []).length;
+  assert.ok(alertCount >= 2, 'alerts must be pinned "not sold until it exists" in both comparison columns');
+  assert.match(page, /Model-price and budget monitoring \(alerts\) is not sold until it exists/);
+  assert.match(component, /Model-price and budget monitoring \(alerts\) is not sold until it exists/);
+});
+
+test('pricing funds independent benchmarking, in both flag states', () => {
+  const page = read('site/src/pages/pricing.astro');
+  const component = read('site/src/components/ProCheckout.astro');
+  // Secondary placement: flag-independent, always-visible pricing intro.
+  assert.match(page, /Solvency takes no money from model vendors; the paid tier is what funds its independent benchmark runs\./);
+  // Primary placement: inside the ProCheckout card, directly under the price\/interval display.
+  assert.match(component, /<p class="tile-v mt-3">\$19\/month[\s\S]{0,300}Pro funds the measurements\./);
+  assert.match(component, /Pro funds the measurements\.(<\/strong>)? Solvency's benchmark runs — the measured cost-per-solved-task data this site exists to publish — are paid for by subscriptions, not by model vendors\. One full run of a 90-task-per-model batch costs about \$2,700: roughly 142 subscriber-months\. You are not just buying software; you are funding independent measurement\./);
 });
 
 test('provisional prices cannot be mistaken for an active offer', () => {

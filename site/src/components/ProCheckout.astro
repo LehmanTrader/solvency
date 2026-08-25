@@ -61,14 +61,20 @@ const DISCLOSURE = [
 <article class="card card-pad" id="pro-checkout" data-clerk-enabled={CLERK_ENABLED ? 'true' : 'false'} aria-labelledby="pro-checkout-title">
   <p class="label">Pro · subscribe</p>
   <p class="tile-v mt-3">$19/month <span class="text-base font-normal text-[var(--color-muted)]">or $190/year</span></p>
+
+  <div class="mt-4 border-t border-b border-[var(--color-rule)] py-4" id="pro-checkout-funding">
+    <p class="text-sm leading-relaxed"><strong>Pro funds the measurements.</strong> Solvency's benchmark runs — the measured cost-per-solved-task data this site exists to publish — are paid for by subscriptions, not by model vendors. One full run of a 90-task-per-model batch costs about $2,700: roughly 142 subscriber-months. You are not just buying software; you are funding independent measurement.</p>
+  </div>
+
   <h3 class="h-card mt-6" id="pro-checkout-title">Keep the budget current</h3>
   <ul class="mt-3 list-disc pl-5 text-sm leading-relaxed">
-    <li>Higher finite plan and version allowances; the 24-role safety cap remains</li>
-    <li>Reusable cross-plan custom-rate and observed-usage profiles</li>
-    <li>Expanded architecture comparison and review workflows</li>
-    <li>Additional permissions and controls for unlisted review links</li>
-    <li>Active model-price and budget monitoring</li>
+    <li>Full Composer: up to 24 roles, with custom or contract rates</li>
+    <li>Sensitivity, break-even and scenario deltas</li>
+    <li>Versioned account saves: 20 plans, 100 versions per plan</li>
+    <li>Unlisted share links and JSON, CSV and PNG exports</li>
+    <li>Founding rate lock: your rate never increases while subscribed</li>
   </ul>
+  <p class="small mt-3">Roadmap, not sold as active features: a re-priced digest email, local-hardware comparison, reusable rate profiles, usage import and an API. Model-price and budget monitoring (alerts) is not sold until it exists.</p>
 
   <div class="mt-5 grid gap-2 sm:grid-cols-2" role="group" aria-label="Subscribe to Solvency Pro">
     <button type="button" class="btn btn-accent min-w-0 w-full whitespace-normal text-center" id="pro-checkout-month" disabled>Upgrade to Pro — $19/month</button>
