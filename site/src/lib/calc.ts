@@ -146,6 +146,27 @@ export function calloutHtml(rows: Row[], volume: number): string {
     Over ${volume.toLocaleString()} tasks that is <strong>${moneyMonth((best.cost - cheapest.cost) * volume)}</strong> a month.`;
 }
 
+/**
+ * The hero's project-total answer: the same cheapest-vs-highest-pass-rate
+ * pair calloutHtml uses (first cost basis with more than one row — normally
+ * "measured"), priced over a task count instead of a monthly volume. Used
+ * when the hero is in bucket mode ("I want to ship a [bucket]"); calloutHtml
+ * itself is untouched and still drives monthly mode.
+ */
+export function projectTotalHtml(rows: Row[], taskCount: number): string {
+  const g = GROUPS.map((g) => ({ g, rows: rows.filter((x) => x.basisKey === g.key) })).find((p) => p.rows.length > 1);
+  const pool = g?.rows ?? [];
+  const cheapest = pool[0];
+  const best = pool.slice().sort((a, b) => b.r.pass_rate - a.r.pass_rate)[0];
+  if (!cheapest || !best) return '<span class="text-[var(--color-muted)]">No model has both a verified price and a published pass rate under these settings.</span>';
+  const name = (x: Row) => `<strong>${escapeHtml(x.m.display_name)}</strong>`;
+  const tasks = Number.isInteger(taskCount) ? taskCount.toLocaleString() : taskCount.toFixed(1);
+  if (cheapest.m.model_id === best.m.model_id)
+    return `${name(cheapest)} is both the cheapest per solved task and the highest pass rate here — ${moneyMonth(cheapest.cost * taskCount)} over ~${tasks} tasks.`;
+  return `${name(cheapest)} ships it for <strong class="t-better">${moneyMonth(cheapest.cost * taskCount)}</strong> against
+    ${name(best)} at ${moneyMonth(best.cost * taskCount)} — over ~${tasks} tasks.`;
+}
+
 export interface GateDelta { moved: boolean; text: string; }
 
 /**

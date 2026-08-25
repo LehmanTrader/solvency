@@ -6,7 +6,8 @@
  * island takes over. The island re-renders from compute() on every input.
  */
 import { TIER_NAMES, sources, models } from '../lib/data.ts';
-import { DEFAULTS, compute, groupsHtml, calloutHtml, missingHtml, TIER_HELP } from '../lib/calc.ts';
+import { DEFAULTS, compute, groupsHtml, calloutHtml, projectTotalHtml, missingHtml, TIER_HELP } from '../lib/calc.ts';
+import { TASK_BUCKETS, bucketById, provenanceHtml } from '../lib/tasks.ts';
 import { CLERK_ENABLED } from '../lib/clerk.ts';
 import { GATE_MODE } from '../lib/gate.ts';
 const { rows, missing } = compute(DEFAULTS);
@@ -14,7 +15,18 @@ const { rows, missing } = compute(DEFAULTS);
 const WIDE = 1046, NARROW = 350;
 const wide = groupsHtml(rows, DEFAULTS, { width: WIDE, compact: false });
 const narrow = groupsHtml(rows, DEFAULTS, { width: NARROW, compact: true });
-const callout = calloutHtml(rows, DEFAULTS.volume);
+// The hero defaults to bucket mode (owner's approved design): "I want to ship
+// a [bucket]" with the working task count set to that bucket's published
+// median, re-derived from data/task-study/final_table.csv by ../lib/tasks.ts.
+// Monthly mode (the previous "I build [tier] tasks, about [n] a month."
+// sentence) is a quiet secondary affordance for existing users and links —
+// see the #c-mode-toggle wiring below and the URL-compat note there.
+const defaultBucket = bucketById('mobile')!;
+// calloutHtml(rows, DEFAULTS.volume) is what #c-callout falls back to in
+// monthly mode; the client script recomputes it there, so it isn't needed
+// at build time — the SSR default is bucket mode's project total below.
+const project = projectTotalHtml(rows, defaultBucket.median);
+const provenance = provenanceHtml(defaultBucket);
 const aa = sources.find((s) => s.benchmark === 'aa-coding-agent-index');
 const verified = aa?.last_verified;
 const fresh = verified ? (Date.now() - Date.parse(verified)) / 86_400_000 <= 30 : false;
@@ -25,26 +37,54 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
   <h1 id="q-h" class="h-display max-w-[30ch] text-balance">Which model is cheapest for what you actually ship?</h1>
   <p class="lede mt-4 max-w-[52ch] text-pretty">Cost per solved task — what it takes to get a task finished, not the token price. Every number carries a source and a verified date.</p>
 
-  <p class="sentence mt-6">
-    I build{' '}<select id="c-tier" class="ctl ctl-inline" aria-label="Task tier: what you build" aria-describedby="c-tier-help" data-ctl="tier">{TIER_NAMES.map((t) => <option value={t} selected={t === DEFAULTS.tier}>{t}</option>)}</select>{' '}tasks,<br class="sm:hidden" /> about{' '}<input id="c-volume" class="ctl ctl-inline" type="number" inputmode="numeric" min="1" max="10000000" step="1" value={DEFAULTS.volume} aria-label="Tasks per month" data-ctl="volume" />{' '}a month.
-  </p>
-  <div class="mt-3 grid gap-x-8 gap-y-3 sm:grid-cols-[minmax(0,26rem)_minmax(0,20rem)] items-center">
-    <p id="c-tier-help" class="small" aria-live="polite">{tierHelp(DEFAULTS.tier)}</p>
-    <div>
-      <input id="c-volume-range" class="ctl-range" type="range" min="0" max="1000" step="1" value="325"
-        aria-label="Tasks per month, slider" aria-valuetext={`${DEFAULTS.volume} tasks a month`} data-ctl="volume" />
-      <!-- One label per decade. The track is log10 over VOL_MIN..VOL_MAX, so a
-           label every decade is exactly evenly spaced, which is what the flex
-           does. Dropping one (as an earlier 10/1k/10k/100k set did) leaves the
-           labels at 0/33/66% while those values sit at 0/50/75%, and the handle
-           then reads a decade off: 200 tasks appeared to sit on "1k". -->
-      <div class="ticks small" aria-hidden="true"><span>10</span><span>100</span><span>1k</span><span>10k</span><span>100k</span></div>
+  <div id="hero-modes">
+    <p class="sentence mode-bucket mt-6">
+      I want to ship{' '}<select id="c-bucket" class="ctl ctl-inline" aria-label="What are you shipping?" data-ctl="bucket">
+        {TASK_BUCKETS.map((b) => <option value={b.id} selected={b.id === defaultBucket.id}>{b.label}</option>)}
+        <option value="other">something else</option>
+      </select>.
+    </p>
+    <p id="c-other-row" class="mode-bucket small mt-2 hidden">
+      How many tasks?{' '}<input id="c-taskcount" class="ctl ctl-inline" type="number" inputmode="numeric" min="1" max="1000000" step="1" value={defaultBucket.median} aria-label="Task count" data-ctl="taskcount" />
+    </p>
+
+    <p class="sentence mode-monthly hidden mt-6">
+      I build{' '}<select id="c-tier" class="ctl ctl-inline" aria-label="Task tier: what you build" aria-describedby="c-tier-help" data-ctl="tier">{TIER_NAMES.map((t) => <option value={t} selected={t === DEFAULTS.tier}>{t}</option>)}</select>{' '}tasks,<br class="sm:hidden" /> about{' '}<input id="c-volume" class="ctl ctl-inline" type="number" inputmode="numeric" min="1" max="10000000" step="1" value={DEFAULTS.volume} aria-label="Tasks per month" data-ctl="volume" />{' '}a month.
+    </p>
+    <div class="mode-monthly hidden mt-3 grid gap-x-8 gap-y-3 sm:grid-cols-[minmax(0,26rem)_minmax(0,20rem)] items-center">
+      <p id="c-tier-help" class="small" aria-live="polite">{tierHelp(DEFAULTS.tier)}</p>
+      <div>
+        <input id="c-volume-range" class="ctl-range" type="range" min="0" max="1000" step="1" value="325"
+          aria-label="Tasks per month, slider" aria-valuetext={`${DEFAULTS.volume} tasks a month`} data-ctl="volume" />
+        <!-- One label per decade. The track is log10 over VOL_MIN..VOL_MAX, so a
+             label every decade is exactly evenly spaced, which is what the flex
+             does. Dropping one (as an earlier 10/1k/10k/100k set did) leaves the
+             labels at 0/33/66% while those values sit at 0/50/75%, and the handle
+             then reads a decade off: 200 tasks appeared to sit on "1k". -->
+        <div class="ticks small" aria-hidden="true"><span>10</span><span>100</span><span>1k</span><span>10k</span><span>100k</span></div>
+      </div>
     </div>
   </div>
 
+  <p class="small mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-1" id="c-tier-row">
+    <span class="mode-bucket">Task tier:{' '}<select id="c-tier-bucket" class="ctl ctl-inline" aria-label="Task tier: what you build" aria-describedby="c-tier-help-bucket">{TIER_NAMES.map((t) => <option value={t} selected={t === DEFAULTS.tier}>{t}</option>)}</select>{' '}<span id="c-tier-help-bucket">{tierHelp(DEFAULTS.tier)}</span></span>
+    <span class="mode-bucket" aria-hidden="true">·</span>
+    <button type="button" id="c-mode-toggle" class="link-btn" aria-describedby="c-mode-toggle-help">pricing ongoing work instead?</button>
+  </p>
+  <p id="c-mode-toggle-help" class="sr-only">Switches to a tasks-per-month slider for pricing an ongoing volume of work instead of a single project.</p>
+
   <div class="card mt-6 overflow-hidden" id="c-result" role="region" aria-label="Result">
-    <p id="c-callout" class="px-5 py-4 sm:py-5 text-[var(--color-ink)] text-[1rem] sm:text-[1.1rem] leading-relaxed border-b border-[var(--color-rule)]" aria-live="polite" aria-atomic="true" set:html={callout}></p>
+    <div class="px-5 py-4 sm:py-5 border-b border-[var(--color-rule)]">
+      <p id="c-callout" class="text-[var(--color-ink)] text-[1rem] sm:text-[1.1rem] leading-relaxed" aria-live="polite" aria-atomic="true" set:html={project}></p>
+      <p id="c-provenance" class="small mt-2" aria-live="polite" set:html={provenance}></p>
+    </div>
     <a href="#c-actions" class="sr-only focus:not-sr-only focus:block focus:m-3 btn">Skip the ranked rows</a>
+    <!-- TASK_BUCKETS, computed server-side from data/task-study/final_table.csv
+         by ../lib/tasks.ts (node:fs — build-only). The client island cannot
+         import that module (no node:fs in the browser), so it reads the same
+         already-computed data from here and formats it with the pure helpers
+         in ../lib/tasks-shared.ts — one computation, no client-side drift. -->
+    <script type="application/json" id="task-buckets-data" is:inline set:html={JSON.stringify(TASK_BUCKETS)}></script>
     <div id="c-groups" class="relative" data-wide={WIDE} data-narrow={NARROW}>
       <form id="c-find" class="find" role="search" autocomplete="off">
         <label for="c-find-q" class="sr-only">Find a model</label>
@@ -129,7 +169,15 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
 </section>
 
 <script>
-  import { compute, groupsHtml, calloutHtml, missingHtml, gateDelta, TIER_HELP, validModelId, allChartRows, type Settings, type Row } from '../lib/calc.ts';
+  import { compute, groupsHtml, calloutHtml, projectTotalHtml, missingHtml, gateDelta, TIER_HELP, validModelId, allChartRows, type Settings, type Row } from '../lib/calc.ts';
+  // ../lib/tasks.ts reads data/task-study/final_table.csv via node:fs at
+  // import time and must never reach a browser bundle. The server already
+  // computed TASK_BUCKETS from it and embedded the result as #task-buckets-data
+  // (see Calculator.astro's markup); only the pure formatting helpers are
+  // imported here, from the node:fs-free ../lib/tasks-shared.ts.
+  import { type TaskBucket, bucketById as bucketByIdIn, provenanceHtml, otherProvenanceHtml } from '../lib/tasks-shared.ts';
+  const TASK_BUCKETS: TaskBucket[] = JSON.parse(document.getElementById('task-buckets-data')!.textContent!);
+  const bucketById = (id: string) => bucketByIdIn(TASK_BUCKETS, id);
   import { patchRanked, scatterPareto, VOL_MIN, VOL_MAX } from '../lib/charts.ts';
   import { gateFor, GATE_SEEN_KEY, type Control, type GateMode } from '../lib/gate.ts';
   import { signedIn, onClerk, openSignUp, wireSave } from '../lib/clerk-client.ts';
@@ -141,14 +189,20 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
   const section = $('calc')!;
   const CTRL = {
     tier: $<HTMLSelectElement>('c-tier')!,
+    tierBucket: $<HTMLSelectElement>('c-tier-bucket')!,
     volume: $<HTMLInputElement>('c-volume')!,
     range: $<HTMLInputElement>('c-volume-range')!,
+    bucket: $<HTMLSelectElement>('c-bucket')!,
+    taskcount: $<HTMLInputElement>('c-taskcount')!,
     variant: $<HTMLSelectElement>('c-variant')!,
     cache: $<HTMLInputElement>('c-cache')!,
     residual: $<HTMLInputElement>('c-residual')!,
     frontier: $<HTMLInputElement>('c-frontier')!,
   };
   const groupsEl = $('c-groups')!;
+  const otherRow = $('c-other-row')!;
+  const modeToggle = $<HTMLButtonElement>('c-mode-toggle')!;
+  const BUCKET_IDS = TASK_BUCKETS.map((b) => b.id).concat('other');
   const TIERS = ['light', 'moderate', 'heavy'], VARIANTS = ['naive', 'capped', 'truncatedGeometric'];
 
   // ---- volume: number box and a log-scale slider, bound both ways --------
@@ -180,12 +234,38 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
   const q = new URLSearchParams(location.search);
   const num = (v: string | null, lo: number, hi: number) => { const n = Number(v); return v !== null && v !== '' && Number.isFinite(n) && n >= lo && n <= hi ? Math.round(n) : null; };
   if (TIERS.includes(q.get('tier') ?? '')) CTRL.tier.value = q.get('tier')!;
+  CTRL.tierBucket.value = CTRL.tier.value;
   if (VARIANTS.includes(q.get('variant') ?? '')) CTRL.variant.value = q.get('variant')!;
   const vol = num(q.get('volume'), 1, 10_000_000); if (vol) CTRL.volume.value = String(vol);
   const cache = num(q.get('cache'), 0, 90); if (cache !== null) CTRL.cache.value = String(Math.round(cache / 10) * 10);
   const res = num(q.get('residual'), 0, 1_000_000); if (res !== null) CTRL.residual.value = String(res);
   if (q.get('frontier') === '0' || q.get('frontier') === '1') CTRL.frontier.checked = q.get('frontier') === '1';
   let highlight = validModelId(q.get('highlight'));
+
+  // ---- hero mode: "I want to ship a [bucket]" (default) vs the legacy
+  // "I build [tier] tasks, about [n] a month." slider. A link that already
+  // encodes a monthly volume (?volume=…) but no explicit ?mode= is an old or
+  // externally shared link — it keeps opening in monthly mode so the volume
+  // it encodes is what the visitor sees, never silently reinterpreted.
+  const modeParam = q.get('mode');
+  let mode: 'bucket' | 'monthly' = modeParam === 'monthly' || modeParam === 'bucket' ? modeParam : (q.has('volume') ? 'monthly' : 'bucket');
+  if (BUCKET_IDS.includes(q.get('bucket') ?? '')) CTRL.bucket.value = q.get('bucket')!;
+  const taskcountParam = num(q.get('taskcount'), 1, 1_000_000);
+  if (CTRL.bucket.value === 'other' && taskcountParam !== null) CTRL.taskcount.value = String(taskcountParam);
+  else { const b0 = bucketById(CTRL.bucket.value); if (b0) CTRL.taskcount.value = String(b0.median); }
+  otherRow.classList.toggle('hidden', CTRL.bucket.value !== 'other');
+
+  function applyMode(next: 'bucket' | 'monthly') {
+    mode = next;
+    document.querySelectorAll<HTMLElement>('.mode-bucket').forEach((el) => el.classList.toggle('hidden', mode !== 'bucket'));
+    document.querySelectorAll<HTMLElement>('.mode-monthly').forEach((el) => el.classList.toggle('hidden', mode !== 'monthly'));
+    // otherRow carries .mode-bucket (hidden outright in monthly mode) but is
+    // also conditional on the "something else" bucket being picked — the
+    // blanket rule above must not force it open just because bucket mode is active.
+    if (mode === 'bucket') otherRow.classList.toggle('hidden', CTRL.bucket.value !== 'other');
+    modeToggle.textContent = mode === 'bucket' ? 'pricing ongoing work instead?' : 'pricing one project instead?';
+  }
+  applyMode(mode);
   syncSlider(); sizeInline();
 
   const settings = (): Settings => ({
@@ -196,6 +276,12 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
     residual: Math.max(0, Number(CTRL.residual.value) || 0),
     frontier: CTRL.frontier.checked,
   });
+
+  /** Median for the selected bucket, or the visitor's own count for "something else". */
+  const effectiveTaskCount = (): number =>
+    CTRL.bucket.value === 'other'
+      ? Math.max(1, Math.round(Number(CTRL.taskcount.value)) || 1)
+      : (bucketById(CTRL.bucket.value)?.median ?? 1);
 
   // ---- render -------------------------------------------------------------
   const widthOf = (el: Element) => Math.max(300, Math.round(el.getBoundingClientRect().width));
@@ -218,10 +304,20 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
     last = s;
     $('c-cache-v')!.textContent = `${CTRL.cache.value}%`;
     CTRL.cache.style.setProperty('--fill', `${(Number(CTRL.cache.value) / 90) * 100}%`);
-    $('c-tier-help')!.textContent = `${TIER_HELP[s.tier]} · Tier: ${s.tier} — measured rows unchanged.`;
+    const tierHelpText = `${TIER_HELP[s.tier]} · Tier: ${s.tier} — measured rows unchanged.`;
+    $('c-tier-help')!.textContent = tierHelpText;
+    $('c-tier-help-bucket')!.textContent = tierHelpText;
     const { rows, missing } = compute(s);
     lastRows = rows;
-    $('c-callout')!.innerHTML = calloutHtml(rows, s.volume);
+    if (mode === 'bucket') {
+      const taskCount = effectiveTaskCount();
+      $('c-callout')!.innerHTML = projectTotalHtml(rows, taskCount);
+      const b = bucketById(CTRL.bucket.value);
+      $('c-provenance')!.innerHTML = b ? provenanceHtml(b) : otherProvenanceHtml(taskCount);
+    } else {
+      $('c-callout')!.innerHTML = calloutHtml(rows, s.volume);
+      $('c-provenance')!.innerHTML = '';
+    }
     const wideEl = groupsEl.querySelector<HTMLElement>('[data-layout="wide"]')!;
     const narrowEl = groupsEl.querySelector<HTMLElement>('[data-layout="narrow"]')!;
     const visible = wideEl.offsetParent ? wideEl : narrowEl;
@@ -234,7 +330,9 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
     sizeInline();
     if (pushUrl) {
       const p = new URLSearchParams({ tier: s.tier, volume: String(s.volume), variant: s.variant,
-        cache: CTRL.cache.value, residual: String(s.residual), frontier: s.frontier ? '1' : '0' });
+        cache: CTRL.cache.value, residual: String(s.residual), frontier: s.frontier ? '1' : '0',
+        mode, bucket: CTRL.bucket.value });
+      if (CTRL.bucket.value === 'other') p.set('taskcount', CTRL.taskcount.value);
       if (highlight) p.set('highlight', highlight);
       history.replaceState(null, '', `${location.pathname}?${p}`);
     }
@@ -390,6 +488,32 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
     syncSlider();
     render();
   });
+
+  // ---- bucket-mode controls: tier select is mirrored between the hero's
+  // monthly-mode sentence (#c-tier) and the bucket-mode answer row
+  // (#c-tier-bucket) — one value, two positions, same pattern as the
+  // volume number box and range slider above.
+  CTRL.tier.addEventListener('input', () => { CTRL.tierBucket.value = CTRL.tier.value; });
+  CTRL.tierBucket.addEventListener('input', (ev) => {
+    CTRL.tier.value = CTRL.tierBucket.value;
+    if (!allow(CTRL.tier, ev)) return;
+    render();
+    afterRender(CTRL.tier);
+  });
+  CTRL.bucket.addEventListener('input', () => {
+    const isOther = CTRL.bucket.value === 'other';
+    otherRow.classList.toggle('hidden', !isOther);
+    if (!isOther) {
+      const b = bucketById(CTRL.bucket.value);
+      if (b) CTRL.taskcount.value = String(b.median);
+    } else {
+      CTRL.taskcount.focus();
+    }
+    render();
+  });
+  CTRL.taskcount.addEventListener('input', () => { if (CTRL.bucket.value === 'other') render(); });
+  modeToggle.addEventListener('click', () => { applyMode(mode === 'bucket' ? 'monthly' : 'bucket'); render(); });
+
   wireCopy($<HTMLButtonElement>('c-share')!, () => location.href);
 
   // re-layout on resize (width changes only; row heights are fixed)
