@@ -90,11 +90,11 @@ jobs:
         working-directory: site
         env:
           PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ vars.PUBLIC_CLERK_PUBLISHABLE_KEY }}
-          PUBLIC_ACCOUNT_PLANS_ENABLED: 'false'
-          PUBLIC_PRODUCT_INTENTS_ENABLED: 'false'
+          PUBLIC_ACCOUNT_PLANS_ENABLED: 'true'
+          PUBLIC_PRODUCT_INTENTS_ENABLED: 'true'
           PUBLIC_DEPLOYMENT_ENV: 'production'
           PUBLIC_STRIPE_SANDBOX_UI_ENABLED: 'false'
-          PUBLIC_STRIPE_CHECKOUT_ENABLED: 'false'
+          PUBLIC_STRIPE_CHECKOUT_ENABLED: 'true'
           PUBLIC_BUILD_SHA: ${{ github.sha }}
         run: npm run build
 

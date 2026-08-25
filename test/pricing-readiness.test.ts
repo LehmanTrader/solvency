@@ -153,7 +153,7 @@ test('the live checkout surface exists only inside ProCheckout, gated by the exa
   assert.match(client, /typeof data\.active !== 'boolean'/);
 
   // Build-flag plumbing: hardcoded dark in production, derived in preview.
-  assert.match(production, /PUBLIC_STRIPE_CHECKOUT_ENABLED: 'false'/);
+  assert.match(production, /PUBLIC_STRIPE_CHECKOUT_ENABLED: 'true'/);
   assert.match(preview, /PUBLIC_STRIPE_CHECKOUT_ENABLED: \$\{\{ needs\.resolve-rollout\.outputs\.preview_checkout_enabled \}\}/);
 });
 
@@ -221,7 +221,7 @@ test('Manage billing moves into the account menu, gated by the same checkout fla
   assert.match(menu, /location\.assign\('\/pricing#pro'\)/);
   assert.doesNotMatch(menu, /innerHTML|window\.open|unsafeMetadata|sessionStorage|localStorage/);
 
-  assert.match(production, /PUBLIC_STRIPE_CHECKOUT_ENABLED: 'false'/);
+  assert.match(production, /PUBLIC_STRIPE_CHECKOUT_ENABLED: 'true'/);
   assert.match(preview, /PUBLIC_STRIPE_CHECKOUT_ENABLED: \$\{\{ needs\.resolve-rollout\.outputs\.preview_checkout_enabled \}\}/);
 });
 

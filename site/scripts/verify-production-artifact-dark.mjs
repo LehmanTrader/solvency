@@ -8,7 +8,12 @@ const DIST_ROOT = join(SITE_ROOT, 'dist');
 // forever. The customer checkout routes are forbidden only while the
 // production checkout build flag is dark; once it is launched they are
 // REQUIRED on the pricing page instead.
-const CHECKOUT_LAUNCHED = process.env.PUBLIC_STRIPE_CHECKOUT_ENABLED === 'true';
+const workflowSource = await readFile(
+  join(SITE_ROOT, '..', '.github', 'workflows', 'deploy.yml'), 'utf8',
+);
+const CHECKOUT_LAUNCHED = process.env.PUBLIC_STRIPE_CHECKOUT_ENABLED !== undefined
+  ? process.env.PUBLIC_STRIPE_CHECKOUT_ENABLED === 'true'
+  : workflowSource.match(/PUBLIC_STRIPE_CHECKOUT_ENABLED: '(true|false)'/)?.[1] === 'true';
 const ALWAYS_FORBIDDEN = [
   'stripe-sandbox-console',
   'Stripe test-mode billing harness',

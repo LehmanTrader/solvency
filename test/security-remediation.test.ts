@@ -104,8 +104,8 @@ test('deployment actions are immutable and installs are frozen', () => {
   assert.match(workflow, /--branch main/);
   assert.match(workflow, /--commit-hash \$\{\{ github\.sha \}\}/);
   assert.match(workflow, /--commit-dirty=false/);
-  assert.match(workflow, /PUBLIC_ACCOUNT_PLANS_ENABLED: 'false'/);
-  assert.match(workflow, /PUBLIC_PRODUCT_INTENTS_ENABLED: 'false'/);
+  assert.match(workflow, /PUBLIC_ACCOUNT_PLANS_ENABLED: 'true'/);
+  assert.match(workflow, /PUBLIC_PRODUCT_INTENTS_ENABLED: 'true'/);
   assert.match(workflow, /PUBLIC_DEPLOYMENT_ENV: 'production'/);
   assert.match(workflow, /PUBLIC_STRIPE_SANDBOX_UI_ENABLED: 'false'/);
   assert.match(workflow, /npm run verify:production-artifact-dark/);
@@ -118,7 +118,7 @@ test('deployment actions are immutable and installs are frozen', () => {
   assert.match(productionVars, /^ACCOUNT_PLANS_ENABLED = "true"$/m);
   assert.match(productionVars, /^ENTITLEMENTS_ENABLED = "true"$/m);
   assert.match(productionVars, /^PRODUCT_INTENTS_ENABLED = "true"$/m);
-  assert.match(productionVars, /^STRIPE_CHECKOUT_ENABLED = "false"$/m);
+  assert.match(productionVars, /^STRIPE_CHECKOUT_ENABLED = "true"$/m);
   assert.match(productionVars, /^STRIPE_PORTAL_ENABLED = "true"$/m);
   assert.match(productionVars, /^STRIPE_WEBHOOK_ENABLED = "true"$/m);
   assert.match(previewVars, /^ACCOUNT_PLANS_ENABLED = "true"$/m);
