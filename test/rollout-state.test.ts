@@ -79,8 +79,9 @@ test('current rollout state passes and exposes only non-secret workflow outputs'
 
 test('rollout verifier rejects production billing and unsafe Preview stage order', () => {
   const cases: Array<[string, (directory: string) => void, RegExp]> = [
-    ['production Stripe', (directory) => replace(directory, 'site/wrangler.toml',
-      'STRIPE_WEBHOOK_ENABLED = "false"', 'STRIPE_WEBHOOK_ENABLED = "true"'), /\[vars\]\.STRIPE_WEBHOOK_ENABLED must remain false/],
+    ['production Stripe without account gates', (directory) => replace(directory, 'site/wrangler.toml',
+      'STRIPE_WEBHOOK_ENABLED = "false"', 'STRIPE_WEBHOOK_ENABLED = "true"'),
+    /Every Production account\/entitlement\/product-intent gate must be true/],
     ['erasure plus webhook', (directory) => replace(directory, 'site/wrangler.toml',
       'PREVIEW_ACCOUNT_ERASURE_ENABLED = "false"\nSTRIPE_CHECKOUT_ENABLED = "true"\nSTRIPE_PORTAL_ENABLED = "true"\nSTRIPE_WEBHOOK_ENABLED = "true"\nAPP_ENV = "preview"',
       'PREVIEW_ACCOUNT_ERASURE_ENABLED = "true"\nSTRIPE_CHECKOUT_ENABLED = "true"\nSTRIPE_PORTAL_ENABLED = "true"\nSTRIPE_WEBHOOK_ENABLED = "true"\nAPP_ENV = "preview"'),

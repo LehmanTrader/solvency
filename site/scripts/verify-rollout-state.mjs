@@ -161,10 +161,32 @@ const production = sections.get('vars');
 const preview = sections.get('env.preview.vars');
 if (!production || !preview) fail('wrangler.toml must define [vars] and [env.preview.vars].');
 
-for (const name of FLAG_NAMES) {
-  if (name !== 'PREVIEW_ACCOUNT_ERASURE_ENABLED') assertFalse(production, name, '[vars]');
-}
+// Production billing follows the same staged ordering rules the Preview
+// rollout proved; destructive erasure never exists in production.
+const productionState = Object.fromEntries(
+  FLAG_NAMES.map((name) => [name, booleanValue(production, name, '[vars]')]),
+);
 assertFalse(production, 'PREVIEW_ACCOUNT_ERASURE_ENABLED', '[vars]');
+const productionStripe = productionState.STRIPE_WEBHOOK_ENABLED
+  || productionState.STRIPE_PORTAL_ENABLED
+  || productionState.STRIPE_CHECKOUT_ENABLED;
+if (productionStripe) {
+  for (const name of [
+    'STRIPE_ACCOUNT_ID', 'STRIPE_PORTAL_CONFIGURATION_ID',
+    'STRIPE_PRO_MONTHLY_PRICE_ID', 'STRIPE_PRO_ANNUAL_PRICE_ID',
+  ]) requiredValue(production, name, '[vars]');
+}
+if (productionState.STRIPE_PORTAL_ENABLED && !productionState.STRIPE_WEBHOOK_ENABLED) {
+  fail('Production billing portal requires the signed webhook path to be enabled first.');
+}
+if (productionState.STRIPE_CHECKOUT_ENABLED
+  && (!productionState.STRIPE_WEBHOOK_ENABLED || !productionState.STRIPE_PORTAL_ENABLED)) {
+  fail('Production Checkout requires both webhook processing and the billing portal.');
+}
+if (productionStripe && (!productionState.ACCOUNT_PLANS_ENABLED
+  || !productionState.ENTITLEMENTS_ENABLED || !productionState.PRODUCT_INTENTS_ENABLED)) {
+  fail('Every Production account/entitlement/product-intent gate must be true before Stripe is enabled.');
+}
 if (requiredValue(production, 'APP_ENV', '[vars]') !== 'production') fail('[vars].APP_ENV must be production.');
 if (requiredValue(production, 'CLERK_AUTHORIZED_PARTIES', '[vars]') !== 'https://solvency.dev') {
   fail('[vars].CLERK_AUTHORIZED_PARTIES must be the exact Production origin.');
