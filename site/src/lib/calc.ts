@@ -142,7 +142,7 @@ export function calloutHtml(rows: Row[], volume: number): string {
   const pts = Math.round((best.r.pass_rate - cheapest.r.pass_rate) * 100);
   const forWhat = pts > 0 ? `for ${pts} fewer point${pts === 1 ? '' : 's'} of pass rate` : 'at the same pass rate';
   return `${name(cheapest)} costs <strong>${money(cheapest.cost)}</strong> per solved task against
-    ${name(best)} at ${money(best.cost)} — <strong class="t-better">▼ ${x >= 10 ? x.toFixed(0) : x.toFixed(1)}x cheaper</strong> ${forWhat}.
+    ${name(best)} at <span class="t-worse">${money(best.cost)}</span> — <strong class="t-better">▼ ${x >= 10 ? x.toFixed(0) : x.toFixed(1)}x cheaper</strong> ${forWhat}.
     Over ${volume.toLocaleString()} tasks that is <strong>${moneyMonth((best.cost - cheapest.cost) * volume)}</strong> a month.`;
 }
 
@@ -164,7 +164,7 @@ export function projectTotalHtml(rows: Row[], taskCount: number): string {
   if (cheapest.m.model_id === best.m.model_id)
     return `${name(cheapest)} is both the cheapest per solved task and the highest pass rate here — ${moneyMonth(cheapest.cost * taskCount)} over ~${tasks} tasks.`;
   return `${name(cheapest)} ships it for <strong class="t-better">${moneyMonth(cheapest.cost * taskCount)}</strong> against
-    ${name(best)} at ${moneyMonth(best.cost * taskCount)} — over ~${tasks} tasks.`;
+    ${name(best)} at a pricier <strong class="t-worse">${moneyMonth(best.cost * taskCount)}</strong> — over ~${tasks} tasks.`;
 }
 
 export interface GateDelta { moved: boolean; text: string; }

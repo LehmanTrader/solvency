@@ -55,7 +55,7 @@ export function verdictHtml(a: Side, b: Side, volume: number): string {
   return `<p class="label">Verdict · <span class="t-${cheap.basis}">${cheap.basis}</span> basis</p>
     <p class="mt-2 text-[1.1rem] leading-relaxed text-[var(--color-ink)]">
       <strong>${cheapName}</strong> costs <strong>${money(cheap.cost!)}</strong> per solved task against
-      <strong>${dearName}</strong> at ${money(dear.cost!)} — <strong class="t-better">▼ ${fmtX(x)} cheaper</strong>.
+      <strong>${dearName}</strong> at <span class="t-worse">${money(dear.cost!)}</span> — <strong class="t-better">▼ ${fmtX(x)} cheaper</strong>.
       Over ${volume.toLocaleString()} tasks that is <strong>${moneyMonth(saving)}</strong> a month.
     </p>
     <p class="mt-3 text-sm text-[var(--color-muted)] leading-relaxed">On output token price alone ${tokenCheapName} looks ${fmtX(ratio(a.m.output_per_mtok, b.m.output_per_mtok))} cheaper.${flips ? ' The ranking reverses once you divide by pass rate — the cheaper tokens do not win the task.' : ' The ranking holds, but the margin changes.'}</p>`;
