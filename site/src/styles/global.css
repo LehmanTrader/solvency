@@ -439,7 +439,7 @@
   .nav-a:hover { color: var(--color-ink); }
   .nav-a[aria-current="page"] { color: var(--color-ink); border-bottom-color: var(--color-ink); }
   /* scrollable nav on small screens: a right-edge fade says "there is more" */
-  .nav-scroll { overflow-x: auto; scrollbar-width: none; }
+  .nav-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; scroll-padding-inline: .75rem; scrollbar-width: none; }
   .nav-scroll::-webkit-scrollbar { display: none; }
   .nav-scroll[data-more] { mask-image: linear-gradient(to right, #000 calc(100% - 3rem), transparent); }
 

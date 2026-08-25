@@ -157,7 +157,7 @@ const harnessExamples = [
             <div>
               <p class="text-sm leading-relaxed text-[var(--color-body)]">Save an immutable quote, duplicate the current architecture, then edit the copy to see its cost delta against a baseline.</p>
               <p class="small mt-2">Preview storage in the list beside this copy is limited to this open tab. It disappears when the tab closes and is never uploaded automatically.</p>
-              <div class="mt-4 grid grid-cols-3 gap-2" aria-label="Delta from selected baseline">
+              <div class="b-delta-grid mt-4 grid grid-cols-3 gap-2" aria-label="Delta from selected baseline">
                 <div class="delta-tile"><p class="label">Attempt</p><p class="delta-v" id="b-delta-attempt">No baseline</p></div>
                 <div class="delta-tile"><p class="label">Solved</p><p class="delta-v" id="b-delta-solved">No baseline</p></div>
                 <div class="delta-tile"><p class="label">Monthly</p><p class="delta-v" id="b-delta-month">No baseline</p></div>
@@ -243,7 +243,7 @@ const harnessExamples = [
                 <h3 class="h-card">Move one assumption</h3>
                 <p class="small mt-2">Low and high scenarios change only the selected input family across every model role. They are user-controlled hypotheticals, not measured forecasts.</p>
               </div>
-              <div class="grid grid-cols-[minmax(0,1fr)_8rem] gap-3 w-full sm:w-auto sm:min-w-[28rem]">
+              <div class="sens-controls grid grid-cols-[minmax(0,1fr)_8rem] gap-3 w-full sm:w-auto sm:min-w-[28rem]">
                 <label class="block"><span class="label">Input family</span><select class="ctl ctl-row mt-2 w-full" id="b-sens-axis">
                   <option value="role_calls">Role calls per build</option>
                   <option value="tokens_per_call">Tokens per call</option>
@@ -2363,7 +2363,7 @@ const harnessExamples = [
   .plan-field-error { display: block; flex-basis: 100%; width: 100%; margin-top: .4rem; color: var(--color-worse); font-weight: 600; }
   .role-editor .role-label { width: min(18rem, 58vw); }
   .role-editor button:disabled { opacity: .35; cursor: not-allowed; }
-  .ledger { display: grid; gap: .5rem; padding-left: 1rem; list-style: square; font-family: var(--font-mono); font-size: .72rem; line-height: 1.6; color: var(--color-muted); }
+  .ledger { display: grid; gap: .5rem; padding-left: 1rem; list-style: square; font-family: var(--font-mono); font-size: .78rem; line-height: 1.6; color: var(--color-muted); }
   .delta-tile { min-width: 0; padding: .8rem; border: 1px solid var(--color-rule); background: var(--color-panel-2); }
   .delta-v { margin-top: .35rem; overflow-wrap: anywhere; font-family: var(--font-mono); font-size: clamp(.75rem, 2.4vw, 1rem); color: var(--color-muted); }
   .delta-v[data-direction='lower'] { color: var(--color-better); }
@@ -2392,5 +2392,14 @@ const harnessExamples = [
     .operation-card .btn { width: 100%; }
     .operation-draft-row { flex-direction: column; }
     .operation-draft-row > .flex { width: 100%; }
+  }
+  /* the native select clips its selected value once "Input family" and "Range"
+     share a 50/50-ish row under ~480px; stack them so the select gets full width */
+  @media (max-width: 479px) {
+    .sens-controls { grid-template-columns: minmax(0, 1fr); }
+  }
+  /* "No baseline" wraps mid-word in a 3-up grid below ~360px; one column reads clean */
+  @media (max-width: 359px) {
+    .b-delta-grid { grid-template-columns: minmax(0, 1fr); }
   }
 </style>
