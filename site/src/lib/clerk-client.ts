@@ -438,9 +438,12 @@ export function clerkAppearance() {
       formButtonPrimary: { fontFamily: token('--font-mono'), fontWeight: 700, textTransform: 'none' },
       footer: { background: token('--color-panel-2') },
       // GitHub's near-black mark disappears on the dark panels; invert it to
-      // white there. Light theme keeps the original mark.
+      // white there. Light theme keeps the original mark. Guarded so the
+      // module stays importable and callable outside a DOM (tests).
       socialButtonsProviderIcon__github:
-        document.documentElement.getAttribute('data-theme') !== 'light'
+        typeof document !== 'undefined'
+          && typeof document.documentElement?.getAttribute === 'function'
+          && document.documentElement.getAttribute('data-theme') !== 'light'
           ? { filter: 'invert(1)' }
           : {},
     },
