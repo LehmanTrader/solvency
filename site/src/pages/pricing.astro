@@ -2,11 +2,17 @@
 import Base from '../layouts/Base.astro';
 import Section from '../components/Section.astro';
 import StripeSandbox from '../components/StripeSandbox.astro';
+import ProCheckout from '../components/ProCheckout.astro';
 import { CLERK_ENABLED, CLERK_PUBLISHABLE_KEY } from '../lib/clerk.ts';
 const PRODUCT_INTENTS_ENABLED = import.meta.env.PUBLIC_PRODUCT_INTENTS_ENABLED === 'true';
 const STRIPE_SANDBOX_UI_ENABLED = import.meta.env.PUBLIC_DEPLOYMENT_ENV === 'preview'
   && import.meta.env.PUBLIC_STRIPE_SANDBOX_UI_ENABLED === 'true'
   && CLERK_PUBLISHABLE_KEY.startsWith('pk_test_');
+// Production checkout surface. Dark (false) until the paid-launch checklist
+// in docs/handoff-harness-and-paid-tier.md is approved; deploy.yml pins this
+// to 'false', deploy-preview.yml wires it from the resolve-rollout checkout
+// output. See ProCheckout.astro for the gated rendering it controls.
+const CHECKOUT_UI_ENABLED = import.meta.env.PUBLIC_STRIPE_CHECKOUT_ENABLED === 'true';
 
 const comparison = [
   {
@@ -47,7 +53,7 @@ const comparison = [
   {
     feature: 'Model-price and budget monitoring',
     free: 'Free-account Preview can save inactive settings only; no monitoring or email is delivered',
-    pro: 'Active monitoring and delivery planned; it will not be sold until it exists',
+    pro: 'Active monitoring and delivery planned: recheck a saved plan when a model price changes, monthly spend crosses a threshold, or a version drifts from its baseline. Not sold until it exists',
   },
 ];
 
@@ -76,21 +82,24 @@ const launchDecisions = [
     <p class="eyebrow">Pricing</p>
     <h1 class="h-display mt-3 max-w-3xl">Public evidence stays free.</h1>
     <p class="lede mt-4 max-w-3xl">Research, methodology, verified model prices and the calculator are free to read and use. Pro is being designed for teams that repeatedly re-plan, review and monitor a multi-model build budget.</p>
+    <p class="lede mt-2 max-w-3xl">Solvency prices everything — the calculator, the frontier chart and Build Composer — the same way: cost per completed task, verified against a source. Pro is that same math applied to the plans you save.</p>
 
-    <section class="card card-pad mt-8 grid gap-5 sm:grid-cols-[1fr_auto] sm:items-start" aria-labelledby="pricing-status-title">
-      <div class="max-w-3xl">
-        <p class="label">Launch status</p>
-        <h2 class="h-card mt-2" id="pricing-status-title">{STRIPE_SANDBOX_UI_ENABLED ? 'Operator-only Stripe sandbox.' : 'There is nothing to buy today.'}</h2>
-        <p class="mt-2 text-sm leading-relaxed">{STRIPE_SANDBOX_UI_ENABLED
-          ? 'This Access-protected Preview may create Stripe test Customers, test Subscriptions and Preview entitlement records. It cannot accept a real payment or create a live subscription. Public and Production billing remain off.'
-          : 'Billing is not live. There is no active checkout, trial, subscription, upgrade or paid entitlement. The Build Composer is an open product preview, and its current access and safety limits do not establish the final Free or Pro tiers.'}</p>
-        <div class="mt-4 flex flex-wrap gap-2">
-          <a class="btn" href="/build-planner">Use the open Build Composer</a>
-          <a class="btn btn-quiet" href="#launch-decisions">Review launch decisions ↓</a>
+    {!CHECKOUT_UI_ENABLED && (
+      <section class="card card-pad mt-8 grid gap-5 sm:grid-cols-[1fr_auto] sm:items-start" aria-labelledby="pricing-status-title">
+        <div class="max-w-3xl">
+          <p class="label">Launch status</p>
+          <h2 class="h-card mt-2" id="pricing-status-title">{STRIPE_SANDBOX_UI_ENABLED ? 'Operator-only Stripe sandbox.' : 'There is nothing to buy today.'}</h2>
+          <p class="mt-2 text-sm leading-relaxed">{STRIPE_SANDBOX_UI_ENABLED
+            ? 'This Access-protected Preview may create Stripe test Customers, test Subscriptions and Preview entitlement records. It cannot accept a real payment or create a live subscription. Public and Production billing remain off.'
+            : 'Billing is not live. There is no active checkout, trial, subscription, upgrade or paid entitlement. The Build Composer is an open product preview, and its current access and safety limits do not establish the final Free or Pro tiers.'}</p>
+          <div class="mt-4 flex flex-wrap gap-2">
+            <a class="btn" href="/build-planner">Use the open Build Composer</a>
+            <a class="btn btn-quiet" href="#launch-decisions">Review launch decisions ↓</a>
+          </div>
         </div>
-      </div>
-      <span class="pill pill-ink self-start justify-self-start">{STRIPE_SANDBOX_UI_ENABLED ? 'Test mode' : 'Billing off'}</span>
-    </section>
+        <span class="pill pill-ink self-start justify-self-start">{STRIPE_SANDBOX_UI_ENABLED ? 'Test mode' : 'Billing off'}</span>
+      </section>
+    )}
 
     {STRIPE_SANDBOX_UI_ENABLED && <StripeSandbox />}
 
@@ -111,26 +120,29 @@ const launchDecisions = [
           <p class="small mt-4">When the Free-account Preview is enabled, it currently supports up to 20 plans, 100 immutable versions per plan and controlled unlisted links. It can save inactive alert settings, but it does not monitor prices or send email. These are preview safeguards, not promised final tier allowances.</p>
         </article>
 
-        <article class="card card-pad" id="pricing-pro-interest" data-clerk-enabled={CLERK_ENABLED ? 'true' : 'false'}>
-          <p class="label">Pro · planned, not for sale</p>
-          <p class="tile-v mt-3">$19/month <span class="text-base font-normal text-[var(--color-muted)]">or $190/year</span></p>
-          <p class="small mt-2">Provisional USD price hypothesis. No plan can be purchased or reserved.</p>
-          <h3 class="h-card mt-6">Keep the budget current</h3>
-          <ul class="mt-3 list-disc pl-5 text-sm leading-relaxed">
-            <li>Higher finite plan and version allowances; the 24-role safety cap remains</li>
-            <li>Reusable cross-plan custom-rate and observed-usage profiles</li>
-            <li>Expanded architecture comparison and review workflows</li>
-            <li>Additional permissions and controls for unlisted review links</li>
-            <li>Active model-price and budget monitoring, only after delivery exists</li>
-          </ul>
-          <p class="small mt-4">The recurring hook is re-planning, review and monitoring—not access to public evidence.</p>
-          <div class="mt-5 border-t border-[var(--color-rule)] pt-4">
-            <h4 class="text-sm font-semibold text-[var(--color-ink)]">Would that recurring workflow be worth $19/month?</h4>
-            <button type="button" class="btn mt-3" id="pricing-pro-interest-button" aria-describedby="pricing-pro-interest-help pricing-pro-interest-status" disabled>I’d consider Pro at $19</button>
-            <p class="small mt-2" id="pricing-pro-interest-help">Requires a free account so one person counts once. This is a research signal only—no plan is reserved and there is no upgrade, checkout, trial, subscription or charge.</p>
-            <p class="small mt-2" id="pricing-pro-interest-status" role="status" aria-live="polite" aria-atomic="true">{!PRODUCT_INTENTS_ENABLED ? 'Account-based research measurement is unavailable in this build. No interest can be submitted or charged.' : CLERK_ENABLED ? 'Free-account sign-up is loading.' : 'Free-account sign-up is unavailable in this build.'}</p>
-          </div>
-        </article>
+        {!CHECKOUT_UI_ENABLED && (
+          <article class="card card-pad" id="pricing-pro-interest" data-clerk-enabled={CLERK_ENABLED ? 'true' : 'false'}>
+            <p class="label">Pro · planned, not for sale</p>
+            <p class="tile-v mt-3">$19/month <span class="text-base font-normal text-[var(--color-muted)]">or $190/year</span></p>
+            <p class="small mt-2">Provisional USD price hypothesis. No plan can be purchased or reserved.</p>
+            <h3 class="h-card mt-6">Keep the budget current</h3>
+            <ul class="mt-3 list-disc pl-5 text-sm leading-relaxed">
+              <li>Higher finite plan and version allowances; the 24-role safety cap remains</li>
+              <li>Reusable cross-plan custom-rate and observed-usage profiles</li>
+              <li>Expanded architecture comparison and review workflows</li>
+              <li>Additional permissions and controls for unlisted review links</li>
+              <li>Active model-price and budget monitoring, only after delivery exists</li>
+            </ul>
+            <p class="small mt-4">The recurring hook is re-planning, review and monitoring—not access to public evidence.</p>
+            <div class="mt-5 border-t border-[var(--color-rule)] pt-4">
+              <h4 class="text-sm font-semibold text-[var(--color-ink)]">Would that recurring workflow be worth $19/month?</h4>
+              <button type="button" class="btn mt-3" id="pricing-pro-interest-button" aria-describedby="pricing-pro-interest-help pricing-pro-interest-status" disabled>I’d consider Pro at $19</button>
+              <p class="small mt-2" id="pricing-pro-interest-help">Requires a free account so one person counts once. This is a research signal only—no plan is reserved and there is no upgrade, checkout, trial, subscription or charge.</p>
+              <p class="small mt-2" id="pricing-pro-interest-status" role="status" aria-live="polite" aria-atomic="true">{!PRODUCT_INTENTS_ENABLED ? 'Account-based research measurement is unavailable in this build. No interest can be submitted or charged.' : CLERK_ENABLED ? 'Free-account sign-up is loading.' : 'Free-account sign-up is unavailable in this build.'}</p>
+            </div>
+          </article>
+        )}
+        {CHECKOUT_UI_ENABLED && <ProCheckout />}
       </div>
     </Section>
 

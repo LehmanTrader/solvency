@@ -1,0 +1,107 @@
+---
+/**
+ * Production checkout surface for Solvency Pro.
+ *
+ * Importer: site/src/pages/pricing.astro, exclusively behind
+ * `{CHECKOUT_UI_ENABLED && <ProCheckout />}` where
+ * `CHECKOUT_UI_ENABLED = import.meta.env.PUBLIC_STRIPE_CHECKOUT_ENABLED === 'true'`.
+ * That flag is hardcoded 'false' in .github/workflows/deploy.yml and wired
+ * from the resolve-rollout checkout output in deploy-preview.yml, so this
+ * component is dark (never instantiated, never present in dist) unless the
+ * paid-launch checklist in docs/handoff-harness-and-paid-tier.md is approved.
+ *
+ * Contracts matched, read from site/functions/api/checkout.ts and
+ * site/functions/api/billing-portal.ts -> site/src/lib/server/billing-api.ts:
+ *   POST /api/checkout       body exactly { interval: 'month' | 'year' }
+ *                            -> 200 { data: { url } } (Stripe Checkout URL)
+ *                            -> 503 SERVICE_UNAVAILABLE when the route is
+ *                               disabled server-side; 409 IDEMPOTENCY_CONFLICT
+ *                               when an existing subscription must be
+ *                               managed in the portal or an attempt is
+ *                               already in flight.
+ *   POST /api/billing-portal body exactly {} (no keys)
+ *                            -> 200 { data: { url } } (Stripe portal URL)
+ *                            -> 404 RESOURCE_NOT_FOUND when no billing
+ *                               customer exists yet; 503 when disabled.
+ * Both require a same-origin POST, `Content-Type: application/json`, a
+ * Clerk session bearer token and a valid `Idempotency-Key` header
+ * (`/^[A-Za-z0-9._:-]{16,128}$/`) — see pro-checkout-runtime.js.
+ *
+ * The client runtime is imported as raw text (`?raw`) and rendered through
+ * `<script is:inline set:html>`, exactly like StripeSandbox.astro /
+ * stripe-sandbox-runtime.js: when this component is not instantiated, Astro
+ * emits neither this markup nor a dormant JS chunk that could reference
+ * /api/checkout or /api/billing-portal in a dark build (see
+ * scripts/verify-production-artifact-dark.mjs).
+ *
+ * Sign-in is triggered the same way the header's #auth-signup button does
+ * (openSignIn in clerk-client.ts) — reimplemented locally in the runtime
+ * script because an inlined raw-text module script cannot resolve a
+ * relative .ts import specifier in the browser.
+ */
+import proCheckoutRuntime from '../scripts/pro-checkout-runtime.js?raw';
+import { CLERK_ENABLED } from '../lib/clerk.ts';
+
+// TODO(launch-runbook Phase 3): every line below is a drafting placeholder,
+// not final legal copy. Values are pinned to the recommended defaults in
+// docs/billing-policy-drafts.md (14-day full refund on a first subscription,
+// cancel anytime from the billing portal effective at the end of the paid
+// period, subscriptions auto-renew until cancelled, tax added at Checkout
+// where required). Phase 3 of the launch runbook is where these get an
+// actual legal review and get finalized in /terms and /privacy before Pro
+// can be sold; this component must not be treated as that review.
+const DISCLOSURE = [
+  { label: 'Amount and cadence', copy: 'TODO(Phase 3): the exact USD amount and billing cadence — $19/month or $190/year, billed in advance — is confirmed on the Stripe Checkout page before you pay.' },
+  { label: 'Auto-renewal', copy: 'TODO(Phase 3): the subscription auto-renews at the end of each billing period until cancelled.' },
+  { label: 'Cancellation', copy: 'TODO(Phase 3): cancel any time from Manage billing below; Pro access continues through the end of the period already paid for.' },
+  { label: 'Refunds', copy: 'TODO(Phase 3): a first subscription is refundable in full within 14 days of the first charge; see the Refunds section of /terms for renewal refund terms.' },
+  { label: 'Tax', copy: 'TODO(Phase 3): applicable sales tax, VAT or GST is added at Checkout where required, shown before you pay.' },
+];
+---
+<article class="card card-pad" id="pro-checkout" data-clerk-enabled={CLERK_ENABLED ? 'true' : 'false'} aria-labelledby="pro-checkout-title">
+  <p class="label">Pro · subscribe</p>
+  <p class="tile-v mt-3">$19/month <span class="text-base font-normal text-[var(--color-muted)]">or $190/year</span></p>
+  <h3 class="h-card mt-6" id="pro-checkout-title">Keep the budget current</h3>
+  <ul class="mt-3 list-disc pl-5 text-sm leading-relaxed">
+    <li>Higher finite plan and version allowances; the 24-role safety cap remains</li>
+    <li>Reusable cross-plan custom-rate and observed-usage profiles</li>
+    <li>Expanded architecture comparison and review workflows</li>
+    <li>Additional permissions and controls for unlisted review links</li>
+    <li>Active model-price and budget monitoring</li>
+  </ul>
+
+  <div class="mt-5 grid gap-2 sm:grid-cols-2" role="group" aria-label="Subscribe to Solvency Pro">
+    <button type="button" class="btn btn-accent min-w-0 w-full whitespace-normal text-center" id="pro-checkout-month" disabled>Upgrade to Pro — $19/month</button>
+    <button type="button" class="btn btn-accent min-w-0 w-full whitespace-normal text-center" id="pro-checkout-year" disabled>Upgrade to Pro — $190/year</button>
+  </div>
+  <button type="button" class="btn btn-quiet mt-3" id="pro-checkout-portal" disabled>Manage billing</button>
+  <p class="small mt-3" id="pro-checkout-status" role="status" aria-live="polite" aria-atomic="true">Account controls are loading.</p>
+  <p class="small mt-2 text-[var(--color-worse)]" id="pro-checkout-error" role="alert" aria-atomic="true"></p>
+
+  <div class="mt-5 border-t border-[var(--color-rule)] pt-4">
+    <h4 class="text-sm font-semibold text-[var(--color-ink)]">Before you subscribe</h4>
+    <ul class="mt-2 list-disc pl-5 text-sm leading-relaxed">
+      {DISCLOSURE.map((item) => (
+        <li><strong>{item.label}:</strong> {item.copy}</li>
+      ))}
+    </ul>
+    <p class="small mt-2">Full terms are at <a class="link" href="/terms">Terms</a> and <a class="link" href="/privacy">Privacy policy</a>.</p>
+  </div>
+</article>
+
+<!-- `?raw` plus an inline module is intentional: when the build-time gate is
+     false, ProCheckout is never instantiated, so Astro emits neither this
+     markup nor a dormant JS chunk referencing /api/checkout or
+     /api/billing-portal. -->
+<script is:inline type="module" set:html={proCheckoutRuntime}></script>
+
+<style>
+  /* Same technique as #auth-signup:disabled in global.css (kept local here
+     because global.css is owned by another change in flight): an amber
+     btn-accent commit action must stay amber while SSR'd disabled, so the
+     page never flashes dark -> amber once Clerk finishes loading. */
+  #pro-checkout-month:disabled, #pro-checkout-month:disabled:hover, #pro-checkout-month:disabled:active,
+  #pro-checkout-year:disabled, #pro-checkout-year:disabled:hover, #pro-checkout-year:disabled:active {
+    background: var(--color-accent); color: var(--color-on-accent); border-color: var(--color-accent); cursor: not-allowed;
+  }
+</style>

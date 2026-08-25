@@ -32,8 +32,10 @@ test('pricing page separates what is free now from planned Pro', () => {
   assert.match(page, /Free-account Preview can create controlled unlisted links when enabled/);
   assert.match(page, /inactive settings only; no monitoring or email is delivered/);
   assert.match(page, /Active model-price and budget monitoring, only after delivery exists/);
+  assert.match(page, /recheck a saved plan when a model price changes, monthly spend crosses a threshold, or a version drifts from its baseline\. Not sold until it exists/);
   assert.doesNotMatch(page, /Unlimited roles|generic exports[^\n]*Pro/i);
   assert.match(page, /re-planning, review and monitoring—not access to public evidence/);
+  assert.match(page, /Solvency prices everything — the calculator, the frontier chart and Build Composer — the same way: cost per completed task, verified against a source\. Pro is that same math applied to the plans you save\./);
 });
 
 test('provisional prices cannot be mistaken for an active offer', () => {
@@ -45,8 +47,72 @@ test('provisional prices cannot be mistaken for an active offer', () => {
   assert.match(page, /There is nothing to buy today/);
   assert.match(page, /no active checkout, trial, subscription, upgrade or paid entitlement/i);
   assert.match(page, /No plan can be purchased or reserved/);
+  // pricing.astro's own ungated markup — everything outside the
+  // `{CHECKOUT_UI_ENABLED && <ProCheckout />}` conditional exercised below —
+  // must never itself contain a checkout affordance. This no longer means
+  // no checkout markup exists anywhere in source: ProCheckout.astro is a
+  // separate, flag-gated component file and is checked on its own terms by
+  // the next test.
   assert.doesNotMatch(page, /href=["']\/(?:checkout|subscribe|upgrade)/);
   assert.doesNotMatch(page, /btn-accent/);
+});
+
+test('the live checkout surface exists only inside ProCheckout, gated by the exact PUBLIC_STRIPE_CHECKOUT_ENABLED flag', () => {
+  const page = read('site/src/pages/pricing.astro');
+  const component = read('site/src/components/ProCheckout.astro');
+  const client = read('site/src/scripts/pro-checkout-runtime.js');
+  const production = read('.github/workflows/deploy.yml');
+  const preview = read('.github/workflows/deploy-preview.yml');
+
+  // ProCheckout requires the exact flag const, and pricing.astro renders it
+  // only behind that exact condition — the sole place the amber commit
+  // button and the checkout/portal request paths can appear.
+  assert.match(page, /const CHECKOUT_UI_ENABLED = import\.meta\.env\.PUBLIC_STRIPE_CHECKOUT_ENABLED === 'true';/);
+  assert.match(page, /\{CHECKOUT_UI_ENABLED && <ProCheckout \/>\}/);
+  // The only occurrence of <ProCheckout is the exact gated render matched
+  // above, so no ungated instance can exist elsewhere in the page.
+  assert.equal(page.match(/<ProCheckout/g)?.length, 1);
+
+  // The existing free-forever interest signal is the mutually exclusive
+  // complement: it renders only while checkout is dark.
+  assert.match(page, /\{!CHECKOUT_UI_ENABLED && \(\s*<article class="card card-pad" id="pricing-pro-interest"/);
+  // The pre-launch "nothing to buy" status card is likewise suppressed once
+  // real checkout exists.
+  assert.match(page, /\{!CHECKOUT_UI_ENABLED && \(\s*<section class="card card-pad mt-8/);
+
+  assert.match(component, /id="pro-checkout"/);
+  assert.match(component, /btn-accent/);
+  assert.match(component, /id="pro-checkout-month"[^>]*disabled>Upgrade to Pro/);
+  assert.match(component, /id="pro-checkout-year"[^>]*disabled>Upgrade to Pro/);
+  assert.match(component, /id="pro-checkout-portal"[^>]*disabled>Manage billing/);
+  assert.match(component, /pro-checkout-runtime\.js\?raw/);
+  assert.match(component, /script is:inline type="module"/);
+  assert.match(component, /#pro-checkout-month:disabled/);
+  assert.match(component, /#pro-checkout-year:disabled/);
+
+  // Required pre-payment disclosure: amount/cadence, auto-renewal,
+  // cancellation, refund and tax treatment, each marked as a Phase 3
+  // placeholder rather than final copy.
+  assert.match(component, /TODO\(launch-runbook Phase 3\)/);
+  assert.match(component, /Amount and cadence/);
+  assert.match(component, /Auto-renewal/);
+  assert.match(component, /Cancellation/);
+  assert.match(component, /Refunds/);
+  assert.match(component, /Tax/);
+  assert.match(component, /docs\/billing-policy-drafts\.md/);
+
+  // Contracts matched from the Functions: exact request shapes and no
+  // fabricated success on a disabled/unavailable route.
+  assert.match(client, /\/api\/checkout/);
+  assert.match(client, /\/api\/billing-portal/);
+  assert.match(client, /json: \{ interval \}/);
+  assert.match(client, /'Idempotency-Key'/);
+  assert.match(client, /Checkout is not available right now\./);
+  assert.doesNotMatch(client, /innerHTML|window\.open|unsafeMetadata|sessionStorage|localStorage/);
+
+  // Build-flag plumbing: hardcoded dark in production, derived in preview.
+  assert.match(production, /PUBLIC_STRIPE_CHECKOUT_ENABLED: 'false'/);
+  assert.match(preview, /PUBLIC_STRIPE_CHECKOUT_ENABLED: \$\{\{ needs\.resolve-rollout\.outputs\.preview_checkout_enabled \}\}/);
 });
 
 test('Stripe sandbox controls are double-gated, test-only and distrust browser return markers', () => {

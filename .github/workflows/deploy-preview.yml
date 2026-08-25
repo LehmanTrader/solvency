@@ -193,6 +193,7 @@ jobs:
           PUBLIC_PRODUCT_INTENTS_ENABLED: ${{ needs.resolve-rollout.outputs.preview_product_intents_enabled }}
           PUBLIC_DEPLOYMENT_ENV: 'preview'
           PUBLIC_STRIPE_SANDBOX_UI_ENABLED: ${{ needs.resolve-rollout.outputs.preview_sandbox_ui_enabled }}
+          PUBLIC_STRIPE_CHECKOUT_ENABLED: ${{ needs.resolve-rollout.outputs.preview_checkout_enabled }}
           PUBLIC_BUILD_SHA: ${{ github.sha }}
         run: npm run build
 
