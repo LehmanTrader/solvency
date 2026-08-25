@@ -270,16 +270,24 @@ export function createStripeApi(
       });
       if (idempotencyKey) headers.set('Idempotency-Key', idempotencyKey);
       if (parameters) headers.set('Content-Type', 'application/x-www-form-urlencoded');
+      // workerd rejects redirect: 'error' outright ("won't be implemented ...
+      // use manual and check the response status code"), so 'manual' carries
+      // the same never-follow guarantee and the 3xx check below preserves the
+      // hard-failure semantics in every runtime.
       const response = await transport(`${STRIPE_API_ORIGIN}${path}`, {
         method,
         headers,
         ...(parameters ? { body: parameters.toString() } : {}),
         cache: 'no-store',
         credentials: 'omit',
-        redirect: 'error',
+        redirect: 'manual',
         referrerPolicy: 'no-referrer',
         signal: controller.signal,
       });
+      if (response.status >= 300 && response.status < 400) {
+        await response.body?.cancel().catch(() => undefined);
+        return { ok: false, reason: 'invalid_response' };
+      }
       const value = await readBoundedResponseJson(response);
       if (response.status !== 200) {
         const error = validStripeErrorEnvelope(value);

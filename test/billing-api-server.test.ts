@@ -152,7 +152,7 @@ class StripeMock {
     this.calls.push(call);
     assert.equal(call.headers.get('stripe-version'), STRIPE_API_VERSION);
     assert.match(call.headers.get('authorization') ?? '', /^Bearer sk_(?:test|live)_/);
-    assert.equal(init.redirect, 'error');
+    assert.equal(init.redirect, 'manual');
     assert.equal(init.credentials, 'omit');
     assert.equal(init.cache, 'no-store');
     assert.equal(init.referrerPolicy, 'no-referrer');
@@ -1299,6 +1299,9 @@ describe('authenticated billing readiness API', () => {
     for (const fetch of [
       (async () => stripeJson({ id: 'acct_foreign000000001', object: 'account' })) as StripeFetch,
       (async () => { throw new Error(`${TEST_SECRET} provider detail`); }) as StripeFetch,
+      (async () => new Response(null, {
+        status: 302, headers: { location: 'https://api.stripe.com/elsewhere' },
+      })) as StripeFetch,
     ]) {
       const db = new SqliteD1();
       const response = await handleBillingReadiness(readiness(db), { fetch });
