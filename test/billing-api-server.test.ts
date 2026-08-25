@@ -223,7 +223,7 @@ class StripeMock {
         object: 'billing_portal.session',
         configuration: parameters.get('configuration'),
         livemode: live,
-        url: `https://billing.stripe.com/p/session/test_${String(this.portalCount).padStart(24, '0')}`,
+        url: `https://billing.stripe.com/p/session?secret=test_${String(this.portalCount).padStart(24, '0')}`,
       };
     } else {
       return stripeJson({ error: { type: 'invalid_request_error' } }, false, 404);
@@ -462,6 +462,20 @@ describe('Stripe configuration and transport boundary', () => {
       })),
     );
     assert.equal((await portalApi.createPortalSession({
+      customerId: 'cus_0000000000000001', returnUrl: 'https://solvency.dev/pricing',
+      configurationId: PORTAL_CONFIGURATION,
+      idempotencyKey: 'provider-key-0001',
+    })).ok, false);
+
+    const extraQueryApi = createStripeApi(
+      { secretKey: TEST_SECRET, mode: 'test', accountId: STRIPE_ACCOUNT },
+      afterVerifiedStripeAccount(() => stripeJson({
+        id: 'bps_0000000000000001', object: 'billing_portal.session', livemode: false,
+        configuration: PORTAL_CONFIGURATION,
+        url: 'https://billing.stripe.com/p/session?secret=test_000000000000000000000001&next=https%3A%2F%2Fevil.example',
+      })),
+    );
+    assert.equal((await extraQueryApi.createPortalSession({
       customerId: 'cus_0000000000000001', returnUrl: 'https://solvency.dev/pricing',
       configurationId: PORTAL_CONFIGURATION,
       idempotencyKey: 'provider-key-0001',

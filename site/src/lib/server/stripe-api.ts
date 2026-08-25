@@ -237,9 +237,18 @@ function validPortalUrl(value: unknown): value is string {
   if (typeof value !== 'string' || value.length > 4096) return false;
   try {
     const url = new URL(value);
-    return url.protocol === 'https:' && url.hostname === 'billing.stripe.com' && url.port === ''
-      && !url.username && !url.password && url.search === '' && url.hash === ''
-      && /^\/p\/session\/[A-Za-z0-9_-]{16,2048}$/.test(url.pathname);
+    if (url.protocol !== 'https:' || url.hostname !== 'billing.stripe.com' || url.port !== ''
+      || url.username || url.password || url.hash !== '') return false;
+    // Legacy shape carries the token in the path with no query; current
+    // sandbox sessions return /p/session with the token in a single
+    // `secret` query parameter. Nothing else is a portal URL.
+    if (url.search === '' && /^\/p\/session\/[A-Za-z0-9_-]{16,2048}$/.test(url.pathname)) {
+      return true;
+    }
+    if (url.pathname !== '/p/session') return false;
+    const parameters = [...url.searchParams.entries()];
+    return parameters.length === 1 && parameters[0][0] === 'secret'
+      && /^[A-Za-z0-9_-]{16,2048}$/.test(parameters[0][1]);
   } catch {
     return false;
   }

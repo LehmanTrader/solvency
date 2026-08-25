@@ -27,16 +27,22 @@ export function stripeSandboxRedirectUrl(value, destination) {
     || typeof value.data.url !== 'string' || value.data.url.length > 4096) return null;
   try {
     const url = new URL(value.data.url);
-    if (url.protocol !== 'https:' || url.port !== '' || url.username || url.password || url.search !== '') return null;
+    if (url.protocol !== 'https:' || url.port !== '' || url.username || url.password) return null;
     if (destination === 'checkout') {
-      return url.hostname === 'checkout.stripe.com'
+      return url.search === '' && url.hostname === 'checkout.stripe.com'
         && /^\/(?:c\/)?pay\/cs_test_[A-Za-z0-9_-]+(?:\/.*)?$/.test(url.pathname)
         ? url.href
         : null;
     }
     if (destination !== 'portal') return null;
-    return url.hostname === 'billing.stripe.com' && url.hash === ''
-      && /^\/p\/session\/test_[A-Za-z0-9_-]{8,2048}$/.test(url.pathname)
+    if (url.hostname !== 'billing.stripe.com' || url.hash !== '') return null;
+    if (url.search === '' && /^\/p\/session\/test_[A-Za-z0-9_-]{8,2048}$/.test(url.pathname)) {
+      return url.href;
+    }
+    if (url.pathname !== '/p/session') return null;
+    const secretEntries = [...url.searchParams.entries()];
+    return secretEntries.length === 1 && secretEntries[0][0] === 'secret'
+      && /^test_[A-Za-z0-9_-]{8,2048}$/.test(secretEntries[0][1])
       ? url.href
       : null;
   } catch {
