@@ -34,9 +34,11 @@ test('privacy discloses unlisted-link, inactive-alert and deletion behavior', ()
   assert.match(privacy, /product-intent and per-account rate-limit records/);
   assert.match(privacy, /product-intent row expires after 90 days/);
   assert.match(privacy, /pruned on that account's next product-intent write or when the account is erased/);
-  assert.match(privacy, /Billing is not currently available/);
+  assert.match(privacy, /Solvency Pro is processed by Stripe on its hosted pages/);
   assert.match(privacy, /test mode, does not create a real charge/);
   assert.match(privacy, /does not receive or store your complete card number or card security code/);
+  assert.match(privacy, /no card data ever touches Solvency/);
+  assert.match(privacy, /kept for up to 7 years after account deletion/);
   assert.match(privacy, /Browser-supplied customer IDs, price IDs, amounts and entitlement claims are not trusted/);
   assert.match(privacy, /one owner-linked checkout-attempt row containing a SHA-256 request hash/);
   assert.match(privacy, /random generation token, state, bounded expiry times, a nullable short reconciliation token/);

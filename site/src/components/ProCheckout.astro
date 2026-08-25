@@ -52,20 +52,17 @@
 import proCheckoutRuntime from '../scripts/pro-checkout-runtime.js?raw';
 import { CLERK_ENABLED } from '../lib/clerk.ts';
 
-// TODO(launch-runbook Phase 3): every line below is a drafting placeholder,
-// not final legal copy. Values are pinned to the recommended defaults in
-// docs/billing-policy-drafts.md (14-day full refund on a first subscription,
-// cancel anytime from the billing portal effective at the end of the paid
-// period, subscriptions auto-renew until cancelled, tax added at Checkout
-// where required). Phase 3 of the launch runbook is where these get an
-// actual legal review and get finalized in /terms and /privacy before Pro
-// can be sold; this component must not be treated as that review.
+// Final billing disclosure copy, decided at launch. Adapted from the reviewed
+// draft in docs/billing-policy-drafts.md — that draft's recommended
+// time-limited refund windows were superseded by the owner's decided
+// no-refund stance below. Mirrored in /terms and /privacy.
 const DISCLOSURE = [
-  { label: 'Amount and cadence', copy: 'TODO(Phase 3): the exact USD amount and billing cadence — $19/month or $190/year, billed in advance — is confirmed on the Stripe Checkout page before you pay.' },
-  { label: 'Auto-renewal', copy: 'TODO(Phase 3): the subscription auto-renews at the end of each billing period until cancelled.' },
-  { label: 'Cancellation', copy: 'TODO(Phase 3): cancel any time from Manage billing below; Pro access continues through the end of the period already paid for.' },
-  { label: 'Refunds', copy: 'TODO(Phase 3): a first subscription is refundable in full within 14 days of the first charge; see the Refunds section of /terms for renewal refund terms.' },
-  { label: 'Tax', copy: 'TODO(Phase 3): applicable sales tax, VAT or GST is added at Checkout where required, shown before you pay.' },
+  { label: 'Amount and cadence', copy: 'The exact USD amount and billing cadence — $19/month or $190/year, billed in advance — is confirmed on the Stripe Checkout page before you pay.' },
+  { label: 'Auto-renewal', copy: 'The subscription auto-renews at the end of each billing period until cancelled.' },
+  { label: 'Cancellation', copy: 'Cancel any time from Manage billing below; Pro access continues through the end of the period already paid for.' },
+  { label: 'Refunds', copy: 'All sales are final except where required by law.' },
+  { label: 'Tax', copy: 'Prices exclude tax; Solvency does not collect tax at Checkout, and you are responsible for any tax your jurisdiction imposes.' },
+  { label: 'Immediate access', copy: 'By subscribing you get immediate access to Pro.' },
 ];
 ---
 <article class="card card-pad" id="pro-checkout" data-clerk-enabled={CLERK_ENABLED ? 'true' : 'false'} aria-labelledby="pro-checkout-title">

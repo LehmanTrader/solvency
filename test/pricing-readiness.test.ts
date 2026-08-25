@@ -122,15 +122,18 @@ test('the live checkout surface exists only inside ProCheckout, gated by the exa
   assert.match(component, /id="pro-checkout-subscribed-status"[^>]*>You're subscribed — Pro is active\.</);
 
   // Required pre-payment disclosure: amount/cadence, auto-renewal,
-  // cancellation, refund and tax treatment, each marked as a Phase 3
-  // placeholder rather than final copy.
-  assert.match(component, /TODO\(launch-runbook Phase 3\)/);
+  // cancellation, refund and tax treatment, decided at launch (final copy,
+  // not a placeholder).
   assert.match(component, /Amount and cadence/);
   assert.match(component, /Auto-renewal/);
   assert.match(component, /Cancellation/);
   assert.match(component, /Refunds/);
   assert.match(component, /Tax/);
-  assert.match(component, /docs\/billing-policy-drafts\.md/);
+  assert.match(component, /Immediate access/);
+  assert.match(component, /All sales are final except where required by law\./);
+  assert.match(component, /By subscribing you get immediate access to Pro\./);
+  assert.doesNotMatch(component, /TODO\(Phase 3\)|TODO\(launch-runbook/);
+  assert.doesNotMatch(component, /14 days|14-day|7 days|7-day/);
 
   // Contracts matched from the Functions: exact request shapes and no
   // fabricated success on a disabled/unavailable route.
@@ -270,11 +273,16 @@ test('Stripe sandbox controls are double-gated, test-only and distrust browser r
   assert.doesNotMatch(preview, /vars\.PUBLIC_STRIPE_SANDBOX_UI_ENABLED/);
 });
 
-test('pricing names unresolved pre-checkout policy decisions instead of promising terms', () => {
+test('pricing states the decided pre-checkout policies instead of leaving them pending', () => {
   const page = read('site/src/pages/pricing.astro');
   for (const item of ['Trial', 'Cancellation', 'Refunds', 'Tax']) {
-    assert.match(page, new RegExp(`title: '${item}'[\\s\\S]{0,40}Decision pending\\.`));
+    assert.match(page, new RegExp(`title: '${item}'[\\s\\S]{0,40}Decided\\.`));
   }
+  assert.match(page, /There is no trial\. Your card is charged when you subscribe\./);
+  assert.match(page, /Cancel any time from the billing portal\. Cancelling stops future renewals; Pro access continues through the end of the period you already paid for\./);
+  assert.match(page, /All sales are final\. Solvency does not offer refunds, except where required by law\./);
+  assert.match(page, /Prices exclude tax\. Solvency does not collect tax at checkout; you are responsible for any tax your jurisdiction imposes\./);
+  assert.doesNotMatch(page, /Decision pending/);
   assert.match(page, /Required pre-checkout disclosure/);
   assert.match(page, /automatic-renewal terms/);
   assert.match(page, /href="\/terms"/);
