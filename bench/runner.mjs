@@ -109,7 +109,8 @@ async function callModel({ slug, prompt, maxTokens, apiKey }) {
   const body = await res.json();
   if (body.error) throw new Error(`OpenRouter error: ${JSON.stringify(body.error).slice(0, 300)}`);
   const usage = body.usage ?? { prompt_tokens: 0, completion_tokens: 0 };
-  return { text: body.choices?.[0]?.message?.content ?? '', usage };
+  const choice = body.choices?.[0] ?? {};
+  return { text: choice.message?.content ?? '', usage, finish: choice.finish_reason ?? null };
 }
 
 export function protocolHash(tasks, trials, maxTokens) {
@@ -149,7 +150,7 @@ export async function runBenchmark(cfg, emit = () => {}) {
       let rec;
       try {
         const t0 = Date.now();
-        let text, costUsd, usageRec;
+        let text, costUsd, usageRec, finishNote = null;
         if (cfg.harness) {
           const a = await ADAPTERS[cfg.harness].attempt({ prompt: task.prompt, model: cfg.harnessModel, timeoutMs: 300000 });
           if (a.infra) throw new Error(a.detail);
@@ -161,14 +162,20 @@ export async function runBenchmark(cfg, emit = () => {}) {
           text = r.text;
           costUsd = attemptCostUsd(r.usage, prices);
           usageRec = { input: r.usage.prompt_tokens, cacheRead: 0, cacheWrite: 0, output: r.usage.completion_tokens };
+          // Reasoning models can spend the whole cap thinking and return no
+          // content: record that as the specific failure it is.
+          if (r.finish === 'length') finishNote = 'token cap reached (finish=length) — raise --max-tokens for reasoning models';
         }
         spent += costUsd;
         const code = extractCode(text);
         const check = code ? await runChecker(task, code)
-                           : { pass: false, detail: 'no extractable code block in the reply' };
+                           : { pass: false, detail: finishNote ?? 'no extractable code block in the reply' };
         rec = {
           taskId: task.id, trial, pass: check.pass, detail: check.detail,
           costUsd: Number(costUsd.toFixed(6)), usage: usageRec,
+          // Audit trail: enough of the raw reply to distinguish a model
+          // failure from an extraction bug without re-running anything.
+          replyHead: (text ?? '').slice(0, 240),
           ms: Date.now() - t0, infra: false, at: new Date().toISOString(),
         };
         counted[check.pass ? 'pass' : 'fail']++;

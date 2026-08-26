@@ -79,7 +79,13 @@ export const ADAPTERS = {
     label: 'Codex CLI (local subscription)',
     async version() { return versionOf('codex'); },
     async attempt({ prompt, model, timeoutMs }) {
-      const args = ['exec', '--json'];
+      // Codex CLI 1.x JSON stream (verified live 2026-08-26): the reply is
+      // {type:"item.completed", item:{type:"agent_message", text}} and usage
+      // is {type:"turn.completed", usage:{input_tokens (incl. cached),
+      // cached_input_tokens, cache_write_input_tokens, output_tokens,
+      // reasoning_output_tokens}}. output_tokens is treated as inclusive of
+      // reasoning tokens, the OpenAI accounting convention.
+      const args = ['exec', '--json', '--skip-git-repo-check'];
       if (model) args.push('--model', model);
       args.push(prompt);
       const r = await run('codex', args, { timeoutMs });
@@ -88,15 +94,17 @@ export const ADAPTERS = {
       for (const line of r.out.split('\n')) {
         if (!line.trim().startsWith('{')) continue;
         let e; try { e = JSON.parse(line); } catch { continue; }
-        const msg = e?.msg ?? e;
-        if (typeof msg?.last_agent_message === 'string') text = msg.last_agent_message;
-        if (msg?.type === 'agent_message' && typeof msg.message === 'string') text = msg.message;
-        const u = msg?.info?.total_token_usage ?? msg?.usage ?? msg?.token_usage;
-        if (u && (u.input_tokens ?? u.total_tokens) != null) {
+        if (e.type === 'item.completed' && e.item?.type === 'agent_message' && typeof e.item.text === 'string') text = e.item.text;
+        // Older builds nested events under .msg with different names — keep those paths alive.
+        const msg = e.msg ?? e;
+        if (typeof msg.last_agent_message === 'string') text = msg.last_agent_message;
+        const u = (e.type === 'turn.completed' && e.usage) ? e.usage
+          : (msg.info?.total_token_usage ?? msg.token_usage ?? null);
+        if (u && u.input_tokens != null) {
           usage = {
             input: (u.input_tokens ?? 0) - (u.cached_input_tokens ?? 0),
             cacheRead: u.cached_input_tokens ?? 0,
-            cacheWrite: 0,
+            cacheWrite: u.cache_write_input_tokens ?? 0,
             output: u.output_tokens ?? 0,
           };
         }
