@@ -27,3 +27,20 @@ claude-opus-4-5,anthropic,Claude Opus 4.5,legacy,frontier,5,25,0.5,200000,https:
 gemini-3.7-flash-google-free-tier,google,Gemini 3.7 Flash (free tier),current,small,0,0,0,,https://ai.google.dev/gemini-api/docs/pricing,2026-08-26
 glm-4.7-flash-zai-free,zai,GLM 4.7 Flash (Z.ai free),current,small,0,0,0,,https://docs.z.ai/guides/overview/pricing,2026-08-26
 glm-4.5-flash-zai-free,zai,GLM 4.5 Flash (Z.ai free),current,small,0,0,0,,https://docs.z.ai/guides/overview/pricing,2026-08-26
+glm-5.3,zai,GLM-5.3,current,frontier,1.4,4.4,0.26,,https://docs.z.ai/guides/overview/pricing,2026-08-26
+kimi-k3,moonshot,Kimi K3,current,frontier,3,15,0.3,1048576,https://platform.kimi.ai/docs/pricing/chat-k3,2026-08-26
+minimax-m3,minimax,MiniMax M3,current,frontier,0.3,1.2,0.06,1000000,https://platform.minimax.io/docs/guides/pricing-paygo,2026-08-26
+minimax-m2.7,minimax,MiniMax M2.7,current,frontier,0.3,1.2,0.06,204800,https://platform.minimax.io/docs/guides/pricing-paygo,2026-08-26
+minimax-m2.5,minimax,MiniMax M2.5,current,frontier,0.3,1.2,0.03,204800,https://platform.minimax.io/docs/guides/pricing-paygo,2026-08-26
+minimax-m2.1,minimax,MiniMax M2.1,current,frontier,0.3,1.2,0.03,204800,https://platform.minimax.io/docs/guides/pricing-paygo,2026-08-26
+minimax-m2,minimax,MiniMax M2,current,frontier,0.3,1.2,0.03,204800,https://platform.minimax.io/docs/guides/pricing-paygo,2026-08-26
+solar-pro4,upstage,Solar Pro 4,current,frontier,0.3,1.2,0.06,524288,https://www.upstage.ai/pricing,2026-08-26
+solar-pro3,upstage,Solar Pro 3,current,frontier,0.15,0.6,0.015,131072,https://www.upstage.ai/pricing,2026-08-26
+solar-pro2,upstage,Solar Pro 2,current,frontier,0.15,0.6,0.015,66560,https://www.upstage.ai/pricing,2026-08-26
+solar-mini,upstage,Solar Mini,current,small,0.15,0.15,0.15,32768,https://www.upstage.ai/pricing,2026-08-26
+ling-3.0-flash,ant-ling,Ling 3.0 Flash,current,small,0.075,0.22,0.015,262144,https://developer.ant-ling.com/en/docs/models/price,2026-08-26
+ling-2.6-1t,ant-ling,Ling 2.6 1T,current,frontier,0.3,2.5,0.06,262144,https://developer.ant-ling.com/en/docs/models/price,2026-08-26
+ling-2.6-flash,ant-ling,Ling 2.6 Flash,current,small,0.1,0.3,0.02,,https://developer.ant-ling.com/en/docs/models/price,2026-08-26
+ring-2.6-1t,ant-ling,Ring 2.6 1T,current,frontier,0.3,2.5,0.06,262144,https://developer.ant-ling.com/en/docs/models/price,2026-08-26
+north-mini-code-cohere-free,cohere,North Mini Code (Cohere free),current,small,0,0,0,256000,https://cohere.com/pricing,2026-08-26
+laguna-s-2.1,poolside,Laguna S 2.1,current,frontier,0.09,0.18,0.009,1048576,https://openrouter.ai/poolside/laguna-s-2.1,2026-08-26
