@@ -12,7 +12,14 @@ interface Props {
   /** Open Graph type: "website" for index pages, "article" for notes. */
   type?: 'website' | 'article';
 }
-const { title, description, og = '/og/divergence-og.png', type = 'website' } = Astro.props;
+// Default is the clean per-page-card design (scripts/og-cards.ts), reused as
+// the site's generic unfurl: one dominant amber multiplier, one serif claim,
+// source+date, wordmark. Every page that does not pass its own `og` prop
+// (pricing, methodology, compare, changelog, etc.) unfurls with this instead
+// of the old full divergence chart (site/public/og/divergence-og.png), which
+// is too dense to read at Discord/X unfurl and thumbnail sizes. The old file
+// is left on disk untouched -- other references to it are unaffected.
+const { title, description, og = '/og/cards/home.png', type = 'website' } = Astro.props;
 const site = Astro.site!;
 const url = new URL(Astro.url.pathname, site).href;
 const image = new URL(og, site).href;

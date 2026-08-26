@@ -1,4 +1,6 @@
 ---
+import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import Base from '../../layouts/Base.astro';
 import Section from '../../components/Section.astro';
 import Provenance from '../../components/Provenance.astro';
@@ -48,9 +50,15 @@ const peerBasis = peerRows[0]?.basis ?? 'modelled';
 const peersWide = peerRows.length > 1 ? rankedBars(peerRows, { width: 1046, volume: PEER_VOLUME, basis: peerBasis, compact: false, highlight: model.model_id }) : '';
 const peersNarrow = peerRows.length > 1 ? rankedBars(peerRows, { width: 350, volume: PEER_VOLUME, basis: peerBasis, compact: true, highlight: model.model_id }) : '';
 const peers = models.filter((m) => m.model_id !== model.model_id && m.status === 'current').slice(0, 8);
+// Per-model stat card (scripts/og-cards.ts -> site/public/og/cards/model-<id>.png),
+// generated only for current models; retired/preview models without a card
+// fall back to the site's generic divergence chart card.
+const modelCardPath = fileURLToPath(new URL(`../../../public/og/cards/model-${model.model_id}.png`, import.meta.url));
+const ogCard = existsSync(modelCardPath) ? `/og/cards/model-${model.model_id}.png` : '/og/divergence-og.png';
 ---
 <Base title={`${model.display_name} — pricing and cost per solved task — Solvency`}
-      description={`${model.display_name} API pricing verified ${model.last_verified}: $${model.input_per_mtok}/M input, $${model.output_per_mtok}/M output${mine ? `, ${money(mine.cost)} per solved task (${measured ? 'measured' : 'modelled'})` : ', no published pass rate'}.`}>
+      description={`${model.display_name} API pricing verified ${model.last_verified}: $${model.input_per_mtok}/M input, $${model.output_per_mtok}/M output${mine ? `, ${money(mine.cost)} per solved task (${measured ? 'measured' : 'modelled'})` : ', no published pass rate'}.`}
+      og={ogCard}>
   <div class="wrap pt-8 md:pt-12">
     <div class="flex flex-wrap items-end justify-between gap-6">
       <div>

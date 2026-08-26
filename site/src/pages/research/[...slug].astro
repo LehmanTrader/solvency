@@ -22,8 +22,11 @@ const toc = headings.filter((h) => h.depth === 2);
 const srcNames = d.pdf_sources ?? sources.map((s) => shortSourceName(s.benchmark)).join(' · ');
 const reportMethod = d.pdf_method ?? 'cost ÷ pass rate';
 const shareText = `${d.title}: ${d.description}`;
+// Per-note stat card (scripts/og-cards.ts -> site/public/og/cards/note-NN.png),
+// keyed the same way the article's own eyebrow numbers the note.
+const ogCard = `/og/cards/note-${String(d.note).padStart(2, '0')}.png`;
 ---
-<Base title={`${d.title} — Solvency`} description={d.description} type="article">
+<Base title={`${d.title} — Solvency`} description={d.description} og={ogCard} type="article">
   <article class="wrap pt-10">
     <header class="measure">
       <p class="eyebrow">Research note {String(d.note).padStart(2, '0')}</p>

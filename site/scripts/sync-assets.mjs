@@ -10,6 +10,11 @@ const jobs = [
   { from: join(repo, 'reports', 'charts'), to: join(here, '..', 'public', 'charts'), ext: '.svg' },
   { from: join(repo, 'reports', 'charts-light'), to: join(here, '..', 'public', 'charts-light'), ext: '.svg' },
   { from: join(repo, 'reports', 'png'), to: join(here, '..', 'public', 'og'), ext: '.png' },
+  // per-page social stat cards (npm run og:cards at the repo root); manifest.json
+  // is the staleness-guard sidecar that test/og-cards.test.ts checks against
+  // the live data, so it travels with the PNGs into the served directory too.
+  { from: join(repo, 'reports', 'og-cards'), to: join(here, '..', 'public', 'og', 'cards'), ext: '.png' },
+  { from: join(repo, 'reports', 'og-cards'), to: join(here, '..', 'public', 'og', 'cards'), ext: '.json' },
   // datasets are copied in so the client bundle can import them; the repo's
   // /data remains canonical and is the only place they are edited
   { from: join(repo, 'data'), to: join(here, '..', 'src', 'data'), ext: '.json' },

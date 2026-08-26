@@ -60,10 +60,19 @@ export function headline() {
   };
 }
 
-/** Prewritten tweet for the share button. Figures come from headline(), never from memory. */
+/**
+ * Prewritten tweet for the share button. Figures come from headline(), never
+ * from memory. Number-first per the house share-copy formula: "{Z}x. {Model
+ * A} costs {$a} per solved task vs {$b} for {Model B} — same benchmark,
+ * [basis]. Token price ≠ task cost." Both models are drawn from headline()'s
+ * `measured` leaderboard bucket (see leaderboard()), so "both measured" is
+ * true of every pair this can produce — unlike their pass rates, which
+ * differ (cheap is cheapest-cost, dear is highest-pass-rate), so the copy
+ * does not claim a matched pass rate.
+ */
 export function tweetText() {
   const h = headline();
-  return `${h.cheap.m.display_name} is ~${fmtX(h.inX)} cheaper than ${h.dear.m.display_name} per input token and ~${fmtX(h.outX)} per output token — but ~${fmtX(h.solvedX)} cheaper per solved coding task (${money(h.cheap.cost)} vs ${money(h.dear.cost)}). Token price is not task cost.`;
+  return `${fmtX(h.solvedX)}. ${h.cheap.m.display_name} costs ${money(h.cheap.cost)} per solved task vs ${money(h.dear.cost)} for ${h.dear.m.display_name} — same benchmark, both measured. Token price ≠ task cost.`;
 }
 
 export const shareUrl = (text: string, url: string) =>
