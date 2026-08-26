@@ -65,7 +65,12 @@ const comparison = [
     pro: 'Not sold until it exists',
   },
   {
-    feature: 'Re-priced digest email, local-hardware comparison, rate profiles, usage import, API',
+    feature: 'Local-hardware vs cloud TCO comparison',
+    free: 'Reference rigs at their defaults',
+    pro: proPlanned('Included — compare your own rig cost per solved task against your Composer plan, with a break-even volume', 'Planned: compare your own rig cost per solved task against your Composer plan'),
+  },
+  {
+    feature: 'Re-priced digest email, rate profiles, usage import, API',
     free: 'Not included',
     pro: 'Roadmap — planned, never sold as an active feature',
   },
@@ -156,8 +161,9 @@ const launchDecisions = [
               <li>Versioned account saves: 20 plans, 100 versions per plan</li>
               <li>Unlisted share links and JSON, CSV and PNG exports</li>
               <li>Founding rate lock: your rate never increases while subscribed</li>
+              <li>Local-hardware vs cloud: your own rig’s cost per solved task, with a break-even volume against your plan</li>
             </ul>
-            <p class="small mt-4">Roadmap, not sold as active features: a re-priced digest email, local-hardware comparison, reusable rate profiles, usage import and an API. Model-price and budget monitoring (alerts) is not sold until it exists.</p>
+            <p class="small mt-4">Roadmap, not sold as active features: a re-priced digest email, reusable rate profiles, usage import and an API. Model-price and budget monitoring (alerts) is not sold until it exists.</p>
             <p class="small mt-2">The recurring hook is re-planning, review and monitoring—not access to public evidence.</p>
             <div class="mt-5 border-t border-[var(--color-rule)] pt-4">
               <h4 class="text-sm font-semibold text-[var(--color-ink)]">Would that recurring workflow be worth $19/month?</h4>

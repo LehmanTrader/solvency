@@ -47,9 +47,15 @@ test('pricing page separates what is free now from planned Pro', () => {
 test('pricing names the roadmap items as planned and alerts as not sold until it exists', () => {
   const page = read('site/src/pages/pricing.astro');
   const component = read('site/src/components/ProCheckout.astro');
-  const roadmapItems = /re-priced digest email, local-hardware comparison, reusable rate profiles, usage import and an API/;
+  const roadmapItems = /re-priced digest email, reusable rate profiles, usage import and an API/;
   assert.match(page, roadmapItems);
   assert.match(component, roadmapItems);
+  // Local-hardware left the roadmap the day it shipped (2026-08-26): it must now
+  // appear as its own live comparison row, and never again as a roadmap item.
+  assert.doesNotMatch(page, /local-hardware comparison/);
+  assert.doesNotMatch(component, /local-hardware comparison/);
+  assert.match(page, /Local-hardware vs cloud TCO comparison/);
+  assert.match(page, /break-even volume/);
   assert.match(page, /Roadmap, not sold as active features/);
   assert.match(component, /Roadmap, not sold as active features/);
   assert.match(page, /Roadmap — planned, never sold as an active feature/);
