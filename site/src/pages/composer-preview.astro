@@ -14,6 +14,10 @@ import { models } from '../lib/data.ts';
 import { BUILD_PLAN_LIMITS } from '../lib/build-plan-limits.ts';
 
 const currentModels = models.filter((model) => model.status === 'current');
+const harnessExamples = [
+  'Custom harness', 'Hermes Agent', 'Claude Code', 'Codex', 'Pi', 'Grok Build',
+  'Cursor', 'OpenCode', 'OpenHands', 'Goose',
+];
 ---
 <Base title="Composer preview — interactive org chart — Solvency"
       description="Prototype: an interactive org-chart view of the Build Composer. Add orchestrator, worker and fallback roles, assign models, and watch price and sensitivity update live.">
@@ -26,8 +30,75 @@ const currentModels = models.filter((model) => model.status === 'current');
     <p class="mt-4 lede max-w-2xl">
       An org-chart view of the same Build Composer pricing engine: add a role, assign a model,
       and the chart, totals and sensitivity band reprice together. Local only in this
-      prototype — nothing here saves, shares, or requires an account.
+      preview — nothing here saves to an account, shares, or persists past this tab.
     </p>
+
+    <section class="card mt-6 overflow-hidden" aria-labelledby="cp-settings-title">
+      <div class="card-head">
+        <div><p class="label">Plan settings</p><h2 class="h-card mt-1" id="cp-settings-title">Stack &amp; workload</h2></div>
+        <p class="small">Free-form: presets are suggestions, not restrictions.</p>
+      </div>
+      <div class="card-pad grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <label class="block">
+          <span class="label">Plan name</span>
+          <input class="ctl ctl-row mt-2 w-full" id="cp-name" maxlength={BUILD_PLAN_LIMITS.maxPlanNameChars} value="Composer preview stack" />
+        </label>
+        <label class="block">
+          <span class="label">Harness name</span>
+          <input class="ctl ctl-row mt-2 w-full" id="cp-harness" list="cp-harness-examples" maxlength={BUILD_PLAN_LIMITS.maxHarnessNameChars} value="Custom harness" autocomplete="off" />
+          <datalist id="cp-harness-examples">{harnessExamples.map((name) => <option value={name} />)}</datalist>
+        </label>
+        <label class="block">
+          <span class="label">Build volume / month</span>
+          <input class="ctl ctl-row mt-2 w-full" id="cp-volume" type="number" min="1" max={BUILD_PLAN_LIMITS.maxBuildsPerMonth} step="any" value="100" />
+        </label>
+        <label class="block">
+          <span class="label">Volume means</span>
+          <select class="ctl ctl-row mt-2 w-full" id="cp-volume-basis">
+            <option value="attempted_builds">Attempted builds</option>
+            <option value="successful_builds">Successful builds</option>
+          </select>
+        </label>
+      </div>
+      <details class="disc px-5 py-3 border-t border-[var(--color-rule)]" id="cp-settings-details">
+        <summary>Fine-tune harness &amp; success</summary>
+        <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <label class="block">
+            <span class="label">Harness version</span>
+            <input class="ctl ctl-row mt-2 w-full" id="cp-version" maxlength={BUILD_PLAN_LIMITS.maxHarnessVersionChars} placeholder="optional" />
+          </label>
+          <label class="block">
+            <span class="label">Configuration basis</span>
+            <select class="ctl ctl-row mt-2 w-full" id="cp-harness-basis">
+              <option value="user_supplied">User supplied</option>
+              <option value="solvency_template">Solvency template</option>
+              <option value="published">Published measurement · user asserted</option>
+            </select>
+          </label>
+          <label class="block">
+            <span class="label">Harness overhead / attempt</span>
+            <span class="money-input mt-2"><span>$</span><input class="ctl ctl-row w-full" id="cp-overhead" type="number" min="0" max={BUILD_PLAN_LIMITS.maxFixedCostUsd} step="any" value="0" /></span>
+          </label>
+          <label class="block">
+            <span class="label">Fixed harness cost / month</span>
+            <span class="money-input mt-2"><span>$</span><input class="ctl ctl-row w-full" id="cp-fixed" type="number" min="0" max={BUILD_PLAN_LIMITS.maxFixedCostUsd} step="any" value="0" /></span>
+          </label>
+          <label class="block lg:col-span-2">
+            <span class="label">End-to-end system success</span>
+            <span class="percent-input mt-2"><input class="ctl ctl-row w-full" id="cp-success" type="number" min="0.01" max="100" step="any" placeholder="Not supplied" /><span>%</span></span>
+            <span class="small block mt-1">Optional. Must describe the whole configured system—not individual model benchmarks.</span>
+          </label>
+          <label class="block lg:col-span-2">
+            <span class="label">Success-rate basis</span>
+            <select class="ctl ctl-row mt-2 w-full" id="cp-success-basis">
+              <option value="user_assumption">User assumption</option>
+              <option value="measured_by_user">Measured by you · user asserted</option>
+              <option value="published_system_run">Published system run · user asserted</option>
+            </select>
+          </label>
+        </div>
+      </details>
+    </section>
 
     <div class="mt-6 tile-grid grid-cols-3" id="cp-strip" aria-live="polite" aria-atomic="false">
       <div class="tile">
@@ -70,7 +141,7 @@ const currentModels = models.filter((model) => model.status === 'current');
           <div class="export-menu" id="cp-export-menu" data-popover="export" hidden role="menu" aria-label="Chart options">
             <button type="button" class="export-item" id="cp-export-json" data-action="export-json" role="menuitem" disabled>Download JSON</button>
             <button type="button" class="export-item" id="cp-export-csv" data-action="export-csv" role="menuitem" disabled>Download CSV</button>
-            <button type="button" class="export-item" id="cp-export-png" role="menuitem" disabled aria-disabled="true">Download PNG · soon</button>
+            <button type="button" class="export-item" id="cp-export-png" data-action="export-png" role="menuitem" disabled>Download PNG <span class="cp-lock" aria-hidden="true" hidden>🔒</span></button>
           </div>
         </div>
       </div>
@@ -82,6 +153,7 @@ const currentModels = models.filter((model) => model.status === 'current');
     <section class="card mt-4 overflow-hidden" aria-labelledby="cp-sens-title">
       <div class="card-head">
         <div><p class="label">Companion chart</p><h2 class="h-card mt-1" id="cp-sens-title">Sensitivity</h2></div>
+        <button type="button" class="btn btn-quiet" id="cp-save-baseline" data-action="save-baseline">Save baseline <span class="cp-lock" aria-hidden="true" hidden>🔒</span></button>
       </div>
       <div class="card-pad">
         <div class="sens-controls grid gap-3 sm:grid-cols-[1fr_auto]">
@@ -99,13 +171,17 @@ const currentModels = models.filter((model) => model.status === 'current');
         </div>
         <p class="small mt-3" id="cp-sens-status" role="status" aria-live="polite"></p>
         <div class="mt-4 grid gap-3" id="cp-sens-bands"></div>
+        <div class="cp-break-even mt-4 pt-4 border-t border-[var(--color-rule)]">
+          <p class="small" id="cp-break-even" role="status" aria-live="polite">Save a version to calculate break-even.</p>
+          <p class="small mt-1" id="cp-break-even-detail">Break-even uses a common attempted-build volume: per-attempt role and harness cost × volume, plus each plan's fixed monthly cost. It does not infer success.</p>
+        </div>
       </div>
     </section>
 
     <p class="small mt-6 max-w-2xl">
-      Prototype scope: this preview holds workload and harness inputs fixed and focuses on the
-      chart interaction. Full plan editing, tab-only versions, saved plans and Pro entitlement
-      live at <a class="link" href="/build-planner">Build Composer</a>.
+      Local parity with Build Composer: plan editing, the org chart, sensitivity, break-even
+      and gated exports all live here. Account saves, unlisted share links and price/budget
+      alerts still live at <a class="link" href="/build-planner">Build Composer</a>.
     </p>
 
     <div class="demo-gate-toast" id="cp-demo-gate" hidden role="status" aria-live="polite">
@@ -123,8 +199,8 @@ const currentModels = models.filter((model) => model.status === 'current');
   import { models } from '../lib/data.ts';
   import { type BuildQuoteV1, type BuildRoleQuote } from '../lib/build-cost.ts';
   import { validateUntrustedBuildPlanV1 } from '../lib/build-plan-schema.ts';
-  import { analyzeBuildSensitivity, type SensitivityAxis } from '../lib/build-sensitivity.ts';
-  import { buildExportCsv, buildExportFilename, buildExportJson } from '../lib/build-export.ts';
+  import { analyzeBuildSensitivity, breakEvenBuildPlans, type SensitivityAxis } from '../lib/build-sensitivity.ts';
+  import { buildExportCsv, buildExportFilename, buildExportJson, buildExportSummary } from '../lib/build-export.ts';
   import { BUILD_PLAN_LIMITS } from '../lib/build-plan-limits.ts';
   import { chipMarkup, providerLabel } from '../lib/providers.ts';
   import { groupsFor, toEnginePlan, TRUNK_STUB_KEY, type ComposerRole, type ComposerPlan, type RoleGroup } from '../lib/composer-tree.ts';
@@ -153,6 +229,19 @@ const currentModels = models.filter((model) => model.status === 'current');
   const DEMO_ROLE_CEILING = 2;
   const GATE_ADD_ROLE = 'Model more than two roles in one stack. Free demo covers two roles at catalog prices.';
 
+  // Same demoTier gating build-planner.astro enforces (DEMO_GATED_SELECTOR /
+  // DEMO_GATE_DESCRIPTIONS there): list-price catalog models stay free,
+  // custom/contracted rates, PNG export and saving a comparison baseline are
+  // Pro controls. This local-parity preview has no Clerk/entitlement wiring
+  // (that's account parity, stage C of composer-concept-architecture.md §7),
+  // so — same as build-planner's demoLocked() failing closed without a live
+  // entitlement — every gated control here is permanently locked, visible
+  // but inert, exactly mirroring what a signed-out Free visitor sees today.
+  const DEMO_LOCKED = true;
+  const GATE_CUSTOM_PRICING = 'Set custom or contracted token prices for this role.';
+  const GATE_EXPORT_PNG = 'Export this quote as a PNG.';
+  const GATE_SAVE_BASELINE = 'Save a version to compare architectures.';
+
   const KIND_META: Record<ComposerRole['kind'], { emoji: string; label: string }> = {
     orchestrator: { emoji: '🧭', label: 'Orchestrator' },
     worker: { emoji: '🛠️', label: 'Worker' },
@@ -177,6 +266,14 @@ const currentModels = models.filter((model) => model.status === 'current');
   };
 
   let lastChangedRoleId: string | null = null;
+
+  // View-only display state (never read by the engine, never a second copy
+  // of plan data — one-authority rule, composer-concept-interaction.md §6):
+  // which node detail panels are expanded, and the tab-local comparison
+  // baseline break-even reads against.
+  const expandedRoleIds = new Set<string>();
+  interface BaselineSnapshot { plan: ComposerPlan; label: string; }
+  let baselineSnapshot: BaselineSnapshot | null = null;
 
   // ---------- helpers ----------
 
@@ -284,6 +381,84 @@ const currentModels = models.filter((model) => model.status === 'current');
     scheduleRender();
   }
 
+  // ---------- mutations: plan-level workload + harness (build-composer §2 parity) ----------
+  // Same fields as build-planner.astro's Step-1 "Harness and workload" card,
+  // rehomed to a compact settings bar above the chart; identical field
+  // semantics, just read on 'change'/'input' straight into the one plan
+  // object rather than rebuilt from the DOM on every render.
+
+  function setPlanName(v: string) { plan.name = v.normalize('NFC').trim().slice(0, BUILD_PLAN_LIMITS.maxPlanNameChars) || plan.name; scheduleRender(); }
+  function setHarnessName(v: string) { plan.harness.name = v.normalize('NFC').trim().slice(0, BUILD_PLAN_LIMITS.maxHarnessNameChars) || plan.harness.name; scheduleRender(); }
+  function setHarnessVersion(v: string) { plan.harness.version = v.trim() ? v.trim().slice(0, BUILD_PLAN_LIMITS.maxHarnessVersionChars) : null; scheduleRender(); }
+  function setHarnessBasis(v: string) { plan.harness.configBasis = v as ComposerPlan['harness']['configBasis']; scheduleRender(); }
+  function setVolume(v: string) {
+    const n = Number(v);
+    if (Number.isFinite(n) && n > 0) plan.workload.buildsPerMonth = Math.min(n, BUILD_PLAN_LIMITS.maxBuildsPerMonth);
+    scheduleRender();
+  }
+  function setVolumeBasis(v: string) { plan.workload.volumeBasis = v as ComposerPlan['workload']['volumeBasis']; scheduleRender(); }
+  function setOverhead(v: string) {
+    const n = Number(v);
+    if (Number.isFinite(n) && n >= 0) plan.harness.fixedCostPerBuildAttemptUsd = Math.min(n, BUILD_PLAN_LIMITS.maxFixedCostUsd);
+    scheduleRender();
+  }
+  function setFixed(v: string) {
+    const n = Number(v);
+    if (Number.isFinite(n) && n >= 0) plan.harness.fixedMonthlyCostUsd = Math.min(n, BUILD_PLAN_LIMITS.maxFixedCostUsd);
+    scheduleRender();
+  }
+  function setSuccess(v: string) {
+    const trimmed = v.trim();
+    if (!trimmed) { delete plan.endToEndSuccess; scheduleRender(); return; }
+    const n = Number(trimmed);
+    if (!Number.isFinite(n) || n <= 0 || n > 100) { scheduleRender(); return; }
+    plan.endToEndSuccess = {
+      rate: n / 100,
+      basis: plan.endToEndSuccess?.basis ?? 'user_assumption',
+      assertionOrigin: 'user_asserted',
+    };
+    scheduleRender();
+  }
+  function setSuccessBasis(v: string) {
+    if (!plan.endToEndSuccess) return;
+    plan.endToEndSuccess.basis = v as NonNullable<ComposerPlan['endToEndSuccess']>['basis'];
+    scheduleRender();
+  }
+
+  // ---------- mutations: per-node usage & custom pricing (build-composer §1 parity) ----------
+  // Same fields as build-planner.astro's per-role "Token profile and pricing"
+  // <details> disclosure, rehomed into the node's own expand-on-click panel.
+
+  function toggleDetails(roleId: string) {
+    if (expandedRoleIds.has(roleId)) expandedRoleIds.delete(roleId);
+    else expandedRoleIds.add(roleId);
+    scheduleRender();
+  }
+
+  function setUsageBasis(roleId: string, v: string) {
+    const role = plan.roles.find((r) => r.roleId === roleId);
+    if (!role) return;
+    role.usagePerInvocation.basis = v as ComposerRole['usagePerInvocation']['basis'];
+    lastChangedRoleId = roleId;
+    scheduleRender();
+  }
+
+  function setUsageTokens(roleId: string, field: 'uncachedInputTokens' | 'cacheReadTokens' | 'outputTokens', v: string) {
+    const role = plan.roles.find((r) => r.roleId === roleId);
+    if (!role) return;
+    const n = Number(v);
+    if (!Number.isFinite(n) || n < 0) { scheduleRender(); return; }
+    role.usagePerInvocation[field] = Math.min(n, BUILD_PLAN_LIMITS.maxTokensPerInvocation);
+    lastChangedRoleId = roleId;
+    scheduleRender();
+  }
+
+  // Custom/contracted pricing is a Pro control on both pages — see
+  // DEMO_LOCKED above. This preview has no path to ever actually set
+  // role.priceOverride locally; the toggle always routes to the gate, same
+  // as build-planner's data-field="custom-toggle" under demoLocked().
+  function gateCustomPricing() { showGate(GATE_CUSTOM_PRICING); }
+
   // ---------- HTML builders (pure renders of plan + quote) ----------
   // Layout derivation (groupsFor) lives in composer-tree.ts, pure and unit-tested.
 
@@ -345,7 +520,47 @@ const currentModels = models.filter((model) => model.status === 'current');
       </p>
       <p class="cp-build-cost num">${perBuild}/build <span class="cp-share">· ${shareText}</span></p>
       <div class="cp-share-bar"><div class="cp-share-fill" style="width:${share}%"></div></div>
+      ${usageDetailsHtml(role)}
     </article>`;
+  }
+
+  /**
+   * Expand-on-click usage & pricing panel (composer-concept-architecture.md
+   * §1: "the current Composer's per-role usage inputs ... become editable on
+   * the org-chart node — expand-on-click detail panel"). Same fields as
+   * build-planner.astro's per-role "Token profile and pricing" <details>:
+   * usage basis, fresh/cache/output tokens per call, and the custom-pricing
+   * toggle (permanently Pro-gated here — see DEMO_LOCKED).
+   */
+  function usageDetailsHtml(role: ComposerRole): string {
+    const expanded = expandedRoleIds.has(role.roleId);
+    const u = role.usagePerInvocation;
+    const toggleLabel = expanded ? 'Hide usage & pricing ▴' : 'Edit usage & pricing ▾';
+    const panel = expanded ? `<div class="cp-detail-panel" id="cp-detail-panel-${role.roleId}" data-role-id="${role.roleId}">
+      <div class="cp-detail-grid">
+        <label class="cp-detail-field"><span class="cp-detail-label">Usage basis</span>
+          <select class="ctl ctl-inline mt-1 w-full" data-field="usage-basis" data-role-id="${role.roleId}" aria-label="Usage basis for ${esc(role.label)}">
+            <option value="template_assumption" ${u.basis === 'template_assumption' ? 'selected' : ''}>Template assumption</option>
+            <option value="user_supplied" ${u.basis === 'user_supplied' ? 'selected' : ''}>User supplied</option>
+            <option value="measured" ${u.basis === 'measured' ? 'selected' : ''}>Measured · user asserted</option>
+          </select>
+        </label>
+        <label class="cp-detail-field"><span class="cp-detail-label">Fresh input / call</span>
+          <input class="ctl ctl-inline mt-1 w-full num" type="number" min="0" max="${BUILD_PLAN_LIMITS.maxTokensPerInvocation}" step="any" data-field="fresh" data-role-id="${role.roleId}" value="${u.uncachedInputTokens}" aria-label="Fresh input tokens per call for ${esc(role.label)}" />
+        </label>
+        <label class="cp-detail-field"><span class="cp-detail-label">Cache read / call</span>
+          <input class="ctl ctl-inline mt-1 w-full num" type="number" min="0" max="${BUILD_PLAN_LIMITS.maxTokensPerInvocation}" step="any" data-field="cache" data-role-id="${role.roleId}" value="${u.cacheReadTokens}" aria-label="Cache-read tokens per call for ${esc(role.label)}" />
+        </label>
+        <label class="cp-detail-field"><span class="cp-detail-label">Output / call</span>
+          <input class="ctl ctl-inline mt-1 w-full num" type="number" min="0" max="${BUILD_PLAN_LIMITS.maxTokensPerInvocation}" step="any" data-field="output" data-role-id="${role.roleId}" value="${u.outputTokens}" aria-label="Output tokens per call for ${esc(role.label)}" />
+        </label>
+      </div>
+      <button type="button" class="cp-custom-toggle-row" data-action="gate-custom" data-role-id="${role.roleId}" aria-describedby="cp-demo-gate-detail">
+        <span class="cp-lock" aria-hidden="true">🔒</span>
+        <span>Use custom or contracted token prices for this role — Pro</span>
+      </button>
+    </div>` : '';
+    return `<button type="button" class="cp-details-toggle" data-action="toggle-details" data-role-id="${role.roleId}" aria-expanded="${expanded}" aria-controls="cp-detail-panel-${role.roleId}">${toggleLabel}</button>${panel}`;
   }
 
   function groupHtml(key: string, orchestrators: ComposerRole[], group: RoleGroup, quoteByRole: Map<string, BuildRoleQuote>, total: number | null, appendGhost: boolean): string {
@@ -374,7 +589,7 @@ const currentModels = models.filter((model) => model.status === 'current');
         <button type="button" class="btn btn-quiet" data-action="preset" data-preset="openhands">OpenHands</button>
         <button type="button" class="btn btn-quiet" data-action="preset" data-preset="custom">Custom harness</button>
       </div>
-      <p class="small">One click builds a starter orchestrator + worker pair, live-priced.</p>
+      <p class="small">One click away: a starter team — orchestrator + worker pair — live-priced.</p>
     </div>`;
   }
 
@@ -503,6 +718,52 @@ const currentModels = models.filter((model) => model.status === 'current');
     const ok = Boolean(quote && quote.valid);
     (document.getElementById('cp-export-json') as HTMLButtonElement).disabled = !ok;
     (document.getElementById('cp-export-csv') as HTMLButtonElement).disabled = !ok;
+    (document.getElementById('cp-export-png') as HTMLButtonElement).disabled = !ok;
+  }
+
+  /**
+   * Break-even (composer-concept-interaction.md §5, last bullet): a single-
+   * line secondary readout beneath the sensitivity band, unchanged substance
+   * from build-planner.astro's `breakEvenBuildPlans`. Needs a saved
+   * comparison baseline — "Save baseline" is a Pro control here exactly as
+   * `#b-save-version` is on build-planner (see DEMO_LOCKED), so the default,
+   * gated state is the same one production shows a signed-out visitor.
+   */
+  function updateBreakEven(validPlan: ComposerPlan | null, quote: BuildQuoteV1 | null) {
+    const headline = document.getElementById('cp-break-even')!;
+    const detail = document.getElementById('cp-break-even-detail')!;
+    if (!validPlan || !quote || !quote.valid) {
+      headline.textContent = 'Break-even is unavailable while the current plan is invalid.';
+      detail.textContent = 'Resolve the current plan errors to compare this plan with a saved baseline.';
+      return;
+    }
+    if (!baselineSnapshot) {
+      headline.textContent = 'Save a version to calculate break-even.';
+      detail.textContent = "Break-even uses a common attempted-build volume: per-attempt role and harness cost × volume, plus each plan's fixed monthly cost. It does not infer success.";
+      return;
+    }
+    const result = breakEvenBuildPlans(toEnginePlan(validPlan), toEnginePlan(baselineSnapshot.plan), eligibleModels);
+    const currentName = 'Current stack';
+    const baselineName = baselineSnapshot.label;
+    if (result.kind === 'crosses') {
+      const volume = result.attemptedBuildsPerMonth!.toLocaleString(undefined, { maximumFractionDigits: 1 });
+      const below = result.lowerBelow === 'current' ? currentName : baselineName;
+      const above = result.lowerAbove === 'current' ? currentName : baselineName;
+      headline.textContent = `Break-even: monthly costs match at ${volume} attempted builds.`;
+      detail.textContent = `Below that volume, ${below} costs less; above it, ${above} costs less.`;
+    } else if (result.kind === 'current_always_lower') {
+      headline.textContent = `${currentName} costs less than ${baselineName} at every positive attempted-build volume.`;
+      detail.textContent = 'No positive crossing exists. This comparison does not infer or use a success rate.';
+    } else if (result.kind === 'baseline_always_lower') {
+      headline.textContent = `${baselineName} costs less than ${currentName} at every positive attempted-build volume.`;
+      detail.textContent = 'No positive crossing exists. This comparison does not infer or use a success rate.';
+    } else if (result.kind === 'equal_all_volumes') {
+      headline.textContent = `${currentName} and ${baselineName} cost the same at every volume.`;
+      detail.textContent = 'Per-attempt cost and fixed monthly cost are identical between the two plans.';
+    } else {
+      headline.textContent = 'Break-even is unavailable for this comparison.';
+      detail.textContent = result.reason ?? 'Both plans need valid per-attempt quotes.';
+    }
   }
 
   // ---------- render: the one repaint of the one authority ----------
@@ -523,6 +784,7 @@ const currentModels = models.filter((model) => model.status === 'current');
       updateStrip(null);
       updateSensitivity(null);
       updateExportButtons(null);
+      updateBreakEven(null, null);
       return;
     }
 
@@ -549,30 +811,172 @@ const currentModels = models.filter((model) => model.status === 'current');
     }
 
     updateStrip(quote);
-    updateSensitivity(result.ok && result.quote.valid ? plan : null);
+    const validPlan = result.ok && result.quote.valid ? plan : null;
+    updateSensitivity(validPlan);
     updateExportButtons(quote);
+    updateBreakEven(validPlan, quote);
   }
 
   // ---------- exports (reuse the untouched export lib, unchanged) ----------
 
-  function exportCurrent(format: 'json' | 'csv') {
+  function downloadBlob(blob: Blob, filename: string) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.hidden = true;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  const cleanCanvasText = (text: string) => text.replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ').replace(/\s+/g, ' ').trim();
+  function fitCanvasText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string {
+    const clean = cleanCanvasText(text);
+    if (ctx.measureText(clean).width <= maxWidth) return clean;
+    let result = clean;
+    while (result.length && ctx.measureText(`${result}…`).width > maxWidth) result = result.slice(0, -1);
+    return `${result}…`;
+  }
+
+  /**
+   * PNG export (composer-concept-architecture.md §5a — "extend the same
+   * hand-drawn canvas approach"): a bounded, deterministic Canvas 2D render
+   * from `plan`/`quote` data only, never a DOM screenshot — same discipline
+   * and light-theme hex literals as build-planner.astro's `buildPngBlob`,
+   * extended to draw the chart's node boxes and connector lines instead of
+   * a role table. Simple geometric rendering: a quote artifact, not a photo
+   * of the chart.
+   */
+  async function buildComposerPngBlob(current: ComposerPlan, validatedPlan: Parameters<typeof buildExportSummary>[0], quote: BuildQuoteV1): Promise<Blob> {
+    // `assertExportable()` inside buildExportSummary requires byte-for-byte
+    // equality with the plan the quote was actually derived from — that's
+    // `validatedPlan` (result.value, re-parsed by the schema), never the
+    // hand-built `current` object, even though they're semantically
+    // identical (same subtlety exportCurrent's json/csv path already
+    // handles). `current` (with its parentRoleId chart-position hints) is
+    // used below only for tree layout, never passed into the export lib.
+    const summary = buildExportSummary(validatedPlan, quote);
+    const { orchestrators, byParent, parentOrder } = groupsFor(current);
+    const quoteByRole = new Map(quote.roles.map((r) => [r.roleId, r]));
+    const width = 1200;
+    const NODE_W = 260, NODE_H = 76, GAP_X = 28, GROUP_GAP_Y = 130;
+    const rowsPerGroup = parentOrder.map((key) => {
+      const group = byParent.get(key)!;
+      return 1 + (group.workers.length > 0 ? 1 : 0) + (group.fallbacks.length > 0 ? 1 : 0);
+    });
+    const chartTop = 366;
+    const chartHeight = parentOrder.length * GROUP_GAP_Y + Math.max(...rowsPerGroup, 1) * 30 + 80;
+    const height = Math.min(2400, chartTop + chartHeight + 120);
+    const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height;
+    const ctx = canvas.getContext('2d'); if (!ctx) throw new Error('PNG rendering is unavailable in this browser.');
+    const CARD_BG = '#F8F6EE', CARD_PANEL_2 = '#F4F3F1', CARD_RULE = '#CFCCC6', CARD_RULE_2 = '#E2E0DC';
+    const CARD_INK = '#1A1D20', CARD_BODY = '#3E464C', CARD_MUTED = '#5F6B73', CARD_MISSING = '#5F6B73', CARD_AMBER = '#9A6410', CARD_PURPLE = '#6C3BF4';
+    ctx.fillStyle = CARD_BG; ctx.fillRect(0, 0, width, height);
+    ctx.strokeStyle = CARD_RULE; ctx.lineWidth = 2; ctx.strokeRect(48, 48, width - 96, height - 96);
+    ctx.fillStyle = CARD_AMBER; ctx.fillRect(72, 74, 7, 28);
+    ctx.fillStyle = CARD_INK; ctx.font = '700 22px ui-monospace, monospace'; ctx.fillText('SOLVENCY · BUILD QUOTE', 96, 98);
+    ctx.fillStyle = CARD_MUTED; ctx.font = '16px ui-monospace, monospace'; ctx.fillText(`Generated ${new Date(summary.quotedAt).toISOString()} · ${summary.engineVersion}`, 72, 132);
+    ctx.fillStyle = CARD_INK; ctx.font = '700 38px system-ui, sans-serif'; ctx.fillText(fitCanvasText(ctx, summary.planName, 1056), 72, 188);
+    ctx.fillStyle = CARD_MUTED; ctx.font = '18px ui-monospace, monospace'; ctx.fillText(fitCanvasText(ctx, `Harness: ${summary.harness}`, 1056), 72, 222);
+
+    summary.metrics.slice(0, 3).forEach((metric, index) => {
+      const x = 72 + index * 356, y = 250;
+      ctx.fillStyle = CARD_PANEL_2; ctx.fillRect(x, y, 336, 76); ctx.strokeStyle = CARD_RULE_2; ctx.strokeRect(x, y, 336, 76);
+      ctx.fillStyle = CARD_MUTED; ctx.font = '13px ui-monospace, monospace'; ctx.fillText(metric.label.toUpperCase(), x + 16, y + 24);
+      ctx.fillStyle = metric.value.startsWith('Missing') ? CARD_MISSING : CARD_INK; ctx.font = '700 21px ui-monospace, monospace'; ctx.fillText(fitCanvasText(ctx, metric.value, 300), x + 16, y + 54);
+    });
+
+    function drawNode(cx: number, cy: number, roleId: string, kind: string, label: string) {
+      const x = cx - NODE_W / 2, y = cy;
+      ctx!.fillStyle = CARD_BG; ctx!.strokeStyle = kind === 'other' ? CARD_MUTED : CARD_RULE_2; ctx!.lineWidth = 1;
+      if (kind === 'other') ctx!.setLineDash([5, 4]); else ctx!.setLineDash([]);
+      ctx!.fillRect(x, y, NODE_W, NODE_H); ctx!.strokeRect(x, y, NODE_W, NODE_H);
+      ctx!.setLineDash([]);
+      const roleQuote = quoteByRole.get(roleId);
+      ctx!.fillStyle = CARD_MUTED; ctx!.font = '11px ui-monospace, monospace';
+      ctx!.fillText(kind === 'orchestrator' ? 'ORCHESTRATOR' : kind === 'worker' ? 'WORKER' : 'FALLBACK', x + 14, y + 20);
+      ctx!.fillStyle = CARD_INK; ctx!.font = '700 16px system-ui, sans-serif'; ctx!.fillText(fitCanvasText(ctx!, label, NODE_W - 28), x + 14, y + 42);
+      ctx!.fillStyle = roleQuote ? CARD_INK : CARD_MISSING; ctx!.font = '13px ui-monospace, monospace';
+      ctx!.fillText(roleQuote ? `${money(roleQuote.costPerBuildAttemptUsd)}/build` : 'Missing', x + 14, y + 62);
+      return { x, y, w: NODE_W, h: NODE_H };
+    }
+
+    let groupY = chartTop;
+    parentOrder.forEach((key) => {
+      const anchor = key === TRUNK_STUB_KEY ? null : orchestrators.find((o) => o.roleId === key) ?? null;
+      const group = byParent.get(key)!;
+      const trunkCx = width / 2;
+      const trunkBox = anchor
+        ? drawNode(trunkCx, groupY, anchor.roleId, 'orchestrator', anchor.label)
+        : (() => {
+            ctx.strokeStyle = CARD_RULE_2; ctx.setLineDash([5, 4]);
+            ctx.strokeRect(trunkCx - NODE_W / 2, groupY, NODE_W, NODE_H); ctx.setLineDash([]);
+            ctx.fillStyle = CARD_MUTED; ctx.font = '13px ui-monospace, monospace';
+            ctx.fillText('No orchestrator added', trunkCx - NODE_W / 2 + 14, groupY + 42);
+            return { x: trunkCx - NODE_W / 2, y: groupY, w: NODE_W, h: NODE_H };
+          })();
+      const children = [...group.workers, ...group.fallbacks];
+      if (children.length) {
+        const rowY = groupY + NODE_H + 54;
+        const totalW = children.length * NODE_W + (children.length - 1) * GAP_X;
+        let cx = trunkCx - totalW / 2 + NODE_W / 2;
+        for (const child of children) {
+          ctx.strokeStyle = CARD_RULE_2; ctx.setLineDash(child.kind === 'other' ? [4, 4] : []);
+          ctx.beginPath(); ctx.moveTo(trunkBox.x + trunkBox.w / 2, trunkBox.y + trunkBox.h); ctx.lineTo(cx, rowY); ctx.stroke(); ctx.setLineDash([]);
+          drawNode(cx, rowY, child.roleId, child.kind, child.label);
+          cx += NODE_W + GAP_X;
+        }
+        groupY = rowY + NODE_H + GROUP_GAP_Y - NODE_H - 54;
+      } else {
+        groupY += GROUP_GAP_Y;
+      }
+    });
+
+    ctx.fillStyle = CARD_PURPLE;
+    const footerY = height - 72;
+    ctx.font = '13px system-ui, sans-serif';
+    let y = footerY;
+    for (const notice of summary.notices.slice(0, 1)) {
+      ctx.fillStyle = CARD_MUTED;
+      ctx.fillText(fitCanvasText(ctx, notice, 1056), 72, y); y += 20;
+    }
+    return await new Promise<Blob>((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('Could not encode the PNG file.')), 'image/png'));
+  }
+
+  async function exportCurrent(format: 'json' | 'csv' | 'png') {
     if (plan.roles.length === 0) return;
+    if (DEMO_LOCKED && format === 'png') { showGate(GATE_EXPORT_PNG); return; }
     const result = validateUntrustedBuildPlanV1(toEnginePlan(plan), eligibleModels);
     if (!result.ok || !result.quote.valid) return;
     // assertExportable() requires byte-for-byte equality with the plan the
     // quote was actually derived from — that's result.value (re-parsed by
     // the schema), not the hand-built plan passed in, even though the two
     // are semantically identical.
+    if (format === 'png') {
+      const blob = await buildComposerPngBlob(plan, result.value, result.quote);
+      downloadBlob(blob, buildExportFilename(plan.name, 'png'));
+      return;
+    }
     const text = format === 'json' ? buildExportJson(result.value, result.quote) : buildExportCsv(result.value, result.quote);
     const blob = new Blob([text], { type: format === 'json' ? 'application/json' : 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = buildExportFilename(plan.name, format);
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    downloadBlob(blob, buildExportFilename(plan.name, format));
+  }
+
+  /**
+   * Save baseline (composer-concept-interaction.md §5, break-even). A Pro
+   * control — same gating as `#b-save-version` on build-planner.astro (see
+   * DEMO_LOCKED) — that captures the current valid plan as the tab-local
+   * comparison point `breakEvenBuildPlans` reads against.
+   */
+  function saveBaseline() {
+    if (DEMO_LOCKED) { showGate(GATE_SAVE_BASELINE); return; }
+    const result = validateUntrustedBuildPlanV1(toEnginePlan(plan), eligibleModels);
+    if (!result.ok || !result.quote.valid) return;
+    baselineSnapshot = { plan: structuredClone(plan), label: `${plan.name} (saved)` };
+    setStatus(`Baseline saved: ${plan.name}.`);
+    scheduleRender();
   }
 
   // ---------- gate toast + status line ----------
@@ -635,8 +1039,12 @@ const currentModels = models.filter((model) => model.status === 'current');
       else if (kind === 'add-worker') addRole('worker');
       else if (kind === 'add-fallback') addRole('other');
       else if (kind === 'preset') applyPreset(action.dataset.preset ?? '');
-      else if (kind === 'export-json') exportCurrent('json');
-      else if (kind === 'export-csv') exportCurrent('csv');
+      else if (kind === 'export-json') void exportCurrent('json');
+      else if (kind === 'export-csv') void exportCurrent('csv');
+      else if (kind === 'export-png') void exportCurrent('png');
+      else if (kind === 'toggle-details') toggleDetails(roleId);
+      else if (kind === 'gate-custom') gateCustomPricing();
+      else if (kind === 'save-baseline') saveBaseline();
       else if (kind === 'dismiss-gate') (document.getElementById('cp-demo-gate') as HTMLElement).hidden = true;
       closeAllPopovers();
       return;
@@ -648,8 +1056,22 @@ const currentModels = models.filter((model) => model.status === 'current');
     const el = event.target as HTMLElement;
     if (el.matches('[data-field="label"]')) setLabel(el.dataset.roleId!, (el as HTMLInputElement).value);
     else if (el.matches('[data-field="calls"]')) setCalls(el.dataset.roleId!, (el as HTMLInputElement).value);
+    else if (el.matches('[data-field="usage-basis"]')) setUsageBasis(el.dataset.roleId!, (el as HTMLSelectElement).value);
+    else if (el.matches('[data-field="fresh"]')) setUsageTokens(el.dataset.roleId!, 'uncachedInputTokens', (el as HTMLInputElement).value);
+    else if (el.matches('[data-field="cache"]')) setUsageTokens(el.dataset.roleId!, 'cacheReadTokens', (el as HTMLInputElement).value);
+    else if (el.matches('[data-field="output"]')) setUsageTokens(el.dataset.roleId!, 'outputTokens', (el as HTMLInputElement).value);
     else if (el.matches('[data-action="move-to"]')) setParent(el.dataset.roleId!, (el as HTMLSelectElement).value || null);
     else if (el.id === 'cp-sens-axis' || el.id === 'cp-sens-range') scheduleRender();
+    else if (el.id === 'cp-name') setPlanName((el as HTMLInputElement).value);
+    else if (el.id === 'cp-harness') setHarnessName((el as HTMLInputElement).value);
+    else if (el.id === 'cp-version') setHarnessVersion((el as HTMLInputElement).value);
+    else if (el.id === 'cp-harness-basis') setHarnessBasis((el as HTMLSelectElement).value);
+    else if (el.id === 'cp-volume') setVolume((el as HTMLInputElement).value);
+    else if (el.id === 'cp-volume-basis') setVolumeBasis((el as HTMLSelectElement).value);
+    else if (el.id === 'cp-overhead') setOverhead((el as HTMLInputElement).value);
+    else if (el.id === 'cp-fixed') setFixed((el as HTMLInputElement).value);
+    else if (el.id === 'cp-success') setSuccess((el as HTMLInputElement).value);
+    else if (el.id === 'cp-success-basis') setSuccessBasis((el as HTMLSelectElement).value);
   });
 
   // ---------- hover / focus cross-highlight: node <-> sensitivity band ----------
@@ -678,6 +1100,15 @@ const currentModels = models.filter((model) => model.status === 'current');
     const node = (event.target as Element).closest<HTMLElement>('.cp-node[data-role-id]');
     if (node && !node.contains(event.relatedTarget as Node)) setHover(node, false);
   });
+
+  // Static (non-chart) Pro-gated controls carry the same lock glyph the
+  // gated nodes/rows use, per composer-concept-interaction.md §7's
+  // "visible-but-gated" rule — set once since DEMO_LOCKED never changes in
+  // this local-parity build (no live entitlement to flip it).
+  if (DEMO_LOCKED) {
+    document.getElementById('cp-export-png')?.querySelector('.cp-lock')?.removeAttribute('hidden');
+    document.getElementById('cp-save-baseline')?.querySelector('.cp-lock')?.removeAttribute('hidden');
+  }
 
   render();
 </script>
@@ -749,6 +1180,36 @@ const currentModels = models.filter((model) => model.status === 'current');
   .cp-badge-lock { opacity: .7; }
   .cp-ghost-text { margin-top: .7rem; color: var(--color-muted); font-size: .85rem; }
   .cp-node-ghost:hover { outline: 2px solid var(--color-purple); outline-offset: 1px; }
+
+  /* Node detail panel: expand-on-click usage & pricing editing
+     (composer-concept-architecture.md §1/§2 — same data-field inputs as
+     build-planner.astro's role editor, laid out inside the node instead of
+     a flat card). */
+  .cp-details-toggle {
+    margin-top: .6rem; border: 0; background: none; padding: 0; min-height: auto;
+    font-family: var(--font-mono); font-size: .68rem; letter-spacing: .03em;
+    color: var(--color-muted); cursor: pointer; text-align: left;
+  }
+  .cp-details-toggle:hover, .cp-details-toggle:focus-visible { color: var(--color-purple); }
+  .cp-detail-panel { margin-top: .6rem; padding-top: .6rem; border-top: 1px dashed var(--color-rule); }
+  .cp-detail-grid { display: grid; grid-template-columns: 1fr; gap: .55rem; }
+  .cp-detail-field { display: block; }
+  .cp-detail-field .ctl-inline { width: 100%; display: block; }
+  .cp-detail-label { display: block; font-family: var(--font-mono); font-size: .62rem; letter-spacing: .04em; text-transform: uppercase; color: var(--color-muted); }
+  .cp-custom-toggle-row {
+    margin-top: .65rem; width: 100%; display: flex; align-items: center; gap: .4rem;
+    border: 0; background: none; padding: .3rem 0; min-height: auto; cursor: pointer;
+    text-align: left; font-size: .74rem; color: var(--color-muted); opacity: .75;
+  }
+  .cp-custom-toggle-row:hover, .cp-custom-toggle-row:focus-visible { opacity: 1; color: var(--color-ink); }
+  .cp-lock { font-size: .8rem; line-height: 1; flex: none; }
+
+  /* Plan-settings bar (composer-concept-architecture.md §2 — build-planner's
+     Step 1 "Harness and workload" fields, rehomed above the chart). */
+  .money-input, .percent-input { display: flex; align-items: center; gap: .45rem; font-family: var(--font-mono); color: var(--color-muted); }
+  .money-input .ctl, .percent-input .ctl { min-width: 0; }
+
+  .cp-break-even { color: var(--color-body); }
 
   .export-menu { position: absolute; right: 0; top: 100%; z-index: 20; margin-top: .35rem; width: 12.5rem; padding: .4rem; border: 1px solid var(--color-rule-strong); border-radius: 8px; background: var(--color-panel); box-shadow: 0 8px 24px rgb(0 0 0 / .18); display: flex; flex-direction: column; gap: .15rem; }
   .export-item { display: block; width: 100%; text-align: left; padding: .5rem .6rem; border: 0; background: none; border-radius: 6px; font-family: var(--font-mono); font-size: .72rem; letter-spacing: .04em; text-transform: uppercase; color: var(--color-ink); cursor: pointer; min-height: auto; }
