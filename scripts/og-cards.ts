@@ -119,11 +119,13 @@ const RANKED_FONT_FACE_CSS = FONT_FACE_CSS + `
   @font-face { font-family: 'IBM Plex Sans'; font-style: normal; font-weight: 300 700; src: url('${fontUrl('ibm-plex-sans-latin.woff2')}') format('woff2'); }
 `;
 
+// The balance mark (operator direction 2026-08-26: the drawn balance, Arena
+// register). Interim raster from the approved round-4 direction; replaced by
+// the vector trace once that is approved. Ink-colored on transparency, so it
+// sits on the cream card ground directly.
+const BRAND_MARK = pathToFileURL(join(ROOT, 'site', 'public', 'brand', 'mark-balance.png')).href;
 const rankedMarkSvg = (px: number) =>
-  `<svg width="${px}" height="${px}" viewBox="0 0 100 100" aria-hidden="true">` +
-  `<rect x="18" y="10" width="64" height="18" fill="${RC_INK}"/>` +
-  `<rect x="10" y="44" width="80" height="7" fill="${RC_INK}"/>` +
-  `<rect x="42" y="66" width="16" height="18" fill="${BRAND_AMBER}"/></svg>`;
+  `<img src="${BRAND_MARK}" width="${px}" height="${px}" style="display:block" alt=""/>`;
 
 /** Measured/harness bars are solid purple (both are observed-cost bases, no
  * loop assumption — harness rows are source_usage_repriced, same solid

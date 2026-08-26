@@ -1,0 +1,48 @@
+{
+  "description": "WildClawBench harness-comparison slice for Research Note 02's second population. Sixteen cells: four harnesses (OpenClaw, Claude Code, Codex CLI, Hermes Agent) each running the same four models over the same 60 tasks. Kept OUTSIDE data/benchmarks.json deliberately: three of the four models have no row in the model catalog, the cost figures are the source's own computed dollars (not repriced from token usage), and the task population is incomparable with the OpenBench group per the comparability rule. Never joined to any other table, never included in the CC-BY export.",
+  "source": {
+    "benchmark": "wildclawbench-harness-comparison",
+    "name": "WildClawBench (InternLM) — harness comparison leaderboard",
+    "url": "https://huggingface.co/datasets/internlm/WildClawBench",
+    "paper": "https://arxiv.org/abs/2605.10912",
+    "paper_v1_date": "2026-05-11",
+    "license": "MIT",
+    "redistributable": false,
+    "last_verified": "2026-08-26",
+    "cost_basis": "measured_by_source",
+    "cost_basis_notes": "Per-task average USD as computed and published by InternLM at the API prices they paid, at their (unstated) run time. NOT repriced by Solvency: per-cell token usage is not published for the harness-comparison arms (the trajectories repo carries per-model archives for the OpenClaw-fixed model leaderboard only).",
+    "provenance_gaps": [
+      "No run dates are stated for the harness-comparison table; the paper's v1 date (2026-05-11) is the only anchor.",
+      "No trial count per cell is stated.",
+      "Harness versions are recorded as Docker image tags (wildclawbench-ubuntu:v1.3, wildclawbench-claudecode-ubuntu:v0.2, wildclawbench-codex-ubuntu:v0.0, wildclawbench-hermes-agent:v0.5), not harness CLI versions.",
+      "Per-cell token usage is unpublished, so these dollars cannot be repriced to current API rates.",
+      "Score is a graded 0-100 average (deterministic checks + environment-state audit + LLM/VLM judge, partial credit possible), not a strict pass count."
+    ]
+  },
+  "tasks_n": 60,
+  "score_semantics": "graded_0_100_average_not_pass_rate",
+  "harness_images": {
+    "OpenClaw": "wildclawbench-ubuntu:v1.3",
+    "Claude Code": "wildclawbench-claudecode-ubuntu:v0.2",
+    "Codex CLI": "wildclawbench-codex-ubuntu:v0.0",
+    "Hermes Agent": "wildclawbench-hermes-agent:v0.5"
+  },
+  "results": [
+    { "model": "GPT-5.4", "harness": "OpenClaw", "time_min_per_task": 5.83, "cost_usd_per_task": 0.33, "score_pct": 50.3 },
+    { "model": "GPT-5.4", "harness": "Claude Code", "time_min_per_task": 9.07, "cost_usd_per_task": 0.61, "score_pct": 48.4 },
+    { "model": "GPT-5.4", "harness": "Codex CLI", "time_min_per_task": 7.16, "cost_usd_per_task": 0.57, "score_pct": 56.8 },
+    { "model": "GPT-5.4", "harness": "Hermes Agent", "time_min_per_task": 8.97, "cost_usd_per_task": 0.44, "score_pct": 50.7 },
+    { "model": "GLM 5", "harness": "OpenClaw", "time_min_per_task": 6.22, "cost_usd_per_task": 0.19, "score_pct": 42.6 },
+    { "model": "GLM 5", "harness": "Claude Code", "time_min_per_task": 10.18, "cost_usd_per_task": 0.21, "score_pct": 31.0 },
+    { "model": "GLM 5", "harness": "Codex CLI", "time_min_per_task": 7.84, "cost_usd_per_task": 0.13, "score_pct": 38.9 },
+    { "model": "GLM 5", "harness": "Hermes Agent", "time_min_per_task": 6.62, "cost_usd_per_task": 0.44, "score_pct": 46.4 },
+    { "model": "MiMo V2 Pro", "harness": "OpenClaw", "time_min_per_task": 7.63, "cost_usd_per_task": 0.44, "score_pct": 40.2 },
+    { "model": "MiMo V2 Pro", "harness": "Claude Code", "time_min_per_task": 9.90, "cost_usd_per_task": 0.15, "score_pct": 29.9 },
+    { "model": "MiMo V2 Pro", "harness": "Codex CLI", "time_min_per_task": 6.44, "cost_usd_per_task": 0.15, "score_pct": 35.3 },
+    { "model": "MiMo V2 Pro", "harness": "Hermes Agent", "time_min_per_task": 8.30, "cost_usd_per_task": 0.26, "score_pct": 48.1 },
+    { "model": "MiniMax M2.7", "harness": "OpenClaw", "time_min_per_task": 9.18, "cost_usd_per_task": 0.12, "score_pct": 33.8 },
+    { "model": "MiniMax M2.7", "harness": "Claude Code", "time_min_per_task": 10.08, "cost_usd_per_task": 0.09, "score_pct": 32.0 },
+    { "model": "MiniMax M2.7", "harness": "Codex CLI", "time_min_per_task": 8.66, "cost_usd_per_task": 0.06, "score_pct": 35.8 },
+    { "model": "MiniMax M2.7", "harness": "Hermes Agent", "time_min_per_task": 10.30, "cost_usd_per_task": 0.11, "score_pct": 37.1 }
+  ]
+}
