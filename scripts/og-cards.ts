@@ -25,7 +25,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 import {
   ROOT, allReportFrontmatter, noteCardData, homeCardData, currentModels, modelCardData,
-  type CardData,
+  rankedCostCardData, rankedHarnessCardData, rankedModelledCardData,
+  type CardData, type RankedCardData, type RankedRow, type RankedBasis,
 } from './og-card-data.ts';
 
 const OUT = join(ROOT, 'reports', 'og-cards');
@@ -110,7 +111,137 @@ function render(card: CardData) {
   return card;
 }
 
-const manifest: { generated_at: string; cards: Record<string, CardData> } = {
+// ---------------------------------------------------------------------------
+// Ranked-bar leaderboard variant (design exploration — see scripts/og-card-data.ts
+// for the data functions; keyed `ranked-*`, not wired into any page yet).
+// Off-white card, unlike the dark cards above: a deliberate contrast choice for
+// an X timeline (X's chrome is dark; a light card pops the way it doesn't in a
+// feed of other dark cards) and it matches the founder's Arena.ai reference.
+// Brand-consistent regardless: the mark, wordmark and headline highlight are
+// the same brand amber (#E0A02E) the dark cards use; site/public/brand/mark.svg
+// and lockup.svg already ship this exact ink-on-light variant.
+// ---------------------------------------------------------------------------
+const RC_BG = '#F5F0E3', RC_INK = '#17150F', RC_MUTED = '#8A7F6C', RC_RULE = '#E2DAC8';
+const RC_MODELLED = '#8FA0D8', RC_STALE = '#E8895A';
+const RC_LEAD_TINT = 'rgba(224,160,46,0.10)';
+
+const RANKED_FONT_FACE_CSS = FONT_FACE_CSS + `
+  @font-face { font-family: 'IBM Plex Sans'; font-style: normal; font-weight: 300 700; src: url('${fontUrl('ibm-plex-sans-latin.woff2')}') format('woff2'); }
+`;
+
+const rankedMarkSvg = (px: number) =>
+  `<svg width="${px}" height="${px}" viewBox="0 0 100 100" aria-hidden="true">` +
+  `<rect x="18" y="10" width="64" height="18" fill="${RC_INK}"/>` +
+  `<rect x="10" y="44" width="80" height="7" fill="${RC_INK}"/>` +
+  `<rect x="42" y="66" width="16" height="18" fill="${BRAND_AMBER}"/></svg>`;
+
+/** Measured/harness bars are solid amber (both are observed-cost bases, no
+ * loop assumption); modelled bars are hatched periwinkle; stale bars are a
+ * dashed hollow outline — same basis semantics as site/src/lib/charts.ts,
+ * just CSS instead of an SVG pattern. */
+function basisBarCss(basis: RankedBasis): string {
+  if (basis === 'modelled') {
+    return `background:repeating-linear-gradient(135deg, ${RC_MODELLED}, ${RC_MODELLED} 3px, transparent 3px, transparent 7px);border:1px solid ${RC_MODELLED}`;
+  }
+  if (basis === 'stale') {
+    return `background:transparent;border:1.5px dashed ${RC_STALE}`;
+  }
+  return `background:${BRAND_AMBER};border:1px solid ${BRAND_AMBER}`; // measured, harness
+}
+
+function rankedRowHtml(r: RankedRow, rank: number, maxCost: number, rowH: number): string {
+  const pct = maxCost > 0 ? Math.max(4, Math.round((r.cost / maxCost) * 100)) : 4;
+  const secondary = r.sub ? `<span class="sub">${esc(r.sub)}</span>`
+    : r.chip ? `<span class="chip">${esc(r.chip)}</span>` : '';
+  return `<div class="row${rank === 1 ? ' lead' : ''}" style="height:${rowH}px">
+      <div class="rank">${rank}</div>
+      <div class="who"><span class="name">${esc(r.name)}</span>${secondary}</div>
+      <div class="track"><div class="bar" style="width:${pct}%;${basisBarCss(r.basis)}"></div></div>
+      <div class="val">${esc(r.value)}</div>
+    </div>`;
+}
+
+/**
+ * Every section of the card gets an explicit pixel height that sums to
+ * exactly 630 (the card's fixed height), rather than leaning on flexbox to
+ * absorb a variable number of rows: with up to 6 rows the content is dense
+ * enough that shrink-to-fit flex sizing let the headline and the row list
+ * overlap. Explicit math is the same approach scripts/charts.ts already uses
+ * for its SVG layouts — deterministic, and it throws if a future change
+ * makes the budget not add up rather than silently overlapping again.
+ */
+function rankedLayout(rowCount: number) {
+  const padTop = 44, padSide = 60, padBottom = 26;
+  const topH = 30, gap1 = 14, headH = 88, gap2 = 18, gap3 = 14, footH = 24;
+  const fixed = padTop + topH + gap1 + headH + gap2 + gap3 + footH + padBottom;
+  const rowsH = 630 - fixed;
+  if (rowsH < rowCount * 40) throw new Error(`rankedLayout: ${rowCount} rows do not fit the card (only ${rowsH}px available)`);
+  const rowGap = rowCount <= 4 ? 14 : 8;
+  const rowH = Math.floor((rowsH - rowGap * (rowCount - 1)) / rowCount);
+  return { padTop, padSide, padBottom, topH, gap1, headH, gap2, gap3, footH, rowsH, rowGap, rowH };
+}
+
+function rankedCardHtml(card: RankedCardData): string {
+  const maxCost = Math.max(...card.rows.map((r) => r.cost));
+  const L = rankedLayout(card.rows.length);
+  const rows = card.rows.map((r, i) => rankedRowHtml(r, i + 1, maxCost, L.rowH)).join('');
+  return `<!doctype html><meta charset="utf-8"><style>
+    ${RANKED_FONT_FACE_CSS}
+    html,body{margin:0;width:1200px;height:630px;background:${RC_BG};overflow:hidden;
+      font-family:'IBM Plex Sans','Helvetica Neue',Arial,sans-serif}
+    .wrap{width:1200px;height:630px;box-sizing:border-box;
+      padding:${L.padTop}px ${L.padSide}px ${L.padBottom}px}
+    .top{height:${L.topH}px;display:flex;justify-content:space-between;align-items:center}
+    .eyebrow{color:${RC_MUTED};font-family:'JetBrains Mono',monospace;font-size:15px;
+      letter-spacing:.12em;font-weight:600}
+    .lockup{display:flex;align-items:center;gap:8px}
+    .lockup svg{display:block}
+    .wordmark{color:${RC_INK};font-size:15px;letter-spacing:.2em}
+    .wordmark b{font-weight:700}
+    .headline{height:${L.headH}px;margin-top:${L.gap1}px;font-family:'Source Serif 4',Georgia,serif;
+      font-weight:400;color:${RC_INK};font-size:34px;line-height:1.25;max-width:1080px;
+      display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .hl{background:${BRAND_AMBER};padding:0 6px;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+    .rows{height:${L.rowsH}px;margin-top:${L.gap2}px;display:flex;flex-direction:column;gap:${L.rowGap}px}
+    .row{display:grid;grid-template-columns:34px 1fr 380px 100px;align-items:center;
+      column-gap:16px;padding:0 14px;border-radius:10px;border:2px solid transparent;box-sizing:border-box}
+    .row.lead{border-color:${BRAND_AMBER};background:${RC_LEAD_TINT}}
+    .rank{width:30px;height:30px;border-radius:50%;border:1.5px solid ${RC_INK};
+      display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;
+      font-size:14px;font-weight:700;color:${RC_INK}}
+    .row.lead .rank{background:${BRAND_AMBER};border-color:${BRAND_AMBER}}
+    .who{display:flex;flex-direction:column;gap:2px;min-width:0}
+    .name{font-weight:600;font-size:19px;color:${RC_INK};white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .sub{font-size:12px;color:${RC_MUTED}}
+    .chip{width:fit-content;padding:1px 6px;border-radius:4px;background:${RC_RULE};
+      font-size:11px;font-weight:700;letter-spacing:.04em;color:${RC_INK}}
+    .track{position:relative;height:12px;border-radius:4px;background:${RC_RULE}}
+    .bar{position:absolute;left:0;top:0;height:100%;border-radius:4px}
+    .val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:18px;color:${RC_INK};text-align:right}
+    .foot{height:${L.footH}px;margin-top:${L.gap3}px;display:flex;justify-content:space-between;
+      align-items:center;gap:24px;border-top:1px solid ${RC_RULE};padding-top:12px}
+    .foot span{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.04em;
+      color:${RC_MUTED};text-transform:uppercase;max-width:520px;white-space:nowrap;
+      overflow:hidden;text-overflow:ellipsis}
+    .foot span.note{text-align:right}
+  </style>
+  <div class="wrap">
+    <div class="top">
+      <span class="eyebrow">${esc(card.eyebrow)}</span>
+      <span class="lockup">${rankedMarkSvg(22)}<span class="wordmark"><b>S</b>OLVENCY</span></span>
+    </div>
+    <div class="headline">${esc(card.headlinePrefix)}<span class="hl">${esc(card.headlineHighlight)}</span>${esc(card.headlineSuffix)}</div>
+    <div class="rows">${rows}</div>
+    <div class="foot"><span>${esc(card.sourceLine)}</span><span class="note">${esc(card.noteLine)}</span></div>
+  </div>`;
+}
+
+function renderRanked(card: RankedCardData) {
+  shot(rankedCardHtml(card), 1200, 630, join(OUT, `${card.key}.png`), 2);
+  return card;
+}
+
+const manifest: { generated_at: string; cards: Record<string, CardData | RankedCardData> } = {
   generated_at: new Date().toISOString(),
   cards: {},
 };
@@ -131,6 +262,20 @@ for (const m of models) {
   const card = render(modelCardData(m));
   manifest.cards[card.key] = card;
   console.log(`${card.key}: "${card.number}" — ${card.claim}`);
+}
+
+const rankedCards: RankedCardData[] = [rankedCostCardData()];
+const harnessCard = rankedHarnessCardData();
+if (harnessCard) rankedCards.push(harnessCard);
+else console.log('ranked-harness: skipped — no model currently has more than one harness result');
+const modelledCard = rankedModelledCardData();
+if (modelledCard) rankedCards.push(modelledCard);
+else console.log('ranked-modelled: skipped — no modelled current models to rank');
+
+for (const card of rankedCards) {
+  renderRanked(card);
+  manifest.cards[card.key] = card;
+  console.log(`${card.key}: ${card.rows.length} rows, #1 "${card.rows[0].name}" ${card.rows[0].value}`);
 }
 
 writeFileSync(join(OUT, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');

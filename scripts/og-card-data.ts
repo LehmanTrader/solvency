@@ -16,9 +16,13 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { headline, fmtX, money, solvedFor } from '../site/src/lib/headline.ts';
-import { models, sourceFor } from '../site/src/lib/data.ts';
+import { headline, fmtX, money, solvedFor, leaderboard } from '../site/src/lib/headline.ts';
+import {
+  models, sourceFor, modelById, tiers, assumptions, results,
+  HARNESS_BENCHMARKS, harnessResultsFor, extrasFor,
+} from '../site/src/lib/data.ts';
 import { BASIS_OF } from '../site/src/lib/charts.ts';
+import { costPerSolvedTask, defaultOptions } from '../site/src/lib/engine.ts';
 
 export const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 export const REPORTS_DIR = join(ROOT, 'reports');
@@ -158,5 +162,193 @@ export function modelCardData(model: any): CardData {
     claim: model.display_name,
     attribution: `list price, no published pass rate · Provider pricing page · verified ${model.last_verified}`,
     raw: { modelId: model.model_id, cost: null, basisKey: null, inputPerMtok: model.input_per_mtok },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Ranked-bar leaderboard cards (design exploration — see scripts/og-cards.ts).
+//
+// One card = one ranked list, one cost basis, one source. Never mixes bases
+// in a single bar list (a chart that did would need every bar color-coded by
+// basis AND the footer stating the split — simpler to keep each card single-
+// basis, same as the existing note/model cards).
+// ---------------------------------------------------------------------------
+
+export type RankedBasis = 'measured' | 'modelled' | 'stale' | 'harness';
+
+export interface RankedRow {
+  id: string;
+  /** Row label: a model's display_name, or (for a harness card) the harness name. */
+  name: string;
+  /** Secondary line under the name, e.g. a harness version. Omit for model rows. */
+  sub?: string;
+  /** Two-letter monogram chip, derived from `provider` — never a scraped logo. */
+  chip?: string;
+  /** $ per solved task. */
+  cost: number;
+  /** money()-formatted, mono. */
+  value: string;
+  basis: RankedBasis;
+  /** Printed nowhere on the card yet; carried for future detail/aria text. */
+  detail: string;
+}
+
+export interface RankedCardData {
+  key: string;
+  eyebrow: string;
+  headlinePrefix: string;
+  /** The one span the headline highlights, brand-amber background. */
+  headlineHighlight: string;
+  headlineSuffix: string;
+  /** Ascending by cost — rows[0] is the #1 (cheapest) row, outlined. */
+  rows: RankedRow[];
+  /** Left footer: "Source: <name> (<domain>)" — rendered in mono caps by the card CSS. */
+  sourceLine: string;
+  /** "NOTE: <metric + verified date>" — right footer. */
+  noteLine: string;
+  raw: Record<string, unknown>;
+}
+
+/** First two letters of the provider id, upper-cased — a monogram, not a logo. */
+const monogram = (provider: string) => provider.slice(0, 2).toUpperCase();
+
+/** Bare hostname of a source URL, for a short "(domain)" footer citation. */
+const domainOf = (url: string) => new URL(url).hostname.replace(/^www\./, '');
+
+/**
+ * All current models with a measured (not modelled, not stale) cost per
+ * solved task, cheapest first. Single basis, single source — verified by
+ * asserting every row shares one benchmark before building the card.
+ */
+export function rankedCostCardData(): RankedCardData {
+  const { measured } = leaderboard('heavy');
+  if (!measured.length) throw new Error('rankedCostCardData: no measured current models to rank');
+  const benchmarks = new Set(measured.map((r) => r.r.benchmark));
+  if (benchmarks.size !== 1) {
+    throw new Error(`rankedCostCardData: measured rows span multiple sources (${[...benchmarks].join(', ')}) — a single-basis card needs one`);
+  }
+  const src = sourceFor([...benchmarks][0]);
+  if (!src) throw new Error('rankedCostCardData: no source metadata for the measured benchmark');
+
+  const rows: RankedRow[] = measured.map((r) => ({
+    id: r.m.model_id,
+    name: r.m.display_name,
+    chip: monogram(r.m.provider),
+    cost: r.cost,
+    value: money(r.cost),
+    basis: 'measured',
+    detail: `${(r.r.pass_rate * 100).toFixed(0)}% pass rate`,
+  }));
+  const leader = rows[0], priciest = rows[rows.length - 1];
+  const spread = fmtX(priciest.cost / leader.cost);
+
+  return {
+    key: 'ranked-cost-per-solved-task',
+    eyebrow: 'COST PER SOLVED TASK · CURRENT MODELS',
+    headlinePrefix: '',
+    headlineHighlight: leader.name,
+    headlineSuffix: ' costs the least per solved task, measured.',
+    rows,
+    // AA's Data Platform Terms s.5 require this exact attribution string,
+    // unparaphrased — it already carries a "(domain)" citation, so it is
+    // used verbatim rather than run through the generic SOURCE: template.
+    sourceLine: src.attribution,
+    noteLine: `NOTE: MEASURED COST PER SOLVED TASK · VERIFIED ${src.last_verified}`,
+    raw: { modelIds: rows.map((r) => r.id), leaderId: leader.id, spread },
+  };
+}
+
+/**
+ * One model, ranked by cost per solved task across every harness it has been
+ * run in. Rows come from HARNESS_BENCHMARKS results only (cost_basis
+ * source_usage_repriced: complete token usage a source observed, repriced at
+ * today's verified prices — no loop or frontier-efficiency assumption).
+ * Returns null (skip, don't fabricate) if no model currently carries more
+ * than one harness result.
+ */
+export function rankedHarnessCardData(): RankedCardData | null {
+  const harnessRows = results.filter((r) => HARNESS_BENCHMARKS.includes(r.benchmark));
+  const modelIds = [...new Set(harnessRows.map((r) => r.model_id))];
+  if (modelIds.length === 0) return null;
+  if (modelIds.length > 1) {
+    throw new Error(`rankedHarnessCardData: ${modelIds.length} models carry harness rows — "same model, four harnesses" needs exactly one`);
+  }
+  const model = modelById(modelIds[0]);
+  if (!model) throw new Error(`rankedHarnessCardData: ${modelIds[0]} is not in data/models.json`);
+  const perHarness = harnessResultsFor(model.model_id);
+  if (perHarness.length < 2) return null;
+
+  const opts = defaultOptions(assumptions);
+  const rows: RankedRow[] = perHarness.map((r) => {
+    const out = costPerSolvedTask(model as any, 'heavy', tiers.heavy, r.pass_rate, opts, extrasFor(r));
+    if (!out.value) throw new Error(`rankedHarnessCardData: ${model.model_id}/${r.harness}: ${out.missing.join('; ')}`);
+    return {
+      id: `${model.model_id}-${r.harness}`,
+      name: r.harness!,
+      sub: r.harness_version,
+      cost: out.value.naive,
+      value: money(out.value.naive),
+      basis: 'harness' as const,
+      detail: `${(r.pass_rate * 100).toFixed(0)}% pass rate`,
+    };
+  }).sort((a, b) => a.cost - b.cost);
+
+  const src = sourceFor(HARNESS_BENCHMARKS[0]);
+  if (!src) throw new Error('rankedHarnessCardData: no source metadata for the harness benchmark');
+  const leader = rows[0], priciest = rows[rows.length - 1];
+  const spread = fmtX(priciest.cost / leader.cost);
+
+  return {
+    key: `ranked-harness-${model.model_id}`,
+    eyebrow: `SAME MODEL, ${rows.length} HARNESSES`,
+    headlinePrefix: '',
+    headlineHighlight: model.display_name,
+    headlineSuffix: `, ${rows.length} harnesses, ${spread} apart on cost.`,
+    rows,
+    sourceLine: `Source: OpenBench harness benchmark (${domainOf(src.source_url)})`,
+    noteLine: `NOTE: OBSERVED-TOKEN COST, CURRENT PRICES · VERIFIED ${src.last_verified}`,
+    raw: { modelId: model.model_id, harnesses: rows.map((r) => r.id), spread },
+  };
+}
+
+/**
+ * All current models whose cost per solved task is modelled_by_solvency (a
+ * published pass rate, but no source-observed cost — Solvency's task-tier
+ * loop model fills the gap). Cheapest first. Kept separate from the measured
+ * card: mixing modelled cost into a measured ranking is exactly the basis
+ * blend the engine's docs forbid.
+ */
+export function rankedModelledCardData(): RankedCardData | null {
+  const { modelled } = leaderboard('heavy');
+  if (!modelled.length) return null;
+  const benchmarks = new Set(modelled.map((r) => r.r.benchmark));
+  if (benchmarks.size !== 1) {
+    throw new Error(`rankedModelledCardData: modelled rows span multiple sources (${[...benchmarks].join(', ')}) — a single-basis card needs one`);
+  }
+  const src = sourceFor([...benchmarks][0]);
+  if (!src) throw new Error('rankedModelledCardData: no source metadata for the modelled benchmark');
+
+  const rows: RankedRow[] = modelled.map((r) => ({
+    id: r.m.model_id,
+    name: r.m.display_name,
+    chip: monogram(r.m.provider),
+    cost: r.cost,
+    value: money(r.cost),
+    basis: 'modelled',
+    detail: `${(r.r.pass_rate * 100).toFixed(0)}% pass rate`,
+  }));
+  const leader = rows[0], priciest = rows[rows.length - 1];
+  const spread = fmtX(priciest.cost / leader.cost);
+
+  return {
+    key: 'ranked-modelled-cost-per-solved-task',
+    eyebrow: 'COST PER SOLVED TASK, MODELLED · LEGACY & PREVIEW MODELS',
+    headlinePrefix: '',
+    headlineHighlight: leader.name,
+    headlineSuffix: ' is cheapest among modelled models.',
+    rows,
+    sourceLine: `Source: Scale SEAL, SWE-bench Pro (${domainOf(src.source_url)})`,
+    noteLine: `NOTE: MODELLED COST, TASK-TIER MODEL · VERIFIED ${src.last_verified}`,
+    raw: { modelIds: rows.map((r) => r.id), leaderId: leader.id, spread },
   };
 }

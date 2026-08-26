@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-25T23:27:56.475Z",
+  "generated_at": "2026-08-26T13:33:17.357Z",
   "cards": {
     "note-01": {
       "key": "note-01",
@@ -244,6 +244,197 @@
         "modelId": "gpt-5.4",
         "cost": 4.187817258883248,
         "basisKey": "modelled_by_solvency"
+      }
+    },
+    "ranked-cost-per-solved-task": {
+      "key": "ranked-cost-per-solved-task",
+      "eyebrow": "COST PER SOLVED TASK · CURRENT MODELS",
+      "headlinePrefix": "",
+      "headlineHighlight": "DeepSeek V4 Flash",
+      "headlineSuffix": " costs the least per solved task, measured.",
+      "rows": [
+        {
+          "id": "deepseek-v4-flash",
+          "name": "DeepSeek V4 Flash",
+          "chip": "DE",
+          "cost": 0.12,
+          "value": "$0.12",
+          "basis": "measured",
+          "detail": "50% pass rate"
+        },
+        {
+          "id": "gemini-3.7-flash",
+          "name": "Gemini 3.7 Flash",
+          "chip": "GO",
+          "cost": 2.1166666666666667,
+          "value": "$2.12",
+          "basis": "measured",
+          "detail": "60% pass rate"
+        },
+        {
+          "id": "grok-4.5",
+          "name": "Grok 4.5",
+          "chip": "XA",
+          "cost": 3.8125,
+          "value": "$3.81",
+          "basis": "measured",
+          "detail": "64% pass rate"
+        },
+        {
+          "id": "gpt-5.6-sol",
+          "name": "GPT-5.6 Sol",
+          "chip": "OP",
+          "cost": 9.876923076923077,
+          "value": "$9.88",
+          "basis": "measured",
+          "detail": "65% pass rate"
+        },
+        {
+          "id": "claude-opus-5",
+          "name": "Claude Opus 5",
+          "chip": "AN",
+          "cost": 12.01470588235294,
+          "value": "$12.01",
+          "basis": "measured",
+          "detail": "68% pass rate"
+        },
+        {
+          "id": "claude-fable-5",
+          "name": "Claude Fable 5",
+          "chip": "AN",
+          "cost": 17.462686567164177,
+          "value": "$17.46",
+          "basis": "measured",
+          "detail": "67% pass rate"
+        }
+      ],
+      "sourceLine": "Source: Artificial Analysis (artificialanalysis.ai)",
+      "noteLine": "NOTE: MEASURED COST PER SOLVED TASK · VERIFIED 2026-08-21",
+      "raw": {
+        "modelIds": [
+          "deepseek-v4-flash",
+          "gemini-3.7-flash",
+          "grok-4.5",
+          "gpt-5.6-sol",
+          "claude-opus-5",
+          "claude-fable-5"
+        ],
+        "leaderId": "deepseek-v4-flash",
+        "spread": "146x"
+      }
+    },
+    "ranked-harness-gpt-5.6-sol": {
+      "key": "ranked-harness-gpt-5.6-sol",
+      "eyebrow": "SAME MODEL, 4 HARNESSES",
+      "headlinePrefix": "",
+      "headlineHighlight": "GPT-5.6 Sol",
+      "headlineSuffix": ", 4 harnesses, 3.8x apart on cost.",
+      "rows": [
+        {
+          "id": "gpt-5.6-sol-Pi",
+          "name": "Pi",
+          "sub": "0.80.10",
+          "cost": 0.36329165625000004,
+          "value": "$0.36",
+          "basis": "harness",
+          "detail": "73% pass rate"
+        },
+        {
+          "id": "gpt-5.6-sol-Claude Code",
+          "name": "Claude Code",
+          "sub": "2.1.214",
+          "cost": 0.4199064857142857,
+          "value": "$0.42",
+          "basis": "harness",
+          "detail": "78% pass rate"
+        },
+        {
+          "id": "gpt-5.6-sol-Grok Build",
+          "name": "Grok Build",
+          "sub": "0.2.103 (89c3d36fb6f1)",
+          "cost": 0.5974231081081082,
+          "value": "$0.60",
+          "basis": "harness",
+          "detail": "82% pass rate"
+        },
+        {
+          "id": "gpt-5.6-sol-Codex",
+          "name": "Codex",
+          "sub": "0.144.5",
+          "cost": 1.37037084375,
+          "value": "$1.37",
+          "basis": "harness",
+          "detail": "73% pass rate"
+        }
+      ],
+      "sourceLine": "Source: OpenBench harness benchmark (openbench.run)",
+      "noteLine": "NOTE: OBSERVED-TOKEN COST, CURRENT PRICES · VERIFIED 2026-08-23",
+      "raw": {
+        "modelId": "gpt-5.6-sol",
+        "harnesses": [
+          "gpt-5.6-sol-Pi",
+          "gpt-5.6-sol-Claude Code",
+          "gpt-5.6-sol-Grok Build",
+          "gpt-5.6-sol-Codex"
+        ],
+        "spread": "3.8x"
+      }
+    },
+    "ranked-modelled-cost-per-solved-task": {
+      "key": "ranked-modelled-cost-per-solved-task",
+      "eyebrow": "COST PER SOLVED TASK, MODELLED · LEGACY & PREVIEW MODELS",
+      "headlinePrefix": "",
+      "headlineHighlight": "GPT-5.4",
+      "headlineSuffix": " is cheapest among modelled models.",
+      "rows": [
+        {
+          "id": "gpt-5.4",
+          "name": "GPT-5.4",
+          "chip": "OP",
+          "cost": 4.187817258883248,
+          "value": "$4.19",
+          "basis": "modelled",
+          "detail": "59% pass rate"
+        },
+        {
+          "id": "gemini-3.1-pro-preview",
+          "name": "Gemini 3.1 Pro (preview)",
+          "chip": "GO",
+          "cost": 4.295010845986985,
+          "value": "$4.30",
+          "basis": "modelled",
+          "detail": "46% pass rate"
+        },
+        {
+          "id": "claude-opus-4-6",
+          "name": "Claude Opus 4.6",
+          "chip": "AN",
+          "cost": 8.670520231213873,
+          "value": "$8.67",
+          "basis": "modelled",
+          "detail": "52% pass rate"
+        },
+        {
+          "id": "claude-opus-4-5",
+          "name": "Claude Opus 4.5",
+          "chip": "AN",
+          "cost": 9.806057964698192,
+          "value": "$9.81",
+          "basis": "modelled",
+          "detail": "46% pass rate"
+        }
+      ],
+      "sourceLine": "Source: Scale SEAL, SWE-bench Pro (labs.scale.com)",
+      "noteLine": "NOTE: MODELLED COST, TASK-TIER MODEL · VERIFIED 2026-08-21",
+      "raw": {
+        "modelIds": [
+          "gpt-5.4",
+          "gemini-3.1-pro-preview",
+          "claude-opus-4-6",
+          "claude-opus-4-5"
+        ],
+        "leaderId": "gpt-5.4",
+        "spread": "2.3x"
       }
     }
   }
