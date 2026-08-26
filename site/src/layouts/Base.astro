@@ -24,8 +24,12 @@ const site = Astro.site!;
 const url = new URL(Astro.url.pathname, site).href;
 const image = new URL(og, site).href;
 const path = Astro.url.pathname;
+// Stage 1.3 (Roy's note 3, 2026-08-26): "Lets rename the build tab to the
+// compose tab." Label only — /build-planner's URL and file path are
+// unchanged for now (see redesign direction doc). This NAV array also
+// drives the footer link list below (same map, same labels).
 const NAV = [
-  ['/', 'Calculator'], ['/build-planner', 'Build'], ['/local-hardware', 'Local rig'], ['/pricing', 'Pricing'], ['/models', 'Models'], ['/compare', 'Compare'],
+  ['/', 'Calculator'], ['/build-planner', 'Compose'], ['/local-hardware', 'Local rig'], ['/pricing', 'Pricing'], ['/models', 'Models'], ['/compare', 'Compare'],
   ['/harness', 'Harness'], ['/methodology', 'Methodology'], ['/research', 'Research'],
 ];
 const DEV = [['/data', 'Data (CC-BY)'], ['/embed', 'Embed'], ['/changelog', 'Changelog']];

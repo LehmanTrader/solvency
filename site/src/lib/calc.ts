@@ -136,8 +136,20 @@ export function calloutHtml(rows: Row[], volume: number): string {
   const best = pool.slice().sort((a, b) => b.r.pass_rate - a.r.pass_rate)[0];
   if (!cheapest || !best) return '<span class="text-[var(--color-muted)]">No model has both a verified price and a published pass rate under these settings.</span>';
   const name = (x: Row) => `<strong>${escapeHtml(x.m.display_name)}</strong>`;
-  if (cheapest.m.model_id === best.m.model_id)
+  if (cheapest.m.model_id === best.m.model_id) {
+    // Stage 1.3 (Roy's note 4, 2026-08-26): "GPT-5.4 is cheapest among
+    // modelled models sounds weird please rewrite that sentence." The old
+    // single sentence below ("X is both the cheapest ... and the highest
+    // pass rate here") read as a benchmark verdict even when the matched
+    // pool was modelled, not measured — nothing ran a cost benchmark on
+    // these rows, so claiming "the highest pass rate here" alongside
+    // "cheapest" sounded like an observed result instead of a priced
+    // estimate. Measured pools keep the direct sentence; modelled/stale
+    // pools name the modelled basis up front instead.
+    if (g!.g.basis !== 'measured')
+      return `No harness has published a cost run for these; our loop model prices ${name(cheapest)} lowest at ${money(cheapest.cost)} per solved task, ${moneyMonth(cheapest.cost * volume)} a month — it also carries the highest published pass rate here.`;
     return `${name(cheapest)} is both the cheapest per solved task and the highest pass rate here — ${money(cheapest.cost)} per solved task, ${moneyMonth(cheapest.cost * volume)} a month.`;
+  }
   const x = best.cost / cheapest.cost;
   const pts = Math.round((best.r.pass_rate - cheapest.r.pass_rate) * 100);
   const forWhat = pts > 0 ? `for ${pts} fewer point${pts === 1 ? '' : 's'} of pass rate` : 'at the same pass rate';
@@ -161,8 +173,13 @@ export function projectTotalHtml(rows: Row[], taskCount: number): string {
   if (!cheapest || !best) return '<span class="text-[var(--color-muted)]">No model has both a verified price and a published pass rate under these settings.</span>';
   const name = (x: Row) => `<strong>${escapeHtml(x.m.display_name)}</strong>`;
   const tasks = Number.isInteger(taskCount) ? taskCount.toLocaleString() : taskCount.toFixed(1);
-  if (cheapest.m.model_id === best.m.model_id)
+  if (cheapest.m.model_id === best.m.model_id) {
+    // Same rewrite as calloutHtml's tie case above (Stage 1.3, Roy's note 4) —
+    // this is the hero's bucket-mode twin of that sentence.
+    if (g!.g.basis !== 'measured')
+      return `No harness has published a cost run for these; our loop model prices ${name(cheapest)} lowest at ${moneyMonth(cheapest.cost * taskCount)} over ~${tasks} tasks — it also carries the highest published pass rate here.`;
     return `${name(cheapest)} is both the cheapest per solved task and the highest pass rate here — ${moneyMonth(cheapest.cost * taskCount)} over ~${tasks} tasks.`;
+  }
   return `${name(cheapest)} ships it for <strong class="t-better">${moneyMonth(cheapest.cost * taskCount)}</strong> against
     ${name(best)} at a pricier <strong class="t-worse">${moneyMonth(best.cost * taskCount)}</strong> — over ~${tasks} tasks.`;
 }

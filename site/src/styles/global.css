@@ -63,21 +63,23 @@
   --color-modelled: var(--color-purple); /* same hue as measured on purpose: the hatch pattern is what reads as "modelled" */
   --color-stale: #A8451B;        /* 5.49:1 on cream — unchanged; stale isn't part of this pivot */
   --color-missing: #5F6B73;      /* 5.06:1 on cream */
-  --color-better: #1B7F4F;       /* 4.63:1 on cream — unchanged: checked against the new red below (stage 1.2), HSL L30/S65 vs the red's L30/S61 is a close lightness/saturation match, a more balanced pair than the old brighter red made — no retune needed */
+  --color-better: #1B7F4F;       /* 4.63:1 on cream — unchanged by the stage-1.3 red swap below */
   /* Stage 1.2 (Roy's note 4, 2026-08-26): "i like the color red used for the
      more expensive price lets come up with a better color red" — the old
-     #A8331B read as alarm/warning-red (HSL L38 S72, brighter and more
-     saturated than --color-better's L30 S65, an unbalanced pair on the
-     verdict line). Replaced with a deep wine/crimson (HSL L30 S61 — a much
-     closer lightness/saturation match to the green), eye-tuned on cream:
-     9.26:1 (AAA even for normal text; the old red cleared AA at 6.15:1). */
-  --color-worse: #7B1E3D;        /* 9.26:1 on cream, 10.02:1 on white cards */
+     #A8331B alarm-red became a deep wine/crimson (#7B1E3D).
+     Stage 1.3 (2026-08-26, Roy's note 2): "i dont like the wine red either,
+     lets make the more expensive number the typical error red." Replaced
+     again with a familiar UI error red — Material Design's red 700
+     (#D32F2F), eye-tuned/picked from the founder-named #D32F2F–#DC2626
+     neighborhood for the better cream contrast at the darker end of that
+     range: 4.60:1 on cream (AA), 4.98:1 on white cards. */
+  --color-worse: #D32F2F;        /* 4.60:1 on cream, 4.98:1 on white cards */
   --color-fresh: #1B7F4F;
   /* Categorical ramp, brand review §4.3. Six is the ceiling; dash carries basis.
      s1/s3/s4/s6 alias the accent/better/worse/missing tokens above; s4 tracks
-     --color-worse's stage-1.2 change so the ramp never carries two reds. */
+     --color-worse's stage-1.3 change so the ramp never carries two reds. */
   --color-s1: #9A6410; --color-s2: #0E6E9E; --color-s3: #1B7F4F;
-  --color-s4: #7B1E3D; --color-s5: #7A3FC0; --color-s6: #5F6B73;
+  --color-s4: #D32F2F; --color-s5: #7A3FC0; --color-s6: #5F6B73;
   --font-mono: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
   --font-sans: "IBM Plex Sans", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-display: "Source Serif 4", ui-serif, "New York", "Iowan Old Style", Charter, Georgia, serif;
@@ -115,11 +117,12 @@
        light value to stay vivid on a near-black ground — 7.20:1 on #0A0C0D. */
     --color-purple: #A78BFA;
     --color-measured: var(--color-purple); --color-modelled: var(--color-purple); --color-stale: #E8895A; --color-missing: #7B858C;
-    /* Stage 1.2: dark-theme derivation of the wine/crimson red above — a
-       lighter rose/raspberry (not the old alarm-orange #FF6B4A) so it stays
-       recognizably the same wine family, lit for a near-black ground. */
-    --color-better: #45C08A; --color-worse: #E1618C; /* 5.87:1 on #0A0C0D, 5.50:1 on #10151A panels */ --color-fresh: #45C08A;
-    --color-s1: #E0A02E; --color-s2: #4CC9F0; --color-s3: #45C08A; --color-s4: #E1618C; --color-s5: #B98CFF; --color-s6: #A9B4BC;
+    /* Stage 1.3: dark-theme derivation of the typical-error-red above — a
+       lighter red (Tailwind's red-400 neighborhood, #F87171) so it reads as
+       the same familiar error-red family, lit for a near-black ground,
+       rather than the old wine's rose/raspberry dark variant. */
+    --color-better: #45C08A; --color-worse: #F87171; /* 7.09:1 on #0A0C0D, 6.63:1 on #10151A panels */ --color-fresh: #45C08A;
+    --color-s1: #E0A02E; --color-s2: #4CC9F0; --color-s3: #45C08A; --color-s4: #F87171; --color-s5: #B98CFF; --color-s6: #A9B4BC;
     color-scheme: dark;
   }
   /* Instant anchor jumps. Smooth scrolling was observed never starting in

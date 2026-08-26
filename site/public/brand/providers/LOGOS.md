@@ -13,6 +13,8 @@ two-letter monogram chip instead of guessing at or redrawing a trademark.
 | `google.svg` | `google` | Simple Icons — `icons/googlegemini.svg` (title "Google Gemini") at `raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/googlegemini.svg` | CC0 1.0 Universal | 2026-08-26 |
 | `mistral.svg` | `mistral` | Simple Icons — `icons/mistralai.svg` (title "Mistral AI") at `raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/mistralai.svg` | CC0 1.0 Universal | 2026-08-26 |
 | `deepseek.svg` | `deepseek` | Simple Icons — `icons/deepseek.svg` at `raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/deepseek.svg` | CC0 1.0 Universal | 2026-08-26 |
+| `openai.svg` | `openai` | OpenAI's icon mark (the interlocking-loop "knot"), isolated as its own path from the combined OpenAI horizontal lockup credited to `openai.com/brand/` and hosted at Wikimedia Commons: `upload.wikimedia.org/wikipedia/commons/d/d3/OpenAI_2017-22_logo.svg` (Commons file `File:OpenAI 2017-22 logo.svg`; Commons `Credit`/`Artist` fields point to OpenAI and `openai.com/brand/`). `openai.com/brand/` itself returned a bot-challenge page (Cloudflare) to every automated fetch attempted for this stage, so the mark was sourced from this Commons-hosted, OpenAI-credited copy of the same official asset rather than hand-redrawn. | Public domain (Commons "PD textlogo"); mark is trademarked — used here nominatively only, see note below | 2026-08-26 |
+| `xai.svg` | `xai` | xAI's own live mark, captured directly from `x.ai/` (rendered by a live browser session, the header/hero mark — a stylized angular "X" in the swept style shared with SpaceX, whose brand xAI now shares corporate ownership with; the page currently titles itself "SpaceXAI"). Path data taken verbatim from the page's own inline SVG at retrieval time. | Official mark, direct from the provider's own site — used here nominatively only, see note below | 2026-08-26 |
 
 Simple Icons license: `raw.githubusercontent.com/simple-icons/simple-icons/develop/LICENSE.md`
 ("CC0 1.0 Universal", checked 2026-08-26).
@@ -42,7 +44,41 @@ project the SVG paths themselves come from), retrieved 2026-08-26:
 These are Simple Icons' own recorded brand colors, not colors picked by
 Solvency — same nominative-use basis as the marks themselves (§ above).
 
-## No clean asset — monogram fallback
+### Stage 1.3 (2026-08-26, Roy's note 1): OpenAI and xAI get their real marks
+
+Roy: "the grok logo is the spacex logo not just a red box with XA, the openai
+logo needs to be the open ai logo not just a green box with OP." Both are
+now vendored SVGs in `PROVIDER_MARKS` (`site/src/lib/providers.ts`), routed
+through the same `chipMarkup()`/`LogoChip.astro` path every other provider
+uses — same fixed near-white chip square (`#F4F3F1`), same theme-independent
+legibility in light and dark (see the "served from `public/`" note above;
+nothing provider-specific was needed for dark-theme contrast because that
+square never changes with the site theme).
+
+Both marks are **near-monochrome** in their own official use (OpenAI's knot
+has no brand color, just black; xAI's mark uses `currentColor`, rendered
+`rgb(10,10,10)` on `x.ai`'s own white background) — the vendored files below
+bake in a fixed dark fill (`openai.svg` → `#000000`, matching the source
+file's own unset/default fill; `xai.svg` → `#0A0A0A`, the exact computed
+color read off `x.ai`'s live DOM) rather than an invented brand hex. Because
+the chip square these marks sit on is always the same fixed near-white
+(`#F4F3F1`) regardless of site theme, that dark-on-near-white pairing is
+already the "white-on-dark" legibility case solved structurally — no
+separate dark-theme fill variant was needed the way it would be if the mark
+were ever drawn directly on the page background.
+
+Both files are used **nominatively only**: they identify which lab trained a
+model, in a table cell, chart marker, or share card; nothing here implies
+sponsorship or endorsement by OpenAI or xAI, and neither mark is
+redistributed as a downloadable asset — it is inlined into Solvency's own
+UI only, the same basis every other mark in this file already stands on.
+
+## No clean asset — monogram fallback (historical: stage 1–1.2 only)
+
+**Superseded by Stage 1.3 above** — `openai` and `xai` both moved into
+`PROVIDER_MARKS` with real vendored marks on 2026-08-26. This section stays
+as the record of why they started as monograms and is the pattern to reuse
+if a future provider ships with no clean asset yet.
 
 | Provider (data/models.json) | Why | Fallback |
 |---|---|---|
@@ -52,7 +88,7 @@ Solvency — same nominative-use basis as the marks themselves (§ above).
 Revisit both in a later stage once an official, redistributable brand-kit SVG
 is sourced and reviewed (see direction doc §4: "official brand/press kits").
 
-### Stage 1.2 (2026-08-26, Roy's note 1): monogram chip colors
+### Stage 1.2 (2026-08-26, Roy's note 1): monogram chip colors (historical, superseded — see Stage 1.3 above)
 
 `openai` and `xai` still have no clean vendored mark, so their chip is a
 colored square with a plain two-letter monogram rather than a logo image.

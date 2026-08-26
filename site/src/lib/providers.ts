@@ -7,18 +7,20 @@
  * Both call chipMarkup() below so the chip looks identical everywhere.
  *
  * Vendored marks (site/public/brand/providers/*.svg, see LOGOS.md there) are
- * used only for providers with a license-clean asset. Every other provider —
- * currently openai and xai, neither of which has a usable Simple Icons entry
- * or a vendored press-kit asset yet — gets a colored two-letter monogram
- * chip instead: never a scraped, hotlinked, or hand-redrawn trademark.
+ * used only for providers with a license-clean asset. As of stage 1.3, every
+ * tracked provider (including openai and xai, added that stage — see
+ * LOGOS.md) has one. Any future provider with no clean asset yet falls back
+ * to a colored two-letter monogram chip instead: never a scraped, hotlinked,
+ * or hand-redrawn trademark.
  *
  * Stage 1.2 (Roy's note 1, 2026-08-26): "the logos next to the model names
- * should be in color not in black and white." Each vendored mark now bakes
- * in that provider's official Simple Icons brand hex (see LOGOS.md for the
- * source + retrieval date per file) instead of a flat near-black fill. The
- * two monogram-only providers have no official color to draw from, so each
- * gets a distinct, tasteful chip-background color that LOGOS.md documents
- * as Solvency's own assignment — never presented as an official brand color.
+ * should be in color not in black and white." Each Simple-Icons-sourced mark
+ * bakes in that provider's official Simple Icons brand hex (see LOGOS.md for
+ * the source + retrieval date per file) instead of a flat near-black fill.
+ * Stage 1.3 added openai and xai as real vendored marks too (see LOGOS.md);
+ * both are near-monochrome in official use, so their fill is a fixed dark
+ * neutral rather than an invented brand hex — legible either way because the
+ * chip square beneath every mark is always the same fixed near-white.
  *
  * The vendored SVGs are served from /public as plain <img>/<image> sources.
  * An externally-referenced SVG image cannot inherit the host page's
@@ -37,6 +39,12 @@ export const PROVIDER_MARKS: Record<string, ProviderMark> = {
   google: { file: '/brand/providers/google.svg', alt: 'Google Gemini' },
   mistral: { file: '/brand/providers/mistral.svg', alt: 'Mistral AI' },
   deepseek: { file: '/brand/providers/deepseek.svg', alt: 'DeepSeek' },
+  // Stage 1.3 (Roy's note 1, 2026-08-26): "the grok logo is the spacex logo
+  // not just a red box with XA, the openai logo needs to be the open ai logo
+  // not just a green box with OP." Both marks below are vendored from
+  // official sources (see LOGOS.md) rather than the monogram fallback.
+  openai: { file: '/brand/providers/openai.svg', alt: 'OpenAI' },
+  xai: { file: '/brand/providers/xai.svg', alt: 'xAI' },
 };
 
 /** Display label for every provider id in data/models.json, including monogram-only ones. */
@@ -54,17 +62,14 @@ export const CHIP_BORDER = '#CFCCC6';
 export const CHIP_INK = '#1A1D20';
 
 /**
- * Solvency-assigned chip colors for providers with no clean vendored mark
- * (see LOGOS.md "No clean asset — monogram fallback" for the record of
- * intent: distinct, tasteful, never claimed as the provider's own brand
- * color). Both pass WCAG AA (>=4.5:1) against the white monogram letters
- * they carry, and neither hue collides with an existing vendored mark or
- * with the site's purple/amber accent system.
+ * Solvency-assigned chip colors for providers with no clean vendored mark.
+ * Stage 1.3: openai and xai now have vendored official marks (above), so
+ * this map is empty — kept as the fallback path for any future provider
+ * that ships with no clean asset (see LOGOS.md "No clean asset — monogram
+ * fallback" for the record of intent behind the two colors that used to
+ * live here).
  */
-export const MONOGRAM_COLORS: Record<string, string> = {
-  openai: '#0F7A63', // deep teal-green — 5.27:1 vs white text
-  xai: '#9C4A75', // deep plum-rose — 5.75:1 vs white text
-};
+export const MONOGRAM_COLORS: Record<string, string> = {};
 const MONOGRAM_TEXT = '#FFFFFF';
 
 /**
