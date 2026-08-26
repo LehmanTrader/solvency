@@ -4,12 +4,22 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import type { Model, BenchmarkResult, TaskTier, TierName, Provenance } from './types.ts';
 
-const DATA = join(dirname(fileURLToPath(import.meta.url)), '..', 'data');
+/**
+ * SOLVENCY_DATA_DIR lets tests point this loader at a fixture data/ directory
+ * (e.g. a temp copy of models.json with a deliberately wrong price) instead of
+ * the repo's real data/. Unset in normal use -- production and every existing
+ * caller resolve the real ../data exactly as before.
+ */
+const DATA = process.env.SOLVENCY_DATA_DIR
+  ? process.env.SOLVENCY_DATA_DIR
+  : join(dirname(fileURLToPath(import.meta.url)), '..', 'data');
 const read = (f: string) => JSON.parse(readFileSync(join(DATA, f), 'utf8'));
 
 export const modelsFile = read('models.json');
 export const benchmarksFile = read('benchmarks.json');
 export const assumptions = read('assumptions.json');
+export const changelogFile = read('changelog.json');
+export const changelog: { date: string; kind: string; summary: string; detail: string }[] = changelogFile.entries;
 
 export const models: Model[] = modelsFile.models;
 export const results: BenchmarkResult[] = benchmarksFile.results;

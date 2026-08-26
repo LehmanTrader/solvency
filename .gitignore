@@ -18,3 +18,8 @@ site/public/og/
 docs/
 purge-docs.sh
 .shots/
+
+# Approval queue: drafts and delta-diffing state are an operator's working
+# files, never repo history. Keep only the convention doc tracked.
+queue/**
+!queue/README.md

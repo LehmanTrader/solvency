@@ -24,6 +24,8 @@
     "budget": "node scripts/bench-budget.ts",
     "docx": "node scripts/docx.ts",
     "watch": "node scripts/watch-prices.ts",
+    "queue:miner": "node scripts/content-miner.ts",
+    "queue:price-watch": "node scripts/price-watch-draft.ts",
     "site": "cd site && npm run build"
   }
 }
