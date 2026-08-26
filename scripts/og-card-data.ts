@@ -12,7 +12,7 @@
  * No number is authored by hand; a note whose description does not carry the
  * expected figure throws rather than silently guessing.
  */
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { fmtX, money, leaderboard } from '../site/src/lib/headline.ts';
@@ -402,6 +402,46 @@ export function rankedHarnessCardData(): RankedCardData | null {
     sourceLine: `Source: OpenBench harness benchmark (${domainOf(src.source_url)})`,
     noteLine: `NOTE: OBSERVED-TOKEN COST, CURRENT PRICES · VERIFIED ${src.last_verified}`,
     raw: { modelId: model.model_id, harnesses: rows.map((r) => r.id), spread },
+  };
+}
+
+/**
+ * The first-party five-arm harness card: Solvency's own single-turn run of one
+ * model through bare API + four harnesses (data/harness-study/solvency-bench-v0.json).
+ * Own population — never merged with the OpenBench rankedHarnessCardData() card.
+ */
+export function rankedSolvencyHarnessCardData(): RankedCardData | null {
+  const studyPath = join(ROOT, 'data', 'harness-study', 'solvency-bench-v0.json');
+  if (!existsSync(studyPath)) return null;
+  const study = JSON.parse(readFileSync(studyPath, 'utf8'));
+  const armName = (h: string | null) => h === null ? 'API, no harness'
+    : h === 'aider' ? 'Aider' : h === 'codex' ? 'Codex'
+    : h === 'opencode' ? 'OpenCode' : h === 'hermes' ? 'Hermes Agent' : h;
+  const arms = [...study.arms].sort((a: any, b: any) => a.cost_per_solved_usd - b.cost_per_solved_usd);
+  if (arms.length < 2) return null;
+  const modelId = String(arms[0].model).replace(/^[^/]+\//, '');
+  const model = modelById(modelId);
+  if (!model) throw new Error(`rankedSolvencyHarnessCardData: ${modelId} is not in data/models.json`);
+  const rows: RankedRow[] = arms.map((a: any) => ({
+    id: `${modelId}-${a.harness ?? 'bare'}`,
+    name: armName(a.harness),
+    sub: a.harness_version,
+    cost: a.cost_per_solved_usd,
+    value: `$${a.cost_per_solved_usd.toFixed(4)}`,
+    basis: 'harness' as const,
+    detail: `${(a.pass_rate * 100).toFixed(0)}% pass rate`,
+  }));
+  const spread = fmtX(rows[rows.length - 1].cost / rows[0].cost);
+  return {
+    key: `ranked-harness-solvency-${modelId}`,
+    eyebrow: `SAME MODEL, ${rows.length} HARNESS ARMS · COST PER SOLVED TASK`,
+    headlinePrefix: '',
+    headlineHighlight: model.display_name,
+    headlineSuffix: `, ${rows.length} harness arms, ${spread} apart on cost — measured by Solvency.`,
+    rows,
+    sourceLine: `Source: Solvency Bench v0 — run by Solvency, ${study.run_date}`,
+    noteLine: 'NOTE: HARNESS-REPORTED USAGE × VERIFIED CATALOG PRICES · OWN POPULATION',
+    raw: { modelId, arms: rows.map((r) => r.id), spread },
   };
 }
 

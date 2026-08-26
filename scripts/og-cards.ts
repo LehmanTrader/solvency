@@ -32,7 +32,7 @@ import { pathToFileURL } from 'node:url';
 import { join } from 'node:path';
 import {
   ROOT, allReportFrontmatter, noteCardData, homeCardData, currentModels, modelCardData,
-  rankedCostCardData, rankedHarnessCardData, rankedModelledCardData,
+  rankedCostCardData, rankedHarnessCardData, rankedSolvencyHarnessCardData, rankedModelledCardData,
   type RankedCardData, type RankedRow, type RankedBasis,
 } from './og-card-data.ts';
 
@@ -275,6 +275,9 @@ const rankedCards: RankedCardData[] = [rankedCostCardData()];
 const harnessCard = rankedHarnessCardData();
 if (harnessCard) rankedCards.push(harnessCard);
 else console.log('ranked-harness: skipped — no model currently has more than one harness result');
+const solvencyHarnessCard = rankedSolvencyHarnessCardData();
+if (solvencyHarnessCard) rankedCards.push(solvencyHarnessCard);
+else console.log('ranked-harness-solvency: skipped — no first-party harness study on disk');
 const modelledCard = rankedModelledCardData();
 if (modelledCard) rankedCards.push(modelledCard);
 else console.log('ranked-modelled: skipped — no modelled current models to rank');

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-26T22:33:54.982Z",
+  "generated_at": "2026-08-26T23:18:09.020Z",
   "cards": {
     "note-01": {
       "key": "note-01",
@@ -35382,6 +35382,73 @@
           "gpt-5.6-sol-Codex"
         ],
         "spread": "3.8x"
+      }
+    },
+    "ranked-harness-solvency-gpt-5.6-sol": {
+      "key": "ranked-harness-solvency-gpt-5.6-sol",
+      "eyebrow": "SAME MODEL, 5 HARNESS ARMS · COST PER SOLVED TASK",
+      "headlinePrefix": "",
+      "headlineHighlight": "GPT-5.6 Sol",
+      "headlineSuffix": ", 5 harness arms, 7.7x apart on cost — measured by Solvency.",
+      "rows": [
+        {
+          "id": "gpt-5.6-sol-aider",
+          "name": "Aider",
+          "sub": "aider 0.86.2",
+          "cost": 0.009326250000000001,
+          "value": "$0.0093",
+          "basis": "harness",
+          "detail": "100% pass rate"
+        },
+        {
+          "id": "gpt-5.6-sol-bare",
+          "name": "API, no harness",
+          "sub": null,
+          "cost": 0.009459999999999998,
+          "value": "$0.0095",
+          "basis": "harness",
+          "detail": "100% pass rate"
+        },
+        {
+          "id": "gpt-5.6-sol-codex",
+          "name": "Codex",
+          "sub": "codex-cli 0.150.0",
+          "cost": 0.024755666666666665,
+          "value": "$0.0248",
+          "basis": "harness",
+          "detail": "100% pass rate"
+        },
+        {
+          "id": "gpt-5.6-sol-opencode",
+          "name": "OpenCode",
+          "sub": "1.18.20",
+          "cost": 0.03637583333333335,
+          "value": "$0.0364",
+          "basis": "harness",
+          "detail": "100% pass rate"
+        },
+        {
+          "id": "gpt-5.6-sol-hermes",
+          "name": "Hermes Agent",
+          "sub": "Hermes Agent v0.20.5 (2026.8.19)",
+          "cost": 0.07166083333333334,
+          "value": "$0.0717",
+          "basis": "harness",
+          "detail": "100% pass rate"
+        }
+      ],
+      "sourceLine": "Source: Solvency Bench v0 — run by Solvency, 2026-08-26",
+      "noteLine": "NOTE: HARNESS-REPORTED USAGE × VERIFIED CATALOG PRICES · OWN POPULATION",
+      "raw": {
+        "modelId": "gpt-5.6-sol",
+        "arms": [
+          "gpt-5.6-sol-aider",
+          "gpt-5.6-sol-bare",
+          "gpt-5.6-sol-codex",
+          "gpt-5.6-sol-opencode",
+          "gpt-5.6-sol-hermes"
+        ],
+        "spread": "7.7x"
       }
     },
     "ranked-modelled-cost-per-solved-task": {

@@ -22,6 +22,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   ROOT, allReportFrontmatter, noteCardData, homeCardData, currentModels, modelCardData,
+  rankedSolvencyHarnessCardData,
 } from '../scripts/og-card-data.ts';
 import { leaderboard } from '../site/src/lib/headline.ts';
 
@@ -73,6 +74,15 @@ describe('og cards: manifest matches the live data', () => {
     assert.equal(expected.rows.length, Math.min(9, measured.length), 'home: shown rows disagree with the capped excerpt of leaderboard(\'heavy\').measured');
     assert.deepEqual(expected.raw.allModelIds, measured.map((r: any) => r.m.model_id), 'home: full measured set disagrees with leaderboard(\'heavy\').measured computed here');
     assert.equal(expected.rows[0].id, measured[0].m.model_id, 'home: #1 row disagrees with leaderboard(\'heavy\').measured computed here');
+  });
+
+  test('the first-party harness card matches the study computed now', () => {
+    const expected = rankedSolvencyHarnessCardData();
+    assert.ok(expected, 'expected a first-party harness study on disk');
+    assertRankedCardMatches(expected!.key, cards[expected!.key], expected);
+    // spread pinned to the study itself, same figure Note 02 publishes
+    assert.equal(expected!.raw.spread, '7.7x');
+    assert.equal(expected!.rows.length, 5);
   });
 
   test('every current model has a card, and each matches modelCardData() computed now', () => {
