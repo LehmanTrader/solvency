@@ -135,18 +135,20 @@ const RC_PURPLE = '#6C3BF4', RC_STALE = '#E8895A';
 const RC_LEAD_TINT = 'rgba(224,160,46,0.10)';
 
 /**
- * Colored provider chips (direction doc §4), mirroring site/src/lib/providers.ts
- * on redesign-arena so cards and site agree once merged: vendored marks (their
- * own official brand hex, see site/public/brand/providers/LOGOS.md, copied into
- * this branch) for providers with a license-clean asset; a Solvency-assigned
- * monogram color — never presented as an official brand color — for the two
- * that don't (openai, xai).
+ * Colored provider chips (direction doc §4), mirroring site/src/lib/providers.ts's
+ * chipMarkup() so cards and site agree: vendored marks (their own official
+ * brand hex/color, see site/public/brand/providers/LOGOS.md) for every
+ * tracked provider. As of stage 1.3, that is all six providers in
+ * data/models.json (openai and xai included — real vendored marks, not the
+ * MONOGRAM_COLORS chips they used before) — MONOGRAM_COLORS stays only as
+ * the fallback for any future provider with no clean asset yet.
  */
 const PROVIDER_MARK_FILES: Record<string, string> = {
   anthropic: 'anthropic.svg', google: 'google.svg', mistral: 'mistral.svg', deepseek: 'deepseek.svg',
+  openai: 'openai.svg', xai: 'xai.png',
 };
 const CHIP_BG = '#F4F3F1', CHIP_BORDER = '#CFCCC6';
-const MONOGRAM_COLORS: Record<string, string> = { openai: '#0F7A63', xai: '#9C4A75' };
+const MONOGRAM_COLORS: Record<string, string> = {};
 
 function chipHtml(provider: string | undefined, text: string): string {
   const markFile = provider ? PROVIDER_MARK_FILES[provider] : undefined;
