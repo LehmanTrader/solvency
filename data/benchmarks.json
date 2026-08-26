@@ -6,7 +6,8 @@
     "measured_by_source": "The source ran the model and observed the cost. Uses real token usage; no Solvency loop-count assumption applies. Priced at the source's own pricing snapshot, which Solvency cannot recompute without per-model token counts.",
     "source_usage_repriced": "The source measured complete per-attempt token usage. Solvency divides aggregate usage by countable attempts and applies the model's current verified input, cached-input and output prices. No task-tier, loop-count, cache-hit or frontier-efficiency assumption applies.",
     "modelled_by_solvency": "The source publishes only a pass rate. Cost comes from Solvency's loop model (an ASSUMPTION) times current verified prices.",
-    "historical_at_run_date": "The source published a cost, but at the prices in force on run_date. Never displayed as a current figure."
+    "historical_at_run_date": "The source published a cost, but at the prices in force on run_date. Never displayed as a current figure.",
+    "measured_by_solvency": "Solvency ran the benchmark itself (bench/ in this repository) and observed the usage; dollars are that usage priced at verified catalog list rates. First-party population — never ranked against measured_by_source rows from third-party task populations."
   },
   "sources": [
     {
@@ -146,6 +147,55 @@
       "newest_entry_date": "2025-10-03",
       "newest_entry_confidence": "exact",
       "newest_entry_note": "Verified against the raw leaderboard YAML; newest of all entries."
+    },
+    {
+      "benchmark": "solvency-bench-v0",
+      "name": "Solvency Bench — single-turn suite (solvency-bench-v0)",
+      "version": "v0",
+      "tasks_n": 12,
+      "attempts_per_task": 3,
+      "scoring": "pass@1 across 12 single-turn code tasks, 3 trials each; deterministic hidden-test graders, temperature 0; cost = harness- or API-reported token usage x verified catalog list prices.",
+      "measures": [
+        "pass rate",
+        "cost per task (USD)",
+        "cost per solved task (USD)"
+      ],
+      "source_url": "https://github.com/LehmanTrader/solvency/tree/main/bench",
+      "attribution": "Solvency Bench (solvency.dev) — first-party measurement",
+      "attribution_url": "https://solvency.dev/research/same-model-four-harnesses",
+      "last_verified": "2026-08-26",
+      "redistributable": true,
+      "notes": "Solvency's own instrument: suite, graders and journals in bench/ of this repository. Its own population — measures single-turn correctness, never comparable with the AA agentic index, OpenBench or WildClawBench populations. Cache writes priced at the uncached input rate (stated).",
+      "caveats": [
+        "Single-turn correctness only: no tool use, no iteration — a floor, not an agentic workload. Never comparable with the AA index, OpenBench or WildClawBench populations.",
+        "12 tasks x 3 trials gives a ±27pp worst-case 95% CI: a smoke-signal tier, stated as such, never dressed up as a leaderboard.",
+        "Cache writes are priced at the uncached input rate; vendors' write premiums are not modelled (stated per run).",
+        "Subscription-harness arms measure the model+harness pair via subscription_usage_repriced; the flat fee never enters the math."
+      ]
+    },
+    {
+      "benchmark": "solvency-bench-a1",
+      "name": "Solvency Bench — agentic suite (solvency-bench-a1)",
+      "version": "a1",
+      "tasks_n": 8,
+      "attempts_per_task": 1,
+      "scoring": "pass@1 across 8 agentic repository tasks via the model-agnostic solvency-loop tool harness; hidden test suites injected after the agent finishes, run in a network-less container; cost = metered usage x verified catalog list prices.",
+      "measures": [
+        "pass rate",
+        "cost per task (USD)",
+        "cost per solved task (USD)"
+      ],
+      "source_url": "https://github.com/LehmanTrader/solvency/tree/main/bench",
+      "attribution": "Solvency Bench (solvency.dev) — first-party measurement",
+      "attribution_url": "https://solvency.dev/research/same-model-four-harnesses",
+      "last_verified": "2026-08-26",
+      "redistributable": true,
+      "notes": "Solvency's own instrument: suite, graders and journals in bench/ of this repository. Its own population — measures single-turn correctness, never comparable with the AA agentic index, OpenBench or WildClawBench populations. Cache writes priced at the uncached input rate (stated).",
+      "caveats": [
+        "8 agentic tasks at 1 trial: a pipeline-proving tranche (±35pp-class CI), growing to the 30-task screening tier. Never presented as a leaderboard at this size.",
+        "The solvency-loop reference harness is deliberately minimal; results measure the model under an equal scaffold, not any commercial harness's behaviour.",
+        "Hidden tests are injected only after the agent finishes; task code executes network-less in a container."
+      ]
     }
   ],
   "sources_evaluated_and_rejected": [
@@ -857,6 +907,86 @@
       "date_basis": "date_observed_on_source_page",
       "source_url": "https://artificialanalysis.ai/agents/coding-agents",
       "redistributable": false
+    },
+    {
+      "model_id": "glm-5.3-flash",
+      "harness": null,
+      "harness_version": null,
+      "harness_config": "bare API single call via OpenRouter; temperature 0; max_tokens 8000",
+      "entry_label": "API, no harness - glm-5.3-flash",
+      "benchmark": "solvency-bench-v0",
+      "pass_rate": 1.0,
+      "pass_rate_derivation": "36 solved / 36 countable attempts",
+      "attempts_n": 36,
+      "countable_attempts_n": 36,
+      "solved_attempts_n": 36,
+      "measured_cost_per_task_usd": 0.0008,
+      "cost_basis": "measured_by_solvency",
+      "tasks_n": 12,
+      "run_date": "2026-08-26",
+      "date_basis": "run_executed_by_solvency",
+      "source_url": "https://github.com/LehmanTrader/solvency/tree/main/bench",
+      "redistributable": true
+    },
+    {
+      "model_id": "deepseek-v4-flash",
+      "harness": null,
+      "harness_version": null,
+      "harness_config": "bare API single call via OpenRouter; temperature 0; max_tokens 8000",
+      "entry_label": "API, no harness - deepseek-v4-flash",
+      "benchmark": "solvency-bench-v0",
+      "pass_rate": 0.9167,
+      "pass_rate_derivation": "33 solved / 36 countable attempts",
+      "attempts_n": 36,
+      "countable_attempts_n": 36,
+      "solved_attempts_n": 33,
+      "measured_cost_per_task_usd": 0.0064,
+      "cost_basis": "measured_by_solvency",
+      "tasks_n": 12,
+      "run_date": "2026-08-26",
+      "date_basis": "run_executed_by_solvency",
+      "source_url": "https://github.com/LehmanTrader/solvency/tree/main/bench",
+      "redistributable": true
+    },
+    {
+      "model_id": "kimi-k3",
+      "harness": null,
+      "harness_version": null,
+      "harness_config": "bare API single call via OpenRouter; temperature 0; max_tokens 8000",
+      "entry_label": "API, no harness - kimi-k3",
+      "benchmark": "solvency-bench-v0",
+      "pass_rate": 1.0,
+      "pass_rate_derivation": "36 solved / 36 countable attempts",
+      "attempts_n": 36,
+      "countable_attempts_n": 36,
+      "solved_attempts_n": 36,
+      "measured_cost_per_task_usd": 0.0094,
+      "cost_basis": "measured_by_solvency",
+      "tasks_n": 12,
+      "run_date": "2026-08-26",
+      "date_basis": "run_executed_by_solvency",
+      "source_url": "https://github.com/LehmanTrader/solvency/tree/main/bench",
+      "redistributable": true
+    },
+    {
+      "model_id": "glm-5.3-flash",
+      "harness": "solvency-loop",
+      "harness_version": "1",
+      "harness_config": "model-agnostic reference tool loop; docker --network none; hidden tests injected post-run",
+      "entry_label": "solvency-loop - glm-5.3-flash",
+      "benchmark": "solvency-bench-a1",
+      "pass_rate": 1.0,
+      "pass_rate_derivation": "8 solved / 8 countable attempts",
+      "attempts_n": 8,
+      "countable_attempts_n": 8,
+      "solved_attempts_n": 8,
+      "measured_cost_per_task_usd": 0.0011,
+      "cost_basis": "measured_by_solvency",
+      "tasks_n": 8,
+      "run_date": "2026-08-26",
+      "date_basis": "run_executed_by_solvency",
+      "source_url": "https://github.com/LehmanTrader/solvency/tree/main/bench",
+      "redistributable": true
     }
   ]
 }

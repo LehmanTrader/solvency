@@ -87,7 +87,7 @@ model priced at today's verified rates. The assumptions are listed in full in th
 > measured on 326 agentic tasks; B is our loop model applied to a pass rate from a different
 > benchmark. Read each table against itself only.
 
-**Not in either table:** the remaining 371 priced, current models in the catalog — which,
+**Not in either table:** the remaining 370 priced, current models in the catalog — which,
 as of 2026-08-26, spans every text model listed on OpenRouter plus vendor-direct rows.
 Widely used names sit in this set: Claude Sonnet 5, Claude Haiku 4.5, GPT-5.3 Codex,
 GLM-5.3, MiniMax M3, the Llama 4 line, and hundreds more. None has a published pass rate
@@ -174,7 +174,7 @@ Two further consequences of the staleness, visible in our own data:
 
 Stated plainly, because a methodology section that only lists strengths is marketing.
 
-- **371 of 387 current, priced models have no pass rate anywhere we could find.** Sonnet 5 and
+- **370 of 387 current, priced models have no pass rate anywhere we could find.** Sonnet 5 and
   Haiku 4.5 in particular are widely used and entirely absent from this analysis.
 - **Measured rows are harness+model pairs, not models.** "Claude Code + Opus 5" is not a
   property of Opus 5. Artificial Analysis's own harness comparison shows that holding the model

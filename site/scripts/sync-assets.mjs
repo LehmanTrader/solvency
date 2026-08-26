@@ -18,6 +18,8 @@ const jobs = [
   // datasets are copied in so the client bundle can import them; the repo's
   // /data remains canonical and is the only place they are edited
   { from: join(repo, 'data'), to: join(here, '..', 'src', 'data'), ext: '.json' },
+  // first-party harness studies (bench exports) power /harness's Solvency section
+  { from: join(repo, 'data', 'harness-study'), to: join(here, '..', 'src', 'data', 'harness-study'), ext: '.json' },
 ];
 
 for (const { from, to, ext } of jobs) {
@@ -39,10 +41,19 @@ const benchPath = join(repo, 'data', 'benchmarks.json');
 const models = JSON.parse(readFileSync(modelsPath, 'utf8'));
 const bench = JSON.parse(readFileSync(benchPath, 'utf8'));
 
-const notRedistributable = bench.results.filter((r) => r.redistributable !== false);
+// Third-party rows must be redistributable:false (cited, never re-served).
+// First-party Solvency Bench rows (2026-08-26) are our own measurements and
+// carry redistributable:true — they ship in the open export below.
+const firstParty = (r) => String(r.benchmark ?? '').startsWith('solvency-bench');
+const notRedistributable = bench.results.filter((r) => !firstParty(r) && r.redistributable !== false);
 if (notRedistributable.length) {
-  throw new Error(`refusing to build: ${notRedistributable.length} benchmark rows are not marked redistributable:false`);
+  throw new Error(`refusing to build: ${notRedistributable.length} third-party benchmark rows are not marked redistributable:false`);
 }
+const misflagged = bench.results.filter((r) => firstParty(r) && r.redistributable !== true);
+if (misflagged.length) {
+  throw new Error(`refusing to build: ${misflagged.length} first-party rows are not marked redistributable:true`);
+}
+const firstPartyRows = bench.results.filter(firstParty);
 
 const outData = join(here, '..', 'public', 'data');
 mkdirSync(outData, { recursive: true });
@@ -51,11 +62,12 @@ const payload = {
   name: 'Solvency model pricing dataset',
   license: 'CC-BY-4.0',
   attribution: 'Source: Solvency (solvency.dev)',
-  note: 'Prices verified against each provider\'s own pricing page on the last_verified date. Benchmark pass rates are NOT included: they are third-party and are cited and linked rather than redistributed.',
-  generated_from: 'data/models.json',
+  note: 'Prices verified against each provider\'s own pricing page on the last_verified date. Third-party benchmark pass rates are NOT included: they are cited and linked rather than redistributed. First-party Solvency Bench results (measured_by_solvency) are included under the same CC-BY license.',
+  generated_from: 'data/models.json + data/benchmarks.json (first-party rows only)',
   schema_version: models.$schema_version,
   price_basis: models.price_basis,
   models: models.models,
+  solvency_bench_results: firstPartyRows,
 };
 writeFileSync(join(outData, 'models.json'), JSON.stringify(payload, null, 2) + '\n');
 
@@ -63,4 +75,4 @@ const cols = ['model_id','provider','display_name','status','capability_class','
 const esc = (v) => v === null || v === undefined ? '' : (/[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g,'""')}"` : String(v));
 const csv = [cols.join(','), ...models.models.map((m) => cols.map((c) => esc(m[c])).join(','))].join('\n') + '\n';
 writeFileSync(join(outData, 'models.csv'), csv);
-console.log(`exported ${models.models.length} priced models to public/data (CC-BY); 0 benchmark rows`);
+console.log(`exported ${models.models.length} priced models + ${firstPartyRows.length} first-party bench rows to public/data (CC-BY)`);

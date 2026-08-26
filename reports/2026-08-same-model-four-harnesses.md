@@ -1,43 +1,72 @@
 ---
-title: Same Model, Six Harnesses
+title: Same Model, Eight Harnesses
 note: 2
 date: 2026-08-26
-description: Two independent benchmarks, six coding harnesses, one result twice over — hold the model constant, change only the harness, and the bill per solved task moves by 2x to 3.8x.
+description: Three benchmarks, eight coding harnesses, one result three times over — hold the model constant, change only the scaffold, and the bill moves 3.8x, 2.8x, and in Solvency's own measurements 7.7x.
 price_verified: 2026-08-21
 pdf_verified: 2026-08-26
-pdf_sources: OpenBench · WildClawBench
-pdf_method: usage × price · source-measured
+pdf_sources: OpenBench · WildClawBench · Solvency Bench
+pdf_method: usage × price · source-measured · first-party
 pdf_status: Phase 1 — harness
 pdf_tagline: The harness changes the bill.
-pdf_hero: SAME MODEL|SIX HARNESSES
+pdf_hero: SAME MODEL|EIGHT HARNESSES
 ---
 
-# Same Model, Six Harnesses
+# Same Model, Eight Harnesses
 
-**Two benchmarks that have never met, six coding harnesses between them, the same result
-twice.** OpenBench ran GPT-5.6 Sol through four harnesses and published the token usage;
-Solvency repriced that usage at the model's API rates verified 2026-08-21. WildClawBench
-(InternLM) ran four models — each held constant — through four harnesses, including the two
-this note previously could not cover: **Hermes Agent and OpenClaw**. The two populations are
-reported separately below and never share a table; together they cover six distinct
-harnesses: Pi, Claude Code, Grok Build, Codex, OpenClaw and Hermes Agent.
+**Three benchmarks that have never met, eight coding harnesses between them, the same result
+three times.** OpenBench ran GPT-5.6 Sol through four harnesses and published the token
+usage; Solvency repriced it at verified API rates. WildClawBench (InternLM) held four models
+constant across four scaffolds, including Hermes Agent and OpenClaw. And on 2026-08-26
+Solvency ran the measurement itself: the same GPT-5.6 Sol through five arms of its own
+benchmark — Aider, Codex, OpenCode, Hermes Agent, and a bare API call as the no-scaffold
+control. Three populations, reported separately below, never sharing a table; together they
+cover eight distinct harnesses.
 
-This revision replaces the 2026-08-23 edition ("Same Model, Four Harnesses"). The original
-four-harness table is unchanged; a second, independent population is added. The page keeps
-its original URL.
+This revision replaces the earlier editions at this URL ("Same Model, Four Harnesses",
+2026-08-23; "Six Harnesses", earlier 2026-08-26). Nothing in the earlier tables changed;
+a first-party population and the technical groundwork joined them.
+
+---
+
+## What a harness actually is
+
+The word gets used as if it were packaging. It is closer to the drivetrain. Addy Osmani's
+[Agent Harness Engineering](https://addyosmani.com/blog/agent-harness-engineering/) gives the
+cleanest formulation: **Agent = Model + Harness** — the harness being everything wrapped
+around the raw model that turns next-token prediction into finished work. Concretely, five
+subsystems wear the one name:
+
+1. **A context assembler** — system prompt, project instructions, skill files, repo maps:
+   what the model gets to see, and how many tokens seeing it costs.
+2. **A tool broker** — file reads and writes, shell, search, MCP servers: what the model
+   gets to *do*, and the round-trips each action spends.
+3. **An execution sandbox** — where model-written code actually runs, and what damage it
+   cannot do there.
+4. **A verification loop** — tests, typechecks, hooks; in Osmani's phrase, "success is
+   silent, failures are verbose": failure output is recycled into the next attempt.
+5. **A cache manager** — which parts of the context are rebuilt each call, and which are
+   re-read at the provider's cached-input discount.
+
+Every one of those subsystems is also a line item. That is this note's subject: the same
+model's bill, with only the drivetrain changed.
 
 ---
 
 ## The short version
 
 Hold the model constant. Hold the task set constant. Change the harness, and the bill moves —
-in both benchmarks, independently.
+in three benchmarks, independently.
 
 - **OpenBench (15 tasks, GPT-5.6 Sol):** cost per solved task moves from **$0.363 with Pi to
   $1.370 with Codex** — a **3.77x spread at the same 72.7% pass rate**.
 - **WildClawBench (60 different tasks, four models):** cost per score-equivalent task moves
   by **1.9x to 2.8x within each model**, and the harness that scores best is never the one
   that bills least.
+- **Solvency Bench (12 single-turn tasks, GPT-5.6 Sol, run by Solvency):** every arm scores
+  **100%**, and the bill still spans **7.7x** — from Aider's $0.0093 per solved task to
+  Hermes Agent's $0.0717. With correctness held perfectly equal, what remains is the pure
+  price of the scaffold.
 
 This is not a finding that any harness is universally better. It is a finding that the
 harness changes the bill, even when the name in the model column does not. A useful cost
@@ -190,7 +219,108 @@ same caution applies to any stack that wraps one harness in another.
 
 ---
 
-## Finding 6 — A build calculator needs roles, not one model picker
+## Population three — Solvency Bench: the harness tax, isolated
+
+On 2026-08-26 Solvency stopped repricing other people's runs and ran its own: the same
+GPT-5.6 Sol through five arms of [Solvency Bench](https://github.com/LehmanTrader/solvency/tree/main/bench)'s
+single-turn suite — 12 code tasks, deterministic hidden-test graders, 3 trials, temperature
+0. A bare API call is the control; every other arm is a real harness driving the same
+prompts. Dollars are the harness's own token accounting priced at verified catalog rates
+(the subscription arm's flat fee never enters the math; cache writes price at the uncached
+input rate, stated).
+
+| Arm | Version | Access | Pass | **$ / solved task** | vs cheapest |
+|---|---|---|---:|---:|---:|
+| Aider | aider 0.86.2 | metered (OpenRouter) | 100% | **$0.0093** | 1.00x |
+| API, no harness | — | metered, single call | 100% | **$0.0095** | 1.01x |
+| Codex | codex-cli 0.150.0 | local subscription | 100% | **$0.0248** | 2.65x |
+| OpenCode | 1.18.20 | metered (OpenRouter) | 100% | **$0.0364** | 3.90x |
+| Hermes Agent | Hermes Agent v0.20.5 (2026.8.19) | metered (OpenRouter) | 100% | **$0.0717** | 7.68x |
+
+Dataset: `data/harness-study/solvency-bench-v0.json`; per-attempt journals under `bench/results/`.
+Every arm passed every countable attempt, so pass rate explains none of this spread. The
+anatomy does — median tokens per attempt, from the harnesses' own accounting:
+
+| Arm | Fresh input | Cache reads | Cache writes | Output |
+|---|---:|---:|---:|---:|
+| API, no harness | 103 | 0 | 0 | 288 |
+| Aider | 752 | 0 | 0 | 166 |
+| Codex | 528 | 15,104 | 0 | 214 |
+| OpenCode | 3 | 0 | 6,106 | 171 |
+| Hermes Agent | 3 | 0 | 12,682 | 249 |
+
+---
+
+## Finding 6 — A lean harness can be free. A heavy one is a choice.
+
+Aider's whole scaffold is ~750 tokens — and its tighter output discipline (166 median output
+tokens against the bare call's 288) more than pays for it: **the harness arm comes in under
+no-harness-at-all.** Overhead is not a law of nature; it is a design budget, and it can be
+negative.
+
+At the other end, Hermes carries a ~12.7k-token scaffold into every one-shot session. On a
+100-token task, that is a 120x context multiplier before any work happens. Nothing about
+that is wrong — that scaffold is what buys Hermes its skills, memory and tool surface on
+real agentic work — but on a bounded single call it is pure tax, and now it has a price:
+**7.7x**.
+
+---
+
+## Finding 7 — Cache strategy beats scaffold size
+
+Codex and Hermes carry scaffolds of similar magnitude (~15k vs ~12.7k tokens). Codex bills
+**$0.0248** per solved task; Hermes **$0.0717**. The difference is a single column in the
+anatomy table: Codex's scaffold arrives as **cache reads** — billed at GPT-5.6 Sol's $0.50/M
+cached rate — while Hermes's arrives as **cache writes**, billed here at the full $5/M input
+rate. Same order of context, 2.9x apart on price, decided entirely by whether the harness
+re-reads its context at the discount or rebuilds it at list.
+
+This is the cache manager (subsystem five) earning its keep, and it is invisible on every
+pricing page in the industry.
+
+---
+
+## Why use a harness at all, then?
+
+Because there are two regimes, and the single-turn suite deliberately lives in the one where
+harnesses can only lose. A bounded, self-contained call has nothing for the scaffold to do:
+no files to navigate, no tests to run, no failures to recycle. Overhead multiplies the bill;
+nothing divides it.
+
+Real software work is the other regime. Cost per **solved** task is `attempt cost ÷ pass
+rate` — the scaffold's overhead multiplies the numerator, but its verification loop works on
+the denominator, and the denominator is where the leverage is. On Solvency's agentic suite,
+the reference tool loop read repos, edited files, ran tests and recycled failures to a
+**13-for-13** record at $0.0011–$0.002 per solved task on a value model; a bare single call
+cannot run a test at all, so on execution-verified work its effective pass rate — and with
+it, cost per solved task — falls off a cliff. The population-two data says the same thing
+about scale: scaffold choice moved graded scores by up to 15.4 points on identical models.
+
+Osmani's engineering claim — *"a decent model with a great harness beats a great model with
+a bad harness"* — is the capability half. The economics half, measured above: **the harness
+decides both what a task costs and whether it gets solved at all; pick its weight to match
+the work.** Ship a bounded transform through a lean scaffold or none; ship real repo work
+through a harness whose verification loop and cache discipline you have priced.
+
+---
+
+## The harnesses, feature by feature
+
+First-hand observations from running each arm (2026-08-26 builds), plus each project's
+documentation — capability notes, not endorsements:
+
+| | Claude Code | Codex | Hermes Agent | OpenCode | Aider | solvency-loop |
+|---|---|---|---|---|---|---|
+| Models | Anthropic (login/key) | OpenAI (login/key) | any (multiplexer) | any (provider/model) | any (LiteLLM-style) | any (OpenRouter) |
+| Headless one-shot | `-p --output-format json` | `exec --json` | `-z --usage-file` | `run --format json` | `--message` | library call |
+| Machine-readable usage | full incl. cache r/w | full incl. cache r/w | full incl. reasoning | per-step tokens+cost | tokens line (k-rounded ≥1k) | API usage object |
+| Cache behaviour observed | heavy reads | heavy reads | writes each session | writes each session | none (lean prompt) | none |
+| Agentic tool loop | yes | yes | yes | yes | edit-focused | minimal by design |
+| Execution sandboxing | policy/hooks | sandbox modes | egress controls | permission prompts | none (git-scoped) | docker, network-less |
+
+---
+
+## Finding 8 — A build calculator needs roles, not one model picker
 
 Modern agent systems can route different work to different models. The
 [Hermes Agent documentation](https://hermes-agent.nousresearch.com/docs/) describes isolated
@@ -244,6 +374,16 @@ success rate. Until the system is measured, the honest result is: **success rate
   credit and an LLM/VLM judge in the loop. That is why its derived column is cost per
   score-equivalent task and is never called cost per solved task, and why the two populations
   cannot be ranked against each other.
+- **Population three is single-turn by construction.** It isolates scaffold overhead by
+  removing every task where a scaffold could help; it says nothing about these harnesses'
+  agentic quality, and its 12-task size is a smoke-signal tier (±27pp worst-case CI on any
+  pass-rate claim — moot here at 36/36 per arm, stated anyway).
+- **Population three's dollars are usage repriced at catalog list rates.** The Codex arm ran
+  on a subscription login (basis `subscription_usage_repriced` — precedent: population one);
+  metered arms ran via OpenRouter. Cache writes price at the uncached input rate; vendors'
+  write premiums are not modelled.
+- **Aider's token counts are its own rounded reporting** (k-rounded above 1,000), recorded
+  as reported.
 - **The two Claude Code rows are not the same Claude Code.** Population one pins CLI 2.1.214;
   population two records a Docker image tag from a different build line, months apart. Even
   the shared harness name does not license a cross-population comparison.
@@ -276,6 +416,23 @@ cost_per_score_equivalent_task = cost_usd_per_task / (score_pct / 100)
 with `cost_usd_per_task` and `score_pct` transcribed verbatim from the source's published
 harness-comparison table into `data/harness-study/wildclawbench.json`. The "vs cheapest"
 multiplier compares within one model's four cells only.
+
+For every Solvency Bench arm (population three):
+
+```
+cost_per_attempt = (fresh_in × in_rate + cache_read × cached_rate
+                    + cache_write × in_rate + output × out_rate) / 1e6
+cost_per_solved_task = mean(cost_per_attempt) ÷ pass_rate
+```
+
+with usage from each harness's own accounting and rates from the verified catalog
+(`solvency-bench-v0`, journals in `bench/results/`, study file in
+`data/harness-study/solvency-bench-v0.json`).
+
+```
+node bench/runner.mjs --selftest      # verify every grader, free
+node bench/runner.mjs --model openai/gpt-5.6-sol --harness aider --trials 3
+```
 
 ### Reproduce this
 

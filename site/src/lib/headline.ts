@@ -59,6 +59,7 @@ export function leaderboard(tier: Tier = 'heavy') {
   const by = (k: string) => rows.filter((x) => x.basisKey === k && x.m.access_tier !== 'free').sort((a, b) => a.cost - b.cost);
   return {
     measured: by('measured_by_source'),
+    bench: by('measured_by_solvency'),
     modelled: by('modelled_by_solvency'),
     historical: by('historical_at_run_date'),
     free: rows.filter((x) => x.basisKey === 'free_tier_capped' || x.m.access_tier === 'free').sort((a, b) => b.r.pass_rate - a.r.pass_rate),

@@ -5,6 +5,7 @@ import Provenance from '../components/Provenance.astro';
 import LogoChip from '../components/LogoChip.astro';
 import { modelById } from '../lib/data.ts';
 import { harnessCostsFor, harnessSource } from '../lib/harness.ts';
+import solStudy from '../data/harness-study/solvency-bench-v0.json';
 
 const modelId = 'gpt-5.6-sol';
 const model = modelById(modelId)!;
@@ -14,6 +15,16 @@ const pi = rows.find((r) => r.harness === 'Pi')!;
 const codex = rows.find((r) => r.harness === 'Codex')!;
 const money = (n: number) => `$${n.toFixed(n < 1 ? 3 : 2)}`;
 const ratio = codex.solvedCost / pi.solvedCost;
+
+// Population three: Solvency's own five-arm run. Its own population — never
+// merged with the OpenBench rows above (different tasks, different graders).
+const armName = (h: string | null) => h === null ? 'API, no harness'
+  : h === 'aider' ? 'Aider' : h === 'codex' ? 'Codex'
+  : h === 'opencode' ? 'OpenCode' : h === 'hermes' ? 'Hermes Agent' : h;
+const solArms = [...solStudy.arms].sort((a, b) => a.cost_per_solved_usd - b.cost_per_solved_usd);
+const solCheapest = solArms[0].cost_per_solved_usd;
+const solSpread = solArms[solArms.length - 1].cost_per_solved_usd / solCheapest;
+const money4 = (n: number) => `$${n.toFixed(4)}`;
 ---
 <Base title="GPT-5.6 Sol harness economics — Solvency"
       description="Four coding harnesses ran the same GPT-5.6 Sol model on the same OpenBench tasks. Compare source-observed token usage repriced at current verified API rates."
@@ -75,6 +86,29 @@ const ratio = codex.solvedCost / pi.solvedCost;
       </table></div></div>
       <Provenance source={source.attribution} href={source.attribution_url} verified={source.last_verified}
         note="source usage repriced: measured tokens × current verified model prices; no Solvency loop or tier assumption" />
+    </Section>
+
+    <Section id="solvency-bench" eyebrow="Measured by Solvency · own population" title="Five arms, same model, run by Solvency"
+      caption={`On ${solStudy.run_date} Solvency ran ${model.display_name} through five arms of its own single-turn suite — ${solStudy.suite}. Every arm passed every countable attempt, and the bill still spans ${solSpread.toFixed(1)}×. Own task population: never comparable with the OpenBench table above.`}>
+      <div class="card overflow-hidden"><div class="tbl-wrap"><table class="tbl tone-best">
+        <caption>Solvency Bench v0 harness comparison: five access paths for GPT-5.6 Sol, harness-reported usage priced at verified catalog rates</caption>
+        <thead><tr><th scope="col" class="rank">#</th><th scope="col">Arm</th><th scope="col">Access</th><th scope="col" class="r">Pass</th><th scope="col" class="r">$ / solved</th><th scope="col" class="r">vs lowest</th></tr></thead>
+        <tbody>{solArms.map((a, i) => (
+          <tr class={i === 0 ? 'lead' : undefined}>
+            <td class="rank">{i + 1}</td>
+            <td class="ink">{armName(a.harness)}{a.harness_version && <span class="muted"> · {a.harness_version}</span>}</td>
+            <td class="muted">{a.access}</td>
+            <td class="r">{(a.pass_rate * 100).toFixed(0)}%</td>
+            <td class="r ink"><strong>{money4(a.cost_per_solved_usd)}</strong></td>
+            <td class="r">{(a.cost_per_solved_usd / solCheapest).toFixed(2)}×</td>
+          </tr>
+        ))}</tbody>
+      </table></div></div>
+      <Provenance source="Solvency Bench (first-party)" href="https://github.com/LehmanTrader/solvency/tree/main/bench" verified={solStudy.run_date}
+        note="harness-reported usage × verified catalog prices; cache writes at the uncached input rate (stated); the subscription arm's flat fee never enters the math. Full anatomy and findings in Research Note 02." />
+      <div class="mt-5 flex flex-wrap gap-2">
+        <a class="btn btn-accent" href="/research/same-model-four-harnesses">Read Note 02: Same Model, Eight Harnesses →</a>
+      </div>
     </Section>
 
     <Section id="method" eyebrow="Cost basis" title="What this comparison means"

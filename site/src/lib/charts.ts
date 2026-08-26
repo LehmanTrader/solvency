@@ -81,6 +81,7 @@ export interface ChartRow {
 export const BASIS_OF: Record<string, Basis> = {
   measured_by_source: 'measured', modelled_by_solvency: 'modelled', historical_at_run_date: 'stale',
   free_tier_capped: 'free',
+  measured_by_solvency: 'measured',
 };
 
 export const BASIS_WORD: Record<Basis, string> = { measured: 'MEASURED', modelled: 'MODELLED', stale: 'STALE', free: 'FREE · RATE-CAPPED' };

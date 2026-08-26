@@ -6,21 +6,23 @@ import { costPerSolvedTask, defaultOptions } from '../scripts/solved-cost.ts';
 
 /** The default scenario (moderate tier, naive) as chart rows, built from the repo data. */
 function rows(): ChartRow[] {
-  const basisOf: Record<string, ChartRow['basis']> = { measured_by_source: 'measured', modelled_by_solvency: 'modelled', historical_at_run_date: 'stale', free_tier_capped: 'free' };
+  const basisOf: Record<string, ChartRow['basis']> = { measured_by_source: 'measured', modelled_by_solvency: 'modelled', historical_at_run_date: 'stale', free_tier_capped: 'free', measured_by_solvency: 'measured' };
   const out: ChartRow[] = [];
   for (const m of models) {
     const r = bestResultFor(m.model_id); if (!r) continue;
     const c = costPerSolvedTask(m, 'moderate', tiers.moderate, r.pass_rate, defaultOptions(assumptions), extrasFor(r));
     if (!c.value) continue;
-    out.push({ id: m.model_id, name: m.display_name, href: `/models/${m.model_id}`, cost: c.value.naive, pass: r.pass_rate, basis: basisOf[r.cost_basis] });
+    out.push({ id: m.model_id, name: m.display_name, href: `/models/${m.model_id}`, cost: c.value.naive, pass: r.pass_rate, basis: basisOf[r.cost_basis], harness: r.cost_basis });
   }
   return out;
 }
 
 describe('inline SVG charts', () => {
   const all = rows();
-  const measured = all.filter((r) => r.basis === 'measured');
-  const modelled = all.filter((r) => r.basis === 'modelled');
+  // basisKey rides in `harness` for fixture purposes: one chart never mixes
+  // the AA population with the first-party Solvency Bench population.
+  const measured = all.filter((r) => r.harness === 'measured_by_source');
+  const modelled = all.filter((r) => r.harness === 'modelled_by_solvency');
 
   test('the measured ranked chart contains no modelled row, and vice versa', () => {
     const svg = rankedBars(measured, { width: 846, volume: 200, basis: 'measured' });

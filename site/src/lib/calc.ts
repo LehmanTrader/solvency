@@ -38,6 +38,12 @@ export const GROUPS: { key: string; basis: Basis; title: string; note: string }[
   // same purple, see charts.ts), and are never pooled into a "cheapest"
   // superlative (see SUPERLATIVE_GROUPS below). Sorted by pass rate, not
   // cost, inside rankedBars/groupsHtml, since every row here ties at $0.
+  // First-party measurements (2026-08-26): Solvency Bench rows are their
+  // own population — single-turn correctness, not the agentic index above —
+  // so they render as their own group and never join a "cheapest" claim
+  // computed against a different task population.
+  { key: 'measured_by_solvency', basis: 'measured', title: 'MEASURED · SOLVENCY BENCH',
+    note: 'Solvency ran these itself (single-turn suite, deterministic graders; bench/ in the repo). Own population — not comparable with the agentic index above.' },
   { key: 'free_tier_capped', basis: 'free', title: 'FREE · rate-capped',
     note: 'Zero-dollar access paths with a provider-set rate cap — not comparable to an uncapped paid price, and never counted toward a "cheapest" figure. $0 rows stay off the log-scale Frontier chart; cost is uniformly $0, which cannot be plotted on a log axis.' },
 ];
@@ -57,7 +63,7 @@ const RETIRED_RESULT_BASES = new Set(['historical_at_run_date']);
  * hero's project-total answer) pool from this constant, never from GROUPS
  * directly, even though GROUPS now has a fourth entry for rendering.
  */
-const SUPERLATIVE_GROUPS = GROUPS.filter((g) => g.basis !== 'free');
+const SUPERLATIVE_GROUPS = GROUPS.filter((g) => g.basis !== 'free' && g.key !== 'measured_by_solvency');
 
 export interface Row {
   m: any; r: any; cost: number; basis: string; basisKey: string; attempt: number;

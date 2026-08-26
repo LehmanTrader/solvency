@@ -34,7 +34,7 @@ export const TIER_NAMES: TierName[] = ['light', 'moderate', 'heavy'];
  *   2. SEAL -- current models, uniform scaffolding, but pass rate only (cost is modelled).
  *   3. Aider -- pass rate only AND stale (nothing newer than 2025-10-03).
  */
-export const SOURCE_PREFERENCE = ['aa-coding-agent-index', 'seal-swe-bench-pro', 'aider-polyglot'];
+export const SOURCE_PREFERENCE = ['aa-coding-agent-index', 'seal-swe-bench-pro', 'aider-polyglot', 'solvency-bench-v0', 'solvency-bench-a1'];
 /** Harness-only sources are isolated from the general model leaderboard. */
 export const HARNESS_BENCHMARKS = ['openbench-gpt56-harness'];
 
@@ -76,7 +76,7 @@ export function provenanceFor(r: BenchmarkResult): Provenance {
 export function extrasFor(r: BenchmarkResult) {
   return {
     passRateProvenance: provenanceFor(r),
-    measuredAttemptCostUsd: r.cost_basis === 'measured_by_source'
+    measuredAttemptCostUsd: r.cost_basis === 'measured_by_source' || r.cost_basis === 'measured_by_solvency'
       ? (r as any).measured_cost_per_task_usd
       : undefined,
     sourceUsage: r.cost_basis === 'source_usage_repriced' ? r.source_usage : undefined,

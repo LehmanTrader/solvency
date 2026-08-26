@@ -20,7 +20,7 @@ const { model } = Astro.props;
 const opts = defaultOptions(assumptions);
 const rows = allResultsFor(model.model_id);
 const attemptCostFor = (r) => {
-  if (r.cost_basis === 'measured_by_source') return r.measured_cost_per_task_usd ?? null;
+  if (r.cost_basis === 'measured_by_source' || r.cost_basis === 'measured_by_solvency') return r.measured_cost_per_task_usd ?? null;
   if (r.cost_basis !== 'source_usage_repriced') return null;
   return costPerSolvedTask(model, 'heavy', tiers.heavy, r.pass_rate, opts, extrasFor(r)).value?.attempt.costUsd ?? null;
 };
@@ -30,7 +30,7 @@ const tierCosts = TIER_NAMES.map((t) => {
   const out = best ? costPerSolvedTask(model, t, tiers[t], best.pass_rate, opts, extrasFor(best)) : null;
   return { tier: t, value: out?.value?.naive ?? null };
 });
-const measured = best?.cost_basis === 'measured_by_source';
+const measured = best?.cost_basis === 'measured_by_source' || best?.cost_basis === 'measured_by_solvency';
 const basis = best ? (BASIS_OF[best.cost_basis] ?? 'modelled') : null;
 const basisWord = basis === 'measured' ? 'measured cost' : basis === 'free' ? 'free tier · rate-capped' : basis === 'stale' ? 'modelled cost · stale pass rate' : 'modelled cost';
 const bestSrc = best ? sourceFor(best.benchmark) : null;
@@ -45,7 +45,7 @@ const lb = leaderboard(PEER_TIER);
 // (lb.free), never lb.modelled — a free $0 row is not a modelled paid
 // estimate, and mixing the two would silently rank a rate-capped price
 // against an uncapped one on this very peer chart.
-const pool = mine ? (mine.basisKey === 'measured_by_source' ? lb.measured : mine.basisKey === 'historical_at_run_date' ? lb.historical : mine.basisKey === 'free_tier_capped' ? lb.free : lb.modelled) : [];
+const pool = mine ? (mine.basisKey === 'measured_by_source' ? lb.measured : mine.basisKey === 'measured_by_solvency' ? lb.bench : mine.basisKey === 'historical_at_run_date' ? lb.historical : mine.basisKey === 'free_tier_capped' ? lb.free : lb.modelled) : [];
 const harnessOf = (r) => r.harness ?? undefined;
 const peerRows: ChartRow[] = pool.map((x) => ({
   id: x.m.model_id, name: x.m.display_name, href: `/models/${x.m.model_id}`, cost: x.cost, pass: x.r.pass_rate,

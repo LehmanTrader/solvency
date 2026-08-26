@@ -1,0 +1,170 @@
+{
+  "description": "Solvency Bench harness comparison: one model (GPT-5.6 Sol) through every arm of the single-turn suite (solvency-bench-v0). First-party measurement; its own population, never merged with the OpenBench or WildClawBench populations in Note 02, nor with any leaderboard group. Cache writes are priced at the uncached input rate (write premium not modelled, stated); the bare arm is the no-scaffold control.",
+  "benchmark": "solvency-bench-v0-harness",
+  "source": "Solvency Bench (bench/ in this repository); journals under bench/results/<run_id>/",
+  "suite": "12 single-turn code tasks, deterministic hidden-test graders, temperature 0, 3 trials",
+  "run_date": "2026-08-26",
+  "redistributable": true,
+  "arms": [
+    {
+      "run_id": "bare-gpt-5.6-sol-2026-08-26-mt8000",
+      "harness": null,
+      "harness_version": null,
+      "access": "metered API, single call, no scaffold",
+      "cost_basis": "api_metered_at_catalog_prices",
+      "model": "openai/gpt-5.6-sol",
+      "prices": {
+        "inputPerMtok": 5,
+        "outputPerMtok": 30,
+        "cachedInputPerMtok": 0.5,
+        "basis": "catalog",
+        "modelId": "gpt-5.6-sol",
+        "lastVerified": "2026-08-21",
+        "priceNote": "catalog row gpt-5.6-sol, verified 2026-08-21"
+      },
+      "protocol": "solvency-bench-v0",
+      "protocol_hash": "3bd9cc9568a7",
+      "trials": 3,
+      "attempts_countable": 36,
+      "infra_excluded": 0,
+      "pass_rate": 1,
+      "cost_per_task_usd": 0.009459999999999998,
+      "cost_per_solved_usd": 0.009459999999999998,
+      "run_date": "2026-08-26",
+      "median_usage_per_attempt": {
+        "input": 103,
+        "cache_read": 0,
+        "cache_write": 0,
+        "output": 288
+      }
+    },
+    {
+      "run_id": "aider-gpt-5.6-sol-2026-08-26-r2",
+      "harness": "aider",
+      "harness_version": "aider 0.86.2",
+      "access": "metered provider (OpenRouter)",
+      "cost_basis": "harness_usage_repriced_metered",
+      "model": "openai/gpt-5.6-sol",
+      "prices": {
+        "inputPerMtok": 5,
+        "outputPerMtok": 30,
+        "cachedInputPerMtok": 0.5,
+        "basis": "catalog",
+        "modelId": "gpt-5.6-sol",
+        "lastVerified": "2026-08-21",
+        "priceNote": "catalog row gpt-5.6-sol, verified 2026-08-21"
+      },
+      "protocol": "solvency-bench-v0h",
+      "protocol_hash": "fb2a199678bc",
+      "trials": 3,
+      "attempts_countable": 36,
+      "infra_excluded": 0,
+      "pass_rate": 1,
+      "cost_per_task_usd": 0.009326250000000001,
+      "cost_per_solved_usd": 0.009326250000000001,
+      "run_date": "2026-08-26",
+      "median_usage_per_attempt": {
+        "input": 752,
+        "cache_read": 0,
+        "cache_write": 0,
+        "output": 166
+      }
+    },
+    {
+      "run_id": "codex-gpt-5.6-sol-2026-08-26-r2",
+      "harness": "codex",
+      "harness_version": "codex-cli 0.150.0",
+      "access": "local subscription login",
+      "cost_basis": "subscription_usage_repriced",
+      "model": "gpt-5.6-sol",
+      "prices": {
+        "inputPerMtok": 5,
+        "outputPerMtok": 30,
+        "cachedInputPerMtok": 0.5,
+        "basis": "catalog",
+        "modelId": "gpt-5.6-sol",
+        "lastVerified": "2026-08-21",
+        "priceNote": "catalog row gpt-5.6-sol, verified 2026-08-21"
+      },
+      "protocol": "solvency-bench-v0h",
+      "protocol_hash": "fb2a199678bc",
+      "trials": 3,
+      "attempts_countable": 36,
+      "infra_excluded": 0,
+      "pass_rate": 1,
+      "cost_per_task_usd": 0.024755666666666665,
+      "cost_per_solved_usd": 0.024755666666666665,
+      "run_date": "2026-08-26",
+      "median_usage_per_attempt": {
+        "input": 528,
+        "cache_read": 15104,
+        "cache_write": 0,
+        "output": 214
+      }
+    },
+    {
+      "run_id": "opencode-gpt-5.6-sol-2026-08-26",
+      "harness": "opencode",
+      "harness_version": "1.18.20",
+      "access": "metered provider (OpenRouter)",
+      "cost_basis": "harness_usage_repriced_metered",
+      "model": "openai/gpt-5.6-sol",
+      "prices": {
+        "inputPerMtok": 5,
+        "outputPerMtok": 30,
+        "cachedInputPerMtok": 0.5,
+        "basis": "catalog",
+        "modelId": "gpt-5.6-sol",
+        "lastVerified": "2026-08-21",
+        "priceNote": "catalog row gpt-5.6-sol, verified 2026-08-21"
+      },
+      "protocol": "solvency-bench-v0h",
+      "protocol_hash": "fb2a199678bc",
+      "trials": 3,
+      "attempts_countable": 36,
+      "infra_excluded": 0,
+      "pass_rate": 1,
+      "cost_per_task_usd": 0.03637583333333335,
+      "cost_per_solved_usd": 0.03637583333333335,
+      "run_date": "2026-08-26",
+      "median_usage_per_attempt": {
+        "input": 3,
+        "cache_read": 0,
+        "cache_write": 6106,
+        "output": 171
+      }
+    },
+    {
+      "run_id": "hermes-gpt-5.6-sol-2026-08-26",
+      "harness": "hermes",
+      "harness_version": "Hermes Agent v0.20.5 (2026.8.19)",
+      "access": "metered provider (OpenRouter)",
+      "cost_basis": "harness_usage_repriced_metered",
+      "model": "openai/gpt-5.6-sol",
+      "prices": {
+        "inputPerMtok": 5,
+        "outputPerMtok": 30,
+        "cachedInputPerMtok": 0.5,
+        "basis": "catalog",
+        "modelId": "gpt-5.6-sol",
+        "lastVerified": "2026-08-21",
+        "priceNote": "catalog row gpt-5.6-sol, verified 2026-08-21"
+      },
+      "protocol": "solvency-bench-v0h",
+      "protocol_hash": "fb2a199678bc",
+      "trials": 3,
+      "attempts_countable": 36,
+      "infra_excluded": 0,
+      "pass_rate": 1,
+      "cost_per_task_usd": 0.07166083333333334,
+      "cost_per_solved_usd": 0.07166083333333334,
+      "run_date": "2026-08-26",
+      "median_usage_per_attempt": {
+        "input": 3,
+        "cache_read": 0,
+        "cache_write": 12682,
+        "output": 249
+      }
+    }
+  ]
+}

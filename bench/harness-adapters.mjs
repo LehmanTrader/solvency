@@ -32,7 +32,17 @@ const run = (cmd, args, { timeoutMs = 300000, input } = {}) => new Promise((reso
   child.on('error', (e) => { clearTimeout(t); resolve({ code: -1, out, err: String(e) }); });
 });
 
-const versionOf = async (cmd) => (await run(cmd, ['--version'], { timeoutMs: 15000 })).out.trim().slice(0, 60) || null;
+const runIn = (cmd, args, cwd, timeoutMs) => new Promise((resolve) => {
+  const child = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'], cwd });
+  let out = '', err = '';
+  child.stdout.on('data', (d) => { out += d; });
+  child.stderr.on('data', (d) => { err += d; });
+  const t = setTimeout(() => child.kill('SIGKILL'), timeoutMs);
+  child.on('close', (code, signal) => { clearTimeout(t); resolve({ code, signal, out: out + err }); });
+  child.on('error', (e) => { clearTimeout(t); resolve({ code: -1, out: out + String(e) }); });
+});
+
+const versionOf = async (cmd) => ((await run(cmd, ['--version'], { timeoutMs: 15000 })).out.trim().split('\n')[0] || '').slice(0, 60) || null;
 
 /** Normalized usage: { input, cacheRead, cacheWrite, output } token counts. */
 export function repriceUsage(u, prices) {
@@ -44,11 +54,108 @@ export function repriceUsage(u, prices) {
 }
 
 export const ADAPTERS = {
+  /** OpenCode headless (`opencode run --format json`), model via
+   * openrouter/<slug> — metered caller credentials. Usage from step_finish
+   * events (input/output/reasoning + cache read/write), summed across
+   * steps; reasoning priced as output. */
+  opencode: {
+    label: 'OpenCode (headless, metered provider)',
+    access: 'metered provider (OpenRouter)',
+    async version() { return versionOf('opencode'); },
+    async attempt({ prompt, model, timeoutMs }) {
+      const r = await run('opencode', ['run', prompt, '-m', `openrouter/${model}`, '--format', 'json'], { timeoutMs });
+      if (r.signal === 'SIGKILL') return { infra: true, detail: `harness timeout after ${timeoutMs}ms` };
+      let text = '', usage = null;
+      for (const line of r.out.split('\n')) {
+        if (!line.trim().startsWith('{')) continue;
+        let e; try { e = JSON.parse(line); } catch { continue; }
+        const p = e.part ?? e;
+        if ((e.type === 'text' || p.type === 'text') && typeof p.text === 'string') text = p.text;
+        if (e.type === 'step_finish' && p.tokens) {
+          usage ??= { input: 0, cacheRead: 0, cacheWrite: 0, output: 0 };
+          usage.input += p.tokens.input ?? 0;
+          usage.cacheRead += p.tokens.cache?.read ?? 0;
+          usage.cacheWrite += p.tokens.cache?.write ?? 0;
+          usage.output += (p.tokens.output ?? 0) + (p.tokens.reasoning ?? 0);
+        }
+      }
+      if (!usage) return { infra: true, detail: 'no step_finish tokens in opencode stream — cannot reprice, attempt excluded (fail closed)' };
+      return { text, usage };
+    },
+  },
+
+  /** Aider one-shot (`--message`), model via openrouter/<slug>. Usage parsed
+   * from aider's own "Tokens: X sent, Y received" line; counts >= 1k are
+   * k-rounded by aider (recorded as reported — a stated precision limit,
+   * not a guess). No cache split is reported, so all sent tokens price at
+   * the uncached input rate (conservative). */
+  aider: {
+    label: 'Aider (one-shot, metered provider)',
+    access: 'metered provider (OpenRouter)',
+    async version() { return versionOf('aider'); },
+    async attempt({ prompt, model, timeoutMs }) {
+      const { mkdtempSync, rmSync } = await import('node:fs');
+      const { tmpdir } = await import('node:os');
+      const { join } = await import('node:path');
+      const dir = mkdtempSync(join(tmpdir(), 'sbench-aider-'));
+      // Aider's native mode is editing files, and its chat output is
+      // terminal-formatted (column padding, rulers) that no fence extractor
+      // should be trusted with — the r1 run proved it. So the attempt gives
+      // aider a real file and grades THAT file's content.
+      const { writeFileSync, readFileSync: rf } = await import('node:fs');
+      writeFileSync(join(dir, 'solution.mjs'), '// implement here\n');
+      const proc = await runIn('aider', ['solution.mjs', '--model', `openrouter/${model}`,
+        '--message', prompt + ' Put the complete implementation in solution.mjs.',
+        '--yes', '--no-git', '--no-auto-commits', '--no-check-update', '--no-pretty'], dir, timeoutMs);
+      let content = '';
+      try { content = rf(join(dir, 'solution.mjs'), 'utf8'); } catch {}
+      rmSync(dir, { recursive: true, force: true });
+      if (proc.signal === 'SIGKILL') return { infra: true, detail: `harness timeout after ${timeoutMs}ms` };
+      const m = proc.out.match(/Tokens:\s*([\d.]+)(k?)\s*sent,\s*([\d.]+)(k?)\s*received/i);
+      if (!m) return { infra: true, detail: 'no Tokens line in aider output — cannot reprice, attempt excluded (fail closed)' };
+      const n = (v, k) => Math.round(parseFloat(v) * (k ? 1000 : 1));
+      return { text: '```js\n' + content + '\n```', usage: { input: n(m[1], m[2]), cacheRead: 0, cacheWrite: 0, output: n(m[3], m[4]) } };
+    },
+  },
+
+  /** Hermes Agent one-shot (`hermes -z`) with its machine-readable
+   * --usage-file accounting. Model routed via --provider (default
+   * openrouter, caller-supplied credentials) — access is METERED, and the
+   * recorded dollars are still the usage repriced at catalog list rates so
+   * every harness arm shares one price basis. reasoning_tokens are added to
+   * output (the billing convention for reasoning output). */
+  hermes: {
+    label: 'Hermes Agent (one-shot, metered provider)',
+    access: 'metered provider (OpenRouter)',
+    async version() { return versionOf('hermes'); },
+    async attempt({ prompt, model, timeoutMs }) {
+      const usageFile = `/tmp/sbench-hermes-${Math.random().toString(36).slice(2)}.json`;
+      const args = ['-z', prompt, '--usage-file', usageFile];
+      if (model) args.push('-m', model, '--provider', 'openrouter');
+      const r = await run('hermes', args, { timeoutMs });
+      if (r.signal === 'SIGKILL') return { infra: true, detail: `harness timeout after ${timeoutMs}ms` };
+      let u;
+      try { u = JSON.parse((await import('node:fs')).readFileSync(usageFile, 'utf8')); }
+      catch { return { infra: true, detail: 'no usage file from hermes — cannot reprice, attempt excluded (fail closed)' }; }
+      if (u.failed) return { infra: true, detail: 'hermes reported failed session' };
+      return {
+        text: r.out,
+        usage: {
+          input: u.input_tokens ?? 0,
+          cacheRead: u.cache_read_tokens ?? 0,
+          cacheWrite: u.cache_write_tokens ?? 0,
+          output: (u.output_tokens ?? 0) + (u.reasoning_tokens ?? 0),
+        },
+      };
+    },
+  },
+
   /** Claude Code headless: `claude -p --output-format json` on the local
    * subscription login. Model chosen with --model; usage comes from the
    * result envelope. */
   'claude-code': {
     label: 'Claude Code (local subscription)',
+    access: 'local subscription login',
     async version() { return versionOf('claude'); },
     async attempt({ prompt, model, timeoutMs }) {
       const args = ['-p', prompt, '--output-format', 'json', '--max-turns', '1'];
@@ -77,6 +184,7 @@ export const ADAPTERS = {
    * Codex build does not emit usage, the attempt is excluded fail-closed. */
   codex: {
     label: 'Codex CLI (local subscription)',
+    access: 'local subscription login',
     async version() { return versionOf('codex'); },
     async attempt({ prompt, model, timeoutMs }) {
       // Codex CLI 1.x JSON stream (verified live 2026-08-26): the reply is

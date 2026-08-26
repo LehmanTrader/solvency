@@ -270,19 +270,22 @@ describe('data integrity', () => {
     assert.equal(assumptions.cache_hit_fraction.kind, 'assumption');
   });
 
-  test('every benchmark row is marked non-redistributable (third-party, cite-only)', () => {
+  test('redistribution flags: third-party rows locked, first-party rows CC-BY', () => {
+    // Third-party data never enters the CC-BY export; Solvency's own bench
+    // runs (2026-08-26 onward) are first-party and explicitly CC-BY.
+    const firstParty = (b: string) => b.startsWith('solvency-bench');
     for (const r of results) {
-      assert.equal(r.redistributable, false,
-        `${r.entry_label}: ingested third-party data must never enter the CC-BY export`);
+      assert.equal(r.redistributable, firstParty(r.benchmark),
+        `${r.entry_label}: redistributable must be ${firstParty(r.benchmark)} for ${r.benchmark}`);
     }
-    for (const s of sources) assert.equal(s.redistributable, false, s.name);
+    for (const s of sources) assert.equal(s.redistributable, firstParty(s.benchmark), s.name);
   });
 
   test('every row declares a cost basis, and measured rows carry a measured cost', () => {
-    const valid = ['measured_by_source', 'source_usage_repriced', 'modelled_by_solvency', 'historical_at_run_date', 'free_tier_capped'];
+    const valid = ['measured_by_source', 'source_usage_repriced', 'modelled_by_solvency', 'historical_at_run_date', 'free_tier_capped', 'measured_by_solvency'];
     for (const r of results) {
       assert.ok(valid.includes(r.cost_basis), `${r.entry_label}: ${r.cost_basis}`);
-      if (r.cost_basis === 'measured_by_source') {
+      if (r.cost_basis === 'measured_by_source' || r.cost_basis === 'measured_by_solvency') {
         assert.equal(typeof r.measured_cost_per_task_usd, 'number', r.entry_label);
         assert.ok(r.measured_cost_per_task_usd! > 0, r.entry_label);
       }

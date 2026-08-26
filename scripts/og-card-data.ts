@@ -296,13 +296,12 @@ function excerptAroundId(rows: RankedRow[], keepId: string, max = 6): RankedRow[
  * default card (modelCardData), so both agree on one computation.
  */
 function measuredCostRows() {
-  const { measured } = leaderboard('heavy');
+  // The measured leaderboard card is the AA population by definition; the
+  // first-party Solvency Bench population (2026-08-26) is its own group and
+  // never joins this ranking.
+  const measured = leaderboard('heavy').measured.filter((r) => r.r.benchmark === 'aa-coding-agent-index');
   if (!measured.length) throw new Error('measuredCostRows: no measured current models to rank');
-  const benchmarks = new Set(measured.map((r) => r.r.benchmark));
-  if (benchmarks.size !== 1) {
-    throw new Error(`measuredCostRows: measured rows span multiple sources (${[...benchmarks].join(', ')}) — a single-basis card needs one`);
-  }
-  const src = sourceFor([...benchmarks][0]);
+  const src = sourceFor(measured[0].r.benchmark);
   if (!src) throw new Error('measuredCostRows: no source metadata for the measured benchmark');
 
   const rows: RankedRow[] = measured.map((r) => ({

@@ -49,16 +49,21 @@ describe('group membership is invariant under every assumption control', () => {
   });
 
   test('measured rows never move under any assumption', () => {
-    const a = compute(DEFAULTS).rows.filter((r) => r.basisKey === 'measured_by_source');
-    const b = compute({ ...DEFAULTS, cache: 0.9, residual: 1000, frontier: false, tier: 'heavy' }).rows.filter((r) => r.basisKey === 'measured_by_source');
+    // Both measured bases: third-party (measured_by_source) and first-party
+    // (measured_by_solvency, 2026-08-26) — an observed dollar bill has no knobs.
+    const isMeasured = (k: string) => k === 'measured_by_source' || k === 'measured_by_solvency';
+    const a = compute(DEFAULTS).rows.filter((r) => isMeasured(r.basisKey));
+    const b = compute({ ...DEFAULTS, cache: 0.9, residual: 1000, frontier: false, tier: 'heavy' }).rows.filter((r) => isMeasured(r.basisKey));
     assert.deepEqual(a.map((r) => [r.m.model_id, r.cost]), b.map((r) => [r.m.model_id, r.cost]));
+    assert.ok(a.some((r) => r.basisKey === 'measured_by_solvency'), 'expected at least one first-party measured row');
   });
 
-  test('GROUPS are the three bases, measured first', () => {
-    // Operator directive 2026-08-26: the collapsed Stale disclosure is gone.
-    // historical_at_run_date results are retired from ranking entirely; the
-    // models they covered surface in the priced awaiting-measurement table.
-    assert.deepEqual(GROUPS.map((g) => g.basis), ['measured', 'modelled', 'free']);
+  test('GROUPS are the four groups, measured first, Solvency Bench isolated', () => {
+    // Stale retired 2026-08-26 (operator); the first-party Solvency Bench
+    // group joined the same day — measured styling, own population, and
+    // excluded from every superlative (see SUPERLATIVE_GROUPS).
+    assert.deepEqual(GROUPS.map((g) => g.key),
+      ['measured_by_source', 'modelled_by_solvency', 'measured_by_solvency', 'free_tier_capped']);
   });
 
   test('a free_tier_capped row never moves group under any assumption, same as measured', () => {

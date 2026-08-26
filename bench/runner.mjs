@@ -193,7 +193,10 @@ export async function runBenchmark(cfg, emit = () => {}) {
   const costPerTask = countable ? spent / countable : null;
   const summary = {
     protocol: cfg.harness ? PROTOCOL + 'h' : PROTOCOL, protocolHash: protocolHash(tasks, trials, maxTokens),
-    costBasis: cfg.harness ? 'subscription_usage_repriced' : 'api_metered_at_catalog_prices',
+    costBasis: cfg.harness
+      ? (ADAPTERS[cfg.harness].access?.includes('subscription') ? 'subscription_usage_repriced' : 'harness_usage_repriced_metered')
+      : 'api_metered_at_catalog_prices',
+    access: cfg.harness ? ADAPTERS[cfg.harness].access ?? null : 'metered API',
     harness: cfg.harness ? { name: cfg.harness, version: cfg.harnessVersion ?? null,
       note: 'usage measured from the harness; dollars are catalog API list prices; cache writes priced at the uncached input rate (write premium not modelled); the subscription flat fee never enters the math' } : null,
     runId, model: slug, prices: { ...prices }, trials, maxTokens,
