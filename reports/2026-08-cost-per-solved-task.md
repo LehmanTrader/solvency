@@ -76,8 +76,8 @@ model priced at today's verified rates. The assumptions are listed in full in th
 > benchmark. Read each table against itself only.
 
 **Not in either table:** Claude Sonnet 5, Claude Haiku 4.5, GPT-5.6 Terra, GPT-5.6 Luna,
-GPT-5.3 Codex, DeepSeek V4 Pro, Grok 4.6, Mistral Medium 3.5, GLM 4.7 Flash (Z.ai free), GLM 4.5
-Flash (Z.ai free). All are priced and current. None has a published pass rate we could find. They
+GPT-5.3 Codex, DeepSeek V4 Pro, Grok 4.6, Mistral Medium 3.5, GLM-5.3, Kimi K3, GLM 4.7 Flash
+(Z.ai free), GLM 4.5 Flash (Z.ai free). All are priced and current. None has a published pass rate we could find. They
 are missing, not zero.
 
 ---
@@ -161,7 +161,7 @@ Two further consequences of the staleness, visible in our own data:
 
 Stated plainly, because a methodology section that only lists strengths is marketing.
 
-- **Eight current, priced models have no pass rate anywhere we could find.** Sonnet 5 and
+- **Ten paid and two free current, priced models have no pass rate anywhere we could find.** Sonnet 5 and
   Haiku 4.5 in particular are widely used and entirely absent from this analysis.
 - **Measured rows are harness+model pairs, not models.** "Claude Code + Opus 5" is not a
   property of Opus 5. Artificial Analysis's own harness comparison shows that holding the model

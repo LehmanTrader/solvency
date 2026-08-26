@@ -410,6 +410,36 @@
       "last_verified": "2026-08-26",
       "rate_caps": null,
       "pricing_notes": "Same source as GLM-4.7-Flash above, re-verified 2026-08-26: Free across input, cached input and output. No context_window published. No rate-limit table exists on the page (rate_caps null, not a guess). No AA/SEAL/Aider benchmark row exists for this model; cost per solved task renders as MISSING."
+    },
+    {
+      "model_id": "glm-5.3",
+      "provider": "zai",
+      "vendor_provider": "z-ai",
+      "display_name": "GLM-5.3",
+      "status": "current",
+      "capability_class": "frontier",
+      "input_per_mtok": 1.4,
+      "output_per_mtok": 4.4,
+      "cached_input_per_mtok": 0.26,
+      "context_window": null,
+      "source_url": "https://docs.z.ai/guides/overview/pricing",
+      "last_verified": "2026-08-26",
+      "pricing_notes": "Z.ai's own pricing table, verified 2026-08-26: $1.40 in / $0.26 cached in / $4.40 out per M tokens; cached-input storage listed as limited-time free. The pricing page does not state a context window (third parties report 1M; not vendor-confirmed, so null). No AA/SEAL/Aider benchmark row exists yet; cost per solved task renders as MISSING."
+    },
+    {
+      "model_id": "kimi-k3",
+      "provider": "moonshot",
+      "vendor_provider": "moonshot-ai",
+      "display_name": "Kimi K3",
+      "status": "current",
+      "capability_class": "frontier",
+      "input_per_mtok": 3.0,
+      "output_per_mtok": 15.0,
+      "cached_input_per_mtok": 0.3,
+      "context_window": 1048576,
+      "source_url": "https://platform.kimi.ai/docs/pricing/chat-k3",
+      "last_verified": "2026-08-26",
+      "pricing_notes": "Moonshot's own K3 pricing page (platform.moonshot.ai redirects to platform.kimi.ai), verified 2026-08-26: $3.00 cache-miss input / $0.30 cache-hit input / $15.00 output per M tokens, 1,048,576-token context. The page does not state whether reasoning tokens bill separately from output. No AA/SEAL/Aider benchmark row exists yet; cost per solved task renders as MISSING."
     }
   ]
 }
