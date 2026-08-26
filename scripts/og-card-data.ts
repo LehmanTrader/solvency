@@ -5,24 +5,23 @@
  *
  * Every number here traces to one of:
  *   - reports/*.md frontmatter (`description`, `note`, `price_verified`, `pdf_verified`, `pdf_sources`)
- *   - site/src/lib/headline.ts's headline()/solvedFor()/money()/fmtX() (the same
+ *   - site/src/lib/headline.ts's leaderboard()/money()/fmtX() (the same
  *     engine that drives the hero, Share.astro and the report tests)
  *   - site/src/lib/data.ts's models/sourceFor (data/models.json, data/benchmarks.json)
- *   - site/src/lib/charts.ts's BASIS_OF (the same measured/modelled/stale label
- *     used on every model page and chart)
+ *   - data/task-study/final_table.csv (research note 03's own measurement)
  * No number is authored by hand; a note whose description does not carry the
  * expected figure throws rather than silently guessing.
  */
 import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { headline, fmtX, money, solvedFor, leaderboard } from '../site/src/lib/headline.ts';
+import { fmtX, money, leaderboard } from '../site/src/lib/headline.ts';
 import {
   models, sourceFor, modelById, tiers, assumptions, results,
   HARNESS_BENCHMARKS, harnessResultsFor, extrasFor,
 } from '../site/src/lib/data.ts';
-import { BASIS_OF } from '../site/src/lib/charts.ts';
 import { costPerSolvedTask, defaultOptions } from '../site/src/lib/engine.ts';
+import { providerLabel } from '../site/src/lib/providers.ts';
 
 export const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 export const REPORTS_DIR = join(ROOT, 'reports');
@@ -110,59 +109,33 @@ export const NOTE_CONFIG: Record<number, { claim: string; deriveNumber: (fm: Rep
   },
 };
 
-export function noteCardData(fm: ReportFrontmatter): CardData {
-  const cfg = NOTE_CONFIG[fm.note];
-  if (!cfg) throw new Error(`no og-card config for research note ${fm.note} (${fm.file}) — add one to NOTE_CONFIG before generating cards`);
-  const number = cfg.deriveNumber(fm);
-  const verified = fm.pdf_verified ?? fm.price_verified ?? fm.date;
-  return {
-    key: `note-${String(fm.note).padStart(2, '0')}`,
-    eyebrow: `RESEARCH NOTE ${String(fm.note).padStart(2, '0')}`,
-    number,
-    claim: cfg.claim,
-    attribution: `${fm.pdf_sources ?? 'Solvency'} · verified ${verified}`,
-    raw: { note: fm.note, description: fm.description },
-  };
+/**
+ * Redesign stage 3 (docs/redesign-2026-08/direction.md §7): the site's
+ * DEFAULT unfurl cards — home, every model page, every research note — were
+ * the dark flat "big number + claim" template (see git history for that
+ * shape). They now render through the same cream/purple ranked-leaderboard
+ * grammar as the og-ranked-cards design exploration below, via
+ * note01CardData/note02CardData/note03CardData/homeCardData/modelCardData,
+ * so the DEFAULT card a page shares IS the ranked-card style rather than a
+ * separate variant. Dispatches by note number rather than a generic
+ * deriveNumber() because each note earns its own row set now, not just its
+ * own headline figure.
+ */
+export function noteCardData(fm: ReportFrontmatter): RankedCardData {
+  if (fm.note === 1) return note01CardData(fm);
+  if (fm.note === 2) return note02CardData(fm);
+  if (fm.note === 3) return note03CardData(fm);
+  throw new Error(`no og-card builder for research note ${fm.note} (${fm.file}) — add one before generating cards`);
 }
 
-export function homeCardData(): CardData {
-  const h = headline();
-  return {
-    key: 'home',
-    eyebrow: 'SOLVENCY',
-    number: fmtX(h.solvedX),
-    claim: 'cost per solved task, measured',
-    attribution: `${h.source?.attribution ?? 'Solvency'} · verified ${h.verified}`,
-    raw: { solvedX: h.solvedX, cheapId: h.cheap.m.model_id, dearId: h.dear.m.model_id },
-  };
+/** The homepage default card: the same measured cost-per-solved-task ranking as
+ * rankedCostCardData(), keyed 'home' for site/src/layouts/Base.astro's default og image. */
+export function homeCardData(): RankedCardData {
+  return { ...rankedCostCardData(), key: 'home' };
 }
 
 export function currentModels() {
   return models.filter((m: any) => m.status === 'current');
-}
-
-export function modelCardData(model: any): CardData {
-  const mine = solvedFor(model.model_id, 'heavy');
-  if (mine) {
-    const basis = BASIS_OF[mine.basisKey] ?? 'modelled';
-    const src = sourceFor(mine.r.benchmark);
-    return {
-      key: `model-${model.model_id}`,
-      eyebrow: 'MODEL',
-      number: money(mine.cost),
-      claim: model.display_name,
-      attribution: `${basis} cost per solved task · ${src?.attribution ?? mine.r.benchmark} · verified ${src?.last_verified ?? mine.r.run_date}`,
-      raw: { modelId: model.model_id, cost: mine.cost, basisKey: mine.basisKey },
-    };
-  }
-  return {
-    key: `model-${model.model_id}`,
-    eyebrow: 'MODEL',
-    number: `$${model.input_per_mtok}/M`,
-    claim: model.display_name,
-    attribution: `list price, no published pass rate · Provider pricing page · verified ${model.last_verified}`,
-    raw: { modelId: model.model_id, cost: null, basisKey: null, inputPerMtok: model.input_per_mtok },
-  };
 }
 
 // ---------------------------------------------------------------------------
@@ -193,6 +166,14 @@ export interface RankedRow {
   basis: RankedBasis;
   /** Printed nowhere on the card yet; carried for future detail/aria text. */
   detail: string;
+  /** True field rank (1 = cheapest), independent of this row's position in a
+   * truncated `rows` array — see excerptAroundId(). Falls back to array
+   * position when omitted, which is exact for a card that prints every row. */
+  rank?: number;
+  /** Marks the row the card is *about* (brand-amber outline), independent of
+   * rank. Falls back to "rank 1" when no row sets this — the original
+   * leaderboard-card behaviour. */
+  lead?: boolean;
 }
 
 export interface RankedCardData {
@@ -202,8 +183,14 @@ export interface RankedCardData {
   /** The one span the headline highlights, brand-amber background. */
   headlineHighlight: string;
   headlineSuffix: string;
-  /** Ascending by cost — rows[0] is the #1 (cheapest) row, outlined. */
+  /** Ascending by cost — rows[0] is the #1 (cheapest) row, outlined, unless a
+   * row sets `lead` explicitly (per-model default cards: the subject model,
+   * wherever it actually ranks). */
   rows: RankedRow[];
+  /** Bar-width denominator. Defaults to the max cost in `rows`; a card that
+   * excerpts a longer field (excerptAroundId()) sets this to the *full*
+   * field's max so a truncated card's bars stay proportionally honest. */
+  barMax?: number;
   /** Left footer: "Source: <name> (<domain>)" — rendered in mono caps by the card CSS. */
   sourceLine: string;
   /** "NOTE: <metric + verified date>" — right footer. */
@@ -218,19 +205,44 @@ const monogram = (provider: string) => provider.slice(0, 2).toUpperCase();
 const domainOf = (url: string) => new URL(url).hostname.replace(/^www\./, '');
 
 /**
+ * Ascending-by-rank copy of `rows` with `rank` stamped on every row (1 =
+ * cheapest), then trimmed to `max`: the cheapest `max - 1` plus — if it
+ * would otherwise fall outside that cut — the row whose id is `keepId`,
+ * appended with its true rank intact rather than relabelled. Used by every
+ * per-model default card: a model far down a long field still gets its real
+ * rank number, never a fabricated one, and the bars stay comparable because
+ * callers pass the *full* field's max cost as `RankedCardData.barMax`
+ * alongside this excerpt rather than recomputing it from the trimmed rows.
+ */
+function excerptAroundId(rows: RankedRow[], keepId: string, max = 6): RankedRow[] {
+  const ranked = rows.map((r, i) => ({ ...r, rank: i + 1 }));
+  const idx = ranked.findIndex((r) => r.id === keepId);
+  if (idx === -1) throw new Error(`excerptAroundId: "${keepId}" is not in the row set`);
+  const picked = ranked.length <= max || idx < max ? ranked.slice(0, max) : [...ranked.slice(0, max - 1), ranked[idx]];
+  // Stamp `lead` on every row, true or false, rather than leaving it unset on
+  // the rest: a per-model card is about exactly one row, which may not be
+  // rank 1, and rankedRowHtml's "rank 1 is lead" fallback only kicks in when
+  // a row's `lead` is left unset — leaving it unset here would double-outline
+  // both the true #1 and the subject on a card where they differ.
+  return picked.map((r) => ({ ...r, lead: r.id === keepId }));
+}
+
+/**
  * All current models with a measured (not modelled, not stale) cost per
  * solved task, cheapest first. Single basis, single source — verified by
- * asserting every row shares one benchmark before building the card.
+ * asserting every row shares one benchmark before building the rows.
+ * Shared by the homepage default card and every measured model's own
+ * default card (modelCardData), so both agree on one computation.
  */
-export function rankedCostCardData(): RankedCardData {
+function measuredCostRows() {
   const { measured } = leaderboard('heavy');
-  if (!measured.length) throw new Error('rankedCostCardData: no measured current models to rank');
+  if (!measured.length) throw new Error('measuredCostRows: no measured current models to rank');
   const benchmarks = new Set(measured.map((r) => r.r.benchmark));
   if (benchmarks.size !== 1) {
-    throw new Error(`rankedCostCardData: measured rows span multiple sources (${[...benchmarks].join(', ')}) — a single-basis card needs one`);
+    throw new Error(`measuredCostRows: measured rows span multiple sources (${[...benchmarks].join(', ')}) — a single-basis card needs one`);
   }
   const src = sourceFor([...benchmarks][0]);
-  if (!src) throw new Error('rankedCostCardData: no source metadata for the measured benchmark');
+  if (!src) throw new Error('measuredCostRows: no source metadata for the measured benchmark');
 
   const rows: RankedRow[] = measured.map((r) => ({
     id: r.m.model_id,
@@ -244,6 +256,16 @@ export function rankedCostCardData(): RankedCardData {
   }));
   const leader = rows[0], priciest = rows[rows.length - 1];
   const spread = fmtX(priciest.cost / leader.cost);
+  return { rows, src, leader, priciest, spread };
+}
+
+/**
+ * All current models with a measured (not modelled, not stale) cost per
+ * solved task, cheapest first. Single basis, single source — verified by
+ * asserting every row shares one benchmark before building the card.
+ */
+export function rankedCostCardData(): RankedCardData {
+  const { rows, src, leader, spread } = measuredCostRows();
 
   return {
     key: 'ranked-cost-per-solved-task',
@@ -321,15 +343,15 @@ export function rankedHarnessCardData(): RankedCardData | null {
  * card: mixing modelled cost into a measured ranking is exactly the basis
  * blend the engine's docs forbid.
  */
-export function rankedModelledCardData(): RankedCardData | null {
+function modelledCostRows() {
   const { modelled } = leaderboard('heavy');
   if (!modelled.length) return null;
   const benchmarks = new Set(modelled.map((r) => r.r.benchmark));
   if (benchmarks.size !== 1) {
-    throw new Error(`rankedModelledCardData: modelled rows span multiple sources (${[...benchmarks].join(', ')}) — a single-basis card needs one`);
+    throw new Error(`modelledCostRows: modelled rows span multiple sources (${[...benchmarks].join(', ')}) — a single-basis card needs one`);
   }
   const src = sourceFor([...benchmarks][0]);
-  if (!src) throw new Error('rankedModelledCardData: no source metadata for the modelled benchmark');
+  if (!src) throw new Error('modelledCostRows: no source metadata for the modelled benchmark');
 
   const rows: RankedRow[] = modelled.map((r) => ({
     id: r.m.model_id,
@@ -343,6 +365,20 @@ export function rankedModelledCardData(): RankedCardData | null {
   }));
   const leader = rows[0], priciest = rows[rows.length - 1];
   const spread = fmtX(priciest.cost / leader.cost);
+  return { rows, src, leader, priciest, spread };
+}
+
+/**
+ * All current models whose cost per solved task is modelled_by_solvency (a
+ * published pass rate, but no source-observed cost — Solvency's task-tier
+ * loop model fills the gap). Cheapest first. Kept separate from the measured
+ * card: mixing modelled cost into a measured ranking is exactly the basis
+ * blend the engine's docs forbid.
+ */
+export function rankedModelledCardData(): RankedCardData | null {
+  const built = modelledCostRows();
+  if (!built) return null;
+  const { rows, src, leader, spread } = built;
 
   return {
     key: 'ranked-modelled-cost-per-solved-task',
@@ -358,5 +394,218 @@ export function rankedModelledCardData(): RankedCardData | null {
     sourceLine: `Source: Scale SEAL, SWE-bench Pro (${domainOf(src.source_url)})`,
     noteLine: `NOTE: MODELLED COST, TASK-TIER MODEL · VERIFIED ${src.last_verified}`,
     raw: { modelIds: rows.map((r) => r.id), leaderId: leader.id, spread },
+  };
+}
+
+/**
+ * Every current model's verified list price per million input tokens,
+ * cheapest first — the only ranking available for a model with no published
+ * pass rate (so no cost-per-solved-task figure exists yet). `basis:
+ * 'measured'` here means "a verified real number", not "a benchmark-measured
+ * cost per solved task" — there is no modelled/stale ambiguity for a list
+ * price, so the bar is solid, same as any other verified figure.
+ */
+function priceRankedRows(): RankedRow[] {
+  const list = currentModels().slice().sort((a: any, b: any) => a.input_per_mtok - b.input_per_mtok);
+  return list.map((m: any) => ({
+    id: m.model_id,
+    name: m.display_name,
+    chip: monogram(m.provider),
+    provider: m.provider,
+    cost: m.input_per_mtok,
+    value: `$${m.input_per_mtok}/M`,
+    basis: 'measured',
+    detail: 'list price per million input tokens',
+  }));
+}
+
+/**
+ * The default social card for a model's own page (site/src/pages/models/[id].astro),
+ * replacing the old flat dark stat card with the same ranked-leaderboard
+ * grammar as the homepage: this model's row outlined in brand amber wherever
+ * it actually falls in the field, not repositioned to look like a winner.
+ *
+ * Basis is decided by which leaderboard('heavy') bucket the model is
+ * actually in (the same split rankedCostCardData/rankedModelledCardData use)
+ * rather than re-deriving it — one source of truth for "is this row
+ * measured or modelled." A model with no cost-per-solved-task result at all
+ * (no published pass rate yet) falls back to the list-price ranking above,
+ * so every current model gets a truthful default card instead of none.
+ */
+export function modelCardData(model: any): RankedCardData {
+  const { measured, modelled } = leaderboard('heavy');
+  const inMeasured = measured.some((r) => r.m.model_id === model.model_id);
+  const inModelled = modelled.some((r) => r.m.model_id === model.model_id);
+
+  if (inMeasured) {
+    const { rows, src } = measuredCostRows();
+    const barMax = Math.max(...rows.map((r) => r.cost));
+    const mine = rows.find((r) => r.id === model.model_id)!;
+    return {
+      key: `model-${model.model_id}`,
+      eyebrow: 'COST PER SOLVED TASK · CURRENT MODELS',
+      headlinePrefix: '',
+      headlineHighlight: model.display_name,
+      headlineSuffix: ` costs ${mine.value} per solved task, measured.`,
+      rows: excerptAroundId(rows, model.model_id),
+      barMax,
+      sourceLine: src.attribution,
+      noteLine: `NOTE: MEASURED COST PER SOLVED TASK · VERIFIED ${src.last_verified}`,
+      raw: { modelId: model.model_id, cost: mine.cost, basisKey: 'measured_by_source' },
+    };
+  }
+
+  if (inModelled) {
+    const built = modelledCostRows()!;
+    const { rows, src } = built;
+    const barMax = Math.max(...rows.map((r) => r.cost));
+    const mine = rows.find((r) => r.id === model.model_id)!;
+    return {
+      key: `model-${model.model_id}`,
+      eyebrow: 'COST PER SOLVED TASK, MODELLED · LEGACY & PREVIEW MODELS',
+      headlinePrefix: 'Our loop model prices ',
+      headlineHighlight: model.display_name,
+      headlineSuffix: ` at ${mine.value} per solved task.`,
+      rows: excerptAroundId(rows, model.model_id),
+      barMax,
+      sourceLine: `Source: Scale SEAL, SWE-bench Pro (${domainOf(src.source_url)})`,
+      noteLine: `NOTE: MODELLED COST, TASK-TIER MODEL · VERIFIED ${src.last_verified}`,
+      raw: { modelId: model.model_id, cost: mine.cost, basisKey: 'modelled_by_solvency' },
+    };
+  }
+
+  // No published pass rate yet: no cost-per-solved-task figure exists to
+  // rank. Fall back to the one figure every model has — verified list price.
+  const rows = priceRankedRows();
+  const barMax = Math.max(...rows.map((r) => r.cost));
+  return {
+    key: `model-${model.model_id}`,
+    eyebrow: 'LIST PRICE PER MILLION INPUT TOKENS · CURRENT MODELS',
+    headlinePrefix: '',
+    headlineHighlight: model.display_name,
+    headlineSuffix: ` lists at $${model.input_per_mtok}/M input — no published pass rate yet.`,
+    rows: excerptAroundId(rows, model.model_id),
+    barMax,
+    sourceLine: `Source: ${providerLabel(model.provider)} pricing page (${domainOf(model.source_url)})`,
+    noteLine: `NOTE: LIST PRICE, NO SOLVED-TASK COST YET · VERIFIED ${model.last_verified}`,
+    raw: { modelId: model.model_id, cost: null, basisKey: null, inputPerMtok: model.input_per_mtok },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Research-note default cards (site/src/pages/research/[...slug].astro's
+// `og={/og/cards/note-NN.png}`) — same ranked grammar, one row set per note's
+// own finding rather than a hand-typed number.
+// ---------------------------------------------------------------------------
+
+const TASK_STUDY_CSV = join(ROOT, 'data', 'task-study', 'final_table.csv');
+const TASK_BUCKETS: Record<string, string> = {
+  a: 'Marketing/landing site', b: 'Full web app (SaaS)', c: '2D indie game',
+  d: 'CLI tool/utility', e: 'Data/ML pipeline', f: 'Mobile app',
+};
+
+/** Same minimal quoted-CSV parser as test/task-report.test.ts. */
+function parseCsv(text: string): Record<string, string>[] {
+  const lines = text.trim().split('\n');
+  const splitRow = (line: string): string[] => {
+    const cells: string[] = [];
+    let cur = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (inQuotes) {
+        if (c === '"' && line[i + 1] === '"') { cur += '"'; i++; }
+        else if (c === '"') { inQuotes = false; }
+        else cur += c;
+      } else if (c === '"') { inQuotes = true; }
+      else if (c === ',') { cells.push(cur); cur = ''; }
+      else { cur += c; }
+    }
+    cells.push(cur);
+    return cells;
+  };
+  const header = splitRow(lines[0]);
+  return lines.slice(1).map((line) => {
+    const cells = splitRow(line);
+    const row: Record<string, string> = {};
+    header.forEach((h, i) => { row[h] = cells[i] ?? ''; });
+    return row;
+  });
+}
+
+function median(sorted: number[]): number {
+  const n = sorted.length;
+  const mid = Math.floor(n / 2);
+  return n % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+}
+
+const fmtCount = (n: number) => (Number.isInteger(n) ? n.toLocaleString('en-US') : n.toFixed(1));
+
+/** Bucket, n and median task count per use case, straight from the CSV — see test/task-report.test.ts. */
+function taskBucketMedians(): { bucket: string; label: string; n: number; median: number }[] {
+  const rows = parseCsv(readFileSync(TASK_STUDY_CSV, 'utf8'));
+  return Object.entries(TASK_BUCKETS).map(([key, label]) => {
+    const counts = rows.filter((r) => r.bucket === key).map((r) => Number(r.count_used)).sort((a, b) => a - b);
+    if (!counts.length) throw new Error(`taskBucketMedians: bucket "${key}" has no rows in ${TASK_STUDY_CSV}`);
+    return { bucket: key, label, n: counts.length, median: median(counts) };
+  });
+}
+
+/** Research note 01 (Cost Per Solved Task): the same measured field as the
+ * homepage card, reframed around the cheapest-vs-priciest spread the note leads with. */
+function note01CardData(fm: ReportFrontmatter): RankedCardData {
+  const { rows, src, leader, priciest } = measuredCostRows();
+  const gap = NOTE_CONFIG[1].deriveNumber(fm);
+  return {
+    key: 'note-01',
+    eyebrow: 'RESEARCH NOTE 01 · COST PER SOLVED TASK',
+    headlinePrefix: '',
+    headlineHighlight: gap,
+    headlineSuffix: ` apart — ${leader.name} vs. ${priciest.name}, cheapest to priciest, measured.`,
+    rows,
+    sourceLine: src.attribution,
+    noteLine: `NOTE: MEASURED COST PER SOLVED TASK · VERIFIED ${src.last_verified}`,
+    raw: { note: fm.note, leaderId: leader.id, priciestId: priciest.id, gap },
+  };
+}
+
+/** Research note 02 (Same Model, Four Harnesses) IS the harness ranking — no
+ * separate construction, just the note's own key and eyebrow on top of it. */
+function note02CardData(fm: ReportFrontmatter): RankedCardData {
+  const card = rankedHarnessCardData();
+  if (!card) throw new Error('note02CardData: rankedHarnessCardData() returned null — research note 02 needs a model with 2+ harness results');
+  return { ...card, key: 'note-02', eyebrow: `RESEARCH NOTE 02 · ${card.eyebrow}`, raw: { ...card.raw, note: fm.note } };
+}
+
+/** Research note 03 (What Is a Task): median tasks-to-first-ship per use
+ * case, ranked — bars sized by task count instead of dollars, straight from
+ * data/task-study/final_table.csv (see taskBucketMedians()). */
+function note03CardData(fm: ReportFrontmatter): RankedCardData {
+  const buckets = taskBucketMedians().slice().sort((a, b) => a.median - b.median);
+  const { text: ratio, lo, hi } = extractMedianRatio(fm.description);
+  const many = buckets.find((b) => b.median === hi);
+  const few = buckets.find((b) => b.median === lo);
+  if (!many || !few) throw new Error(`note03CardData: could not match the description's "median ${lo}"/"median ${hi}" to a bucket`);
+
+  const rows: RankedRow[] = buckets.map((b) => ({
+    id: b.bucket,
+    name: b.label,
+    sub: `n=${b.n} repos`,
+    cost: b.median,
+    value: fmtCount(b.median),
+    basis: 'measured',
+    detail: `median tasks to first ship, ${b.n} repos measured`,
+  }));
+
+  return {
+    key: 'note-03',
+    eyebrow: 'RESEARCH NOTE 03 · TASKS TO FIRST SHIP',
+    headlinePrefix: `${many.label} needs `,
+    headlineHighlight: ratio,
+    headlineSuffix: ` more tasks to ship than a ${few.label}, measured.`,
+    rows,
+    sourceLine: "Source: Solvency's own GitHub measurement, 60 repos",
+    noteLine: `NOTE: MEDIAN TASKS TO FIRST SHIP · MEASURED ${fm.pdf_verified ?? fm.date}`,
+    raw: { note: fm.note, manyBucket: many.bucket, fewBucket: few.bucket, ratio },
   };
 }

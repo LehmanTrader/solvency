@@ -588,10 +588,16 @@
   /* ---- theme-paired chart images (research notes only) ------------------- */
   /* Light is the default theme now, so the light-paired image shows by
      default and the dark-only override swaps the pair (research notes ship
-     both a light and a dark PNG of the same chart; see scripts/charts.ts). */
-  .chart-dark { display: none; }
-  :root[data-theme="dark"] .chart-dark { display: block; }
-  :root[data-theme="dark"] .chart-light { display: none; }
+     both a light and a dark PNG of the same chart; see scripts/charts.ts).
+     Redesign stage 3 fix: these images only ever appear inside .prose, whose
+     own `.prose img { display: block; ... }` rule (below, "report prose")
+     carries higher specificity (.prose + img beats a bare single class) and
+     was silently winning the cascade — both the dark and light chart images
+     rendered display:block at once regardless of theme. Scoping these rules
+     under .prose raises them to two classes, which wins outright. */
+  .prose .chart-dark { display: none; }
+  :root[data-theme="dark"] .prose .chart-dark { display: block; }
+  :root[data-theme="dark"] .prose .chart-light { display: none; }
   .theme-btn { display: inline-flex; align-items: center; justify-content: center; width: 2.25rem; height: 2.25rem;
                border: 1px solid var(--color-control-border); border-radius: 6px; color: var(--color-muted); background: transparent; cursor: pointer;
                transition: color .12s, border-color .12s, background .12s; }

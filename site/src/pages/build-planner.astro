@@ -1974,6 +1974,14 @@ const harnessExamples = [
     setTimeout(() => URL.revokeObjectURL(href), 0);
   }
 
+  // Redesign stage 3 (docs/redesign-2026-08/direction.md): this downloadable
+  // quote card used to be hand-drawn in the site's old dark-default palette
+  // (#0A0C0D bg, #E0A02E amber) regardless of which theme the page itself
+  // was in — canvas can't read CSS custom properties, so the values below
+  // are the light-theme hex literals from site/src/styles/global.css's
+  // @theme block, copied rather than computed: cream bg, ink/body/muted text,
+  // the light-theme amber for the one brand accent bar, never used for a
+  // data value (the "Missing" metric stays muted, not amber).
   async function buildPngBlob(plan: BuildPlanV1, quote: ReturnType<typeof quoteBuildPlan>): Promise<Blob> {
     const summary = buildExportSummary(plan, quote);
     const width = 1200;
@@ -1981,35 +1989,37 @@ const harnessExamples = [
     const height = Math.min(2200, 700 + summary.roles.length * 48 + noticeReserve);
     const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height;
     const ctx = canvas.getContext('2d'); if (!ctx) throw new Error('PNG rendering is unavailable in this browser.');
-    ctx.fillStyle = '#0A0C0D'; ctx.fillRect(0, 0, width, height);
-    ctx.strokeStyle = '#2C3338'; ctx.lineWidth = 2; ctx.strokeRect(48, 48, width - 96, height - 96);
-    ctx.fillStyle = '#E0A02E'; ctx.fillRect(72, 74, 7, 28);
-    ctx.fillStyle = '#F4F1EA'; ctx.font = '700 22px ui-monospace, monospace'; ctx.fillText('SOLVENCY · BUILD QUOTE', 96, 98);
-    ctx.fillStyle = '#A7ADB3'; ctx.font = '16px ui-monospace, monospace'; ctx.fillText(`Generated ${new Date(summary.quotedAt).toISOString()} · ${summary.engineVersion}`, 72, 132);
-    ctx.fillStyle = '#F4F1EA'; ctx.font = '700 38px system-ui, sans-serif'; ctx.fillText(fitCanvasText(ctx, summary.planName, 1056), 72, 188);
-    ctx.fillStyle = '#A7ADB3'; ctx.font = '18px ui-monospace, monospace'; ctx.fillText(fitCanvasText(ctx, `Harness: ${summary.harness}`, 1056), 72, 222);
+    const CARD_BG = '#F8F6EE', CARD_PANEL_2 = '#F4F3F1', CARD_RULE = '#CFCCC6', CARD_RULE_2 = '#E2E0DC';
+    const CARD_INK = '#1A1D20', CARD_BODY = '#3E464C', CARD_MUTED = '#5F6B73', CARD_MISSING = '#5F6B73', CARD_AMBER = '#9A6410';
+    ctx.fillStyle = CARD_BG; ctx.fillRect(0, 0, width, height);
+    ctx.strokeStyle = CARD_RULE; ctx.lineWidth = 2; ctx.strokeRect(48, 48, width - 96, height - 96);
+    ctx.fillStyle = CARD_AMBER; ctx.fillRect(72, 74, 7, 28);
+    ctx.fillStyle = CARD_INK; ctx.font = '700 22px ui-monospace, monospace'; ctx.fillText('SOLVENCY · BUILD QUOTE', 96, 98);
+    ctx.fillStyle = CARD_MUTED; ctx.font = '16px ui-monospace, monospace'; ctx.fillText(`Generated ${new Date(summary.quotedAt).toISOString()} · ${summary.engineVersion}`, 72, 132);
+    ctx.fillStyle = CARD_INK; ctx.font = '700 38px system-ui, sans-serif'; ctx.fillText(fitCanvasText(ctx, summary.planName, 1056), 72, 188);
+    ctx.fillStyle = CARD_MUTED; ctx.font = '18px ui-monospace, monospace'; ctx.fillText(fitCanvasText(ctx, `Harness: ${summary.harness}`, 1056), 72, 222);
 
     summary.metrics.forEach((metric, index) => {
       const col = index % 2, row = Math.floor(index / 2), x = 72 + col * 540, y = 260 + row * 116;
-      ctx.fillStyle = '#111519'; ctx.fillRect(x, y, 516, 92); ctx.strokeStyle = '#2C3338'; ctx.strokeRect(x, y, 516, 92);
-      ctx.fillStyle = '#A7ADB3'; ctx.font = '14px ui-monospace, monospace'; ctx.fillText(metric.label.toUpperCase(), x + 18, y + 28);
-      ctx.fillStyle = metric.value.startsWith('Missing') ? '#B8A47A' : '#F4F1EA'; ctx.font = '700 24px ui-monospace, monospace'; ctx.fillText(fitCanvasText(ctx, metric.value, 480), x + 18, y + 64);
+      ctx.fillStyle = CARD_PANEL_2; ctx.fillRect(x, y, 516, 92); ctx.strokeStyle = CARD_RULE_2; ctx.strokeRect(x, y, 516, 92);
+      ctx.fillStyle = CARD_MUTED; ctx.font = '14px ui-monospace, monospace'; ctx.fillText(metric.label.toUpperCase(), x + 18, y + 28);
+      ctx.fillStyle = metric.value.startsWith('Missing') ? CARD_MISSING : CARD_INK; ctx.font = '700 24px ui-monospace, monospace'; ctx.fillText(fitCanvasText(ctx, metric.value, 480), x + 18, y + 64);
     });
 
     const rolesY = 516;
-    ctx.fillStyle = '#A7ADB3'; ctx.font = '14px ui-monospace, monospace';
+    ctx.fillStyle = CARD_MUTED; ctx.font = '14px ui-monospace, monospace';
     ctx.fillText('ROLE', 72, rolesY); ctx.fillText('MODEL', 380, rolesY); ctx.fillText('CALLS', 760, rolesY); ctx.fillText('COST / BUILD', 900, rolesY);
-    ctx.strokeStyle = '#2C3338'; ctx.beginPath(); ctx.moveTo(72, rolesY + 14); ctx.lineTo(1128, rolesY + 14); ctx.stroke();
+    ctx.strokeStyle = CARD_RULE_2; ctx.beginPath(); ctx.moveTo(72, rolesY + 14); ctx.lineTo(1128, rolesY + 14); ctx.stroke();
     summary.roles.forEach((role, index) => {
       const y = rolesY + 52 + index * 48;
-      ctx.fillStyle = '#F4F1EA'; ctx.font = '17px ui-monospace, monospace'; ctx.fillText(fitCanvasText(ctx, role.label, 280), 72, y);
-      ctx.fillStyle = '#CCD0D2'; ctx.fillText(fitCanvasText(ctx, role.modelName, 350), 380, y);
+      ctx.fillStyle = CARD_INK; ctx.font = '17px ui-monospace, monospace'; ctx.fillText(fitCanvasText(ctx, role.label, 280), 72, y);
+      ctx.fillStyle = CARD_BODY; ctx.fillText(fitCanvasText(ctx, role.modelName, 350), 380, y);
       ctx.fillText(role.expectedInvocations.toLocaleString('en-US', { maximumFractionDigits: 2 }), 760, y);
-      ctx.fillStyle = '#F4F1EA'; ctx.fillText(role.costPerBuildAttempt, 900, y);
-      ctx.fillStyle = '#727B82'; ctx.font = '12px ui-monospace, monospace'; ctx.fillText(fitCanvasText(ctx, `${role.priceBasis.replaceAll('_', ' ')} · usage ${role.usageBasis.replaceAll('_', ' ')}${role.priceLastVerified ? ` · verified ${role.priceLastVerified}` : ''}`, 1056), 72, y + 19);
+      ctx.fillStyle = CARD_INK; ctx.fillText(role.costPerBuildAttempt, 900, y);
+      ctx.fillStyle = CARD_MUTED; ctx.font = '12px ui-monospace, monospace'; ctx.fillText(fitCanvasText(ctx, `${role.priceBasis.replaceAll('_', ' ')} · usage ${role.usageBasis.replaceAll('_', ' ')}${role.priceLastVerified ? ` · verified ${role.priceLastVerified}` : ''}`, 1056), 72, y + 19);
     });
     const footerY = rolesY + 78 + summary.roles.length * 48;
-    ctx.fillStyle = '#A7ADB3'; ctx.font = '14px system-ui, sans-serif';
+    ctx.fillStyle = CARD_MUTED; ctx.font = '14px system-ui, sans-serif';
     let y = footerY;
     for (const notice of summary.notices) {
       for (const line of wrapCanvasText(ctx, notice, 1056, 2)) { ctx.fillText(line, 72, y); y += 20; }

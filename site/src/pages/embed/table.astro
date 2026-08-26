@@ -6,18 +6,18 @@ import '../../styles/global.css';
 <html lang="en"><head>
 <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Cost per solved task — Solvency</title><meta name="robots" content="noindex" />
-<style>html,body{margin:0;background:#0A0C0D}</style>
+<style>html,body{margin:0}</style>
 </head><body>
   <div class="p-4">
     <table class="w-full font-mono text-[12px] tabular-nums">
-      <thead><tr class="text-[9px] uppercase tracking-[0.14em] text-[var(--color-muted)] border-b border-[var(--color-accent)]">
+      <thead><tr class="text-[9px] uppercase tracking-[0.14em] text-[var(--color-muted)] border-b border-[var(--color-rule-strong)]">
         <th class="text-left pb-2 pr-3">Model</th><th class="text-right px-3">Pass</th><th class="text-right pl-3">$ / solved task</th>
       </tr></thead>
       <tbody id="e-body"></tbody>
     </table>
     <p id="e-note" class="mt-3 font-mono text-[9px] text-[var(--color-muted)]"></p>
     <p class="mt-1 font-mono text-[9px]">
-      <a href="https://solvency.dev" target="_blank" rel="noopener" class="text-[var(--color-accent)]">Data: Solvency (solvency.dev)</a>
+      <a href="https://solvency.dev" target="_blank" rel="noopener" class="link">Data: Solvency (solvency.dev)</a>
     </p>
   </div>
 <script>
@@ -41,11 +41,19 @@ import '../../styles/global.css';
   const measured = rows.filter((x) => x.basis === 'measured_by_source');
   const show = (measured.length ? measured : rows).sort((a, b) => a.cost - b.cost);
   const body = document.getElementById('e-body')!;
-  body.replaceChildren(...show.map(({ m, r, cost }) => {
+  body.replaceChildren(...show.map(({ m, r, cost, basis }) => {
     const tr = document.createElement('tr'); tr.className = 'border-b border-[var(--color-rule)]';
     const name = document.createElement('td'); name.className = 'py-1.5 pr-3 text-[var(--color-ink)]'; name.textContent = m.display_name;
     const pass = document.createElement('td'); pass.className = 'px-3 text-right text-[var(--color-body)]'; pass.textContent = `${(r.pass_rate * 100).toFixed(0)}%`;
-    const solved = document.createElement('td'); solved.className = 'pl-3 text-right text-[var(--color-accent)]'; solved.textContent = money(cost);
+    // Data accent (purple), not brand amber — this is the "measured/modelled" job, never brand/highlight.
+    // Two full literal class strings, not a template-built one: Tailwind's
+    // static scanner needs the whole arbitrary-value class present verbatim
+    // in source to generate its rule.
+    const solved = document.createElement('td');
+    solved.className = basis === 'measured_by_source'
+      ? 'pl-3 text-right text-[var(--color-measured)]'
+      : 'pl-3 text-right text-[var(--color-modelled)]';
+    solved.textContent = money(cost);
     tr.append(name, pass, solved);
     return tr;
   }));

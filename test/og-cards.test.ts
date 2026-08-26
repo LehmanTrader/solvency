@@ -2,12 +2,19 @@
  * Staleness guard for the per-page social stat cards (scripts/og-cards.ts,
  * reports/og-cards/*.png — the committed source; site/public/og/cards/ is a
  * gitignored build-time mirror synced in by site/scripts/sync-assets.mjs,
- * same pattern as reports/charts/ -> site/public/charts/). The homepage and
- * model cards embed numbers that drift with data/models.json; this test
- * re-derives every embedded figure from the same live sources the generator
- * uses and fails loudly if the committed manifest.json — and therefore the
- * committed PNGs — has drifted from the data. `npm run og:cards` regenerates
- * both.
+ * same pattern as reports/charts/ -> site/public/charts/). The homepage,
+ * model and research-note cards embed numbers that drift with
+ * data/models.json; this test re-derives every embedded figure from the same
+ * live sources the generator uses and fails loudly if the committed
+ * manifest.json — and therefore the committed PNGs — has drifted from the
+ * data. `npm run og:cards` regenerates both.
+ *
+ * Redesign stage 3 (docs/redesign-2026-08/direction.md §7): every DEFAULT
+ * card (home, model-<id>, note-NN) moved from the old dark flat "big number
+ * + claim" template to the cream/purple ranked-leaderboard grammar, so
+ * noteCardData/homeCardData/modelCardData now return RankedCardData (a
+ * headline + a ranked row list), not the old CardData (a headline number +
+ * a claim sentence). This test moved with them.
  */
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
@@ -16,7 +23,7 @@ import { join } from 'node:path';
 import {
   ROOT, allReportFrontmatter, noteCardData, homeCardData, currentModels, modelCardData,
 } from '../scripts/og-card-data.ts';
-import { headline, fmtX, money, solvedFor } from '../site/src/lib/headline.ts';
+import { leaderboard } from '../site/src/lib/headline.ts';
 
 const CARDS_DIR = join(ROOT, 'reports', 'og-cards');
 const MANIFEST_PATH = join(CARDS_DIR, 'manifest.json');
@@ -31,40 +38,40 @@ describe('og cards: manifest matches the live data', () => {
     : { cards: {} };
   const cards: Record<string, any> = manifest.cards ?? {};
 
+  /** Shared assertions for any RankedCardData entry: same headline, row set and footers as a freshly computed one. */
+  function assertRankedCardMatches(key: string, got: any, expected: any) {
+    assert.ok(got, `manifest is missing card "${key}"`);
+    assert.equal(got.eyebrow, expected.eyebrow, `${key}: eyebrow is stale`);
+    assert.equal(got.headlinePrefix, expected.headlinePrefix, `${key}: headlinePrefix is stale`);
+    assert.equal(got.headlineHighlight, expected.headlineHighlight, `${key}: headlineHighlight is stale`);
+    assert.equal(got.headlineSuffix, expected.headlineSuffix, `${key}: headlineSuffix is stale`);
+    assert.equal(got.sourceLine, expected.sourceLine, `${key}: sourceLine is stale`);
+    assert.equal(got.noteLine, expected.noteLine, `${key}: noteLine is stale`);
+    assert.deepEqual(got.rows, expected.rows, `${key}: rows are stale`);
+    assert.equal(got.barMax, expected.barMax, `${key}: barMax is stale`);
+    assert.deepEqual(got.raw, expected.raw, `${key}: raw is stale`);
+    assert.ok(existsSync(join(CARDS_DIR, `${key}.png`)), `${key}.png is missing from reports/og-cards/`);
+  }
+
   test('every note card matches its report frontmatter, freshly re-parsed', () => {
     const notes = allReportFrontmatter();
     assert.ok(notes.length > 0, 'expected at least one research note');
     for (const fm of notes) {
       const expected = noteCardData(fm);
-      const got = cards[expected.key];
-      assert.ok(got, `manifest is missing card "${expected.key}" for research note ${fm.note}`);
-      assert.equal(got.number, expected.number, `${expected.key}: number is stale`);
-      assert.equal(got.claim, expected.claim, `${expected.key}: claim is stale`);
-      assert.equal(got.attribution, expected.attribution, `${expected.key}: attribution is stale`);
-      assert.ok(
-        existsSync(join(CARDS_DIR, `${expected.key}.png`)),
-        `${expected.key}.png is missing from reports/og-cards/`,
-      );
+      assertRankedCardMatches(expected.key, cards[expected.key], expected);
     }
   });
 
-  test('the homepage card matches headline() computed now', () => {
+  test('the homepage card matches the measured leaderboard computed now', () => {
     const expected = homeCardData();
-    const got = cards.home;
-    assert.ok(got, 'manifest is missing the "home" card');
-    assert.equal(got.number, expected.number, 'home: headline multiplier is stale');
-    assert.equal(got.claim, expected.claim, 'home: claim is stale');
-    assert.equal(got.attribution, expected.attribution, 'home: attribution is stale');
-    assert.equal(got.raw.cheapId, expected.raw.cheapId, 'home: cheapest model in the headline changed');
-    assert.equal(got.raw.dearId, expected.raw.dearId, 'home: reference model in the headline changed');
-    assert.equal(got.raw.solvedX, expected.raw.solvedX, 'home: raw multiplier is stale');
-    assert.ok(existsSync(join(CARDS_DIR, 'home.png')), 'home.png is missing from reports/og-cards/');
+    assertRankedCardMatches('home', cards.home, expected);
     // Cross-check against the engine directly, not just against the generator's own function.
-    const h = headline();
-    assert.equal(got.number, fmtX(h.solvedX), 'home: number disagrees with headline() computed here');
+    const { measured } = leaderboard('heavy');
+    assert.equal(expected.rows.length, measured.length, 'home: row count disagrees with leaderboard(\'heavy\').measured computed here');
+    assert.equal(expected.rows[0].id, measured[0].m.model_id, 'home: #1 row disagrees with leaderboard(\'heavy\').measured computed here');
   });
 
-  test('every current model has a card, and each matches solvedFor() computed now', () => {
+  test('every current model has a card, and each matches modelCardData() computed now', () => {
     const models = currentModels();
     assert.ok(models.length > 0, 'expected at least one current model');
     const manifestModelKeys = Object.keys(cards).filter((k) => k.startsWith('model-'));
@@ -74,25 +81,15 @@ describe('og cards: manifest matches the live data', () => {
     );
     for (const m of models) {
       const expected = modelCardData(m);
-      const got = cards[expected.key];
-      assert.ok(got, `manifest is missing card "${expected.key}" for current model ${m.model_id}`);
-      assert.equal(got.number, expected.number, `${expected.key}: number is stale`);
-      assert.equal(got.claim, expected.claim, `${expected.key}: claim (display name) is stale`);
-      assert.equal(got.attribution, expected.attribution, `${expected.key}: attribution is stale`);
-      assert.equal(got.raw.cost, expected.raw.cost, `${expected.key}: raw cost is stale`);
-      assert.equal(got.raw.basisKey, expected.raw.basisKey, `${expected.key}: cost basis is stale`);
-      assert.ok(
-        existsSync(join(CARDS_DIR, `${expected.key}.png`)),
-        `${expected.key}.png is missing from reports/og-cards/`,
-      );
-      // Cross-check against the engine directly.
-      const mine = solvedFor(m.model_id, 'heavy');
-      const wantNumber = mine ? money(mine.cost) : `$${m.input_per_mtok}/M`;
-      assert.equal(got.number, wantNumber, `${expected.key}: number disagrees with solvedFor() computed here`);
+      assertRankedCardMatches(expected.key, cards[expected.key], expected);
+      // The card's own row set must actually contain the model it is about, marked lead.
+      const mine = expected.rows.find((r: any) => r.id === m.model_id);
+      assert.ok(mine, `${expected.key}: card does not include a row for its own subject model`);
+      assert.equal(mine.lead, true, `${expected.key}: subject model's row is not marked lead`);
     }
   });
 
-  test('no card carries a model that is no longer current, or a stale model id', () => {
+  test('no card\'s own subject is a model that is no longer current, or a stale model id', () => {
     const currentIds = new Set(currentModels().map((m: any) => m.model_id));
     for (const [key, card] of Object.entries(cards)) {
       if (!key.startsWith('model-')) continue;
