@@ -1,0 +1,6 @@
+{
+  "id": "currency-ledger",
+  "goal": "Implement src/ledger.js per SPEC.md: a multi-currency double-entry ledger in integer minor units with banker's-rounded conversions, a balanced-entry invariant, and a trial balance report. The hidden grader posts multi-leg entries and checks rounding half-to-even.",
+  "timeoutMs": 420000,
+  "maxTurns": 40
+}

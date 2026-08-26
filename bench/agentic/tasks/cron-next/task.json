@@ -1,0 +1,6 @@
+{
+  "id": "cron-next",
+  "goal": "Implement src/cron.js per SPEC.md: a five-field cron parser (lists, ranges, steps, names) plus nextFire computation in UTC with day-of-month/day-of-week OR semantics. The hidden grader checks parsing errors, leap years, and the DOM/DOW union rule.",
+  "timeoutMs": 420000,
+  "maxTurns": 40
+}

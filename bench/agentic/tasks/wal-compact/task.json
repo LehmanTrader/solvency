@@ -1,0 +1,6 @@
+{
+  "id": "wal-compact",
+  "goal": "Implement src/wal.js per SPEC.md: replay of a write-ahead log (set/del/rename) into final state plus compaction to a minimal equivalent op list with deterministic ordering and tombstone rules. The hidden grader replays rename chains and checks byte-minimal compaction.",
+  "timeoutMs": 420000,
+  "maxTurns": 40
+}

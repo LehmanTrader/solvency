@@ -1,0 +1,6 @@
+{
+  "id": "migrate-store",
+  "goal": "Per SPEC.md, migrate src/store.js from the v1 callback API to the v2 promise API and update every caller (src/session.js, src/cache-facade.js, src/audit.js) to the new interface, preserving each caller's documented behavior. The hidden grader imports the callers and exercises v2 semantics end to end.",
+  "timeoutMs": 420000,
+  "maxTurns": 40
+}

@@ -1,0 +1,6 @@
+{
+  "id": "acl-engine",
+  "goal": "Implement src/acl.js per SPEC.md: a role-inheritance permission engine with deny-overrides, resource wildcards, and a decision trace naming the winning rule. The hidden grader checks inheritance diamonds, wildcard specificity, and trace contents.",
+  "timeoutMs": 420000,
+  "maxTurns": 40
+}

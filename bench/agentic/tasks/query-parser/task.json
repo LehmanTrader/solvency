@@ -1,0 +1,6 @@
+{
+  "id": "query-parser",
+  "goal": "Implement src/query.js per SPEC.md: a search-query parser (AND/OR/NOT, parentheses, quoted phrases, field:term) producing an evaluator over documents, with precedence and exact syntax errors. The hidden grader checks precedence, phrases, fields, and unbalanced input.",
+  "timeoutMs": 420000,
+  "maxTurns": 40
+}

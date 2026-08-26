@@ -1,0 +1,5 @@
+{
+  "name": "currencyledger",
+  "type": "module",
+  "scripts": { "test": "node --test" }
+}

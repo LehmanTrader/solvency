@@ -1,0 +1,6 @@
+{
+  "id": "rate-plan",
+  "goal": "Implement src/plan.js per SPEC.md: a tiered usage-pricing calculator with graduated volume tiers, day-based proration of the platform fee, ordered credit application, and a minimum commit \u2014 all in integer cents. The hidden grader checks tier boundaries, proration rounding, and credit ordering.",
+  "timeoutMs": 420000,
+  "maxTurns": 40
+}

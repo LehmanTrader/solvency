@@ -1,0 +1,6 @@
+{
+  "id": "json-patch",
+  "goal": "Implement src/patch.js per SPEC.md: an RFC-6902-style JSON patch applier (add/remove/replace/move/copy/test) with full JSON-pointer escaping and exact error messages. The hidden grader exercises pointer edge cases, array '-', move-into-self, and failed test ops.",
+  "timeoutMs": 420000,
+  "maxTurns": 40
+}

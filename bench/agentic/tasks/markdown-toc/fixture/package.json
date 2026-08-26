@@ -1,0 +1,5 @@
+{
+  "name": "markdowntoc",
+  "type": "module",
+  "scripts": { "test": "node --test" }
+}

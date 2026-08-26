@@ -1,0 +1,6 @@
+{
+  "id": "stream-window",
+  "goal": "Implement src/window.js per SPEC.md: an event-time sliding-window aggregator with allowed lateness, watermark-driven eviction and finalization callbacks. The hidden grader feeds out-of-order streams and checks exact window emissions.",
+  "timeoutMs": 420000,
+  "maxTurns": 40
+}

@@ -1,0 +1,6 @@
+{
+  "id": "diff-apply",
+  "goal": "Implement src/diff.js per SPEC.md: a unified-diff applier that parses @@ hunks, validates context lines with exact positional errors, and applies additions/removals to a source string. The hidden grader includes multi-hunk patches, offset drift, and context mismatches.",
+  "timeoutMs": 420000,
+  "maxTurns": 40
+}

@@ -1,0 +1,6 @@
+{
+  "id": "inventory-alloc",
+  "goal": "Implement src/inventory.js per SPEC.md: a lot-based inventory allocator with FEFO ordering, partial allocation, named reservations, idempotent release, and exact errors. The hidden grader walks multi-lot allocations, expiry ties, and double-release.",
+  "timeoutMs": 420000,
+  "maxTurns": 40
+}

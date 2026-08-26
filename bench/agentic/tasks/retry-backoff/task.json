@@ -1,0 +1,6 @@
+{
+  "id": "retry-backoff",
+  "goal": "Implement src/retry.js per SPEC.md: a retry engine with injected sleep and jitter, exponential backoff with cap, an error classifier, an overall time budget, and a full attempt history. The hidden grader uses fake clocks and checks exact delay sequences.",
+  "timeoutMs": 420000,
+  "maxTurns": 40
+}

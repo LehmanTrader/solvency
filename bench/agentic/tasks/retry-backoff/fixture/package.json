@@ -1,0 +1,5 @@
+{
+  "name": "retrybackoff",
+  "type": "module",
+  "scripts": { "test": "node --test" }
+}

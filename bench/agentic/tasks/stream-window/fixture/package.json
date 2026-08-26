@@ -1,0 +1,5 @@
+{
+  "name": "streamwindow",
+  "type": "module",
+  "scripts": { "test": "node --test" }
+}

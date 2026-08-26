@@ -1,0 +1,5 @@
+{
+  "name": "aclengine",
+  "type": "module",
+  "scripts": { "test": "node --test" }
+}

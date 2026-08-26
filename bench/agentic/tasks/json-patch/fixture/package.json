@@ -1,0 +1,5 @@
+{
+  "name": "jsonpatch",
+  "type": "module",
+  "scripts": { "test": "node --test" }
+}

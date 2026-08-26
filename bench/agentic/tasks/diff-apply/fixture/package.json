@@ -1,0 +1,5 @@
+{
+  "name": "diffapply",
+  "type": "module",
+  "scripts": { "test": "node --test" }
+}

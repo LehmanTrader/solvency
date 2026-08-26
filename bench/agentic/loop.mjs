@@ -1,5 +1,9 @@
 /**
- * Solvency Bench — agentic suite runner (solvency-bench-a1).
+ * Solvency Bench — agentic suite runner (solvency-bench-a2).
+ *
+ * Protocol history: a1 = the original 13-task tranche (results under that tag
+ * stay valid for that population and never mix with a2); a2 = the 30-task
+ * screening tier (2026-08-26), 17 hard longer-horizon tasks added.
  *
  * The reference harness ("solvency-loop"): a deliberately minimal,
  * model-agnostic tool loop — list/read/write files and run the test command —
@@ -29,7 +33,7 @@ import { resolvePrices } from '../runner.mjs';
 
 const A_DIR = dirname(fileURLToPath(import.meta.url));
 const RESULTS_DIR = join(A_DIR, '..', 'results');
-export const PROTOCOL = 'solvency-bench-a1';
+export const PROTOCOL = 'solvency-bench-a2';
 const IMAGE = 'node:22-slim';
 const OR_URL = 'https://openrouter.ai/api/v1/chat/completions';
 

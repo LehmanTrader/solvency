@@ -1,0 +1,6 @@
+{
+  "id": "csv-join",
+  "goal": "Implement src/join.js per SPEC.md: an RFC-4180 CSV parser plus a left join with aggregation, quoted-field handling, and deterministic output serialization. The hidden grader includes embedded commas, escaped quotes, newlines in quotes, and unmatched rows.",
+  "timeoutMs": 420000,
+  "maxTurns": 40
+}

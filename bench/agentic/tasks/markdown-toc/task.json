@@ -1,0 +1,6 @@
+{
+  "id": "markdown-toc",
+  "goal": "Implement src/toc.js per SPEC.md: a markdown table-of-contents builder that parses ATX headings, skips fenced code blocks, builds GitHub-style slugs with duplicate suffixes, and nests by level. The hidden grader covers fences, level jumps, and slug collisions.",
+  "timeoutMs": 420000,
+  "maxTurns": 40
+}

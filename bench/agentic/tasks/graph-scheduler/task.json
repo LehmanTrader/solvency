@@ -1,0 +1,6 @@
+{
+  "id": "graph-scheduler",
+  "goal": "Implement src/scheduler.js per SPEC.md: a deterministic DAG scheduler with cycle detection (exact cycle-path error), dependency-ordered batches under a concurrency limit, and stable alphabetical tie-breaks. The hidden grader runs diamond graphs, cycles, and limit-1 serialization.",
+  "timeoutMs": 420000,
+  "maxTurns": 40
+}

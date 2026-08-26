@@ -1,0 +1,6 @@
+{
+  "id": "fix-race",
+  "goal": "Per SPEC.md, fix the cache-stampede and stale-write races in src/cache.js without changing its public API. The hidden grader counts loader invocations under concurrency and checks invalidation during in-flight loads.",
+  "timeoutMs": 420000,
+  "maxTurns": 40
+}

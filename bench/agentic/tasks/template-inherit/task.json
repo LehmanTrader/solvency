@@ -1,0 +1,6 @@
+{
+  "id": "template-inherit",
+  "goal": "Implement src/templates.js per SPEC.md: a template renderer with layout inheritance ({% extends %}, {% block %}, {{ super() }}), interpolation with HTML escaping and a raw filter, and exact template errors. The hidden grader nests two layout levels and checks block override plus super chaining.",
+  "timeoutMs": 420000,
+  "maxTurns": 40
+}

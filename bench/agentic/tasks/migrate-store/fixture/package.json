@@ -1,0 +1,5 @@
+{
+  "name": "migratestore",
+  "type": "module",
+  "scripts": { "test": "node --test" }
+}
