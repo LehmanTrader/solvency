@@ -19,7 +19,7 @@ const ratio = codex.solvedCost / pi.solvedCost;
 // Population three: Solvency's own five-arm run. Its own population — never
 // merged with the OpenBench rows above (different tasks, different graders).
 const armName = (h: string | null) => h === null ? 'API, no harness'
-  : h === 'aider' ? 'Aider' : h === 'codex' ? 'Codex'
+  : h === 'aider' ? 'Aider' : h === 'codex' ? 'Codex' : h === 'pi' ? 'Pi'
   : h === 'opencode' ? 'OpenCode' : h === 'hermes' ? 'Hermes Agent' : h;
 const solArms = [...solStudy.arms].sort((a, b) => a.cost_per_solved_usd - b.cost_per_solved_usd);
 const solCheapest = solArms[0].cost_per_solved_usd;
@@ -88,10 +88,10 @@ const money4 = (n: number) => `$${n.toFixed(4)}`;
         note="source usage repriced: measured tokens × current verified model prices; no Solvency loop or tier assumption" />
     </Section>
 
-    <Section id="solvency-bench" eyebrow="Measured by Solvency · own population" title="Five arms, same model, run by Solvency"
-      caption={`On ${solStudy.run_date} Solvency ran ${model.display_name} through five arms of its own single-turn suite — ${solStudy.suite}. Every arm passed every countable attempt, and the bill still spans ${solSpread.toFixed(1)}×. Own task population: never comparable with the OpenBench table above.`}>
+    <Section id="solvency-bench" eyebrow="Measured by Solvency · own population" title="Six arms, same model, run by Solvency"
+      caption={`On ${solStudy.run_date} Solvency ran ${model.display_name} through six arms of its own single-turn suite — ${solStudy.suite}. Every arm passed every countable attempt, and the bill still spans ${solSpread.toFixed(1)}×. Own task population: never comparable with the OpenBench table above.`}>
       <div class="card overflow-hidden"><div class="tbl-wrap"><table class="tbl tone-best">
-        <caption>Solvency Bench v0 harness comparison: five access paths for GPT-5.6 Sol, harness-reported usage priced at verified catalog rates</caption>
+        <caption>Solvency Bench v0 harness comparison: six access paths for GPT-5.6 Sol, harness-reported usage priced at verified catalog rates</caption>
         <thead><tr><th scope="col" class="rank">#</th><th scope="col">Arm</th><th scope="col">Access</th><th scope="col" class="r">Pass</th><th scope="col" class="r">$ / solved</th><th scope="col" class="r">vs lowest</th></tr></thead>
         <tbody>{solArms.map((a, i) => (
           <tr class={i === 0 ? 'lead' : undefined}>

@@ -82,7 +82,7 @@ describe('og cards: manifest matches the live data', () => {
     assertRankedCardMatches(expected!.key, cards[expected!.key], expected);
     // spread pinned to the study itself, same figure Note 02 publishes
     assert.equal(expected!.raw.spread, '7.7x');
-    assert.equal(expected!.rows.length, 5);
+    assert.equal(expected!.rows.length, 6);
   });
 
   test('every current model has a card, and each matches modelCardData() computed now', () => {

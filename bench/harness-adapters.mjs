@@ -84,6 +84,43 @@ export const ADAPTERS = {
     },
   },
 
+  /** Pi coding agent (badlogic/pi-mono), one-shot `-p` with `--mode json`.
+   * The `agent_end` event carries every message with cumulative usage per
+   * assistant message {input, output, cacheRead, cacheWrite}; we sum across
+   * assistant messages and take the last text as the reply. OpenBench's
+   * cheapest arm on its own population — measured here on ours. */
+  pi: {
+    label: 'Pi (one-shot, metered provider)',
+    access: 'metered provider (OpenRouter)',
+    async version() { return versionOf('pi'); },
+    async attempt({ prompt, model, timeoutMs }) {
+      const r = await run('pi', ['--provider', 'openrouter', '--model', model, '--mode', 'json', '-p', prompt], { timeoutMs });
+      if (r.signal === 'SIGKILL') return { infra: true, detail: `harness timeout after ${timeoutMs}ms` };
+      let final = null;
+      for (const line of r.out.split('\n')) {
+        if (!line.trim().startsWith('{')) continue;
+        let e; try { e = JSON.parse(line); } catch { continue; }
+        if (e.type === 'agent_end' && Array.isArray(e.messages)) final = e;
+      }
+      if (!final) return { infra: true, detail: 'no agent_end event in pi JSON stream — cannot reprice, attempt excluded (fail closed)' };
+      const assistants = final.messages.filter((m) => m.role === 'assistant');
+      if (!assistants.length) return { infra: true, detail: 'pi returned no assistant message' };
+      const usage = { input: 0, cacheRead: 0, cacheWrite: 0, output: 0 };
+      let text = '';
+      for (const m of assistants) {
+        const u = m.usage ?? {};
+        usage.input += u.input ?? 0;
+        usage.cacheRead += u.cacheRead ?? 0;
+        usage.cacheWrite += u.cacheWrite ?? 0;
+        usage.output += (u.output ?? 0) + (u.reasoning ?? 0);
+        for (const c of m.content ?? []) if (c.type === 'text' && c.text) text = c.text;
+      }
+      if (!usage.input && !usage.output && !usage.cacheRead && !usage.cacheWrite)
+        return { infra: true, detail: 'pi reported zero usage — cannot reprice, attempt excluded (fail closed)' };
+      return { text, usage };
+    },
+  },
+
   /** Aider one-shot (`--message`), model via openrouter/<slug>. Usage parsed
    * from aider's own "Tokens: X sent, Y received" line; counts >= 1k are
    * k-rounded by aider (recorded as reported — a stated precision limit,

@@ -24,7 +24,7 @@ type Arm = {
 };
 const arms: Arm[] = study.arms;
 const armLabel = (a: Arm) => a.harness === null ? 'API, no harness'
-  : a.harness === 'aider' ? 'Aider' : a.harness === 'codex' ? 'Codex'
+  : a.harness === 'aider' ? 'Aider' : a.harness === 'codex' ? 'Codex' : a.harness === 'pi' ? 'Pi'
   : a.harness === 'opencode' ? 'OpenCode' : a.harness === 'hermes' ? 'Hermes Agent' : a.harness;
 
 describe('Research Note 02, population three, matches the first-party study', () => {
@@ -37,9 +37,9 @@ describe('Research Note 02, population three, matches the first-party study', ()
 
   test('all five ranked rows re-derive: pass, $/solved, ratio vs cheapest', () => {
     const rows = section.split('\n')
-      .filter((l) => /^\| (Aider|API, no harness|Codex|OpenCode|Hermes Agent) \| /.test(l))
+      .filter((l) => /^\| (Aider|API, no harness|Pi|Codex|OpenCode|Hermes Agent) \| /.test(l))
       .filter((l) => cells(l).length === 6); // ranked table only; the anatomy table has 5 columns
-    assert.equal(rows.length, 5, 'expected exactly five arms in the table');
+    assert.equal(rows.length, 6, 'expected exactly six arms in the table');
     const cheapest = Math.min(...arms.map((a) => a.cost_per_solved_usd));
     const sorted = [...arms].sort((a, b) => a.cost_per_solved_usd - b.cost_per_solved_usd);
     rows.forEach((line, i) => {
@@ -54,8 +54,8 @@ describe('Research Note 02, population three, matches the first-party study', ()
   });
 
   test('the anatomy medians re-derive from the study, verbatim', () => {
-    const rows = section.split('Output |')[1].split('\n').filter((l) => /^\| (Aider|API, no harness|Codex|OpenCode|Hermes Agent) \| /.test(l));
-    assert.equal(rows.length, 5);
+    const rows = section.split('Output |')[1].split('\n').filter((l) => /^\| (Aider|API, no harness|Pi|Codex|OpenCode|Hermes Agent) \| /.test(l));
+    assert.equal(rows.length, 6);
     for (const line of rows) {
       const [label, input, cr, cw, out] = cells(line);
       const arm = arms.find((a) => armLabel(a) === label)!;

@@ -71,6 +71,38 @@
       }
     },
     {
+      "run_id": "pi-gpt-5.6-sol-2026-08-26",
+      "harness": "pi",
+      "harness_version": "0.84.3",
+      "access": "metered provider (OpenRouter)",
+      "cost_basis": "harness_usage_repriced_metered",
+      "model": "openai/gpt-5.6-sol",
+      "prices": {
+        "inputPerMtok": 5,
+        "outputPerMtok": 30,
+        "cachedInputPerMtok": 0.5,
+        "basis": "catalog",
+        "modelId": "gpt-5.6-sol",
+        "lastVerified": "2026-08-21",
+        "priceNote": "catalog row gpt-5.6-sol, verified 2026-08-21"
+      },
+      "protocol": "solvency-bench-v0h",
+      "protocol_hash": "3bd9cc9568a7",
+      "trials": 3,
+      "attempts_countable": 36,
+      "infra_excluded": 0,
+      "pass_rate": 1,
+      "cost_per_task_usd": 0.0096585,
+      "cost_per_solved_usd": 0.0096585,
+      "run_date": "2026-08-26",
+      "median_usage_per_attempt": {
+        "input": 3,
+        "cache_read": 1192,
+        "cache_write": 0,
+        "output": 206.5
+      }
+    },
+    {
       "run_id": "codex-gpt-5.6-sol-2026-08-26-r2",
       "harness": "codex",
       "harness_version": "codex-cli 0.150.0",

@@ -18,10 +18,10 @@ pdf_hero: SAME MODEL|EIGHT HARNESSES
 three times.** OpenBench ran GPT-5.6 Sol through four harnesses and published the token
 usage; Solvency repriced it at verified API rates. WildClawBench (InternLM) held four models
 constant across four scaffolds, including Hermes Agent and OpenClaw. And on 2026-08-26
-Solvency ran the measurement itself: the same GPT-5.6 Sol through five arms of its own
-benchmark — Aider, Codex, OpenCode, Hermes Agent, and a bare API call as the no-scaffold
-control. Three populations, reported separately below, never sharing a table; together they
-cover eight distinct harnesses.
+Solvency ran the measurement itself: the same GPT-5.6 Sol through six arms of its own
+benchmark — Pi, Aider, Codex, OpenCode, Hermes Agent, and a bare API call as the
+no-scaffold control. Three populations, reported separately below, never sharing a table;
+together they cover eight distinct harnesses.
 
 This revision replaces the earlier editions at this URL ("Same Model, Four Harnesses",
 2026-08-23; "Six Harnesses", earlier 2026-08-26). Nothing in the earlier tables changed;
@@ -65,8 +65,9 @@ in three benchmarks, independently.
   that bills least.
 - **Solvency Bench (12 single-turn tasks, GPT-5.6 Sol, run by Solvency):** every arm scores
   **100%**, and the bill still spans **7.7x** — from Aider's $0.0093 per solved task to
-  Hermes Agent's $0.0717. With correctness held perfectly equal, what remains is the pure
-  price of the scaffold.
+  Hermes Agent's $0.0717, with Pi (OpenBench's cheapest arm on its own population) at
+  $0.0097. With correctness held perfectly equal, what remains is the pure price of the
+  scaffold.
 
 This is not a finding that any harness is universally better. It is a finding that the
 harness changes the bill, even when the name in the model column does not. A useful cost
@@ -222,10 +223,10 @@ same caution applies to any stack that wraps one harness in another.
 ## Population three — Solvency Bench: the harness tax, isolated
 
 On 2026-08-26 Solvency stopped repricing other people's runs and ran its own: the same
-GPT-5.6 Sol through five arms of [Solvency Bench](https://github.com/LehmanTrader/solvency/tree/main/bench)'s
+GPT-5.6 Sol through six arms of [Solvency Bench](https://github.com/LehmanTrader/solvency/tree/main/bench)'s
 single-turn suite — 12 code tasks, deterministic hidden-test graders, 3 trials, temperature
 0. A bare API call is the control; every other arm is a real harness driving the same
-prompts. Dollars are the harness's own token accounting priced at verified catalog rates
+prompts, including Pi — the arm OpenBench's own population crowns cheapest. Dollars are the harness's own token accounting priced at verified catalog rates
 (the subscription arm's flat fee never enters the math; cache writes price at the uncached
 input rate, stated).
 
@@ -233,6 +234,7 @@ input rate, stated).
 |---|---|---|---:|---:|---:|
 | Aider | aider 0.86.2 | metered (OpenRouter) | 100% | **$0.0093** | 1.00x |
 | API, no harness | — | metered, single call | 100% | **$0.0095** | 1.01x |
+| Pi | 0.84.3 | metered (OpenRouter) | 100% | **$0.0097** | 1.04x |
 | Codex | codex-cli 0.150.0 | local subscription | 100% | **$0.0248** | 2.65x |
 | OpenCode | 1.18.20 | metered (OpenRouter) | 100% | **$0.0364** | 3.90x |
 | Hermes Agent | Hermes Agent v0.20.5 (2026.8.19) | metered (OpenRouter) | 100% | **$0.0717** | 7.68x |
@@ -245,6 +247,7 @@ anatomy does — median tokens per attempt, from the harnesses' own accounting:
 |---|---:|---:|---:|---:|
 | API, no harness | 103 | 0 | 0 | 288 |
 | Aider | 752 | 0 | 0 | 166 |
+| Pi | 3 | 1,192 | 0 | 206.5 |
 | Codex | 528 | 15,104 | 0 | 214 |
 | OpenCode | 3 | 0 | 6,106 | 171 |
 | Hermes Agent | 3 | 0 | 12,682 | 249 |
@@ -275,8 +278,11 @@ cached rate — while Hermes's arrives as **cache writes**, billed here at the f
 rate. Same order of context, 2.9x apart on price, decided entirely by whether the harness
 re-reads its context at the discount or rebuilds it at list.
 
-This is the cache manager (subsystem five) earning its keep, and it is invisible on every
-pricing page in the industry.
+Pi makes the same point from the light end: a ~1.2k-token scaffold arriving almost entirely
+as cache reads leaves it **4% over the bare call** — the OpenBench population's cheapest
+arm rides nearly free on ours too, and for the same reason: small context, read at the
+discount. This is the cache manager (subsystem five) earning its keep, and it is invisible
+on every pricing page in the industry.
 
 ---
 
@@ -309,14 +315,14 @@ through a harness whose verification loop and cache discipline you have priced.
 First-hand observations from running each arm (2026-08-26 builds), plus each project's
 documentation — capability notes, not endorsements:
 
-| | Claude Code | Codex | Hermes Agent | OpenCode | Aider | solvency-loop |
-|---|---|---|---|---|---|---|
-| Models | Anthropic (login/key) | OpenAI (login/key) | any (multiplexer) | any (provider/model) | any (LiteLLM-style) | any (OpenRouter) |
-| Headless one-shot | `-p --output-format json` | `exec --json` | `-z --usage-file` | `run --format json` | `--message` | library call |
-| Machine-readable usage | full incl. cache r/w | full incl. cache r/w | full incl. reasoning | per-step tokens+cost | tokens line (k-rounded ≥1k) | API usage object |
-| Cache behaviour observed | heavy reads | heavy reads | writes each session | writes each session | none (lean prompt) | none |
-| Agentic tool loop | yes | yes | yes | yes | edit-focused | minimal by design |
-| Execution sandboxing | policy/hooks | sandbox modes | egress controls | permission prompts | none (git-scoped) | docker, network-less |
+| | Claude Code | Codex | Pi | Hermes Agent | OpenCode | Aider | solvency-loop |
+|---|---|---|---|---|---|---|---|
+| Models | Anthropic (login/key) | OpenAI (login/key) | any (provider/model) | any (multiplexer) | any (provider/model) | any (LiteLLM-style) | any (OpenRouter) |
+| Headless one-shot | `-p --output-format json` | `exec --json` | `-p --mode json` | `-z --usage-file` | `run --format json` | `--message` | library call |
+| Machine-readable usage | full incl. cache r/w | full incl. cache r/w | full incl. cache r/w + cost | full incl. reasoning | per-step tokens+cost | tokens line (k-rounded ≥1k) | API usage object |
+| Cache behaviour observed | heavy reads | heavy reads | small scaffold, read back | writes each session | writes each session | none (lean prompt) | none |
+| Agentic tool loop | yes | yes | yes (extensible) | yes | yes | edit-focused | minimal by design |
+| Execution sandboxing | policy/hooks | sandbox modes | extension-defined | egress controls | permission prompts | none (git-scoped) | docker, network-less |
 
 ---
 
@@ -384,6 +390,9 @@ success rate. Until the system is measured, the honest result is: **success rate
   write premiums are not modelled.
 - **Aider's token counts are its own rounded reporting** (k-rounded above 1,000), recorded
   as reported.
+- **Grok Build is still unmeasured by Solvency.** It appears only in population one
+  (OpenBench's usage, repriced); adding it first-party needs xAI-side access not yet
+  in place. The eight-harness union is complete; the first-party arm set is not.
 - **The two Claude Code rows are not the same Claude Code.** Population one pins CLI 2.1.214;
   population two records a Docker image tag from a different build line, months apart. Even
   the shared harness name does not license a cross-population comparison.
