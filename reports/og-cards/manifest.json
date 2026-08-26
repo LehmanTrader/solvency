@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-26T17:51:28.347Z",
+  "generated_at": "2026-08-26T18:13:49.254Z",
   "cards": {
     "note-01": {
       "key": "note-01",
@@ -80,7 +80,7 @@
     },
     "note-02": {
       "key": "note-02",
-      "eyebrow": "RESEARCH NOTE 02 · SAME MODEL, 4 HARNESSES",
+      "eyebrow": "RESEARCH NOTE 02 · SAME MODEL, SIX HARNESSES",
       "headlinePrefix": "",
       "headlineHighlight": "GPT-5.6 Sol",
       "headlineSuffix": ", 4 harnesses, 3.8x apart on cost.",
@@ -123,7 +123,7 @@
         }
       ],
       "sourceLine": "Source: OpenBench harness benchmark (openbench.run)",
-      "noteLine": "NOTE: OBSERVED-TOKEN COST, CURRENT PRICES · VERIFIED 2026-08-23",
+      "noteLine": "NOTE: OPENBENCH POPULATION 1 OF 2 · VERIFIED 2026-08-23",
       "raw": {
         "modelId": "gpt-5.6-sol",
         "harnesses": [

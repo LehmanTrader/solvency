@@ -574,7 +574,16 @@ function note01CardData(fm: ReportFrontmatter): RankedCardData {
 function note02CardData(fm: ReportFrontmatter): RankedCardData {
   const card = rankedHarnessCardData();
   if (!card) throw new Error('note02CardData: rankedHarnessCardData() returned null — research note 02 needs a model with 2+ harness results');
-  return { ...card, key: 'note-02', eyebrow: `RESEARCH NOTE 02 · ${card.eyebrow}`, raw: { ...card.raw, note: fm.note } };
+  // Eyebrow comes from the note's own frontmatter title (now "Same Model,
+  // Six Harnesses" — two populations), not from the OpenBench row count: the
+  // rows below are population one, which the source/note lines attribute.
+  return {
+    ...card,
+    key: 'note-02',
+    eyebrow: `RESEARCH NOTE 02 · ${fm.title.toUpperCase()}`,
+    noteLine: `NOTE: OPENBENCH POPULATION 1 OF 2 · VERIFIED ${sourceFor(HARNESS_BENCHMARKS[0])!.last_verified}`,
+    raw: { ...card.raw, note: fm.note },
+  };
 }
 
 /** Research note 03 (What Is a Task): median tasks-to-first-ship per use
