@@ -1,6 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import Provenance from '../../components/Provenance.astro';
+import LogoChip from '../../components/LogoChip.astro';
 import { TIER_NAMES } from '../../lib/data.ts';
 import { CLERK_ENABLED } from '../../lib/clerk.ts';
 import { side, verdictHtml, seriesFor, sourceOf } from '../../lib/compare.ts';
@@ -44,7 +45,14 @@ const statusNote = [a, b].filter((m) => m.status !== 'current').map((m) => `${m.
 <Base title={`${a.display_name} vs ${b.display_name} — cost per solved task — Solvency`} description={desc}>
   <div class="wrap pt-8 md:pt-12" id="cmp" data-a={a.model_id} data-b={b.model_id}>
     <p class="eyebrow">Head to head</p>
-    <h1 class="h-page mt-3">{a.display_name} <span class="text-[var(--color-muted)]">vs</span> {b.display_name}</h1>
+    <!-- Stage 2 (direction doc §2 "comparisons get the two models' chips
+         side by side"): each side gets its own chip + mono name, same
+         .model-head treatment as the model detail page's own heading. -->
+    <h1 class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
+      <span class="model-head"><LogoChip provider={a.provider} size={32} />{a.display_name}</span>
+      <span class="text-[var(--color-muted)] font-[var(--font-display)] text-lg">vs</span>
+      <span class="model-head"><LogoChip provider={b.provider} size={32} />{b.display_name}</span>
+    </h1>
     {statusNote && <p class="small mt-2">{statusNote}.</p>}
 
     <p class="sentence mt-6">

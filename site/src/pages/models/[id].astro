@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import Base from '../../layouts/Base.astro';
 import Section from '../../components/Section.astro';
 import Provenance from '../../components/Provenance.astro';
+import LogoChip from '../../components/LogoChip.astro';
 import { models, assumptions, tiers, TIER_NAMES, allResultsFor, bestResultFor, extrasFor, sourceFor } from '../../lib/data.ts';
 import { costPerSolvedTask, defaultOptions } from '../../lib/engine.ts';
 import { solvedFor, leaderboard, money } from '../../lib/headline.ts';
@@ -44,6 +45,10 @@ const harnessOf = (r) => r.harness ?? undefined;
 const peerRows: ChartRow[] = pool.map((x) => ({
   id: x.m.model_id, name: x.m.display_name, href: `/models/${x.m.model_id}`, cost: x.cost, pass: x.r.pass_rate,
   basis: BASIS_OF[x.basisKey] ?? 'modelled', harness: harnessOf(x.r), attempt: x.perTask ?? undefined,
+  // Stage 2 consistency sweep: this row list never carried `provider`, so the
+  // peers chart was the one ranked-bars table on the site with no logo chip
+  // (direction doc §4: "model logo chips everywhere a model is named").
+  provider: x.m.provider,
   compare: x.m.model_id === model.model_id ? undefined : pairHref(model.model_id, x.m.model_id, { tier: PEER_TIER, volume: PEER_VOLUME }),
 }));
 const peerBasis = peerRows[0]?.basis ?? 'modelled';
@@ -63,7 +68,13 @@ const ogCard = existsSync(modelCardPath) ? `/og/cards/model-${model.model_id}.pn
     <div class="flex flex-wrap items-end justify-between gap-6">
       <div>
         <p class="eyebrow">{model.provider}</p>
-        <h1 class="h-page mt-3">{model.display_name}</h1>
+        <!-- Stage 2 (direction doc §4/§6: "model logo chips everywhere a
+             model is named" · "model name in monospace"): the model page's
+             own name is the one heading on the site that IS a model name, so
+             it gets the chip + mono treatment the ranked-table rows already
+             use, instead of the generic serif .h-page every other title
+             (Models index, Compare picker, Harness) keeps. -->
+        <h1 class="model-head mt-3"><LogoChip provider={model.provider} size={36} />{model.display_name}</h1>
         <p class="small mt-4">
           <span class={model.status === 'current' ? 'text-[var(--color-ink)]' : model.status === 'retired' ? 'line-through' : ''}>{model.status}</span>
           {' '}· {model.capability_class}

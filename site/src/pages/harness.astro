@@ -2,6 +2,7 @@
 import Base from '../layouts/Base.astro';
 import Section from '../components/Section.astro';
 import Provenance from '../components/Provenance.astro';
+import LogoChip from '../components/LogoChip.astro';
 import { modelById } from '../lib/data.ts';
 import { harnessCostsFor, harnessSource } from '../lib/harness.ts';
 
@@ -19,6 +20,10 @@ const ratio = codex.solvedCost / pi.solvedCost;
   <div class="wrap pt-8 md:pt-12">
     <p class="eyebrow">Harness economics · OpenBench</p>
     <h1 class="h-page mt-3">Same model. Different harness bill.</h1>
+    <!-- Stage 2: this page is about one model throughout, so it gets the
+         chip + mono badge everywhere a model is named (direction doc §4),
+         even though the <h1> itself is a sentence, not the model's name. -->
+    <p class="model-head mt-3 text-[1.05rem]"><LogoChip provider={model.provider} size={24} />{model.display_name}</p>
     <p class="mt-4 text-lg text-[var(--color-body)] max-w-3xl leading-relaxed">
       Four coding harnesses ran {model.display_name} on the same 15-task benchmark.
       Solvency reprices each harness’s proxy-measured token usage at the model’s current verified API rates.
@@ -51,7 +56,7 @@ const ratio = codex.solvedCost / pi.solvedCost;
 
     <Section id="ranking" eyebrow="One model · one benchmark" title="Harness cost comparison"
       caption="Ranked by cost per solved task. Only the harness changes; lower is better. Infrastructure and rate-limited failures are excluded exactly as OpenBench specifies.">
-      <div class="card overflow-hidden"><div class="tbl-wrap"><table class="tbl">
+      <div class="card overflow-hidden"><div class="tbl-wrap"><table class="tbl tone-best">
         <caption>GPT-5.6 Sol harness comparison: version, outcomes, pass rate, source-usage-repriced cost per attempt and per solved task</caption>
         <thead><tr><th scope="col" class="rank">#</th><th scope="col">Harness</th><th scope="col">Version</th><th scope="col" class="r">Solved</th><th scope="col" class="r">Pass</th><th scope="col" class="r">$ / attempt</th><th scope="col" class="r">$ / solved</th><th scope="col" class="r">vs lowest</th></tr></thead>
         <tbody>{rows.map((row, i) => (

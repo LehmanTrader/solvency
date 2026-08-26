@@ -164,6 +164,17 @@
                line-height: 1.08; color: var(--color-ink); font-size: clamp(1.9rem, 4vw, 3rem); }
   .h-page { font-family: var(--font-display); font-weight: 600; letter-spacing: -.015em;
             line-height: 1.12; color: var(--color-ink); font-size: clamp(1.65rem, 3vw, 1.9rem); }
+  /* Stage 2: a heading that IS a model's own name (the model detail page,
+     the compare pair page) breaks from .h-page's serif — mono is the site's
+     model-name typeface everywhere else a model is named (ranked-table rows,
+     charts.ts), so the one place that name becomes the page's own <h1> stays
+     in the same face rather than switching to display serif. Sized down a
+     touch from .h-page: JetBrains Mono runs wider than Source Serif 4 at the
+     same size, and model names run longer than section titles. */
+  .model-head { display: inline-flex; align-items: center; gap: .55rem; font-family: var(--font-mono);
+                font-weight: 700; letter-spacing: -.01em; line-height: 1.2; color: var(--color-ink);
+                font-size: clamp(1.35rem, 2.6vw, 1.6rem); }
+  .model-head .logo-chip { flex: none; }
   .h-section { font-family: var(--font-sans); font-weight: 700; letter-spacing: -.01em;
                line-height: 1.2; color: var(--color-ink); font-size: 1.4rem; }
   .h-card { font-family: var(--font-sans); font-weight: 600; color: var(--color-ink);
@@ -387,6 +398,10 @@
   .tbl tbody tr:hover td, .tbl tbody tr:hover th { background: var(--color-panel-2); }
   .tbl td.ink, .tbl td a { color: var(--color-ink); }
   .tbl td a:hover { text-decoration: underline; }
+  /* Stage 2 (direction doc §4: "model logo chips everywhere a model is
+     named"): the models index table's Model column. */
+  .tbl-model-name { display: inline-flex; align-items: center; gap: .5rem; }
+  .tbl-model-name .logo-chip { flex: none; }
   /* provenance in the figure itself: measured/modelled share the purple data accent (see stage 1.1 note) */
   .tbl td.measured { color: var(--color-measured); font-weight: 700; }
   .tbl td.modelled { color: var(--color-modelled); font-weight: 700; }
@@ -397,6 +412,16 @@
   .tbl { --rail: var(--color-measured); }
   .tbl.tone-modelled { --rail: var(--color-modelled); }
   .tbl.tone-stale { --rail: var(--color-stale); }
+  /* Stage 2 consistency fix: .tbl's default --rail is the purple measured
+     token, which is correct when a table's rows share one cost basis, but
+     harness.astro's tr.lead marks the cheapest harness for the SAME model
+     (a best-in-class highlight, not a basis identity) — inheriting the
+     default rail there silently gave "best row" the data accent's job,
+     which is exactly what stage 1.1's color note (charts.ts's rankedBars
+     `mark` comment) says never to do. tone-best opts into the same amber
+     brand/highlight accent the ranked-bars chart already uses for its lead
+     row instead. */
+  .tbl.tone-best { --rail: var(--color-accent); }
   .tbl tr.lead td:first-child { box-shadow: inset 3px 0 0 var(--rail); }
   .tbl .rank { width: 2rem; color: var(--color-muted); font-size: .72rem; }
   @media (min-width: 1024px) {
@@ -452,6 +477,39 @@
   .chart .row.hl .track { fill: color-mix(in srgb, var(--color-ink) 10%, var(--color-panel-3)); }
   /* Find a model emphasises the matched row at the destination: bold, ink, underlined */
   .chart .row.hl .name { font-weight: 700; fill: var(--color-ink); text-decoration: underline; text-underline-offset: 3px; }
+  /* Stage 2: the homepage Ranking view's sortable column headers — real HTML
+     <button>s inside the chart's <foreignObject> (site/src/lib/charts.ts's
+     rankedBars, o.sortable), positioned with the same x/width constants the
+     row cells below use so header and column stay pixel-aligned at any
+     width.
+     Founder fix (screenshot review, 2026-08-26): the first pass flipped the
+     active header's label to purple + bold, which read as three unrelated
+     styles across one row (name muted, active solved purple-bold, month
+     muted) — and the fixed-width flex button wrapped "$ / SOLVED" onto two
+     lines with the arrow stranded on its own line. Now every header — active
+     or not — shares one look: the *same* mono caption idiom the rest of the
+     chart's captions use (.chart .t3.cap, muted color, uppercase, .08em
+     tracking). "Active" is carried by the arrow glyph (purple, the data/
+     interaction accent) plus a heavier label weight only — the label's
+     *color* never changes, so the row reads as one header, not three. Plain
+     block + text-align (from the inline style charts.ts writes) instead of
+     flex/justify-content, and white-space:nowrap, so the arrow always sits
+     on the same line as its label, right after it. */
+  .rank-head { position: relative; width: 100%; height: 100%; font-family: var(--font-mono); }
+  /* line-height matches the foreignObject's fixed 32px height (charts.ts's
+     headH when o.sortable) to vertically center the single line of text —
+     simpler and more robust here than flex, which is what wrapped the label
+     in the first place. */
+  .rank-h { position: absolute; top: 0; height: 100%; margin: 0; padding: 0 .2rem; border: 0; background: none;
+            display: block; font-family: inherit; font-size: .656rem; font-weight: 400; letter-spacing: .08em;
+            text-transform: uppercase; white-space: nowrap; color: var(--color-muted); cursor: pointer;
+            border-radius: 3px; line-height: 32px; }
+  .rank-h:hover { color: var(--color-ink); }
+  .rank-h[aria-sort="ascending"], .rank-h[aria-sort="descending"] { font-weight: 700; color: var(--color-muted); }
+  .rank-h[aria-sort="ascending"]:hover, .rank-h[aria-sort="descending"]:hover { color: var(--color-ink); }
+  .rank-h[aria-sort="ascending"]::after, .rank-h[aria-sort="descending"]::after { color: var(--color-purple); margin-left: .35em; }
+  .rank-h[aria-sort="ascending"]::after { content: "↑"; }
+  .rank-h[aria-sort="descending"]::after { content: "↓"; }
   /* Stage 1.2 (Roy's note 6): the frontier line is purple — the site's data/
      interaction accent — not amber; amber stays brand/highlight-only
      (stage 1.1's color rule). Slightly heavier than the old 1.5px so it

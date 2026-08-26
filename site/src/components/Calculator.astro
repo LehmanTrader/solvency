@@ -19,8 +19,15 @@ const h = headline();
 const { rows, missing } = compute(DEFAULTS);
 // the result card's inner width at the site's one container width (72rem − padding − card padding)
 const WIDE = 1046, NARROW = 350;
-const wide = groupsHtml(rows, DEFAULTS, { width: WIDE, compact: false });
-const narrow = groupsHtml(rows, DEFAULTS, { width: NARROW, compact: true });
+// Stage 2 ("Sortable Ranking table", deferred from stage 1): sortable:true
+// renders each group's header as real <button>s (aria-sort); no `sort` here
+// means each group keeps rankedBars' own default (cost ascending), the same
+// order this page has always shipped with. The client script below owns the
+// live sort state per basis group and re-renders through this same
+// groupsHtml/patchRanked path on every click — one authority, not a DOM
+// shuffle (site/src/lib/charts.ts's rankedBars/patchRanked doc comments).
+const wide = groupsHtml(rows, DEFAULTS, { width: WIDE, compact: false, sortable: true });
+const narrow = groupsHtml(rows, DEFAULTS, { width: NARROW, compact: true, sortable: true });
 // Stage 1.2 (Roy's note 6): the Frontier view of the same leaderboard —
 // pulled forward from stage 2's plan, replacing the old collapsed scatter
 // section on the homepage. Same allChartRows(rows, settings) the old
@@ -139,6 +146,10 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
         <button type="button" id="c-view-frontier" aria-pressed="false">Frontier</button>
       </div>
     </div>
+    <!-- Stage 2: announces a header sort click for screen-reader users; the
+         clicked <button>'s own aria-sort already carries the state for
+         anyone inspecting that control directly. -->
+    <p id="c-sort-status" class="sr-only" role="status" aria-live="polite"></p>
     <div id="c-groups" class="relative" data-wide={WIDE} data-narrow={NARROW}>
       <form id="c-find" class="find" role="search" autocomplete="off">
         <label for="c-find-q" class="sr-only">Find a model</label>
@@ -259,7 +270,7 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
   import { type TaskBucket, bucketById as bucketByIdIn, provenanceHtml, otherProvenanceHtml, bucketArticle } from '../lib/tasks-shared.ts';
   const TASK_BUCKETS: TaskBucket[] = JSON.parse(document.getElementById('task-buckets-data')!.textContent!);
   const bucketById = (id: string) => bucketByIdIn(TASK_BUCKETS, id);
-  import { patchRanked, scatterPareto, VOL_MIN, VOL_MAX } from '../lib/charts.ts';
+  import { patchRanked, scatterPareto, VOL_MIN, VOL_MAX, type RankSort, type RankSortKey, type Basis } from '../lib/charts.ts';
   import { gateFor, GATE_SEEN_KEY, type Control, type GateMode } from '../lib/gate.ts';
   import { signedIn, onClerk, openSignUp, wireSave } from '../lib/clerk-client.ts';
   const scenarioName = () => `${CTRL.tier.value} · ${Number(CTRL.volume.value).toLocaleString()}/mo`;
@@ -281,6 +292,37 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
     frontier: $<HTMLInputElement>('c-frontier')!,
   };
   const groupsEl = $('c-groups')!;
+
+  // ---- Sortable Ranking table (stage 2, deferred from stage 1) ------------
+  // One sort state per basis group ("sort state per basis group" in the
+  // brief) — clicking a header in the Measured group never touches Modelled
+  // or Stale. Default matches what rankedBars already does with no `sort`
+  // passed (cost ascending), so the very first render is pixel-identical to
+  // before this feature existed.
+  const SORT_DEFAULT = (): RankSort => ({ key: 'cost', dir: 'asc' });
+  const groupSort: Record<Basis, RankSort> = { measured: SORT_DEFAULT(), modelled: SORT_DEFAULT(), stale: SORT_DEFAULT() };
+  const SORT_LABEL: Record<RankSortKey, string> = { name: 'model name', pass: 'pass rate', cost: '$ / solved task', month: '$ / month' };
+  const sortStatus = $('c-sort-status');
+  groupsEl.addEventListener('click', (e) => {
+    const btn = (e.target as Element).closest<HTMLButtonElement>('button.rank-h');
+    if (!btn) return;
+    const key = btn.dataset.sortKey as RankSortKey | undefined;
+    const basis = btn.closest<HTMLElement>('[data-group]')?.dataset.group as Basis | undefined;
+    if (!key || !basis) return;
+    const prev = groupSort[basis];
+    // Clicking the active column reverses it; clicking a new column picks a
+    // sensible first direction — pass rate defaults to highest-first (desc),
+    // everything else to lowest/A-first (asc), matching what a first click
+    // on that column should mean.
+    groupSort[basis] = prev.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: key === 'pass' ? 'desc' : 'asc' };
+    render(false);
+    const next = groupSort[basis];
+    if (sortStatus) sortStatus.textContent = `${basis.charAt(0).toUpperCase()}${basis.slice(1)} rows sorted by ${SORT_LABEL[next.key]}, ${next.dir === 'asc' ? 'lowest first' : 'highest first'}.`;
+  });
+  // Enter/Space on a focused header button already dispatches a native
+  // click (native <button> behavior) — no extra keydown handling needed;
+  // this is the "button semantics" half of the brief's a11y requirement.
+
   const otherRow = $('c-other-row')!;
   const bucketArticleEl = $('c-bucket-article')!;
   const syncBucketArticle = () => { bucketArticleEl.textContent = bucketArticle(TASK_BUCKETS, CTRL.bucket.value); };
@@ -406,8 +448,8 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
     const narrowEl = groupsEl.querySelector<HTMLElement>('[data-layout="narrow"]')!;
     const visible = wideEl.offsetParent ? wideEl : narrowEl;
     const w = widthOf(visible.querySelector('[data-chart]') ?? visible);
-    patchGroups(wideEl, groupsHtml(rows, s, { width: visible === wideEl ? w : Number(groupsEl.dataset.wide), compact: false, highlight }));
-    patchGroups(narrowEl, groupsHtml(rows, s, { width: visible === narrowEl ? w : Number(groupsEl.dataset.narrow), compact: true, highlight }));
+    patchGroups(wideEl, groupsHtml(rows, s, { width: visible === wideEl ? w : Number(groupsEl.dataset.wide), compact: false, highlight, sort: groupSort, sortable: true }));
+    patchGroups(narrowEl, groupsHtml(rows, s, { width: visible === narrowEl ? w : Number(groupsEl.dataset.narrow), compact: true, highlight, sort: groupSort, sortable: true }));
     $('c-missing')!.innerHTML = missingHtml(missing, highlight ? models.find((m) => m.model_id === highlight)?.display_name : undefined);
     $('c-missing-d')!.querySelector('[data-count]')!.textContent = String(missing.length);
     renderScatter(rows, s);

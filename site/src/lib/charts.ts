@@ -25,10 +25,20 @@
  * own Measured/Modelled/Stale sections (unlike Arena's single interleaved
  * table) — a repeated "· basis" on the subline would be redundant, so it is
  * left off; the group header already carries that word once. The best row
- * in each group (i === 0) gets a subtle amber heat wash across the full row,
+ * in each group (the actual cheapest by cost — see `bestId` in rankedBars,
+ * stable across a resort) gets a subtle amber heat wash across the full row,
  * in addition to its existing left rail — amber, not the group's basis
  * color, so the "which row is best" highlight never fights the purple bar
  * for the same job (stage 1.1 color note).
+ *
+ * Stage 2: rankedBars also carries a Pass column (desktop only) and an
+ * optional `sort` (RankedOpts.sort) that reorders rows by name / pass /
+ * cost / month — $/month orders identically to cost at a fixed volume, so
+ * only the active-header label differs. `sortable: true` (the homepage
+ * Ranking view only, wired in Calculator.astro) swaps the inert header
+ * caption for real keyboard-operable <button>s with aria-sort, drawn via a
+ * <foreignObject> so they get native button semantics rather than an
+ * SVG-only approximation of one.
  */
 import { chipMarkup, providerLabel } from './providers.ts';
 
@@ -86,6 +96,10 @@ const hatch = () =>
 // Chart A — ranked bars (the result itself)
 // ---------------------------------------------------------------------------
 
+/** Stage 2: the four columns the homepage Ranking view's headers can sort by. */
+export type RankSortKey = 'name' | 'pass' | 'cost' | 'month';
+export interface RankSort { key: RankSortKey; dir: 'asc' | 'desc'; }
+
 export interface RankedOpts {
   width: number;
   volume: number;
@@ -95,6 +109,17 @@ export interface RankedOpts {
   /** model id to outline (from ?highlight=) */
   highlight?: string;
   title?: string;
+  /** Row order. Defaults to cost ascending (the pre-stage-2 behavior). $/month
+   * is a monotonic function of cost at a fixed volume (every row in one group
+   * shares the same volume), so it orders identically to 'cost' — only which
+   * header reads as active differs. */
+  sort?: RankSort;
+  /** Renders the header cells as real keyboard-operable <button>s with
+   * aria-sort (site/src/components/Calculator.astro wires the clicks) instead
+   * of the plain inert caption text every other caller keeps. Stage 2, scoped
+   * to the homepage Ranking view only — see docs/redesign-2026-08/direction.md
+   * §6 and the stage-2 task brief's "Sortable Ranking table" item. */
+  sortable?: boolean;
 }
 
 /**
@@ -102,8 +127,29 @@ export interface RankedOpts {
  * Bars are scaled to the maximum within this group only; sharing a scale
  * across bases would invite a cross-group reading.
  */
+/** Sort comparators for the four ranking columns; $/month reuses cost's
+ * (see RankedOpts.sort above — same order, different active-header label). */
+const RANK_CMP: Record<RankSortKey, (a: ChartRow, b: ChartRow) => number> = {
+  name: (a, b) => a.name.localeCompare(b.name),
+  pass: (a, b) => a.pass - b.pass,
+  cost: (a, b) => a.cost - b.cost,
+  month: (a, b) => a.cost - b.cost,
+};
+
 export function rankedBars(rowsIn: ChartRow[], o: RankedOpts): string {
-  const rows = rowsIn.slice().sort((a, b) => a.cost - b.cost);
+  // "Keep MISSING rows pinned below real values in any sort" (stage-2 brief):
+  // rowsIn never contains a missing row to begin with — compute() in calc.ts
+  // routes models with no published pass rate into the separate `missing`
+  // list before a ChartRow is ever built, so there is nothing here to pin.
+  const sortKey = o.sort?.key ?? 'cost';
+  const sortDir = o.sort?.dir ?? 'asc';
+  const rows = rowsIn.slice().sort(RANK_CMP[sortKey]);
+  if (sortDir === 'desc') rows.reverse();
+  // The best-in-class amber mark (direction doc §6) always names the actual
+  // cheapest row, independent of the sort column/direction above — sorting by
+  // name or pass must not make the highlight jump to whichever row lands
+  // first, or "which row is best" and "row 1 of this view" would blur together.
+  const bestId = rowsIn.length ? rowsIn.slice().sort((a, b) => a.cost - b.cost)[0].id : undefined;
   const w = Math.max(300, Math.round(o.width));
   const compact = o.compact ?? w < 560;
   // Desktop rows grew from 30 to 44px to fit a logo chip and a "Provider"
@@ -111,19 +157,35 @@ export function rankedBars(rowsIn: ChartRow[], o: RankedOpts): string {
   // existing 48px — there is no room there for a third stacked line, so the
   // subline is desktop-only (see the module comment above).
   const rowH = compact ? 48 : 44;
-  const headH = compact ? 0 : 20;
+  // Sortable headers (stage 2) are real HTML <button>s in a <foreignObject>,
+  // which need more breathing room than the inert caption's 20px band.
+  const headH = compact ? 0 : (o.sortable ? 32 : 20);
   const h = headH + rows.length * rowH + 6;
   const max = Math.max(...rows.map((r) => r.cost), 0);
   const basis = o.basis;
   const word = BASIS_WORD[basis];
   const sig = `${basis}|${w}|${compact ? 'c' : 'd'}|${rows.map((r) => r.id).sort().join(',')}`;
 
-  // columns
-  const cmpW = compact ? 0 : 62, monthW = compact ? 0 : 66, solvedW = compact ? 0 : 70, gap = 14;
+  // columns. Pass rate (stage 2, direction doc §6: "pass rate with ±") is a
+  // visible desktop column now, not just tooltip/aria-label text — it sits
+  // just left of $/solved, in the same reserved-right-margin budget.
+  // Founder fix (screenshot review): the sortable header's own label text
+  // ("$ / SOLVED", "$ / MONTH") is wider than the numeral it sits above
+  // ("$12.01") and was wrapping inside the numeral-sized column budget.
+  // Sortable headers get a roomier reserved width so the label always fits
+  // on one line; xPass/xSolved/xMonth (each column's right edge, below)
+  // don't depend on these widths, so the value cells stay exactly where
+  // they were and the header still lands right-aligned over them.
+  const cmpW = compact ? 0 : 62,
+    monthW = compact ? 0 : (o.sortable ? 92 : 66),
+    solvedW = compact ? 0 : (o.sortable ? 98 : 70),
+    passW = compact ? 0 : (o.sortable ? 60 : 46),
+    gap = 14;
   const labelW = compact ? w : Math.min(230, Math.round(w * 0.27));
   const barX = compact ? 0 : labelW + 12;
-  const barEnd = compact ? w - 132 : w - cmpW - monthW - solvedW - gap * 2;
+  const barEnd = compact ? w - 132 : w - cmpW - monthW - solvedW - passW - gap * 3;
   const barMax = Math.max(40, barEnd - barX);
+  const xPass = compact ? w : w - cmpW - monthW - solvedW - gap * 2;
   const xSolved = compact ? w : w - cmpW - monthW - gap;
   const xMonth = compact ? w : w - cmpW;
   const fs = FS_M;
@@ -134,9 +196,11 @@ export function rankedBars(rowsIn: ChartRow[], o: RankedOpts): string {
   const chipX = rankW + (compact ? 2 : 4);
   const nameX = chipX + chipSize + (compact ? 6 : 8);
 
-  // measured: solid, non-lead dimmed by CSS; modelled: hatched; stale: dashed outline, no hatch
-  const fill = (i: number) => basis === 'measured'
-    ? `fill="var(--color-measured)"${i === 0 ? '' : ' data-dim="1"'}`
+  // measured: solid, non-lead dimmed by CSS; modelled: hatched; stale: dashed outline, no hatch.
+  // "Lead" here means the actual cheapest row (bestId), not row 0 of whatever
+  // sort is active — see the bestId note above the sort in this function.
+  const fill = (r: ChartRow) => basis === 'measured'
+    ? `fill="var(--color-measured)"${r.id === bestId ? '' : ' data-dim="1"'}`
     : basis === 'modelled'
       ? `fill="url(#hatch-modelled)" stroke="var(--color-modelled)" stroke-width="1"`
       : `fill="transparent" stroke="var(--color-stale)" stroke-width="1.5" stroke-dasharray="3 2"`;
@@ -154,11 +218,30 @@ export function rankedBars(rowsIn: ChartRow[], o: RankedOpts): string {
   // label text at the exact same x as its value cell below, so header and
   // value are pixel-exact aligned at any width, with no extra glyph to
   // collide with the next column.
-  const header = compact ? '' :
-    `<g class="t3 cap" font-size="${FS_S}" aria-hidden="true">` +
-    `<text x="${barX}" y="12">$ / SOLVED TASK · LOWER IS BETTER</text>` +
-    `<text x="${xSolved}" y="12" text-anchor="end">$ / SOLVED<title>cost per solved task = cost per attempt ÷ pass rate. What it costs to get a task finished, not what a token costs.</title></text>` +
-    `<text x="${xMonth}" y="12" text-anchor="end">$ / MONTH<title>$ / solved task × your monthly task volume.</title></text></g>`;
+  const ariaSort = (key: RankSortKey) => sortKey === key ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none';
+  // Interactive header (stage 2, homepage Ranking view only — o.sortable):
+  // real <button>s in a <foreignObject>, positioned with the exact same
+  // x/width constants the row cells below use, so the header lines up with
+  // its column without a second set of magic numbers to keep in sync.
+  // site/src/components/Calculator.astro wires the clicks (event delegation)
+  // and keeps a live region announcing the new order; this module only draws
+  // the buttons and marks the active one via aria-sort.
+  const sortBtn = (key: RankSortKey, label: string, x: number, bw: number, end: boolean) =>
+    `<button type="button" class="rank-h" data-sort-key="${key}" aria-sort="${ariaSort(key)}" ` +
+    `style="left:${end ? x - bw : x}px;width:${bw}px;text-align:${end ? 'right' : 'left'}">${label}</button>`;
+  const header = compact ? '' : (o.sortable
+    ? `<foreignObject x="0" y="0" width="${w}" height="${headH}">` +
+      `<div xmlns="http://www.w3.org/1999/xhtml" class="rank-head" role="group" aria-label="Sort ${esc(word.toLowerCase())} rows">` +
+      sortBtn('name', 'Model', nameX, labelW - nameX, false) +
+      sortBtn('pass', 'Pass', xPass, passW, true) +
+      sortBtn('cost', '$ / solved', xSolved, solvedW, true) +
+      sortBtn('month', '$ / month', xMonth, monthW, true) +
+      `</div></foreignObject>`
+    : `<g class="t3 cap" font-size="${FS_S}" aria-hidden="true">` +
+      `<text x="${barX}" y="12">$ / SOLVED TASK · LOWER IS BETTER</text>` +
+      `<text x="${xPass}" y="12" text-anchor="end">PASS</text>` +
+      `<text x="${xSolved}" y="12" text-anchor="end">$ / SOLVED<title>cost per solved task = cost per attempt ÷ pass rate. What it costs to get a task finished, not what a token costs.</title></text>` +
+      `<text x="${xMonth}" y="12" text-anchor="end">$ / MONTH<title>$ / solved task × your monthly task volume.</title></text></g>`);
 
   const body = rows.map((r, i) => {
     const y = headH + i * rowH;
@@ -167,7 +250,7 @@ export function rankedBars(rowsIn: ChartRow[], o: RankedOpts): string {
     const detail = [r.harness ? `harness ${r.harness}` : '', `pass rate ${pct(r.pass)}`, r.attempt != null ? `${money(r.attempt)} per attempt` : '', r.note ?? ''].filter(Boolean).join(' · ');
     const provider = r.provider ? providerLabel(r.provider) : undefined;
     const label = `${i + 1}. ${r.name}${provider ? `, ${provider}` : ''}, ${basis}, ${money(r.cost)} per solved task, ${month} a month at ${o.volume.toLocaleString()} tasks. ${detail}.`;
-    const cls = `row${i === 0 ? ' lead' : ''}${o.highlight === r.id ? ' hl' : ''}`;
+    const cls = `row${r.id === bestId ? ' lead' : ''}${o.highlight === r.id ? ' hl' : ''}`;
     // full-row-height hit rects so every link is a ≥ 44 px target on small screens
     const hitRow = `<rect class="hit" x="0" y="0" width="${compact ? w - 120 : barX}" height="${rowH}" fill="transparent"/>`;
     const cmp = r.compare ? (compact
@@ -178,7 +261,7 @@ export function rankedBars(rowsIn: ChartRow[], o: RankedOpts): string {
     // <title> so patchRanked's title-adjacency lookup keeps finding it as a
     // unit. Amber, not var(--color-${basis}): the highlight is a UI job, kept
     // off the bar's own (purple) data color per the stage 1.1 color note.
-    const mark = i === 0
+    const mark = r.id === bestId
       ? `<g class="mark"><rect width="2" height="${rowH}" fill="var(--color-accent)"/><rect class="heat" x="0" y="0" width="${w}" height="${rowH}" fill="var(--color-accent)" opacity=".07"/></g>`
       : '';
     const rank = `<text class="t3 rank-n" data-f="rank" x="${rankW - 4}" y="${rowH / 2 + 4}" text-anchor="end" font-size="${FS_S}">${i + 1}</text>`;
@@ -190,7 +273,7 @@ export function rankedBars(rowsIn: ChartRow[], o: RankedOpts): string {
         `<a href="${esc(r.href)}">${hitRow}<text class="name" x="${nameX}" y="16" font-size="${fs}">${esc(name)}</text></a>` +
         `<text class="v c-${basis}" data-f="solved" x="${xSolved}" y="16" text-anchor="end" font-size="${fs}" font-weight="700">${money(r.cost)}</text>` +
         `<rect class="track" x="8" y="${rowH - 22}" width="${barMax - 8}" height="10" rx="2"/>` +
-        `<rect class="bar" x="8" y="${rowH - 22}" width="${bw}" height="10" rx="2" style="width:${bw}px" ${fill(i)}/>` +
+        `<rect class="bar" x="8" y="${rowH - 22}" width="${bw}" height="10" rx="2" style="width:${bw}px" ${fill(r)}/>` +
         cmp +
         `<text class="t2" data-f="month" x="${xMonth}" y="${rowH - 13}" text-anchor="end" font-size="${FS_S}">${month}/mo</text></g>`
       : `<g class="${cls}" data-id="${esc(r.id)}" role="listitem" aria-label="${esc(label)}" style="transform:translateY(${y}px)">` +
@@ -198,14 +281,17 @@ export function rankedBars(rowsIn: ChartRow[], o: RankedOpts): string {
         `<a href="${esc(r.href)}">${hitRow}<text class="name" x="${nameX}" y="19" font-size="${fs}">${esc(name)}</text>` +
         (provider ? `<text class="t3 sub" x="${nameX}" y="34" font-size="${FS_S}">${esc(provider)}</text>` : '') + `</a>` +
         `<rect class="track" x="${barX}" y="${rowH / 2 - 5}" width="${barMax}" height="10" rx="2"/>` +
-        `<rect class="bar" x="${barX}" y="${rowH / 2 - 5}" width="${bw}" height="10" rx="2" style="width:${bw}px" ${fill(i)}/>` +
+        `<rect class="bar" x="${barX}" y="${rowH / 2 - 5}" width="${bw}" height="10" rx="2" style="width:${bw}px" ${fill(r)}/>` +
+        `<text class="v t3" data-f="pass" x="${xPass}" y="${rowH / 2 + 4.5}" text-anchor="end" font-size="${FS_S}">${pct(r.pass)}</text>` +
         `<text class="v c-${basis}" data-f="solved" x="${xSolved}" y="${rowH / 2 + 4.5}" text-anchor="end" font-size="${fs}" font-weight="700">${money(r.cost)}</text>` +
         `<text class="v" data-f="month" x="${xMonth}" y="${rowH / 2 + 4.5}" text-anchor="end" font-size="${fs}">${month}</text>` +
         cmp + `</g>`;
   }).join('');
 
-  const title = o.title ?? `${word}: cost per solved task, ranked`;
-  const desc = `${rows.length} ${basis} rows ranked cheapest first. ${rows.map((r, i) => `${i + 1} ${r.name} ${money(r.cost)}`).join('; ')}. Monthly figures at ${o.volume.toLocaleString()} tasks.`;
+  const SORT_LABEL: Record<RankSortKey, string> = { name: 'model name', pass: 'pass rate', cost: '$/solved task', month: '$/month' };
+  const orderWord = sortKey === 'cost' && sortDir === 'asc' ? 'ranked cheapest first' : `sorted by ${SORT_LABEL[sortKey]}, ${sortDir === 'asc' ? 'ascending' : 'descending'}`;
+  const title = o.title ?? `${word}: cost per solved task, ${sortKey === 'cost' && sortDir === 'asc' ? 'ranked' : SORT_LABEL[sortKey] + ' order'}`;
+  const desc = `${rows.length} ${basis} rows, ${orderWord}. ${rows.map((r, i) => `${i + 1} ${r.name} ${money(r.cost)}`).join('; ')}. Monthly figures at ${o.volume.toLocaleString()} tasks.`;
   return `<svg class="chart ranked${compact ? ' compact' : ''}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" role="list" aria-label="${esc(title)}" data-sig="${esc(sig)}" data-basis="${basis}">` +
     `<title>${esc(title)}</title><desc>${esc(desc)}</desc><defs>${hatch()}</defs>${header}${body}</svg>`;
 }
@@ -225,8 +311,19 @@ export function patchRanked(container: Element, html: string): void {
     return;
   }
   cur.setAttribute('aria-label', next.getAttribute('aria-label') ?? '');
+  // Stage 2: title/desc text now names the active sort (see rankedBars'
+  // orderWord above), so a resort must patch them too, not just row content.
+  const t = next.querySelector('title'), ct = cur.querySelector('title');
+  if (t && ct) ct.textContent = t.textContent;
   const d = next.querySelector('desc'), cd = cur.querySelector('desc');
   if (d && cd) cd.textContent = d.textContent;
+  // The interactive header (o.sortable) is outside the per-row loop below —
+  // sync its aria-sort states here so the newly-active column is marked.
+  next.querySelectorAll<HTMLButtonElement>('button.rank-h').forEach((nh) => {
+    const key = nh.dataset.sortKey;
+    const ch = cur.querySelector<HTMLButtonElement>(`button.rank-h[data-sort-key="${CSS.escape(key ?? '')}"]`);
+    if (ch) ch.setAttribute('aria-sort', nh.getAttribute('aria-sort') ?? 'none');
+  });
   next.querySelectorAll<SVGGElement>('g.row').forEach((nr) => {
     const id = nr.getAttribute('data-id')!;
     const cr = cur.querySelector<SVGGElement>(`g.row[data-id="${CSS.escape(id)}"]`);

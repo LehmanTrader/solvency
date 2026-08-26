@@ -5,7 +5,7 @@
  */
 import { models, assumptions, tiers, bestResultFor, extrasFor } from './data.ts';
 import { costPerSolvedTask, defaultOptions } from './engine.ts';
-import { rankedBars, BASIS_OF, money, moneyMonth, type ChartRow, type Basis } from './charts.ts';
+import { rankedBars, BASIS_OF, money, moneyMonth, type ChartRow, type Basis, type RankSort } from './charts.ts';
 import { escapeHtml } from './html.ts';
 
 export { money, moneyMonth };
@@ -98,16 +98,35 @@ export function chartRows(rows: Row[], key: string, s: Settings): ChartRow[] {
 /** Every computable row as a chart row (for the scatter). */
 export const allChartRows = (rows: Row[], s: Settings) => GROUPS.flatMap((g) => chartRows(rows, g.key, s));
 
-export interface GroupOpts { width: number; compact?: boolean; highlight?: string; }
+export interface GroupOpts {
+  width: number;
+  compact?: boolean;
+  highlight?: string;
+  /** Sort state per basis group (stage 2's homepage Ranking view). Omitted —
+   * or a group with no entry — falls back to rankedBars' own default
+   * (cost ascending), so callers that don't sort (e.g. the model page's peer
+   * chart) are unaffected. */
+  sort?: Partial<Record<Basis, RankSort>>;
+  /** Renders each group's header as real sortable <button>s. Homepage only. */
+  sortable?: boolean;
+}
 
 /**
  * The grouped result: measured, then modelled, each with its own header and
  * its own scale; stale rows behind a disclosure. Never interleaved.
  */
 export function groupsHtml(rows: Row[], s: Settings, o: GroupOpts): string {
+  // Founder fix (screenshot review, 2026-08-26): on the wide/sortable layout
+  // the "Find a model" search box (site/src/components/Calculator.astro's
+  // #c-find, position:absolute top-right of #c-groups, desktop only) floats
+  // right over the first group's own top band. That band used to be just a
+  // one-line caption; it's now also home to the interactive sort-header row,
+  // and the old 8px gap between them read as the search box crowding the
+  // headers. Wide + sortable groups get real breathing room here instead.
+  const headGap = o.sortable && !o.compact ? 'mt-7' : 'mt-2';
   return GROUPS.map((g) => {
     const cr = chartRows(rows, g.key, s);
-    const svg = cr.length ? rankedBars(cr, { width: o.width, volume: s.volume, basis: g.basis, compact: o.compact, highlight: o.highlight }) : '';
+    const svg = cr.length ? rankedBars(cr, { width: o.width, volume: s.volume, basis: g.basis, compact: o.compact, highlight: o.highlight, sort: o.sort?.[g.basis], sortable: o.sortable }) : '';
     const empty = `<p class="small py-2">No ${g.basis} row has both a verified price and a published pass rate under these settings.</p>`;
     const head = `<p class="ghead"><span class="gword t-${g.basis}">${g.title}</span> · ${g.note}</p>`;
     if (g.basis === 'stale') {
@@ -118,7 +137,7 @@ export function groupsHtml(rows: Row[], s: Settings, o: GroupOpts): string {
     }
     return `<div class="group-${g.basis} px-5 pt-4 pb-2${g.basis === 'modelled' ? ' border-t border-[var(--color-rule)]' : ''}" data-group="${g.basis}">
       ${head}
-      <div class="chart-slot mt-2" data-chart>${svg || empty}</div>
+      <div class="chart-slot ${headGap}" data-chart>${svg || empty}</div>
     </div>`;
   }).join('');
 }
