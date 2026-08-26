@@ -35,26 +35,18 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
 ---
 <section id="calc" aria-labelledby="q-h" data-gated={CLERK_ENABLED ? '1' : '0'} data-gate-mode={GATE_MODE}>
   <h1 id="q-h" class="h-display max-w-[30ch] text-balance">Which model is cheapest for what you actually ship?</h1>
-  <p class="lede mt-4 max-w-[52ch] text-pretty">Cost per solved task — what it takes to get a task finished, not the token price.</p>
 
-  <!-- The metadata row (direction doc §5): three real, sourced counts, the
-       same figures the footer and /methodology cite — not decoration. -->
-  <p class="small mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5">
-    <span class="inline-flex items-center gap-1.5">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
-      verified <span class={fresh ? 't-fresh' : 'text-[var(--color-ink)]'}>{verified}</span>
-    </span>
-    <span aria-hidden="true">·</span>
-    <span class="inline-flex items-center gap-1.5">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-      <span class="text-[var(--color-ink)]">{models.length}</span> models
-    </span>
-    <span aria-hidden="true">·</span>
-    <span class="inline-flex items-center gap-1.5">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/><path d="M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/></svg>
-      <span class="text-[var(--color-ink)]">{sources.length}</span> sources
-    </span>
-  </p>
+  <!-- Stage 1.1 (founder review of stage-1 screenshots): the lede paragraph
+       and the metadata row that used to sit here are both gone. The lede's
+       closing line was the project-wide banned self-validating sentence
+       (direction.md §8 — a trust-assertion the founder ruled out everywhere
+       reader-facing); the metadata row went for a separate reason, in his
+       words: "this isnt some academic paper it's a product stop trying to
+       source everything and validate it all." Verification/sourcing stays an
+       internal discipline (Provenance labels and card footers still show the
+       receipt, direction.md §8) — it just doesn't get a headline sentence or
+       a counter row anymore. The headline + picker carry the page, per
+       direction §5's radical-subtraction brief. -->
 
   <div id="hero-modes">
     <p class="sentence mode-bucket mt-6">
@@ -85,9 +77,17 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
     </div>
   </div>
 
-  <p class="small mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-1" id="c-tier-row">
-    <span class="mode-bucket">Task tier:{' '}<select id="c-tier-bucket" class="ctl ctl-inline" aria-label="Task tier: what you build" aria-describedby="c-tier-help-bucket">{TIER_NAMES.map((t) => <option value={t} selected={t === DEFAULTS.tier}>{t}</option>)}</select>{' '}<span id="c-tier-help-bucket">{tierHelp(DEFAULTS.tier)}</span></span>
-    <span class="mode-bucket" aria-hidden="true">·</span>
+  <!-- Stage 1.1: the visible "Task tier:" row is gone from the hero flow —
+       "this isnt some academic paper it's a product stop trying to source
+       everything and validate it all" applied here too, read as "unnecessary
+       clutter" for a control most visitors never touch (bucket mode already
+       picks a sensible tier from the task type). The control itself isn't
+       deleted — it still drives real state (CTRL.tierBucket in the script
+       below) — it moves into the Assumptions disclosure below, where a
+       visitor who does want to change it can find it. The mode-switch link
+       stays here on its own line: it's a navigation affordance, not the
+       clutter that was called out. -->
+  <p class="small mt-3">
     <button type="button" id="c-mode-toggle" class="link-btn" aria-describedby="c-mode-toggle-help">pricing ongoing work instead?</button>
   </p>
   <p id="c-mode-toggle-help" class="sr-only">Switches to a tasks-per-month slider for pricing an ongoing volume of work instead of a single project.</p>
@@ -159,6 +159,16 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
 
     <details class="disc px-5 py-3 border-t border-[var(--color-rule)]" id="c-assume">
       <summary>Assumptions (4) · move modelled rows only</summary>
+      <!-- Task tier, relocated from the hero (stage 1.1, see the note above
+           #c-mode-toggle): not one of the 4 assumptions below — it doesn't
+           move modelled rows, it picks which tier's rows are shown — so it
+           gets its own line above that grid rather than a 5th tile in it.
+           mode-bucket keeps it in step with the hero: hidden in monthly mode,
+           where #c-tier (in the "I build [tier] tasks…" sentence) already
+           covers the same control. -->
+      <p class="mode-bucket small mb-4">
+        Task tier:{' '}<select id="c-tier-bucket" class="ctl ctl-inline" aria-label="Task tier: what you build" aria-describedby="c-tier-help-bucket">{TIER_NAMES.map((t) => <option value={t} selected={t === DEFAULTS.tier}>{t}</option>)}</select>{' '}<span id="c-tier-help-bucket">{tierHelp(DEFAULTS.tier)}</span>
+      </p>
       <div class="assume mt-4 grid gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-4">
         <label class="block">
           <span class="label">Retry model</span>

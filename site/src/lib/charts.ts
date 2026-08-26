@@ -3,12 +3,17 @@
  * SVG string out. Rendered once at build (so the page is complete without JS)
  * and again by the island on every input. No library.
  *
- * Rules (docs/landing-spec.md §4): measured = solid amber, modelled = hatched
- * / hollow periwinkle, stale = hollow + dashed coral — and the word is always
- * printed, never color alone. Every chart has <title> and <desc>; ranked rows
- * are <g role="listitem"> with an aria-label that reads as a sentence.
- * Colors come from CSS variables (see .chart in global.css) so one SVG serves
- * light and dark.
+ * Rules (docs/landing-spec.md §4, revised by the stage-1.1 color note in
+ * docs/redesign-2026-08/direction.md): measured = solid purple, modelled =
+ * the SAME purple hatched (the hatch carries the basis distinction, not a
+ * second hue), stale = hollow + dashed coral, unchanged — and the word is
+ * always printed, never color alone. The lead row in each group gets an
+ * amber heat wash instead (see the `mark` builder below): amber is the
+ * brand/highlight accent, purple is the data accent, and the two are kept
+ * off the same job so bars and highlight read as separate things. Every
+ * chart has <title> and <desc>; ranked rows are <g role="listitem"> with an
+ * aria-label that reads as a sentence. Colors come from CSS variables (see
+ * .chart in global.css) so one SVG serves light and dark.
  *
  * Type inside the charts uses two sizes only — 10.5 (captions, ticks, labels)
  * and 12.8 (values, names) — the two smallest steps of the site's type scale.
@@ -20,8 +25,10 @@
  * own Measured/Modelled/Stale sections (unlike Arena's single interleaved
  * table) — a repeated "· basis" on the subline would be redundant, so it is
  * left off; the group header already carries that word once. The best row
- * in each group (i === 0) gets a subtle basis-colored heat wash across the
- * full row, in addition to its existing left rail.
+ * in each group (i === 0) gets a subtle amber heat wash across the full row,
+ * in addition to its existing left rail — amber, not the group's basis
+ * color, so the "which row is best" highlight never fights the purple bar
+ * for the same job (stage 1.1 color note).
  */
 import { chipMarkup, providerLabel } from './providers.ts';
 
@@ -156,11 +163,13 @@ export function rankedBars(rowsIn: ChartRow[], o: RankedOpts): string {
     const cmp = r.compare ? (compact
       ? `<a class="cmp" href="${esc(r.compare)}" aria-label="Compare vs ${esc(r.name)} head to head"><rect class="hit" x="${w - 120}" y="0" width="120" height="${rowH}" fill="transparent"/><text x="${w - 118}" y="${rowH - 14}" font-size="${FS_S}" class="t3">vs ›</text></a>`
       : `<a class="cmp" href="${esc(r.compare)}" aria-label="Compare ${esc(r.name)} head to head"><rect class="hit" x="${w - cmpW}" y="0" width="${cmpW}" height="${rowH}" fill="transparent"/><text x="${w}" y="${rowH / 2 + 4}" text-anchor="end" font-size="${FS_S}" class="t3">compare ›</text></a>`) : '';
-    // rail (lead's left-edge accent) and heat wash (lead's full-row basis-colored
+    // rail (lead's left-edge accent) and heat wash (lead's full-row amber
     // tint, "best in class" per direction §6) are one <g> immediately after
-    // <title> so patchRanked's title-adjacency lookup keeps finding it as a unit.
+    // <title> so patchRanked's title-adjacency lookup keeps finding it as a
+    // unit. Amber, not var(--color-${basis}): the highlight is a UI job, kept
+    // off the bar's own (purple) data color per the stage 1.1 color note.
     const mark = i === 0
-      ? `<g class="mark"><rect width="2" height="${rowH}" fill="var(--color-${basis})"/><rect class="heat" x="0" y="0" width="${w}" height="${rowH}" fill="var(--color-${basis})" opacity=".07"/></g>`
+      ? `<g class="mark"><rect width="2" height="${rowH}" fill="var(--color-accent)"/><rect class="heat" x="0" y="0" width="${w}" height="${rowH}" fill="var(--color-accent)" opacity=".07"/></g>`
       : '';
     const rank = `<text class="t3 rank-n" data-f="rank" x="${rankW - 4}" y="${rowH / 2 + 4}" text-anchor="end" font-size="${FS_S}">${i + 1}</text>`;
     const chip = r.provider ? `<g transform="translate(${chipX},${(rowH - chipSize) / 2})">${chipMarkup(r.provider, chipSize)}</g>` : '';
