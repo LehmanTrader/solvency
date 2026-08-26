@@ -61,6 +61,19 @@
      every colored figure sits next to the word measured / modelled / stale / missing. */
   --color-measured: var(--color-purple); /* 5.44:1 on cream — was amber; freed for the "measured" job alone */
   --color-modelled: var(--color-purple); /* same hue as measured on purpose: the hatch pattern is what reads as "modelled" */
+  /* Free-model coverage (docs/free-models-scoping.md §4, 2026-08-26): a
+     fourth basis for rate-capped $0 access paths. Reuses --color-purple's
+     hue and already-cited ratio (5.44:1 light / 7.20:1 dark, same as
+     measured/modelled above) rather than adding a new color the "two
+     accents, two jobs" rule would then have to account for — amber stays
+     brand/highlight-only, purple stays the one data/interaction hue. The
+     free basis is told apart from measured (solid fill) and modelled (hatch
+     fill) by a DOTTED OUTLINE instead (see charts.ts's rankedBars `fill()`
+     and .pt-free below) — never confusable with stale's dashed outline
+     because that's a different hue (#A8451B rust, not purple) as well as a
+     different dash cadence. --color-free is a straight alias, so it tracks
+     --color-purple's dark-theme redeclaration below automatically. */
+  --color-free: var(--color-purple);
   --color-stale: #A8451B;        /* 5.49:1 on cream — unchanged; stale isn't part of this pivot */
   --color-missing: #5F6B73;      /* 5.06:1 on cream */
   --color-better: #1B7F4F;       /* 4.63:1 on cream — unchanged by the stage-1.3 red swap below */
@@ -116,7 +129,7 @@
     /* Purple's dark-theme derivation (stage 1.1): lightened off --color-purple's
        light value to stay vivid on a near-black ground — 7.20:1 on #0A0C0D. */
     --color-purple: #A78BFA;
-    --color-measured: var(--color-purple); --color-modelled: var(--color-purple); --color-stale: #E8895A; --color-missing: #7B858C;
+    --color-measured: var(--color-purple); --color-modelled: var(--color-purple); --color-free: var(--color-purple); --color-stale: #E8895A; --color-missing: #7B858C;
     /* Stage 1.3: dark-theme derivation of the typical-error-red above — a
        lighter red (Tailwind's red-400 neighborhood, #F87171) so it reads as
        the same familiar error-red family, lit for a near-black ground,
@@ -231,6 +244,7 @@
   .tile-v.accent, .tile-v.measured { color: var(--color-measured); }
   .tile-v.modelled { color: var(--color-modelled); }
   .tile-v.stale { color: var(--color-stale); }
+  .tile-v.free { color: var(--color-free); }
   .tile-v.missing { color: var(--color-missing); font-size: 1.1rem; font-weight: 400; }
   .tile-n { margin-top: .4rem; font-family: var(--font-mono); font-size: .72rem; color: var(--color-muted); }
 
@@ -275,10 +289,11 @@
           padding: .2rem .5rem; color: var(--color-muted); white-space: nowrap; }
   .pill-accent, .pill-ink { color: var(--color-ink); }
   /* provenance axis: text in the basis color, no box */
-  .pill-measured, .pill-modelled, .pill-stale, .pill-missing { border: 0; padding: 0; border-radius: 0; }
+  .pill-measured, .pill-modelled, .pill-stale, .pill-free, .pill-missing { border: 0; padding: 0; border-radius: 0; }
   .pill-measured { color: var(--color-measured); }
   .pill-modelled { color: var(--color-modelled); }
   .pill-stale { color: var(--color-stale); }
+  .pill-free { color: var(--color-free); }
   .pill-missing { color: var(--color-missing); font-style: italic; }
   /* status axis: neutral, the word carries it, no box */
   .pill-current, .pill-legacy, .pill-retired { border: 0; padding: 0; border-radius: 0; }
@@ -289,6 +304,7 @@
   .t-measured { color: var(--color-measured) !important; }
   .t-modelled { color: var(--color-modelled) !important; }
   .t-stale { color: var(--color-stale) !important; }
+  .t-free { color: var(--color-free) !important; }
   .t-missing { color: var(--color-missing) !important; }
 
   /* ---- the question sentence and its controls ---------------------------- */
@@ -406,12 +422,14 @@
   .tbl td.measured { color: var(--color-measured); font-weight: 700; }
   .tbl td.modelled { color: var(--color-modelled); font-weight: 700; }
   .tbl td.stale { color: var(--color-stale); font-weight: 700; }
+  .tbl td.free { color: var(--color-free); font-weight: 700; }
   .tbl td.muted { color: var(--color-muted); }
   .tbl td.missing { color: var(--color-missing); font-style: italic; }
   .tbl .basis { font-size: .656rem; letter-spacing: .14em; text-transform: uppercase; font-weight: 400; margin-left: .5rem; }
   .tbl { --rail: var(--color-measured); }
   .tbl.tone-modelled { --rail: var(--color-modelled); }
   .tbl.tone-stale { --rail: var(--color-stale); }
+  .tbl.tone-free { --rail: var(--color-free); }
   /* Stage 2 consistency fix: .tbl's default --rail is the purple measured
      token, which is correct when a table's rows share one cost basis, but
      harness.astro's tr.lead marks the cheapest harness for the SAME model
@@ -533,6 +551,12 @@
   .chart .pt-measured .chip-ring { fill: none; stroke: var(--color-measured); stroke-width: 1.5; }
   .chart .pt-modelled .chip-ring { fill: none; stroke: var(--color-modelled); stroke-width: 1.5; stroke-dasharray: 3 2; }
   .chart .pt-stale .chip-ring { fill: none; stroke: var(--color-stale); stroke-width: 1.5; stroke-dasharray: 2 2; }
+  /* Free-model coverage: dotted (tight dash) purple outline — visually
+     distinct from both modelled's hatch fill and stale's dashed rust
+     outline. In practice a free row's cost is always $0 and is filtered off
+     this log-scale chart entirely (charts.ts scatterPareto), so this rule
+     mainly guards a future free row with a positive effective cost. */
+  .chart .pt-free .chip-ring { fill: none; stroke: var(--color-free); stroke-width: 1.5; stroke-dasharray: 1 2; }
   .chart a.pt.dominated { opacity: .6; transition: opacity .12s; }
   .chart a.pt.dominated:hover, .chart a.pt.dominated:focus-visible { opacity: 1; }
   .chart a.pt:hover .chip-ring, .chart a.pt:focus-visible .chip-ring { stroke-width: 2.5; }
@@ -549,6 +573,7 @@
   .chart .c-measured { color: var(--color-measured); }
   .chart .c-modelled { color: var(--color-modelled); }
   .chart .c-stale { color: var(--color-stale); }
+  .chart .c-free { color: var(--color-free); }
   /* the designed tooltip for scatter points (index.astro positions it) */
   .tip { position: absolute; z-index: 2; pointer-events: none; opacity: 0; transition: opacity .12s;
          background: var(--color-panel); border: 1px solid var(--color-rule-strong); border-radius: 6px;

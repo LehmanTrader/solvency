@@ -41,8 +41,20 @@
  * SVG-only approximation of one.
  */
 import { chipMarkup, providerLabel } from './providers.ts';
+import type { RateCaps } from '../../../scripts/types.ts';
 
-export type Basis = 'measured' | 'modelled' | 'stale';
+/**
+ * Free-model coverage (docs/free-models-scoping.md §4): a fourth basis,
+ * `free`, alongside measured/modelled/stale. It is visually distinguished
+ * from measured (solid fill) and modelled (hatch fill) by a dotted OUTLINE
+ * instead of a new hue — reusing --color-purple's already-cited contrast
+ * (5.44:1 light / 7.20:1 dark, site/src/styles/global.css) rather than
+ * inventing a color the "two accents, two jobs" rule would then have to
+ * account for. Never confused with stale's dashed outline: different color
+ * (purple, not stale's rust/coral #A8451B) AND a tighter dash (dotted, not
+ * dashed).
+ */
+export type Basis = 'measured' | 'modelled' | 'stale' | 'free';
 
 export interface ChartRow {
   id: string;
@@ -62,13 +74,33 @@ export interface ChartRow {
   note?: string;
   /** data/models.json provider id — drives the row's logo chip and subline */
   provider?: string;
+  /** Free-model coverage: compact rate-cap label ("cap: 20 req/min, 50 req/day"), free-basis rows only. */
+  caps?: string;
 }
 
 export const BASIS_OF: Record<string, Basis> = {
   measured_by_source: 'measured', modelled_by_solvency: 'modelled', historical_at_run_date: 'stale',
+  free_tier_capped: 'free',
 };
 
-export const BASIS_WORD: Record<Basis, string> = { measured: 'MEASURED', modelled: 'MODELLED', stale: 'STALE' };
+export const BASIS_WORD: Record<Basis, string> = { measured: 'MEASURED', modelled: 'MODELLED', stale: 'STALE', free: 'FREE · RATE-CAPPED' };
+
+/**
+ * The compact per-row cap label ("cap: 20 req/min, 50 req/day", "cap: 1M
+ * tok/day", or "cap: not published" when a free row's caps were checked and
+ * nothing was found — MISSING, never fabricated as unlimited). Full
+ * provenance (rate_caps.source_url/last_verified) lives on the model page,
+ * not squeezed into this label; see site/src/pages/models/[id].astro.
+ */
+export function capsLabel(caps: RateCaps | null | undefined): string {
+  if (!caps) return 'cap: not published';
+  const parts: string[] = [];
+  if (caps.requests_per_minute != null) parts.push(`${caps.requests_per_minute.toLocaleString()} req/min`);
+  if (caps.requests_per_day != null) parts.push(`${caps.requests_per_day.toLocaleString()} req/day`);
+  if (caps.tokens_per_minute != null) parts.push(`${caps.tokens_per_minute.toLocaleString()} tok/min`);
+  if (caps.tokens_per_day != null) parts.push(`${caps.tokens_per_day.toLocaleString()} tok/day`);
+  return parts.length ? `cap: ${parts.join(', ')}` : 'cap: not published';
+}
 
 export const money = (n: number) =>
   n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : n >= 100 ? `$${n.toFixed(0)}` : `$${n.toFixed(2)}`;
@@ -141,15 +173,22 @@ export function rankedBars(rowsIn: ChartRow[], o: RankedOpts): string {
   // rowsIn never contains a missing row to begin with — compute() in calc.ts
   // routes models with no published pass rate into the separate `missing`
   // list before a ChartRow is ever built, so there is nothing here to pin.
-  const sortKey = o.sort?.key ?? 'cost';
-  const sortDir = o.sort?.dir ?? 'asc';
+  // Free-model coverage: every free row is $0, so "cheapest first" is a
+  // degenerate, arbitrary tie-break — the group's own note (calc.ts GROUPS)
+  // says free rows are ranked by pass rate instead. Only applies when the
+  // caller hasn't already asked for a specific order.
+  const sortKey = o.sort?.key ?? (o.basis === 'free' ? 'pass' : 'cost');
+  const sortDir = o.sort?.dir ?? (o.basis === 'free' ? 'desc' : 'asc');
   const rows = rowsIn.slice().sort(RANK_CMP[sortKey]);
   if (sortDir === 'desc') rows.reverse();
   // The best-in-class amber mark (direction doc §6) always names the actual
   // cheapest row, independent of the sort column/direction above — sorting by
   // name or pass must not make the highlight jump to whichever row lands
   // first, or "which row is best" and "row 1 of this view" would blur together.
-  const bestId = rowsIn.length ? rowsIn.slice().sort((a, b) => a.cost - b.cost)[0].id : undefined;
+  // Free-model coverage: every row in a free group ties at $0, so no row is
+  // meaningfully "cheapest" — the amber lead mark is suppressed there rather
+  // than landing on an arbitrary tie-break winner.
+  const bestId = (o.basis !== 'free' && rowsIn.length) ? rowsIn.slice().sort((a, b) => a.cost - b.cost)[0].id : undefined;
   const w = Math.max(300, Math.round(o.width));
   const compact = o.compact ?? w < 560;
   // Desktop rows grew from 30 to 44px to fit a logo chip and a "Provider"
@@ -196,14 +235,21 @@ export function rankedBars(rowsIn: ChartRow[], o: RankedOpts): string {
   const chipX = rankW + (compact ? 2 : 4);
   const nameX = chipX + chipSize + (compact ? 6 : 8);
 
-  // measured: solid, non-lead dimmed by CSS; modelled: hatched; stale: dashed outline, no hatch.
+  // measured: solid, non-lead dimmed by CSS; modelled: hatched; stale: dashed
+  // outline, no hatch; free: DOTTED outline, no hatch, no fill — same purple
+  // hue as measured/modelled (not a new color, see the Basis doc comment
+  // above) but neither solid nor hatched, so it can never be mistaken for
+  // either, and a tighter dash than stale's so the two outline styles don't
+  // read as the same thing in a different color.
   // "Lead" here means the actual cheapest row (bestId), not row 0 of whatever
   // sort is active — see the bestId note above the sort in this function.
   const fill = (r: ChartRow) => basis === 'measured'
     ? `fill="var(--color-measured)"${r.id === bestId ? '' : ' data-dim="1"'}`
     : basis === 'modelled'
       ? `fill="url(#hatch-modelled)" stroke="var(--color-modelled)" stroke-width="1"`
-      : `fill="transparent" stroke="var(--color-stale)" stroke-width="1.5" stroke-dasharray="3 2"`;
+      : basis === 'free'
+        ? `fill="transparent" stroke="var(--color-free)" stroke-width="1.5" stroke-dasharray="1 2"`
+        : `fill="transparent" stroke="var(--color-stale)" stroke-width="1.5" stroke-dasharray="3 2"`;
 
   // One style for the axis caption and the column headers. Founder note
   // (screenshot review, 2026-08-26): the old "$ / SOLVED ⓘ" / "$ / MONTH ⓘ"
@@ -247,8 +293,14 @@ export function rankedBars(rowsIn: ChartRow[], o: RankedOpts): string {
     const y = headH + i * rowH;
     const bw = max > 0 ? Math.max(3, Math.round((r.cost / max) * barMax)) : 3;
     const month = moneyMonth(r.cost * o.volume);
-    const detail = [r.harness ? `harness ${r.harness}` : '', `pass rate ${pct(r.pass)}`, r.attempt != null ? `${money(r.attempt)} per attempt` : '', r.note ?? ''].filter(Boolean).join(' · ');
+    // Free-model coverage: the rate cap is the load-bearing fact for this row
+    // (a $0 price alone is meaningless without it — direction §4 "never lets
+    // $0 stand alone") so it goes in the tooltip/aria-label detail on every
+    // layout, plus a visible line (subline on desktop, replacing the $/mo
+    // figure on compact — see below) rather than hover-only.
+    const detail = [r.harness ? `harness ${r.harness}` : '', `pass rate ${pct(r.pass)}`, r.attempt != null ? `${money(r.attempt)} per attempt` : '', r.caps ?? '', r.note ?? ''].filter(Boolean).join(' · ');
     const provider = r.provider ? providerLabel(r.provider) : undefined;
+    const subline = [provider, r.caps].filter(Boolean).join(' · ');
     const label = `${i + 1}. ${r.name}${provider ? `, ${provider}` : ''}, ${basis}, ${money(r.cost)} per solved task, ${month} a month at ${o.volume.toLocaleString()} tasks. ${detail}.`;
     const cls = `row${r.id === bestId ? ' lead' : ''}${o.highlight === r.id ? ' hl' : ''}`;
     // full-row-height hit rects so every link is a ≥ 44 px target on small screens
@@ -275,11 +327,14 @@ export function rankedBars(rowsIn: ChartRow[], o: RankedOpts): string {
         `<rect class="track" x="8" y="${rowH - 22}" width="${barMax - 8}" height="10" rx="2"/>` +
         `<rect class="bar" x="8" y="${rowH - 22}" width="${bw}" height="10" rx="2" style="width:${bw}px" ${fill(r)}/>` +
         cmp +
-        `<text class="t2" data-f="month" x="${xMonth}" y="${rowH - 13}" text-anchor="end" font-size="${FS_S}">${month}/mo</text></g>`
+        // Compact layout has no room for a third stacked line: a free row's
+        // $/mo figure is always $0 (uninteresting — it's the row's whole
+        // point), so its cap label takes that slot instead of duplicating "$0".
+        `<text class="t2" data-f="month" x="${xMonth}" y="${rowH - 13}" text-anchor="end" font-size="${FS_S}">${basis === 'free' && r.caps ? esc(r.caps) : `${month}/mo`}</text></g>`
       : `<g class="${cls}" data-id="${esc(r.id)}" role="listitem" aria-label="${esc(label)}" style="transform:translateY(${y}px)">` +
         `<title>${esc(detail)}</title>${mark}${rank}${chip}` +
         `<a href="${esc(r.href)}">${hitRow}<text class="name" x="${nameX}" y="19" font-size="${fs}">${esc(name)}</text>` +
-        (provider ? `<text class="t3 sub" x="${nameX}" y="34" font-size="${FS_S}">${esc(provider)}</text>` : '') + `</a>` +
+        (subline ? `<text class="t3 sub" x="${nameX}" y="34" font-size="${FS_S}">${esc(subline)}</text>` : '') + `</a>` +
         `<rect class="track" x="${barX}" y="${rowH / 2 - 5}" width="${barMax}" height="10" rx="2"/>` +
         `<rect class="bar" x="${barX}" y="${rowH / 2 - 5}" width="${bw}" height="10" rx="2" style="width:${bw}px" ${fill(r)}/>` +
         `<text class="v t3" data-f="pass" x="${xPass}" y="${rowH / 2 + 4.5}" text-anchor="end" font-size="${FS_S}">${pct(r.pass)}</text>` +
@@ -421,7 +476,16 @@ export function scatterPareto(rows: ChartRow[], o: ScatterOpts): string {
   const compact = o.compact ?? o.width < 560;
   const w = Math.max(300, Math.round(o.width));
   const h = o.height ?? (compact ? w : Math.round(w * 0.58));
-  const pts = rows.filter((r) => r.basis !== 'stale' || o.showStale);
+  const preZero = rows.filter((r) => r.basis !== 'stale' || o.showStale);
+  // Engine guard (docs/free-models-scoping.md §2D): a $0 point poisons
+  // Math.log10 (log10(0) === -Infinity), collapsing the log-x axis for every
+  // point in the chart, not just the free one. $0 rows are never plotted on
+  // this log scale at all — free-model coverage's rows are always $0 by
+  // definition, so this is also exactly the "free rows stay off the log
+  // chart" honesty rule (docs/free-models-scoping.md §4): the excluded count
+  // is folded into `desc` below so the omission is stated, not silent.
+  const zeroCount = preZero.filter((r) => !(r.cost > 0)).length;
+  const pts = preZero.filter((r) => r.cost > 0);
   // Stage 1.2 (Roy's note 6, 2026-08-26): axes swapped from stage 1 — score
   // (pass rate) on y, cost per solved task on log-x, matching Arena's own
   // Pareto-view grammar (direction.md's "What was actually observed on
@@ -434,9 +498,14 @@ export function scatterPareto(rows: ChartRow[], o: ScatterOpts): string {
   const ml = 48, mr = compact ? 16 : 20, mt = 36, mb = compact ? 40 : 34;
   const pw = w - ml - mr, ph = h - mt - mb;
   const costs = pts.map((p) => p.cost), passes = pts.map((p) => p.pass);
-  const xmin = Math.min(...costs) / 1.15, xmax = Math.max(...costs) * 1.15;
-  let ymin = Math.max(0, Math.floor((Math.min(...passes) - 0.02) * 20) / 20);
-  let ymax = Math.min(1, Math.ceil((Math.max(...passes) + 0.02) * 20) / 20);
+  // Log-scale domain floors at the minimum POSITIVE cost among the plotted
+  // points (never 0 — see the zeroCount guard above); an empty `pts` (every
+  // candidate row was $0 or there were none) falls back to an arbitrary
+  // finite window rather than Math.min(...[]) === Infinity.
+  const xmin = costs.length ? Math.min(...costs) / 1.15 : 0.01;
+  const xmax = costs.length ? Math.max(...costs) * 1.15 : 1;
+  let ymin = passes.length ? Math.max(0, Math.floor((Math.min(...passes) - 0.02) * 20) / 20) : 0;
+  let ymax = passes.length ? Math.min(1, Math.ceil((Math.max(...passes) + 0.02) * 20) / 20) : 1;
   if (ymax - ymin < 0.05) { ymax = Math.min(1, ymin + 0.05); if (ymax - ymin < 0.05) ymin = Math.max(0, ymax - 0.05); }
   const X = (c: number) => ml + ((Math.log10(c) - Math.log10(xmin)) / (Math.log10(xmax) - Math.log10(xmin))) * pw;
   const Y = (p: number) => mt + ph - ((p - ymin) / (ymax - ymin)) * ph;
@@ -542,7 +611,7 @@ export function scatterPareto(rows: ChartRow[], o: ScatterOpts): string {
     const half = size / 2;
     const ringR = Math.max(2, Math.round(size * 0.22)) + 1;
     const tip = `${p.name} · ${BASIS_WORD[p.basis]} · ${money(p.cost)} per solved task · pass ${pct(p.pass)}${p.harness ? ' · ' + p.harness : ''}`;
-    const ringCls = p.basis === 'measured' ? 'pt-measured' : p.basis === 'modelled' ? 'pt-modelled' : 'pt-stale';
+    const ringCls = p.basis === 'measured' ? 'pt-measured' : p.basis === 'modelled' ? 'pt-modelled' : p.basis === 'free' ? 'pt-free' : 'pt-stale';
     const domCls = onFront.has(p.id) ? ' frontier-pt' : ' dominated';
     const mark = `<rect class="chip-ring" x="-2" y="-2" width="${size + 4}" height="${size + 4}" rx="${ringR}"/>` +
       `<g>${chipMarkup(p.provider ?? '', size)}</g>`;
@@ -563,7 +632,8 @@ export function scatterPareto(rows: ChartRow[], o: ScatterOpts): string {
       `<rect class="chip-ring pt-modelled" x="${ml + pw - 205}" y="${legendY - 8}" width="10" height="10" rx="2"/><text x="${ml + pw - 190}" y="${legendY}">MODELLED · never on the frontier</text></g>`;
 
   const title = 'Cost per solved task against pass rate, with the measured Pareto frontier';
-  const desc = `Scatter of ${pts.length} models: x is dollars per solved task on a log scale from $${money(xmin)} to $${money(xmax)}, y is pass rate ${Math.round(ymin * 100)}–${Math.round(ymax * 100)}%. The frontier joins the measured models nobody beats on both axes: ${front.map((p) => `${p.name} (${pct(p.pass)}, ${money(p.cost)})`).join(', ')}.`;
+  const zeroNote = zeroCount ? ` ${zeroCount} free-tier ($0) row${zeroCount === 1 ? '' : 's'} excluded from this log-scale chart — cost is uniformly $0, which cannot be plotted on a log axis.` : '';
+  const desc = `Scatter of ${pts.length} models: x is dollars per solved task on a log scale from $${money(xmin)} to $${money(xmax)}, y is pass rate ${Math.round(ymin * 100)}–${Math.round(ymax * 100)}%. The frontier joins the measured models nobody beats on both axes: ${front.map((p) => `${p.name} (${pct(p.pass)}, ${money(p.cost)})`).join(', ')}.${zeroNote}`;
   const svg = `<svg class="chart scatter" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" role="img" aria-label="${esc(title)}">` +
     `<title>${esc(title)}</title><desc>${esc(desc)}</desc>` +
     gx.join('') + yt.join('') +
@@ -606,7 +676,16 @@ function declutter(desired: number[], gap: number, lo: number, hi: number): numb
  * rule; three to six lines use the validated ramp. Dash always carries basis.
  */
 export function volumeLines(seriesIn: Series[], o: LinesOpts): string {
-  const series = seriesIn.slice(0, 6); // brand review's validated ceiling
+  const seriesAll = seriesIn.slice(0, 6); // brand review's validated ceiling
+  // Engine guard (docs/free-models-scoping.md §2D): Math.log10(0) === -Infinity
+  // would collapse this log-log chart's y-domain the same way it does
+  // scatterPareto's — a $0/task series (free-model coverage) has no position
+  // on a strictly-positive log axis, so it is dropped here rather than
+  // plotted as a phantom line at y=0. It still has its own row on every
+  // linear (non-log) surface — the ranked table, the model page — this is
+  // the one place it deliberately does not appear.
+  const zeroCount = seriesAll.filter((s) => !(s.perTask > 0)).length;
+  const series = seriesAll.filter((s) => s.perTask > 0);
   const compact = o.compact ?? o.width < 560;
   const w = Math.max(300, Math.round(o.width));
   const h = o.height ?? (compact ? Math.round(w * 0.75) : Math.round(w * 0.56));
@@ -614,8 +693,11 @@ export function volumeLines(seriesIn: Series[], o: LinesOpts): string {
   const pw = w - ml - mr, ph = h - mt - mb;
   const lx0 = Math.log10(VOL_MIN), lx1 = Math.log10(VOL_MAX);
   const costs = series.map((s) => s.perTask);
-  // y-domain fitted to the drawn lines (a quarter decade of padding), not to whole decades
-  const ly0 = Math.log10(Math.min(...costs) * VOL_MIN) - 0.25, ly1 = Math.log10(Math.max(...costs) * VOL_MAX) + 0.25;
+  // A domain needs at least one positive-cost series; if every input was
+  // $0 (or the array was empty), fall back to a finite, arbitrary window
+  // instead of Math.min(...[]) === Infinity.
+  const ly0 = costs.length ? Math.log10(Math.min(...costs) * VOL_MIN) - 0.25 : Math.log10(0.01 * VOL_MIN) - 0.25;
+  const ly1 = costs.length ? Math.log10(Math.max(...costs) * VOL_MAX) + 0.25 : Math.log10(1 * VOL_MAX) + 0.25;
   const ymin = Math.pow(10, Math.ceil(ly0)), ymax = Math.pow(10, Math.floor(ly1));
   const X = (v: number) => ml + ((Math.log10(v) - lx0) / (lx1 - lx0)) * pw;
   const Y = (c: number) => mt + ph - ((Math.log10(c) - ly0) / (ly1 - ly0)) * ph;
@@ -658,7 +740,10 @@ export function volumeLines(seriesIn: Series[], o: LinesOpts): string {
 
   const legend = !compact ? '' : `<g font-size="${FS_S}">${series.map((s, i) => `<text class="${cls(i)}" x="${ml + 4}" y="${mt + 12 + i * 15}">— ${esc(trunc(s.name, pw - 60, FS_S))} · ${BASIS_WORD[s.basis]}</text>`).join('')}</g>`;
   const title = 'Monthly cost against tasks per month';
-  const desc = `Log-log lines for ${series.map((s) => `${s.name} (${s.basis}, ${money(s.perTask)} per solved task)`).join(', ')} from ${VOL_MIN} to ${VOL_MAX.toLocaleString()} tasks a month. Marker at ${vol.toLocaleString()} tasks.`;
+  const zeroNote = zeroCount ? ` ${zeroCount} free-tier ($0) series excluded — cost is uniformly $0, which cannot be plotted on a log axis.` : '';
+  const desc = series.length
+    ? `Log-log lines for ${series.map((s) => `${s.name} (${s.basis}, ${money(s.perTask)} per solved task)`).join(', ')} from ${VOL_MIN} to ${VOL_MAX.toLocaleString()} tasks a month. Marker at ${vol.toLocaleString()} tasks.${zeroNote}`
+    : `No series with a positive cost per solved task to plot on this log scale.${zeroNote}`;
   // the volume marker's label sits above the frame so it can never collide with the x ticks or the axis title
   return `<svg class="chart lines" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" role="img" aria-label="${esc(title)}" data-px0="${ml}" data-px1="${ml + pw}" style="touch-action:none">` +
     `<title>${esc(title)}</title><desc>${esc(desc)}</desc>` + grid.join('') +

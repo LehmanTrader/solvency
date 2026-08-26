@@ -269,6 +269,26 @@
       "redistributable": false
     },
     {
+      "model_id": "gemini-3.7-flash-google-free-tier",
+      "harness": "Opencode",
+      "harness_version": null,
+      "harness_config": null,
+      "variant": "Gemini 3.7 Flash (high)",
+      "entry_label": "Opencode - Gemini 3.7 Flash (high) [free tier, same weights]",
+      "benchmark": "aa-coding-agent-index",
+      "index_score": 60,
+      "pass_rate": 0.6,
+      "pass_rate_derivation": "index_score / 100; borrowed from the paid gemini-3.7-flash row above (same underlying weights) -- see match_note",
+      "cost_basis": "free_tier_capped",
+      "tasks_n": 326,
+      "run_date": "2026-08-21",
+      "date_basis": "date_observed_on_source_page",
+      "source_url": "https://artificialanalysis.ai/agents/coding-agents",
+      "redistributable": false,
+      "match_confidence": "approximate",
+      "match_note": "This pass rate was measured on the PAID gemini-3.7-flash route (Opencode harness, AA Coding Agent Index), not on Google's free usage tier -- no AA/SEAL/Aider run exists against the free-tier endpoint itself. Same underlying weights, but free-tier requests may be rate-limited, routed, or quantized differently by Google; this has not been independently confirmed. Cost is computed at the free tier's own $0 price via the ordinary loop model (cost_basis free_tier_capped, so extrasFor() supplies neither a measured dollar cost nor source usage) -- the pass rate is borrowed from the paid row, the cost is not."
+    },
+    {
       "model_id": "deepseek-v4-flash",
       "harness": "Codex",
       "harness_version": null,

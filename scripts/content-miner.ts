@@ -71,9 +71,20 @@ export function snapshotFrom(fleet: Model[]): Snapshot {
   return snap;
 }
 
-/** Cheapest current model (by input_per_mtok list price) per capability_class. */
+/**
+ * Cheapest current model (by input_per_mtok list price) per capability_class.
+ *
+ * Engine guard (docs/free-models-scoping.md §2B/§7 item 5): `access_tier ===
+ * 'free'` rows are excluded before the reduce. A $0 price always wins a
+ * plain `<` comparison, so without this a free row would permanently "win"
+ * its class the moment it's added to models.json -- and because free-tier
+ * rosters on OpenRouter/Groq/Cerebras churn week to week (docs/free-models-
+ * scoping.md §3), that would fire a flapping stream of "new cheapest model"
+ * drafts every time a free route appears or disappears, exactly the noise
+ * MAX_DRAFTS/tone-lint exist to prevent.
+ */
 export function cheapestPerClass(fleet: Model[]): Record<string, string | null> {
-  const current = fleet.filter((m) => m.status === 'current');
+  const current = fleet.filter((m) => m.status === 'current' && m.access_tier !== 'free');
   const classes = new Set(current.map((m) => m.capability_class));
   const out: Record<string, string | null> = {};
   for (const cls of classes) {

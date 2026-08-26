@@ -13,6 +13,24 @@
       "kind": "correction",
       "summary": "Research Note 01 said the suite was 31 tests; it is 58. The figure is now dated.",
       "detail": "The note's 'Reproduce this' block quoted the test count as at publication on 2026-08-21 and did not move as tests were added. It now carries the date it was counted, so a later reading is stale-but-labelled rather than wrong. No price, table, chart, pass rate or cost figure changed."
+    },
+    {
+      "date": "2026-08-26",
+      "kind": "addition",
+      "summary": "Added Gemini 3.7 Flash's free API tier as its own row (gemini-3.7-flash-google-free-tier), $0/$0/$0, verified against Google's own pricing page.",
+      "detail": "Free-model coverage scoping (docs/free-models-scoping.md). access_tier=free, new schema fields. Rate caps checked on ai.google.dev/gemini-api/docs/rate-limits the same day: no static RPM/RPD/TPM numbers are published there (per-account only, via AI Studio), so rate_caps carries that source_url with last_verified null -- caps are unverified, not zero. Pass rate (0.6, aa-coding-agent-index) is borrowed from the already-tracked paid gemini-3.7-flash row (same weights, different serving tier) with an approximate match_confidence and a caveat in data/benchmarks.json's match_note: free-tier routing/quantization has not been independently confirmed to match. Two other drafted candidates in the same scoping session -- gpt-oss-120b and qwen3.8-27b on Groq's free plan -- were re-verified against console.groq.com/docs/rate-limits today and dropped: both are listed there under the paid Developer plan, not the Free plan, contradicting the draft."
+    },
+    {
+      "date": "2026-08-26",
+      "kind": "addition",
+      "summary": "Added GLM 4.7 Flash's Z.ai-direct free tier (glm-4.7-flash-zai-free), $0 input/cached/output, verified against Z.ai's own pricing page.",
+      "detail": "Free-model coverage scoping (docs/free-models-scoping.md). access_tier=free, provider=zai, vendor_provider=z-ai (Z.ai is both trainer and serving venue here, unlike the OpenRouter-served candidate below). docs.z.ai/guides/overview/pricing lists GLM-4.7-Flash Free across Input, Cached Input and Output columns as of 2026-08-26; the page publishes no rate-limit table, so rate_caps is null (not a guess at unlimited). No AA/SEAL/Aider benchmark row names this model; cost per solved task renders MISSING per house rule. A drafted OpenRouter free route for GLM-5.2 in the same scoping session was re-verified against openrouter.ai/api/v1/models (live) today and dropped: the free roster returned no z-ai/glm-5.2:free entry, only z-ai/glm-5.3 and z-ai/glm-5.3-flash -- the route named in the draft no longer exists on OpenRouter's own live catalog."
+    },
+    {
+      "date": "2026-08-26",
+      "kind": "addition",
+      "summary": "Added GLM 4.5 Flash's Z.ai-direct free tier (glm-4.5-flash-zai-free), $0 input/cached/output, verified against Z.ai's own pricing page.",
+      "detail": "Free-model coverage scoping (docs/free-models-scoping.md). Same source and verification as GLM 4.7 Flash above (docs.z.ai/guides/overview/pricing, checked 2026-08-26): GLM-4.5-Flash also lists Free across Input, Cached Input and Output. rate_caps null for the same reason -- no rate-limit table on the page. No benchmark row exists for this model; cost per solved task renders MISSING. Two drafted Cerebras candidates from the same scoping session -- gpt-oss-120b and gemma-4-31b on Cerebras's 'Free Trial' -- were re-verified against inference-docs.cerebras.ai/support/rate-limits today and dropped: the page states the tier is a one-time $5 credit that expires 30 days after signup, after which the public endpoints require payment -- a time-boxed promotional credit, the same pattern already excluded for DeepSeek in the scoping doc, not the standing rate-capped tier the earlier draft described it as."
     }
   ]
 }

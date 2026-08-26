@@ -11,8 +11,19 @@ export type Tier = 'light' | 'moderate' | 'heavy';
 
 export const money = (n: number) =>
   n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : n >= 100 ? `$${n.toFixed(0)}` : `$${n.toFixed(2)}`;
-export const ratio = (x: number, y: number) => (x > y ? x / y : y / x);
-export const fmtX = (r: number) => `${r >= 10 ? r.toFixed(0) : r.toFixed(1)}x`;
+/**
+ * Engine guard (docs/free-models-scoping.md §2C): a $0 input on either side
+ * used to produce a literal `Infinity` (x/0), which fmtX() then rendered as
+ * the string "Infinity" directly onto /research. Division by a non-positive
+ * number now returns NaN — a sentinel fmtX() below refuses to format as a
+ * bare number — rather than a computed-but-meaningless ratio. Callers that
+ * only ever pass measured, positive prices (the entire current call graph:
+ * free-tier rows never enter the `measured` bucket leaderboard() builds,
+ * see below) are unaffected; this exists as a standing guard regardless.
+ */
+export const ratio = (x: number, y: number): number => (x <= 0 || y <= 0) ? NaN : (x > y ? x / y : y / x);
+/** Never emits the literal string "Infinity" — NaN/non-finite/non-positive ratios read as "n/a". */
+export const fmtX = (r: number) => Number.isFinite(r) && r > 0 ? `${r >= 10 ? r.toFixed(0) : r.toFixed(1)}x` : 'n/a';
 
 export interface Row {
   m: any; r: any; cost: number; perTask: number | null; basisKey: string;
@@ -27,14 +38,30 @@ export function solvedFor(modelId: string, tier: Tier = 'heavy'): Row | null {
   return { m, r, cost: out.value.naive, perTask: (r as any).measured_cost_per_task_usd ?? null, basisKey: r.cost_basis };
 }
 
-/** Every model with a computable figure, grouped by cost basis, each group ranked cheapest first. */
+/**
+ * Every model with a computable figure, grouped by cost basis, each group
+ * ranked cheapest first.
+ *
+ * Engine guard (docs/free-models-scoping.md §2B/§7 item 4): `access_tier ===
+ * 'free'` rows are excluded from measured/modelled/historical explicitly,
+ * not just structurally (their basisKey is 'free_tier_capped', which
+ * already fails every `by()` key match) — belt-and-suspenders against a
+ * future data-entry mistake putting a free row's cost_basis on the wrong
+ * value. This is what keeps headline()'s `cheap`/`dear` selection, and
+ * every page built from it (the homepage hero, /research, tweetText()), from
+ * ever picking a rate-capped $0 row and presenting it as an unqualified
+ * "cheapest."  A free row's own ranking lives in `free` below instead, by
+ * pass rate (see docs/free-models-scoping.md §4: cost is uniformly $0
+ * within the group, so it is not a useful sort key there).
+ */
 export function leaderboard(tier: Tier = 'heavy') {
   const rows = models.map((m) => solvedFor(m.model_id, tier)).filter(Boolean) as Row[];
-  const by = (k: string) => rows.filter((x) => x.basisKey === k).sort((a, b) => a.cost - b.cost);
+  const by = (k: string) => rows.filter((x) => x.basisKey === k && x.m.access_tier !== 'free').sort((a, b) => a.cost - b.cost);
   return {
     measured: by('measured_by_source'),
     modelled: by('modelled_by_solvency'),
     historical: by('historical_at_run_date'),
+    free: rows.filter((x) => x.basisKey === 'free_tier_capped' || x.m.access_tier === 'free').sort((a, b) => b.r.pass_rate - a.r.pass_rate),
     missing: models.filter((m) => m.status === 'current' && !bestResultFor(m.model_id)),
   };
 }

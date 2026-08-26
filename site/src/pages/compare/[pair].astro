@@ -5,7 +5,7 @@ import LogoChip from '../../components/LogoChip.astro';
 import { TIER_NAMES } from '../../lib/data.ts';
 import { CLERK_ENABLED } from '../../lib/clerk.ts';
 import { side, verdictHtml, seriesFor, sourceOf } from '../../lib/compare.ts';
-import { volumeLines, money, moneyMonth } from '../../lib/charts.ts';
+import { volumeLines, money, moneyMonth, capsLabel } from '../../lib/charts.ts';
 import { fmtX, ratio } from '../../lib/headline.ts';
 
 export async function getStaticPaths() {
@@ -54,6 +54,19 @@ const statusNote = [a, b].filter((m) => m.status !== 'current').map((m) => `${m.
       <span class="model-head"><LogoChip provider={b.provider} size={32} />{b.display_name}</span>
     </h1>
     {statusNote && <p class="small mt-2">{statusNote}.</p>}
+    {/* Free-model coverage: a compare page can legitimately pair a free-tier
+        row against a paid one (verdictHtml above already refuses to give a
+        cheaper/pricier verdict across differing bases), but the $0 cells in
+        the table below must never stand without their cap named somewhere
+        on the page — docs/free-models-scoping.md §4 "never lets $0 stand
+        alone." */}
+    {(a.access_tier === 'free' || b.access_tier === 'free') && (
+      <p class="small mt-2">
+        {a.access_tier === 'free' && <><span class="t-free">FREE · rate-capped</span>{' '}— {a.display_name}: {capsLabel(a.rate_caps)}</>}
+        {a.access_tier === 'free' && b.access_tier === 'free' && ' · '}
+        {b.access_tier === 'free' && <><span class="t-free">FREE · rate-capped</span>{' '}— {b.display_name}: {capsLabel(b.rate_caps)}</>}
+      </p>
+    )}
 
     <p class="sentence mt-6">
       For{' '}<select id="k-tier" class="ctl ctl-inline" aria-label="Task tier">{TIER_NAMES.map((t) => <option value={t} selected={t === TIER}>{t}</option>)}</select>{' '}tasks, about{' '}<input id="k-volume" class="ctl ctl-inline" type="number" inputmode="numeric" min="1" max="10000000" step="1" value={VOLUME} aria-label="Tasks per month" />{' '}a month.

@@ -53,11 +53,23 @@ export const PROVIDER_MARKS: Record<string, ProviderMark> = {
   // wide inline SVG lockup captured from x.ai's nav, which the same shape
   // also came from.
   xai: { file: '/brand/providers/xai.png', alt: 'xAI' },
+  // Free-model coverage (2026-08-26): the free-tier venue provider, not a
+  // model vendor — Z.ai serves glm-4.7-flash-zai-free/glm-4.5-flash-zai-free
+  // directly at $0. Simple Icons carries a clean "Z.ai" mark (slug `zdotai`,
+  // see LOGOS.md), so this gets a real vendored mark like every other
+  // provider, not a monogram fallback.
+  zai: { file: '/brand/providers/zai.svg', alt: 'Z.ai' },
 };
 
 /** Display label for every provider id in data/models.json, including monogram-only ones. */
 export const PROVIDER_LABEL: Record<string, string> = {
   anthropic: 'Anthropic', openai: 'OpenAI', google: 'Google', mistral: 'Mistral AI', deepseek: 'DeepSeek', xai: 'xAI',
+  zai: 'Z.ai',
+  // 'z-ai' (hyphenated) is the vendor_provider slug used in models.json's
+  // free-tier rows (e.g. glm-4.7-flash-zai-free's vendor_provider), distinct
+  // from the 'zai' serving-venue provider id above -- both should read as
+  // "Z.ai" wherever a model page prints "weights by {vendor_provider}".
+  'z-ai': 'Z.ai',
 };
 
 export const providerLabel = (id: string): string => PROVIDER_LABEL[id] ?? id;

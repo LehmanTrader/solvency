@@ -5,6 +5,7 @@ import Provenance from '../../components/Provenance.astro';
 import LogoChip from '../../components/LogoChip.astro';
 import { models, bestResultFor, sourceFor } from '../../lib/data.ts';
 import { solvedFor, money } from '../../lib/headline.ts';
+import { BASIS_OF } from '../../lib/charts.ts';
 const order = { current: 0, legacy: 1, retired: 2 };
 const rows = models.slice().sort((a, b) => order[a.status] - order[b.status] || a.provider.localeCompare(b.provider) || a.display_name.localeCompare(b.display_name));
 const verified = models.reduce((a, m) => (m.last_verified > a ? m.last_verified : a), '');
@@ -42,8 +43,8 @@ const nPass = models.filter((m) => bestResultFor(m.model_id)).length;
               <td class="r">{price(m.output_per_mtok)}</td>
               <td class={`r ${m.cached_input_per_mtok === null ? 'missing' : ''}`}>{price(m.cached_input_per_mtok) ?? 'missing'}</td>
               <td class={`r ${r ? '' : 'missing'}`}>{r ? `${Math.round(r.pass_rate * 100)}%` : 'missing'}</td>
-              <td class="muted">{r ? (r.cost_basis === 'measured_by_source' ? 'measured' : r.cost_basis === 'historical_at_run_date' ? 'modelled · stale' : 'modelled') : '—'}</td>
-              <td class={`r ${s ? (s.basisKey === 'measured_by_source' ? 'measured' : s.basisKey === 'historical_at_run_date' ? 'stale' : 'modelled') : 'missing'}`}>{s ? money(s.cost) : 'missing'}</td>
+              <td class="muted">{r ? (r.cost_basis === 'measured_by_source' ? 'measured' : r.cost_basis === 'historical_at_run_date' ? 'modelled · stale' : r.cost_basis === 'free_tier_capped' ? 'free · rate-capped' : 'modelled') : '—'}</td>
+              <td class={`r ${s ? (BASIS_OF[s.basisKey] ?? 'modelled') : 'missing'}`}>{s ? money(s.cost) : 'missing'}</td>
               <td class="muted">{m.last_verified}</td>
             </tr>); })}
         </tbody>

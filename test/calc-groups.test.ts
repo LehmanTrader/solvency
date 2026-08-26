@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { compute, DEFAULTS, GROUPS, gateDelta, type Settings } from '../site/src/lib/calc.ts';
+import { compute, DEFAULTS, GROUPS, gateDelta, calloutHtml, projectTotalHtml, type Settings } from '../site/src/lib/calc.ts';
 
 /** Which group every model lands in (measured / modelled / stale / missing) under one setting. */
 function membership(s: Settings): Record<string, string> {
@@ -46,8 +46,38 @@ describe('group membership is invariant under every assumption control', () => {
     assert.deepEqual(a.map((r) => [r.m.model_id, r.cost]), b.map((r) => [r.m.model_id, r.cost]));
   });
 
-  test('GROUPS are the three bases, measured first', () => {
-    assert.deepEqual(GROUPS.map((g) => g.basis), ['measured', 'modelled', 'stale']);
+  test('GROUPS are the four bases, measured first, free before stale', () => {
+    // Free-model coverage (docs/free-models-scoping.md §4): the fourth
+    // group renders as its own always-visible section, positioned after
+    // Modelled and before the collapsed Stale disclosure.
+    assert.deepEqual(GROUPS.map((g) => g.basis), ['measured', 'modelled', 'free', 'stale']);
+  });
+
+  test('a free_tier_capped row never moves group under any assumption, same as measured', () => {
+    const a = compute(DEFAULTS).rows.filter((r) => r.basisKey === 'free_tier_capped');
+    assert.ok(a.length > 0, 'expected at least one free_tier_capped row under default settings');
+    const b = compute({ ...DEFAULTS, cache: 0.9, residual: 1000, frontier: false, tier: 'heavy' }).rows.filter((r) => r.basisKey === 'free_tier_capped');
+    assert.deepEqual(a.map((r) => [r.m.model_id, r.cost]), b.map((r) => [r.m.model_id, r.cost]));
+    for (const r of a) assert.equal(r.cost, 0, `${r.m.model_id}: a free row's computed cost must stay $0 regardless of assumptions`);
+  });
+
+  describe('free_tier_capped rows are excluded from every "cheapest" superlative (docs/free-models-scoping.md §2B/§4)', () => {
+    const { rows } = compute(DEFAULTS);
+    const freeIds = new Set(rows.filter((r) => r.basisKey === 'free_tier_capped').map((r) => r.m.model_id));
+
+    test('the dataset actually has a free_tier_capped row to exercise this guard', () => {
+      assert.ok(freeIds.size > 0);
+    });
+
+    test('calloutHtml() never names a free-tier model, even though its cost ($0) is the global minimum', () => {
+      const html = calloutHtml(rows, 200);
+      for (const r of rows) if (freeIds.has(r.m.model_id)) assert.doesNotMatch(html, new RegExp(r.m.display_name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    });
+
+    test('projectTotalHtml() never names a free-tier model either', () => {
+      const html = projectTotalHtml(rows, 40);
+      for (const r of rows) if (freeIds.has(r.m.model_id)) assert.doesNotMatch(html, new RegExp(r.m.display_name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    });
   });
 
   test('gateDelta reports a no-op when nothing moved, and names the top modelled row when it did', () => {

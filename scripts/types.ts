@@ -1,6 +1,26 @@
 export type CapabilityClass = 'frontier' | 'small';
 export type ModelStatus = 'current' | 'legacy' | 'retired';
 export type TierName = 'light' | 'moderate' | 'heavy';
+export type AccessTier = 'free' | 'paid';
+
+/**
+ * Free-model coverage (docs/free-models-scoping.md §4/§7). Rate caps a $0
+ * access path is subject to -- RPM/RPD/TPM/TPD, each nullable independently
+ * because a provider may publish some limits and not others (or none at
+ * all: absence here means "not published", never "uncapped"). `source_url`
+ * is nullable too: some free tiers (e.g. a vendor's own pricing page) simply
+ * have no rate-limit page to cite at all, which is a different, more honest
+ * state than "we have a URL but it didn't say"  (source_url set,
+ * last_verified null -- see the Gemini free-tier row for that case).
+ */
+export interface RateCaps {
+  requests_per_minute: number | null;
+  requests_per_day: number | null;
+  tokens_per_minute: number | null;
+  tokens_per_day: number | null;
+  source_url: string | null;
+  last_verified: string | null;
+}
 
 export interface Model {
   model_id: string;
@@ -15,6 +35,24 @@ export interface Model {
   source_url: string;
   last_verified: string;
   pricing_notes: string | null;
+  /**
+   * Defaults to 'paid' when absent, so every one of the original 25 rows is
+   * valid with zero migration. 'free' rows must price at exactly $0 (a real,
+   * verified number -- not a substitute for `null`, which stays reserved for
+   * "not published") and are rendered, ranked and superlative-checked
+   * separately from paid rows everywhere in the engine -- see calc.ts's
+   * `free_tier_capped` group and the guards in headline.ts/content-miner.ts.
+   */
+  access_tier?: AccessTier;
+  /**
+   * Who actually trained/owns the weights, when that differs from `provider`
+   * (the serving venue whose price and rate limits actually apply -- e.g.
+   * `provider: "openrouter"`, `vendor_provider: "z-ai"` for a $0 OpenRouter
+   * route on a Z.ai model). Null/absent when the provider IS the vendor.
+   */
+  vendor_provider?: string | null;
+  /** Present only on `access_tier === 'free'` rows. Null means "not evaluated" (paid rows never have a cap to publish). */
+  rate_caps?: RateCaps | null;
 }
 
 /** Aggregate usage observed by a benchmark source and safe to reprice. */
@@ -32,7 +70,17 @@ export interface BenchmarkResult {
   entry_label: string;
   benchmark: string;
   pass_rate: number;
-  cost_basis: 'measured_by_source' | 'source_usage_repriced' | 'modelled_by_solvency' | 'historical_at_run_date';
+  /**
+   * `free_tier_capped` (free-model coverage, docs/free-models-scoping.md §4):
+   * a benchmark row for an `access_tier === 'free'` model. Deliberately NOT
+   * matched by extrasFor()'s `measured_by_source`/`source_usage_repriced`
+   * checks, so the engine always falls through to the ordinary modelled path
+   * (loop model at the model's own -- $0 -- price); it exists purely so
+   * calc.ts/headline.ts's basisKey grouping puts the row in its own fourth
+   * group by construction, the same mechanism that already keeps measured
+   * rows from ever blending with modelled ones.
+   */
+  cost_basis: 'measured_by_source' | 'source_usage_repriced' | 'modelled_by_solvency' | 'historical_at_run_date' | 'free_tier_capped';
   tasks_n: number;
   run_date: string;
   source_url: string;

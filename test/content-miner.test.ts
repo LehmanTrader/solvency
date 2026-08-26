@@ -12,9 +12,10 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
-  runContentMiner, snapshotFrom, toneLint, BANNED_WORDS,
+  runContentMiner, snapshotFrom, toneLint, BANNED_WORDS, cheapestPerClass,
 } from '../scripts/content-miner.ts';
 import { models } from '../scripts/load.ts';
+import type { Model } from '../scripts/types.ts';
 
 describe('content miner: idempotence', () => {
   test('a stale snapshot produces a delta and a draft; the next run on the now-current snapshot finds none', () => {
@@ -71,6 +72,32 @@ describe('content miner: idempotence', () => {
     } finally {
       rmSync(queueRoot, { recursive: true, force: true });
     }
+  });
+});
+
+describe('cheapestPerClass(): free-tier rows never win a class (docs/free-models-scoping.md §2B/§7 item 5)', () => {
+  test('the real fleet has at least one free row cheaper by input_per_mtok than every paid row in its class, and it still does not win', () => {
+    const free = models.filter((m) => m.access_tier === 'free' && m.status === 'current');
+    assert.ok(free.length > 0, 'expected at least one current free-tier model in data/models.json');
+    const result = cheapestPerClass(models);
+    for (const [cls, id] of Object.entries(result)) {
+      const winner = models.find((m) => m.model_id === id);
+      assert.notEqual(winner?.access_tier, 'free', `class "${cls}" was won by free-tier model ${id}`);
+    }
+  });
+
+  test('fixture: a free ($0) model strictly cheaper than every paid model in its class is still excluded from the result', () => {
+    const paid: Model = {
+      model_id: 'fixture-paid', provider: 'fixture', display_name: 'Fixture Paid', status: 'current',
+      capability_class: 'small', input_per_mtok: 5, output_per_mtok: 10, cached_input_per_mtok: null,
+      context_window: null, source_url: 'https://example.com', last_verified: '2026-08-26', pricing_notes: null,
+    };
+    const free: Model = {
+      ...paid, model_id: 'fixture-free', display_name: 'Fixture Free',
+      input_per_mtok: 0, output_per_mtok: 0, cached_input_per_mtok: 0, access_tier: 'free',
+    };
+    const out = cheapestPerClass([paid, free]);
+    assert.equal(out.small, paid.model_id, 'the $0 free row must never win, even when it is the only candidate cheaper than the paid one');
   });
 });
 

@@ -5,7 +5,7 @@
  */
 import { models, assumptions, tiers, bestResultFor, extrasFor } from './data.ts';
 import { costPerSolvedTask, defaultOptions } from './engine.ts';
-import { rankedBars, BASIS_OF, money, moneyMonth, type ChartRow, type Basis, type RankSort } from './charts.ts';
+import { rankedBars, BASIS_OF, capsLabel, money, moneyMonth, type ChartRow, type Basis, type RankSort } from './charts.ts';
 import { escapeHtml } from './html.ts';
 
 export { money, moneyMonth };
@@ -32,9 +32,27 @@ export const GROUPS: { key: string; basis: Basis; title: string; note: string }[
     note: 'The benchmark ran the model and observed this cost. No Solvency assumption is inside these figures.' },
   { key: 'modelled_by_solvency', basis: 'modelled', title: 'Modelled',
     note: "Pass rate published; cost is Solvency's loop model at verified prices." },
+  // Free-model coverage (docs/free-models-scoping.md §4): rate-capped $0
+  // access paths — real prices, not comparable to an uncapped paid row, so
+  // they get their own group, own color (a dotted-outline treatment of the
+  // same purple, see charts.ts), and are never pooled into a "cheapest"
+  // superlative (see SUPERLATIVE_GROUPS below). Sorted by pass rate, not
+  // cost, inside rankedBars/groupsHtml, since every row here ties at $0.
+  { key: 'free_tier_capped', basis: 'free', title: 'FREE · rate-capped',
+    note: 'Zero-dollar access paths with a provider-set rate cap — not comparable to an uncapped paid price, and never counted toward a "cheapest" figure. $0 rows stay off the log-scale Frontier chart; cost is uniformly $0, which cannot be plotted on a log axis.' },
   { key: 'historical_at_run_date', basis: 'stale', title: 'Stale',
     note: 'Pass rates published before 2026. Cost recomputed at current prices; the pass rate is old.' },
 ];
+
+/**
+ * The three bases a "cheapest"/superlative comparison is allowed to draw
+ * from. Free-tier rows are real, verified $0 prices, but a rate cap makes
+ * them structurally incomparable to an uncapped paid price — so
+ * calloutHtml()/projectTotalHtml() (the Calculator headline sentence and the
+ * hero's project-total answer) pool from this constant, never from GROUPS
+ * directly, even though GROUPS now has a fourth entry for rendering.
+ */
+const SUPERLATIVE_GROUPS = GROUPS.filter((g) => g.basis !== 'free');
 
 export interface Row {
   m: any; r: any; cost: number; basis: string; basisKey: string; attempt: number;
@@ -63,7 +81,15 @@ export function compute(s: Settings): { rows: Row[]; missing: string[] } {
     const o = uncached ? { ...opts, cacheHitFraction: 0 } : opts;
     const out = costPerSolvedTask(m as any, s.tier, tiers[s.tier], r.pass_rate, o, extrasFor(r));
     if (out.value === null) { missing.push(`${m.display_name} (${out.missing[0] ?? 'missing input'})`); continue; }
-    rows.push({ m, r, cost: out.value[s.variant], basis: out.value.costBasis, basisKey: r.cost_basis, attempt: out.value.attempt.costUsd, uncached });
+    // Engine guard (docs/free-models-scoping.md §2B/§7 item 3): segregate
+    // access_tier === 'free' rows into the free_tier_capped group explicitly,
+    // never trusting r.cost_basis alone for this — belt-and-suspenders
+    // against a benchmarks.json row that forgot to set cost_basis to
+    // 'free_tier_capped' on a free model. This is what keeps rows.sort()
+    // below (and every "cheapest" reader downstream) from ever ranking a
+    // rate-capped $0 row against an uncapped paid one.
+    const basisKey = m.access_tier === 'free' ? 'free_tier_capped' : r.cost_basis;
+    rows.push({ m, r, cost: out.value[s.variant], basis: out.value.costBasis, basisKey, attempt: out.value.attempt.costUsd, uncached });
   }
   rows.sort((a, b) => a.cost - b.cost);
   return { rows, missing };
@@ -92,6 +118,7 @@ export function chartRows(rows: Row[], key: string, s: Settings): ChartRow[] {
     harness: harnessOf(x.r), attempt: x.attempt, provider: x.m.provider,
     note: x.uncached && x.basisKey !== 'measured_by_source' ? 'no cached-input price published — computed uncached' : undefined,
     compare: g.length > 1 ? pairHref(x === lead ? second.m.model_id : lead.m.model_id, x.m.model_id, s) : undefined,
+    caps: x.m.access_tier === 'free' ? capsLabel(x.m.rate_caps) : undefined,
   }));
 }
 
@@ -127,7 +154,10 @@ export function groupsHtml(rows: Row[], s: Settings, o: GroupOpts): string {
   return GROUPS.map((g) => {
     const cr = chartRows(rows, g.key, s);
     const svg = cr.length ? rankedBars(cr, { width: o.width, volume: s.volume, basis: g.basis, compact: o.compact, highlight: o.highlight, sort: o.sort?.[g.basis], sortable: o.sortable }) : '';
-    const empty = `<p class="small py-2">No ${g.basis} row has both a verified price and a published pass rate under these settings.</p>`;
+    // Free-model coverage: a row-count-dependent wording tweak only — "No
+    // free row has..." reads oddly, "No free-tier row has..." doesn't.
+    const emptyWord = g.basis === 'free' ? 'free-tier' : g.basis;
+    const empty = `<p class="small py-2">No ${emptyWord} row has both a verified price and a published pass rate under these settings.</p>`;
     const head = `<p class="ghead"><span class="gword t-${g.basis}">${g.title}</span> · ${g.note}</p>`;
     if (g.basis === 'stale') {
       return `<details class="disc group-${g.basis} px-5 py-3 border-t border-[var(--color-rule)]" data-group="${g.basis}">
@@ -135,7 +165,11 @@ export function groupsHtml(rows: Row[], s: Settings, o: GroupOpts): string {
         <div class="chart-slot mt-3" data-chart>${svg || empty}</div>
       </details>`;
     }
-    return `<div class="group-${g.basis} px-5 pt-4 pb-2${g.basis === 'modelled' ? ' border-t border-[var(--color-rule)]' : ''}" data-group="${g.basis}">
+    // FREE · rate-capped renders as its own always-visible section (same
+    // grammar as Measured/Modelled), positioned below them and above the
+    // collapsed Stale disclosure — never interleaved by cost, per
+    // docs/free-models-scoping.md §4.
+    return `<div class="group-${g.basis} px-5 pt-4 pb-2${g.basis === 'modelled' || g.basis === 'free' ? ' border-t border-[var(--color-rule)]' : ''}" data-group="${g.basis}">
       ${head}
       <div class="chart-slot ${headGap}" data-chart>${svg || empty}</div>
     </div>`;
@@ -149,7 +183,10 @@ export function groupsHtml(rows: Row[], s: Settings, o: GroupOpts): string {
  * the compare page uses.
  */
 export function calloutHtml(rows: Row[], volume: number): string {
-  const g = GROUPS.map((g) => ({ g, rows: rows.filter((x) => x.basisKey === g.key) })).find((p) => p.rows.length > 1);
+  // Engine guard (docs/free-models-scoping.md §2B/§4/§7 item 3): pools from
+  // SUPERLATIVE_GROUPS, not GROUPS — a rate-capped $0 row must never win
+  // this "cheapest" sentence, no matter how many free rows are in play.
+  const g = SUPERLATIVE_GROUPS.map((g) => ({ g, rows: rows.filter((x) => x.basisKey === g.key) })).find((p) => p.rows.length > 1);
   const pool = g?.rows ?? [];
   const cheapest = pool[0];
   const best = pool.slice().sort((a, b) => b.r.pass_rate - a.r.pass_rate)[0];
@@ -185,7 +222,8 @@ export function calloutHtml(rows: Row[], volume: number): string {
  * itself is untouched and still drives monthly mode.
  */
 export function projectTotalHtml(rows: Row[], taskCount: number): string {
-  const g = GROUPS.map((g) => ({ g, rows: rows.filter((x) => x.basisKey === g.key) })).find((p) => p.rows.length > 1);
+  // Same guard as calloutHtml above: SUPERLATIVE_GROUPS, never GROUPS.
+  const g = SUPERLATIVE_GROUPS.map((g) => ({ g, rows: rows.filter((x) => x.basisKey === g.key) })).find((p) => p.rows.length > 1);
   const pool = g?.rows ?? [];
   const cheapest = pool[0];
   const best = pool.slice().sort((a, b) => b.r.pass_rate - a.r.pass_rate)[0];

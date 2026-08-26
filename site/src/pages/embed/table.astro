@@ -30,7 +30,11 @@ import '../../styles/global.css';
   const opts = defaultOptions(assumptions);
   const money = (n: number) => n >= 100 ? `$${n.toFixed(0)}` : `$${n.toFixed(2)}`;
 
-  const pool = want.length ? models.filter((m) => want.includes(m.model_id)) : models;
+  // Free-model coverage: this embed has no UI for a FREE/rate-capped badge
+  // or cap numbers, so a $0 row would rank #1 here with no context at all —
+  // exactly the "never lets $0 stand alone" case (docs/free-models-scoping.md
+  // §4). Excluded until this widget gets its own basis treatment.
+  const pool = (want.length ? models.filter((m) => want.includes(m.model_id)) : models).filter((m) => m.access_tier !== 'free');
   const rows = pool.map((m) => {
     const r = bestResultFor(m.model_id); if (!r) return null;
     const out = costPerSolvedTask(m, tier, tiers[tier], r.pass_rate, opts, extrasFor(r));

@@ -76,8 +76,9 @@ model priced at today's verified rates. The assumptions are listed in full in th
 > benchmark. Read each table against itself only.
 
 **Not in either table:** Claude Sonnet 5, Claude Haiku 4.5, GPT-5.6 Terra, GPT-5.6 Luna,
-GPT-5.3 Codex, DeepSeek V4 Pro, Grok 4.6, Mistral Medium 3.5. All are priced and current. None
-has a published pass rate we could find. They are missing, not zero.
+GPT-5.3 Codex, DeepSeek V4 Pro, Grok 4.6, Mistral Medium 3.5, GLM 4.7 Flash (Z.ai free), GLM 4.5
+Flash (Z.ai free). All are priced and current. None has a published pass rate we could find. They
+are missing, not zero.
 
 ---
 

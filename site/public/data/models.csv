@@ -24,3 +24,6 @@ grok-4.5,xai,Grok 4.5,current,frontier,2,6,0.3,500000,https://docs.x.ai/docs/mod
 gpt-5.4,openai,GPT-5.4,current,frontier,2.5,15,0.25,272000,https://developers.openai.com/api/docs/pricing,2026-08-21
 claude-opus-4-6,anthropic,Claude Opus 4.6,legacy,frontier,5,25,0.5,1000000,https://platform.claude.com/docs/en/about-claude/pricing,2026-08-21
 claude-opus-4-5,anthropic,Claude Opus 4.5,legacy,frontier,5,25,0.5,200000,https://platform.claude.com/docs/en/about-claude/pricing,2026-08-21
+gemini-3.7-flash-google-free-tier,google,Gemini 3.7 Flash (free tier),current,small,0,0,0,,https://ai.google.dev/gemini-api/docs/pricing,2026-08-26
+glm-4.7-flash-zai-free,zai,GLM 4.7 Flash (Z.ai free),current,small,0,0,0,,https://docs.z.ai/guides/overview/pricing,2026-08-26
+glm-4.5-flash-zai-free,zai,GLM 4.5 Flash (Z.ai free),current,small,0,0,0,,https://docs.z.ai/guides/overview/pricing,2026-08-26

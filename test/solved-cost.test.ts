@@ -158,13 +158,59 @@ describe('data integrity', () => {
     }
   });
 
-  test('prices are positive numbers; absent cache prices are null, never 0', () => {
+  test('prices are positive numbers; absent cache prices are null, never 0 -- except access_tier "free" rows, which price at exactly $0', () => {
+    // Free-model coverage (docs/free-models-scoping.md §4): $0 is a real,
+    // verified number for a free-tier row, never a substitute for "not
+    // published" (null stays reserved for that). Every other, paid row keeps
+    // the original invariant unchanged.
     for (const m of models as Model[]) {
-      assert.ok(m.input_per_mtok > 0 && m.output_per_mtok > 0, m.model_id);
-      assert.ok(m.cached_input_per_mtok === null || m.cached_input_per_mtok > 0,
-        `${m.model_id}: a missing cache price must be null, not 0`);
+      if (m.access_tier === 'free') {
+        assert.equal(m.input_per_mtok, 0, `${m.model_id}: a free row's input price must be exactly $0`);
+        assert.equal(m.output_per_mtok, 0, `${m.model_id}: a free row's output price must be exactly $0`);
+        assert.ok(m.cached_input_per_mtok === null || m.cached_input_per_mtok === 0,
+          `${m.model_id}: a free row's cached price must be $0 or null, never a positive number`);
+      } else {
+        assert.ok(m.input_per_mtok > 0 && m.output_per_mtok > 0, m.model_id);
+        assert.ok(m.cached_input_per_mtok === null || m.cached_input_per_mtok > 0,
+          `${m.model_id}: a missing cache price must be null, not 0`);
+      }
       assert.ok(m.context_window === null || m.context_window > 0, m.model_id);
     }
+  });
+
+  test('every access_tier "free" row carries a source_url + last_verified on its $0 price, and a rate_caps object with its own source', () => {
+    const free = (models as Model[]).filter((m) => m.access_tier === 'free');
+    assert.ok(free.length > 0, 'expected at least one free-tier row in the dataset');
+    for (const m of free) {
+      assert.match(m.source_url, /^https:\/\//, `${m.model_id} source_url`);
+      assert.match(m.last_verified, /^\d{4}-\d{2}-\d{2}$/, `${m.model_id} last_verified`);
+      // rate_caps is allowed to be entirely null (no rate-limit page exists
+      // to cite) -- but if it's present and any numeric cap is set, its own
+      // source_url must be a real citation, not fabricated.
+      const caps = m.rate_caps;
+      if (caps && (caps.requests_per_minute != null || caps.requests_per_day != null || caps.tokens_per_minute != null || caps.tokens_per_day != null)) {
+        assert.match(caps.source_url ?? '', /^https:\/\//, `${m.model_id}: a published rate cap needs a source_url`);
+      }
+    }
+  });
+
+  test('free-model coverage: costPerAttempt/costPerSolvedTask compute $0 without throwing (fixture, not real data)', () => {
+    // Direct regression test for docs/free-models-scoping.md §2A: a $0 price
+    // is legitimate and must not crash or produce a special-cased value --
+    // the engine itself was already correct here before this feature; this
+    // pins it so a future refactor can't silently regress it.
+    const freeModel: Model = {
+      model_id: 'fixture-free-model', provider: 'fixture', display_name: 'Fixture Free Model',
+      status: 'current', capability_class: 'small', input_per_mtok: 0, output_per_mtok: 0,
+      cached_input_per_mtok: 0, context_window: null, source_url: 'https://example.com/pricing',
+      last_verified: '2026-08-26', pricing_notes: null, access_tier: 'free',
+    };
+    const attempt = costPerAttempt(freeModel, 'heavy', tiers.heavy, opts);
+    assert.equal(attempt.value!.costUsd, 0);
+    const solved = costPerSolvedTask(freeModel, 'heavy', tiers.heavy, 0.5, opts);
+    assert.equal(solved.value!.naive, 0);
+    assert.equal(solved.value!.costBasis, 'modelled_by_solvency');
+    assert.ok(Number.isFinite(solved.value!.naive), 'a $0 attempt cost must still divide out to a finite per-solved-task cost');
   });
 
   test('every benchmark row has a valid pass rate, source and run date', () => {
@@ -192,6 +238,12 @@ describe('data integrity', () => {
       if (r.cost_basis === 'modelled_by_solvency') {
         assert.equal(r.measured_cost_per_task_usd, undefined,
           `${r.entry_label}: a modelled row must not carry a measured cost`);
+      }
+      if (r.cost_basis === 'free_tier_capped') {
+        assert.equal(r.measured_cost_per_task_usd, undefined,
+          `${r.entry_label}: a free_tier_capped row must be priced by the loop model at the row's own $0 price, not a carried-over measured cost`);
+        assert.equal(modelById(r.model_id!)?.access_tier, 'free',
+          `${r.entry_label}: a free_tier_capped benchmark row must join to an access_tier "free" model`);
       }
     }
   });
@@ -227,7 +279,7 @@ describe('data integrity', () => {
   });
 
   test('every row declares a cost basis, and measured rows carry a measured cost', () => {
-    const valid = ['measured_by_source', 'source_usage_repriced', 'modelled_by_solvency', 'historical_at_run_date'];
+    const valid = ['measured_by_source', 'source_usage_repriced', 'modelled_by_solvency', 'historical_at_run_date', 'free_tier_capped'];
     for (const r of results) {
       assert.ok(valid.includes(r.cost_basis), `${r.entry_label}: ${r.cost_basis}`);
       if (r.cost_basis === 'measured_by_source') {

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-26T16:20:27.562Z",
+  "generated_at": "2026-08-26T16:38:19.986Z",
   "cards": {
     "note-01": {
       "key": "note-01",
@@ -387,6 +387,42 @@
       "headlineSuffix": " lists at $2/M input — no published pass rate yet.",
       "rows": [
         {
+          "id": "gemini-3.7-flash-google-free-tier",
+          "name": "Gemini 3.7 Flash (free tier)",
+          "chip": "GO",
+          "provider": "google",
+          "cost": 0,
+          "value": "$0/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 1,
+          "lead": false
+        },
+        {
+          "id": "glm-4.7-flash-zai-free",
+          "name": "GLM 4.7 Flash (Z.ai free)",
+          "chip": "ZA",
+          "provider": "zai",
+          "cost": 0,
+          "value": "$0/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 2,
+          "lead": false
+        },
+        {
+          "id": "glm-4.5-flash-zai-free",
+          "name": "GLM 4.5 Flash (Z.ai free)",
+          "chip": "ZA",
+          "provider": "zai",
+          "cost": 0,
+          "value": "$0/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 3,
+          "lead": false
+        },
+        {
           "id": "gpt-5.6-luna",
           "name": "GPT-5.6 Luna",
           "chip": "OP",
@@ -395,7 +431,7 @@
           "value": "$0.2/M",
           "basis": "measured",
           "detail": "list price per million input tokens",
-          "rank": 1,
+          "rank": 4,
           "lead": false
         },
         {
@@ -405,42 +441,6 @@
           "provider": "deepseek",
           "cost": 0.44,
           "value": "$0.44/M",
-          "basis": "measured",
-          "detail": "list price per million input tokens",
-          "rank": 2,
-          "lead": false
-        },
-        {
-          "id": "gemini-3.7-flash",
-          "name": "Gemini 3.7 Flash",
-          "chip": "GO",
-          "provider": "google",
-          "cost": 0.75,
-          "value": "$0.75/M",
-          "basis": "measured",
-          "detail": "list price per million input tokens",
-          "rank": 3,
-          "lead": false
-        },
-        {
-          "id": "claude-haiku-4-5",
-          "name": "Claude Haiku 4.5",
-          "chip": "AN",
-          "provider": "anthropic",
-          "cost": 1,
-          "value": "$1/M",
-          "basis": "measured",
-          "detail": "list price per million input tokens",
-          "rank": 4,
-          "lead": false
-        },
-        {
-          "id": "deepseek-v4-pro",
-          "name": "DeepSeek V4 Pro",
-          "chip": "DE",
-          "provider": "deepseek",
-          "cost": 1.32,
-          "value": "$1.32/M",
           "basis": "measured",
           "detail": "list price per million input tokens",
           "rank": 5,
@@ -455,7 +455,7 @@
           "value": "$2/M",
           "basis": "measured",
           "detail": "list price per million input tokens",
-          "rank": 8,
+          "rank": 11,
           "lead": true
         }
       ],
@@ -477,6 +477,42 @@
       "headlineSuffix": " lists at $1/M input — no published pass rate yet.",
       "rows": [
         {
+          "id": "gemini-3.7-flash-google-free-tier",
+          "name": "Gemini 3.7 Flash (free tier)",
+          "chip": "GO",
+          "provider": "google",
+          "cost": 0,
+          "value": "$0/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 1,
+          "lead": false
+        },
+        {
+          "id": "glm-4.7-flash-zai-free",
+          "name": "GLM 4.7 Flash (Z.ai free)",
+          "chip": "ZA",
+          "provider": "zai",
+          "cost": 0,
+          "value": "$0/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 2,
+          "lead": false
+        },
+        {
+          "id": "glm-4.5-flash-zai-free",
+          "name": "GLM 4.5 Flash (Z.ai free)",
+          "chip": "ZA",
+          "provider": "zai",
+          "cost": 0,
+          "value": "$0/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 3,
+          "lead": false
+        },
+        {
           "id": "gpt-5.6-luna",
           "name": "GPT-5.6 Luna",
           "chip": "OP",
@@ -485,7 +521,7 @@
           "value": "$0.2/M",
           "basis": "measured",
           "detail": "list price per million input tokens",
-          "rank": 1,
+          "rank": 4,
           "lead": false
         },
         {
@@ -497,19 +533,7 @@
           "value": "$0.44/M",
           "basis": "measured",
           "detail": "list price per million input tokens",
-          "rank": 2,
-          "lead": false
-        },
-        {
-          "id": "gemini-3.7-flash",
-          "name": "Gemini 3.7 Flash",
-          "chip": "GO",
-          "provider": "google",
-          "cost": 0.75,
-          "value": "$0.75/M",
-          "basis": "measured",
-          "detail": "list price per million input tokens",
-          "rank": 3,
+          "rank": 5,
           "lead": false
         },
         {
@@ -521,32 +545,8 @@
           "value": "$1/M",
           "basis": "measured",
           "detail": "list price per million input tokens",
-          "rank": 4,
+          "rank": 7,
           "lead": true
-        },
-        {
-          "id": "deepseek-v4-pro",
-          "name": "DeepSeek V4 Pro",
-          "chip": "DE",
-          "provider": "deepseek",
-          "cost": 1.32,
-          "value": "$1.32/M",
-          "basis": "measured",
-          "detail": "list price per million input tokens",
-          "rank": 5,
-          "lead": false
-        },
-        {
-          "id": "mistral-medium-latest",
-          "name": "Mistral Medium 3.5",
-          "chip": "MI",
-          "provider": "mistral",
-          "cost": 1.5,
-          "value": "$1.5/M",
-          "basis": "measured",
-          "detail": "list price per million input tokens",
-          "rank": 6,
-          "lead": false
         }
       ],
       "barMax": 10,
@@ -656,6 +656,42 @@
       "headlineSuffix": " lists at $2/M input — no published pass rate yet.",
       "rows": [
         {
+          "id": "gemini-3.7-flash-google-free-tier",
+          "name": "Gemini 3.7 Flash (free tier)",
+          "chip": "GO",
+          "provider": "google",
+          "cost": 0,
+          "value": "$0/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 1,
+          "lead": false
+        },
+        {
+          "id": "glm-4.7-flash-zai-free",
+          "name": "GLM 4.7 Flash (Z.ai free)",
+          "chip": "ZA",
+          "provider": "zai",
+          "cost": 0,
+          "value": "$0/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 2,
+          "lead": false
+        },
+        {
+          "id": "glm-4.5-flash-zai-free",
+          "name": "GLM 4.5 Flash (Z.ai free)",
+          "chip": "ZA",
+          "provider": "zai",
+          "cost": 0,
+          "value": "$0/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 3,
+          "lead": false
+        },
+        {
           "id": "gpt-5.6-luna",
           "name": "GPT-5.6 Luna",
           "chip": "OP",
@@ -664,7 +700,7 @@
           "value": "$0.2/M",
           "basis": "measured",
           "detail": "list price per million input tokens",
-          "rank": 1,
+          "rank": 4,
           "lead": false
         },
         {
@@ -674,42 +710,6 @@
           "provider": "deepseek",
           "cost": 0.44,
           "value": "$0.44/M",
-          "basis": "measured",
-          "detail": "list price per million input tokens",
-          "rank": 2,
-          "lead": false
-        },
-        {
-          "id": "gemini-3.7-flash",
-          "name": "Gemini 3.7 Flash",
-          "chip": "GO",
-          "provider": "google",
-          "cost": 0.75,
-          "value": "$0.75/M",
-          "basis": "measured",
-          "detail": "list price per million input tokens",
-          "rank": 3,
-          "lead": false
-        },
-        {
-          "id": "claude-haiku-4-5",
-          "name": "Claude Haiku 4.5",
-          "chip": "AN",
-          "provider": "anthropic",
-          "cost": 1,
-          "value": "$1/M",
-          "basis": "measured",
-          "detail": "list price per million input tokens",
-          "rank": 4,
-          "lead": false
-        },
-        {
-          "id": "deepseek-v4-pro",
-          "name": "DeepSeek V4 Pro",
-          "chip": "DE",
-          "provider": "deepseek",
-          "cost": 1.32,
-          "value": "$1.32/M",
           "basis": "measured",
           "detail": "list price per million input tokens",
           "rank": 5,
@@ -724,7 +724,7 @@
           "value": "$2/M",
           "basis": "measured",
           "detail": "list price per million input tokens",
-          "rank": 9,
+          "rank": 12,
           "lead": true
         }
       ],
@@ -746,6 +746,42 @@
       "headlineSuffix": " lists at $0.2/M input — no published pass rate yet.",
       "rows": [
         {
+          "id": "gemini-3.7-flash-google-free-tier",
+          "name": "Gemini 3.7 Flash (free tier)",
+          "chip": "GO",
+          "provider": "google",
+          "cost": 0,
+          "value": "$0/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 1,
+          "lead": false
+        },
+        {
+          "id": "glm-4.7-flash-zai-free",
+          "name": "GLM 4.7 Flash (Z.ai free)",
+          "chip": "ZA",
+          "provider": "zai",
+          "cost": 0,
+          "value": "$0/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 2,
+          "lead": false
+        },
+        {
+          "id": "glm-4.5-flash-zai-free",
+          "name": "GLM 4.5 Flash (Z.ai free)",
+          "chip": "ZA",
+          "provider": "zai",
+          "cost": 0,
+          "value": "$0/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 3,
+          "lead": false
+        },
+        {
           "id": "gpt-5.6-luna",
           "name": "GPT-5.6 Luna",
           "chip": "OP",
@@ -754,7 +790,7 @@
           "value": "$0.2/M",
           "basis": "measured",
           "detail": "list price per million input tokens",
-          "rank": 1,
+          "rank": 4,
           "lead": true
         },
         {
@@ -766,7 +802,7 @@
           "value": "$0.44/M",
           "basis": "measured",
           "detail": "list price per million input tokens",
-          "rank": 2,
+          "rank": 5,
           "lead": false
         },
         {
@@ -776,42 +812,6 @@
           "provider": "google",
           "cost": 0.75,
           "value": "$0.75/M",
-          "basis": "measured",
-          "detail": "list price per million input tokens",
-          "rank": 3,
-          "lead": false
-        },
-        {
-          "id": "claude-haiku-4-5",
-          "name": "Claude Haiku 4.5",
-          "chip": "AN",
-          "provider": "anthropic",
-          "cost": 1,
-          "value": "$1/M",
-          "basis": "measured",
-          "detail": "list price per million input tokens",
-          "rank": 4,
-          "lead": false
-        },
-        {
-          "id": "deepseek-v4-pro",
-          "name": "DeepSeek V4 Pro",
-          "chip": "DE",
-          "provider": "deepseek",
-          "cost": 1.32,
-          "value": "$1.32/M",
-          "basis": "measured",
-          "detail": "list price per million input tokens",
-          "rank": 5,
-          "lead": false
-        },
-        {
-          "id": "mistral-medium-latest",
-          "name": "Mistral Medium 3.5",
-          "chip": "MI",
-          "provider": "mistral",
-          "cost": 1.5,
-          "value": "$1.5/M",
           "basis": "measured",
           "detail": "list price per million input tokens",
           "rank": 6,
@@ -836,6 +836,42 @@
       "headlineSuffix": " lists at $1.75/M input — no published pass rate yet.",
       "rows": [
         {
+          "id": "gemini-3.7-flash-google-free-tier",
+          "name": "Gemini 3.7 Flash (free tier)",
+          "chip": "GO",
+          "provider": "google",
+          "cost": 0,
+          "value": "$0/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 1,
+          "lead": false
+        },
+        {
+          "id": "glm-4.7-flash-zai-free",
+          "name": "GLM 4.7 Flash (Z.ai free)",
+          "chip": "ZA",
+          "provider": "zai",
+          "cost": 0,
+          "value": "$0/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 2,
+          "lead": false
+        },
+        {
+          "id": "glm-4.5-flash-zai-free",
+          "name": "GLM 4.5 Flash (Z.ai free)",
+          "chip": "ZA",
+          "provider": "zai",
+          "cost": 0,
+          "value": "$0/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 3,
+          "lead": false
+        },
+        {
           "id": "gpt-5.6-luna",
           "name": "GPT-5.6 Luna",
           "chip": "OP",
@@ -844,7 +880,7 @@
           "value": "$0.2/M",
           "basis": "measured",
           "detail": "list price per million input tokens",
-          "rank": 1,
+          "rank": 4,
           "lead": false
         },
         {
@@ -854,42 +890,6 @@
           "provider": "deepseek",
           "cost": 0.44,
           "value": "$0.44/M",
-          "basis": "measured",
-          "detail": "list price per million input tokens",
-          "rank": 2,
-          "lead": false
-        },
-        {
-          "id": "gemini-3.7-flash",
-          "name": "Gemini 3.7 Flash",
-          "chip": "GO",
-          "provider": "google",
-          "cost": 0.75,
-          "value": "$0.75/M",
-          "basis": "measured",
-          "detail": "list price per million input tokens",
-          "rank": 3,
-          "lead": false
-        },
-        {
-          "id": "claude-haiku-4-5",
-          "name": "Claude Haiku 4.5",
-          "chip": "AN",
-          "provider": "anthropic",
-          "cost": 1,
-          "value": "$1/M",
-          "basis": "measured",
-          "detail": "list price per million input tokens",
-          "rank": 4,
-          "lead": false
-        },
-        {
-          "id": "deepseek-v4-pro",
-          "name": "DeepSeek V4 Pro",
-          "chip": "DE",
-          "provider": "deepseek",
-          "cost": 1.32,
-          "value": "$1.32/M",
           "basis": "measured",
           "detail": "list price per million input tokens",
           "rank": 5,
@@ -904,7 +904,7 @@
           "value": "$1.75/M",
           "basis": "measured",
           "detail": "list price per million input tokens",
-          "rank": 7,
+          "rank": 10,
           "lead": true
         }
       ],
@@ -1080,6 +1080,42 @@
       "headlineSuffix": " lists at $1.32/M input — no published pass rate yet.",
       "rows": [
         {
+          "id": "gemini-3.7-flash-google-free-tier",
+          "name": "Gemini 3.7 Flash (free tier)",
+          "chip": "GO",
+          "provider": "google",
+          "cost": 0,
+          "value": "$0/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 1,
+          "lead": false
+        },
+        {
+          "id": "glm-4.7-flash-zai-free",
+          "name": "GLM 4.7 Flash (Z.ai free)",
+          "chip": "ZA",
+          "provider": "zai",
+          "cost": 0,
+          "value": "$0/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 2,
+          "lead": false
+        },
+        {
+          "id": "glm-4.5-flash-zai-free",
+          "name": "GLM 4.5 Flash (Z.ai free)",
+          "chip": "ZA",
+          "provider": "zai",
+          "cost": 0,
+          "value": "$0/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 3,
+          "lead": false
+        },
+        {
           "id": "gpt-5.6-luna",
           "name": "GPT-5.6 Luna",
           "chip": "OP",
@@ -1088,7 +1124,7 @@
           "value": "$0.2/M",
           "basis": "measured",
           "detail": "list price per million input tokens",
-          "rank": 1,
+          "rank": 4,
           "lead": false
         },
         {
@@ -1100,31 +1136,7 @@
           "value": "$0.44/M",
           "basis": "measured",
           "detail": "list price per million input tokens",
-          "rank": 2,
-          "lead": false
-        },
-        {
-          "id": "gemini-3.7-flash",
-          "name": "Gemini 3.7 Flash",
-          "chip": "GO",
-          "provider": "google",
-          "cost": 0.75,
-          "value": "$0.75/M",
-          "basis": "measured",
-          "detail": "list price per million input tokens",
-          "rank": 3,
-          "lead": false
-        },
-        {
-          "id": "claude-haiku-4-5",
-          "name": "Claude Haiku 4.5",
-          "chip": "AN",
-          "provider": "anthropic",
-          "cost": 1,
-          "value": "$1/M",
-          "basis": "measured",
-          "detail": "list price per million input tokens",
-          "rank": 4,
+          "rank": 5,
           "lead": false
         },
         {
@@ -1136,20 +1148,8 @@
           "value": "$1.32/M",
           "basis": "measured",
           "detail": "list price per million input tokens",
-          "rank": 5,
+          "rank": 8,
           "lead": true
-        },
-        {
-          "id": "mistral-medium-latest",
-          "name": "Mistral Medium 3.5",
-          "chip": "MI",
-          "provider": "mistral",
-          "cost": 1.5,
-          "value": "$1.5/M",
-          "basis": "measured",
-          "detail": "list price per million input tokens",
-          "rank": 6,
-          "lead": false
         }
       ],
       "barMax": 10,
@@ -1259,6 +1259,42 @@
       "headlineSuffix": " lists at $2/M input — no published pass rate yet.",
       "rows": [
         {
+          "id": "gemini-3.7-flash-google-free-tier",
+          "name": "Gemini 3.7 Flash (free tier)",
+          "chip": "GO",
+          "provider": "google",
+          "cost": 0,
+          "value": "$0/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 1,
+          "lead": false
+        },
+        {
+          "id": "glm-4.7-flash-zai-free",
+          "name": "GLM 4.7 Flash (Z.ai free)",
+          "chip": "ZA",
+          "provider": "zai",
+          "cost": 0,
+          "value": "$0/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 2,
+          "lead": false
+        },
+        {
+          "id": "glm-4.5-flash-zai-free",
+          "name": "GLM 4.5 Flash (Z.ai free)",
+          "chip": "ZA",
+          "provider": "zai",
+          "cost": 0,
+          "value": "$0/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 3,
+          "lead": false
+        },
+        {
           "id": "gpt-5.6-luna",
           "name": "GPT-5.6 Luna",
           "chip": "OP",
@@ -1267,7 +1303,7 @@
           "value": "$0.2/M",
           "basis": "measured",
           "detail": "list price per million input tokens",
-          "rank": 1,
+          "rank": 4,
           "lead": false
         },
         {
@@ -1277,42 +1313,6 @@
           "provider": "deepseek",
           "cost": 0.44,
           "value": "$0.44/M",
-          "basis": "measured",
-          "detail": "list price per million input tokens",
-          "rank": 2,
-          "lead": false
-        },
-        {
-          "id": "gemini-3.7-flash",
-          "name": "Gemini 3.7 Flash",
-          "chip": "GO",
-          "provider": "google",
-          "cost": 0.75,
-          "value": "$0.75/M",
-          "basis": "measured",
-          "detail": "list price per million input tokens",
-          "rank": 3,
-          "lead": false
-        },
-        {
-          "id": "claude-haiku-4-5",
-          "name": "Claude Haiku 4.5",
-          "chip": "AN",
-          "provider": "anthropic",
-          "cost": 1,
-          "value": "$1/M",
-          "basis": "measured",
-          "detail": "list price per million input tokens",
-          "rank": 4,
-          "lead": false
-        },
-        {
-          "id": "deepseek-v4-pro",
-          "name": "DeepSeek V4 Pro",
-          "chip": "DE",
-          "provider": "deepseek",
-          "cost": 1.32,
-          "value": "$1.32/M",
           "basis": "measured",
           "detail": "list price per million input tokens",
           "rank": 5,
@@ -1327,7 +1327,7 @@
           "value": "$2/M",
           "basis": "measured",
           "detail": "list price per million input tokens",
-          "rank": 11,
+          "rank": 14,
           "lead": true
         }
       ],
@@ -1349,6 +1349,42 @@
       "headlineSuffix": " lists at $1.5/M input — no published pass rate yet.",
       "rows": [
         {
+          "id": "gemini-3.7-flash-google-free-tier",
+          "name": "Gemini 3.7 Flash (free tier)",
+          "chip": "GO",
+          "provider": "google",
+          "cost": 0,
+          "value": "$0/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 1,
+          "lead": false
+        },
+        {
+          "id": "glm-4.7-flash-zai-free",
+          "name": "GLM 4.7 Flash (Z.ai free)",
+          "chip": "ZA",
+          "provider": "zai",
+          "cost": 0,
+          "value": "$0/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 2,
+          "lead": false
+        },
+        {
+          "id": "glm-4.5-flash-zai-free",
+          "name": "GLM 4.5 Flash (Z.ai free)",
+          "chip": "ZA",
+          "provider": "zai",
+          "cost": 0,
+          "value": "$0/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 3,
+          "lead": false
+        },
+        {
           "id": "gpt-5.6-luna",
           "name": "GPT-5.6 Luna",
           "chip": "OP",
@@ -1357,7 +1393,7 @@
           "value": "$0.2/M",
           "basis": "measured",
           "detail": "list price per million input tokens",
-          "rank": 1,
+          "rank": 4,
           "lead": false
         },
         {
@@ -1367,42 +1403,6 @@
           "provider": "deepseek",
           "cost": 0.44,
           "value": "$0.44/M",
-          "basis": "measured",
-          "detail": "list price per million input tokens",
-          "rank": 2,
-          "lead": false
-        },
-        {
-          "id": "gemini-3.7-flash",
-          "name": "Gemini 3.7 Flash",
-          "chip": "GO",
-          "provider": "google",
-          "cost": 0.75,
-          "value": "$0.75/M",
-          "basis": "measured",
-          "detail": "list price per million input tokens",
-          "rank": 3,
-          "lead": false
-        },
-        {
-          "id": "claude-haiku-4-5",
-          "name": "Claude Haiku 4.5",
-          "chip": "AN",
-          "provider": "anthropic",
-          "cost": 1,
-          "value": "$1/M",
-          "basis": "measured",
-          "detail": "list price per million input tokens",
-          "rank": 4,
-          "lead": false
-        },
-        {
-          "id": "deepseek-v4-pro",
-          "name": "DeepSeek V4 Pro",
-          "chip": "DE",
-          "provider": "deepseek",
-          "cost": 1.32,
-          "value": "$1.32/M",
           "basis": "measured",
           "detail": "list price per million input tokens",
           "rank": 5,
@@ -1417,7 +1417,7 @@
           "value": "$1.5/M",
           "basis": "measured",
           "detail": "list price per million input tokens",
-          "rank": 6,
+          "rank": 9,
           "lead": true
         }
       ],
@@ -1672,6 +1672,276 @@
         "modelId": "gpt-5.4",
         "cost": 4.187817258883248,
         "basisKey": "modelled_by_solvency"
+      }
+    },
+    "model-gemini-3.7-flash-google-free-tier": {
+      "key": "model-gemini-3.7-flash-google-free-tier",
+      "eyebrow": "LIST PRICE PER MILLION INPUT TOKENS · CURRENT MODELS",
+      "headlinePrefix": "",
+      "headlineHighlight": "Gemini 3.7 Flash (free tier)",
+      "headlineSuffix": " lists at $0/M input — no published pass rate yet.",
+      "rows": [
+        {
+          "id": "gemini-3.7-flash-google-free-tier",
+          "name": "Gemini 3.7 Flash (free tier)",
+          "chip": "GO",
+          "provider": "google",
+          "cost": 0,
+          "value": "$0/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 1,
+          "lead": true
+        },
+        {
+          "id": "glm-4.7-flash-zai-free",
+          "name": "GLM 4.7 Flash (Z.ai free)",
+          "chip": "ZA",
+          "provider": "zai",
+          "cost": 0,
+          "value": "$0/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 2,
+          "lead": false
+        },
+        {
+          "id": "glm-4.5-flash-zai-free",
+          "name": "GLM 4.5 Flash (Z.ai free)",
+          "chip": "ZA",
+          "provider": "zai",
+          "cost": 0,
+          "value": "$0/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 3,
+          "lead": false
+        },
+        {
+          "id": "gpt-5.6-luna",
+          "name": "GPT-5.6 Luna",
+          "chip": "OP",
+          "provider": "openai",
+          "cost": 0.2,
+          "value": "$0.2/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 4,
+          "lead": false
+        },
+        {
+          "id": "deepseek-v4-flash",
+          "name": "DeepSeek V4 Flash",
+          "chip": "DE",
+          "provider": "deepseek",
+          "cost": 0.44,
+          "value": "$0.44/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 5,
+          "lead": false
+        },
+        {
+          "id": "gemini-3.7-flash",
+          "name": "Gemini 3.7 Flash",
+          "chip": "GO",
+          "provider": "google",
+          "cost": 0.75,
+          "value": "$0.75/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 6,
+          "lead": false
+        }
+      ],
+      "barMax": 10,
+      "sourceLine": "Source: Google pricing page (ai.google.dev)",
+      "noteLine": "NOTE: LIST PRICE, NO SOLVED-TASK COST YET · VERIFIED 2026-08-26",
+      "raw": {
+        "modelId": "gemini-3.7-flash-google-free-tier",
+        "cost": null,
+        "basisKey": null,
+        "inputPerMtok": 0
+      }
+    },
+    "model-glm-4.7-flash-zai-free": {
+      "key": "model-glm-4.7-flash-zai-free",
+      "eyebrow": "LIST PRICE PER MILLION INPUT TOKENS · CURRENT MODELS",
+      "headlinePrefix": "",
+      "headlineHighlight": "GLM 4.7 Flash (Z.ai free)",
+      "headlineSuffix": " lists at $0/M input — no published pass rate yet.",
+      "rows": [
+        {
+          "id": "gemini-3.7-flash-google-free-tier",
+          "name": "Gemini 3.7 Flash (free tier)",
+          "chip": "GO",
+          "provider": "google",
+          "cost": 0,
+          "value": "$0/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 1,
+          "lead": false
+        },
+        {
+          "id": "glm-4.7-flash-zai-free",
+          "name": "GLM 4.7 Flash (Z.ai free)",
+          "chip": "ZA",
+          "provider": "zai",
+          "cost": 0,
+          "value": "$0/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 2,
+          "lead": true
+        },
+        {
+          "id": "glm-4.5-flash-zai-free",
+          "name": "GLM 4.5 Flash (Z.ai free)",
+          "chip": "ZA",
+          "provider": "zai",
+          "cost": 0,
+          "value": "$0/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 3,
+          "lead": false
+        },
+        {
+          "id": "gpt-5.6-luna",
+          "name": "GPT-5.6 Luna",
+          "chip": "OP",
+          "provider": "openai",
+          "cost": 0.2,
+          "value": "$0.2/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 4,
+          "lead": false
+        },
+        {
+          "id": "deepseek-v4-flash",
+          "name": "DeepSeek V4 Flash",
+          "chip": "DE",
+          "provider": "deepseek",
+          "cost": 0.44,
+          "value": "$0.44/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 5,
+          "lead": false
+        },
+        {
+          "id": "gemini-3.7-flash",
+          "name": "Gemini 3.7 Flash",
+          "chip": "GO",
+          "provider": "google",
+          "cost": 0.75,
+          "value": "$0.75/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 6,
+          "lead": false
+        }
+      ],
+      "barMax": 10,
+      "sourceLine": "Source: Z.ai pricing page (docs.z.ai)",
+      "noteLine": "NOTE: LIST PRICE, NO SOLVED-TASK COST YET · VERIFIED 2026-08-26",
+      "raw": {
+        "modelId": "glm-4.7-flash-zai-free",
+        "cost": null,
+        "basisKey": null,
+        "inputPerMtok": 0
+      }
+    },
+    "model-glm-4.5-flash-zai-free": {
+      "key": "model-glm-4.5-flash-zai-free",
+      "eyebrow": "LIST PRICE PER MILLION INPUT TOKENS · CURRENT MODELS",
+      "headlinePrefix": "",
+      "headlineHighlight": "GLM 4.5 Flash (Z.ai free)",
+      "headlineSuffix": " lists at $0/M input — no published pass rate yet.",
+      "rows": [
+        {
+          "id": "gemini-3.7-flash-google-free-tier",
+          "name": "Gemini 3.7 Flash (free tier)",
+          "chip": "GO",
+          "provider": "google",
+          "cost": 0,
+          "value": "$0/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 1,
+          "lead": false
+        },
+        {
+          "id": "glm-4.7-flash-zai-free",
+          "name": "GLM 4.7 Flash (Z.ai free)",
+          "chip": "ZA",
+          "provider": "zai",
+          "cost": 0,
+          "value": "$0/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 2,
+          "lead": false
+        },
+        {
+          "id": "glm-4.5-flash-zai-free",
+          "name": "GLM 4.5 Flash (Z.ai free)",
+          "chip": "ZA",
+          "provider": "zai",
+          "cost": 0,
+          "value": "$0/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 3,
+          "lead": true
+        },
+        {
+          "id": "gpt-5.6-luna",
+          "name": "GPT-5.6 Luna",
+          "chip": "OP",
+          "provider": "openai",
+          "cost": 0.2,
+          "value": "$0.2/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 4,
+          "lead": false
+        },
+        {
+          "id": "deepseek-v4-flash",
+          "name": "DeepSeek V4 Flash",
+          "chip": "DE",
+          "provider": "deepseek",
+          "cost": 0.44,
+          "value": "$0.44/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 5,
+          "lead": false
+        },
+        {
+          "id": "gemini-3.7-flash",
+          "name": "Gemini 3.7 Flash",
+          "chip": "GO",
+          "provider": "google",
+          "cost": 0.75,
+          "value": "$0.75/M",
+          "basis": "measured",
+          "detail": "list price per million input tokens",
+          "rank": 6,
+          "lead": false
+        }
+      ],
+      "barMax": 10,
+      "sourceLine": "Source: Z.ai pricing page (docs.z.ai)",
+      "noteLine": "NOTE: LIST PRICE, NO SOLVED-TASK COST YET · VERIFIED 2026-08-26",
+      "raw": {
+        "modelId": "glm-4.5-flash-zai-free",
+        "cost": null,
+        "basisKey": null,
+        "inputPerMtok": 0
       }
     },
     "ranked-cost-per-solved-task": {

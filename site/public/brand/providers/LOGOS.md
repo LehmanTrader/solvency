@@ -16,6 +16,8 @@ two-letter monogram chip instead of guessing at or redrawing a trademark.
 | `openai.svg` | `openai` | OpenAI's icon mark (the interlocking-loop "knot"), isolated as its own path from the combined OpenAI horizontal lockup credited to `openai.com/brand/` and hosted at Wikimedia Commons: `upload.wikimedia.org/wikipedia/commons/d/d3/OpenAI_2017-22_logo.svg` (Commons file `File:OpenAI 2017-22 logo.svg`; Commons `Credit`/`Artist` fields point to OpenAI and `openai.com/brand/`). `openai.com/brand/` itself returned a bot-challenge page (Cloudflare) to every automated fetch attempted for this stage, so the mark was sourced from this Commons-hosted, OpenAI-credited copy of the same official asset rather than hand-redrawn. | Public domain (Commons "PD textlogo"); mark is trademarked — used here nominatively only, see note below | 2026-08-26 |
 | `xai.png` | `xai` | xAI's own official app icon, `x.ai/icon.png` (linked from `x.ai/`'s own `<link rel="icon" sizes="512x512">`), tightly cropped to the mark's own pixels (transparent elsewhere) — a stylized angular "X" in the swept style shared with SpaceX, whose brand xAI now shares corporate ownership with; the page currently titles itself "SpaceXAI". A wide inline SVG of the same mark was also captured live from `x.ai/`'s nav (viewBox `0 0 759 290.2`, ~2.6:1) but was not used for the vendored file — see the note below on why the app-icon crop reads better at chip size. | Official mark, direct from the provider's own site — used here nominatively only, see note below | 2026-08-26 |
 
+| `zai.svg` | `zai` | Simple Icons — `icons/zdotai.svg` (title "Z.ai", slug `zdotai`) at `raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/zdotai.svg` | CC0 1.0 Universal | 2026-08-26 |
+
 Simple Icons license: `raw.githubusercontent.com/simple-icons/simple-icons/develop/LICENSE.md`
 ("CC0 1.0 Universal", checked 2026-08-26).
 
@@ -40,9 +42,20 @@ project the SVG paths themselves come from), retrieved 2026-08-26:
 | `google.svg` | Google Gemini | `#8E75B2` | `simple-icons.json` → `icons[slug="googlegemini"].hex` |
 | `mistral.svg` | Mistral AI | `#FA520F` | `simple-icons.json` → `icons[slug="mistralai"].hex` |
 | `deepseek.svg` | DeepSeek | `#5786FE` | `simple-icons.json` → `icons[slug="deepseek"].hex` |
+| `zai.svg` | Z.ai | `#2D2D2D` | `simple-icons.json` → `icons[slug="zdotai"].hex` |
 
 These are Simple Icons' own recorded brand colors, not colors picked by
 Solvency — same nominative-use basis as the marks themselves (§ above).
+
+### Free-model coverage (2026-08-26): `zai` provider added
+
+`data/models.json` gained two free-tier rows served directly by Z.ai
+(`glm-4.7-flash-zai-free`, `glm-4.5-flash-zai-free`; `provider: "zai"`).
+Simple Icons carries a "Z.ai" mark at slug `zdotai` (near-monochrome, official
+hex `#2D2D2D`, same CC0 basis as every other mark above) — checked and
+vendored the same way `anthropic`/`google`/`mistral`/`deepseek` were, no
+monogram fallback needed. `PROVIDER_MARKS.zai` / `PROVIDER_LABEL.zai` in
+`site/src/lib/providers.ts` point at this file.
 
 ### Stage 1.3 (2026-08-26, Roy's note 1): OpenAI and xAI get their real marks
 
