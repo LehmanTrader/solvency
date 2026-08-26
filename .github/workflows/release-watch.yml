@@ -1,0 +1,52 @@
+name: Release watch
+
+# Overnight scans for new models (OpenRouter catalog) and harness releases
+# (GitHub feeds), so Solvency benchmarks new arrivals before anyone else
+# posts numbers. Findings: committed brief + a GitHub issue for the morning.
+on:
+  schedule:
+    - cron: '23 4 * * *'   # 12:23am ET
+    - cron: '23 9 * * *'   # 5:23am ET
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Scan release feeds
+        id: scan
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          node scripts/release-watch.mjs | tee scan.out
+          echo "findings=$(grep -c '^- ' scan.out || true)" >> "$GITHUB_OUTPUT"
+      - name: Commit state and brief
+        run: |
+          git config user.name "solvency-watch"
+          git config user.email "watch@solvency.dev"
+          git add data/watch docs/watch || true
+          git diff --cached --quiet || git commit -m "release-watch: nightly scan"
+          git push
+      - name: Open morning-brief issue on findings
+        if: steps.scan.outputs.findings != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TITLE="Release watch: $(grep -c '^- ' scan.out) new release(s) $(date -u +%F)"
+          BODY="$(grep '^- ' scan.out)
+
+          Next step: estimate benchmark cost, run the screening tier, post first."
+          EXISTING=$(gh issue list --state open --search "Release watch: in:title $(date -u +%F)" --json number --jq '.[0].number' || true)
+          if [ -n "$EXISTING" ] && [ "$EXISTING" != "null" ]; then
+            gh issue comment "$EXISTING" --body "$BODY"
+          else
+            gh issue create --title "$TITLE" --body "$BODY"
+          fi
