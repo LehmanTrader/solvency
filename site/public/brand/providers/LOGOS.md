@@ -14,7 +14,7 @@ two-letter monogram chip instead of guessing at or redrawing a trademark.
 | `mistral.svg` | `mistral` | Simple Icons — `icons/mistralai.svg` (title "Mistral AI") at `raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/mistralai.svg` | CC0 1.0 Universal | 2026-08-26 |
 | `deepseek.svg` | `deepseek` | Simple Icons — `icons/deepseek.svg` at `raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/deepseek.svg` | CC0 1.0 Universal | 2026-08-26 |
 | `openai.svg` | `openai` | OpenAI's icon mark (the interlocking-loop "knot"), isolated as its own path from the combined OpenAI horizontal lockup credited to `openai.com/brand/` and hosted at Wikimedia Commons: `upload.wikimedia.org/wikipedia/commons/d/d3/OpenAI_2017-22_logo.svg` (Commons file `File:OpenAI 2017-22 logo.svg`; Commons `Credit`/`Artist` fields point to OpenAI and `openai.com/brand/`). `openai.com/brand/` itself returned a bot-challenge page (Cloudflare) to every automated fetch attempted for this stage, so the mark was sourced from this Commons-hosted, OpenAI-credited copy of the same official asset rather than hand-redrawn. | Public domain (Commons "PD textlogo"); mark is trademarked — used here nominatively only, see note below | 2026-08-26 |
-| `xai.svg` | `xai` | xAI's own live mark, captured directly from `x.ai/` (rendered by a live browser session, the header/hero mark — a stylized angular "X" in the swept style shared with SpaceX, whose brand xAI now shares corporate ownership with; the page currently titles itself "SpaceXAI"). Path data taken verbatim from the page's own inline SVG at retrieval time. | Official mark, direct from the provider's own site — used here nominatively only, see note below | 2026-08-26 |
+| `xai.png` | `xai` | xAI's own official app icon, `x.ai/icon.png` (linked from `x.ai/`'s own `<link rel="icon" sizes="512x512">`), tightly cropped to the mark's own pixels (transparent elsewhere) — a stylized angular "X" in the swept style shared with SpaceX, whose brand xAI now shares corporate ownership with; the page currently titles itself "SpaceXAI". A wide inline SVG of the same mark was also captured live from `x.ai/`'s nav (viewBox `0 0 759 290.2`, ~2.6:1) but was not used for the vendored file — see the note below on why the app-icon crop reads better at chip size. | Official mark, direct from the provider's own site — used here nominatively only, see note below | 2026-08-26 |
 
 Simple Icons license: `raw.githubusercontent.com/simple-icons/simple-icons/develop/LICENSE.md`
 ("CC0 1.0 Universal", checked 2026-08-26).
@@ -57,15 +57,32 @@ square never changes with the site theme).
 
 Both marks are **near-monochrome** in their own official use (OpenAI's knot
 has no brand color, just black; xAI's mark uses `currentColor`, rendered
-`rgb(10,10,10)` on `x.ai`'s own white background) — the vendored files below
-bake in a fixed dark fill (`openai.svg` → `#000000`, matching the source
-file's own unset/default fill; `xai.svg` → `#0A0A0A`, the exact computed
-color read off `x.ai`'s live DOM) rather than an invented brand hex. Because
-the chip square these marks sit on is always the same fixed near-white
-(`#F4F3F1`) regardless of site theme, that dark-on-near-white pairing is
-already the "white-on-dark" legibility case solved structurally — no
-separate dark-theme fill variant was needed the way it would be if the mark
-were ever drawn directly on the page background.
+`rgb(10,10,10)` on `x.ai`'s own white background). `openai.svg` bakes in a
+fixed `#000000` fill, matching the source file's own unset/default fill.
+`xai.png` is a raster crop of xAI's own already-black-on-transparent app
+icon — no fill to bake in, the pixels are already the mark's real color.
+Because the chip square these marks sit on is always the same fixed
+near-white (`#F4F3F1`) regardless of site theme, that dark-on-near-white
+pairing is already the "white-on-dark" legibility case solved structurally
+— no separate dark-theme fill variant was needed the way it would be if the
+mark were ever drawn directly on the page background.
+
+**Why `xai.png`, not the wide SVG lockup:** the mark captured live from
+`x.ai/`'s nav is a genuinely wide, asymmetric sweep — its own tight bounding
+box is `0 0 759 290.2`, ~2.6:1 — because that rendition is drawn for a
+horizontal nav slot. Every other vendored mark here is close to square
+(Simple Icons' `24x24` viewBox), and `chipMarkup()`'s `<image>` inset uses
+one `size` for both width and height, so a 2.6:1 mark would be scaled to
+fit width and letterboxed to a thin sliver vertically — technically correct
+but small enough to undercut the point of Roy's note ("not just a red box
+with XA" — a hard-to-read mark isn't much better than a monogram). xAI's own
+`icon.png` (their `<link rel="icon" sizes="512x512">`, i.e. the app-icon
+composition, not the nav lockup) uses noticeably tighter padding around the
+same mark — its own pixel bounding box is ~1.9:1 — so cropping to just those
+pixels (`xai.png` here, transparent elsewhere) renders visibly larger and
+more legible inside the square chip than the SVG lockup would, while still
+being the same official mark from the same official source, just the
+icon-composition crop rather than the nav-lockup crop.
 
 Both files are used **nominatively only**: they identify which lab trained a
 model, in a table cell, chart marker, or share card; nothing here implies

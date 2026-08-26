@@ -6,8 +6,10 @@
  * ranked-bar rows in charts.ts (which cannot import an .astro component).
  * Both call chipMarkup() below so the chip looks identical everywhere.
  *
- * Vendored marks (site/public/brand/providers/*.svg, see LOGOS.md there) are
- * used only for providers with a license-clean asset. As of stage 1.3, every
+ * Vendored marks (site/public/brand/providers/*, see LOGOS.md there — SVG
+ * for every provider except xai, which is a PNG crop; both formats are valid
+ * <image href> sources) are used only for providers with a license-clean
+ * asset. As of stage 1.3, every
  * tracked provider (including openai and xai, added that stage — see
  * LOGOS.md) has one. Any future provider with no clean asset yet falls back
  * to a colored two-letter monogram chip instead: never a scraped, hotlinked,
@@ -22,9 +24,10 @@
  * neutral rather than an invented brand hex — legible either way because the
  * chip square beneath every mark is always the same fixed near-white.
  *
- * The vendored SVGs are served from /public as plain <img>/<image> sources.
+ * The vendored marks are served from /public as plain <img>/<image> sources.
  * An externally-referenced SVG image cannot inherit the host page's
- * currentColor (cross-document isolation), so every mark chip sits on its
+ * currentColor (cross-document isolation) — and a PNG never could either —
+ * so every mark chip sits on its
  * own fixed near-white square (CHIP_BG) — that reads correctly in both the
  * light and dark app themes without the mark itself needing to re-theme.
  * Monogram chips use their own fixed colored background instead (see
@@ -44,7 +47,12 @@ export const PROVIDER_MARKS: Record<string, ProviderMark> = {
   // not just a green box with OP." Both marks below are vendored from
   // official sources (see LOGOS.md) rather than the monogram fallback.
   openai: { file: '/brand/providers/openai.svg', alt: 'OpenAI' },
-  xai: { file: '/brand/providers/xai.svg', alt: 'xAI' },
+  // xai.png, not .svg: xAI's mark is a genuinely wide, asymmetric sweep (its
+  // own official app-icon crop is ~1.9:1, not square) — see LOGOS.md for why
+  // a PNG crop of the official app icon reads clearer at chip size than the
+  // wide inline SVG lockup captured from x.ai's nav, which the same shape
+  // also came from.
+  xai: { file: '/brand/providers/xai.png', alt: 'xAI' },
 };
 
 /** Display label for every provider id in data/models.json, including monogram-only ones. */
