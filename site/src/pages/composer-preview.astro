@@ -1,0 +1,797 @@
+---
+/**
+ * Composer prototype preview — interactive org-chart view of Build Composer.
+ *
+ * Stage A prototype per docs/redesign-2026-08/composer-concept-architecture.md §7:
+ * a sibling page, NOT linked from nav, that reuses the untouched pricing engine
+ * (build-cost.ts, build-plan-schema.ts, build-sensitivity.ts, build-export.ts)
+ * behind a new org-chart paint target. Local only: no Clerk, no account
+ * save/share/alert wiring. See docs/redesign-2026-08/composer-concept-interaction.md
+ * for the full interaction spec this implements.
+ */
+import Base from '../layouts/Base.astro';
+import { models } from '../lib/data.ts';
+import { BUILD_PLAN_LIMITS } from '../lib/build-plan-limits.ts';
+
+const currentModels = models.filter((model) => model.status === 'current');
+---
+<Base title="Composer preview — interactive org chart — Solvency"
+      description="Prototype: an interactive org-chart view of the Build Composer. Add orchestrator, worker and fallback roles, assign models, and watch price and sensitivity update live.">
+  <div class="wrap pt-8 md:pt-12" id="composer-preview">
+    <p class="eyebrow">Composer · prototype preview</p>
+    <div class="mt-3 flex flex-wrap items-center gap-3">
+      <h1 class="h-page">Build your stack.</h1>
+      <span class="pill pill-ink">PROTOTYPE · not linked from navigation</span>
+    </div>
+    <p class="mt-4 lede max-w-2xl">
+      An org-chart view of the same Build Composer pricing engine: add a role, assign a model,
+      and the chart, totals and sensitivity band reprice together. Local only in this
+      prototype — nothing here saves, shares, or requires an account.
+    </p>
+
+    <div class="mt-6 tile-grid grid-cols-3" id="cp-strip" aria-live="polite" aria-atomic="false">
+      <div class="tile">
+        <p class="label">Per build attempt</p>
+        <p class="tile-v num" id="cp-strip-attempt">—</p>
+        <p class="tile-n" id="cp-delta-attempt"></p>
+      </div>
+      <div class="tile">
+        <p class="label">Per completed build</p>
+        <p class="tile-v num" id="cp-strip-solved">—</p>
+        <p class="tile-n" id="cp-delta-solved"></p>
+      </div>
+      <div class="tile">
+        <p class="label">Per month</p>
+        <p class="tile-v num" id="cp-strip-month">—</p>
+        <p class="tile-n" id="cp-delta-month"></p>
+      </div>
+    </div>
+
+    <div class="mt-6 flex flex-wrap items-center gap-2" role="group" aria-label="Add a role">
+      <button type="button" class="btn palette-btn" data-action="add-orchestrator">
+        <span aria-hidden="true">🧭</span> Add orchestrator
+      </button>
+      <button type="button" class="btn palette-btn" data-action="add-worker">
+        <span aria-hidden="true">🛠️</span> Add worker
+      </button>
+      <button type="button" class="btn palette-btn" data-action="add-fallback">
+        <span aria-hidden="true">🛟</span> Add fallback
+      </button>
+      <span class="small" id="cp-role-count">0 roles</span>
+    </div>
+    <p class="small mt-2" id="cp-status" role="status" aria-live="polite"></p>
+
+    <section class="card mt-4 overflow-hidden" aria-labelledby="cp-chart-title">
+      <div class="card-head">
+        <div><p class="label">Org chart</p><h2 class="h-card mt-1" id="cp-chart-title">Your stack</h2></div>
+        <div class="relative">
+          <button type="button" class="btn btn-quiet" id="cp-export-kebab" data-popover-toggle="export"
+                  aria-haspopup="true" aria-expanded="false" aria-label="Chart options">⋯</button>
+          <div class="export-menu" id="cp-export-menu" data-popover="export" hidden role="menu" aria-label="Chart options">
+            <button type="button" class="export-item" id="cp-export-json" data-action="export-json" role="menuitem" disabled>Download JSON</button>
+            <button type="button" class="export-item" id="cp-export-csv" data-action="export-csv" role="menuitem" disabled>Download CSV</button>
+            <button type="button" class="export-item" id="cp-export-png" role="menuitem" disabled aria-disabled="true">Download PNG · soon</button>
+          </div>
+        </div>
+      </div>
+      <div class="card-pad">
+        <div id="cp-chart" class="cp-chart"></div>
+      </div>
+    </section>
+
+    <section class="card mt-4 overflow-hidden" aria-labelledby="cp-sens-title">
+      <div class="card-head">
+        <div><p class="label">Companion chart</p><h2 class="h-card mt-1" id="cp-sens-title">Sensitivity</h2></div>
+      </div>
+      <div class="card-pad">
+        <div class="sens-controls grid gap-3 sm:grid-cols-[1fr_auto]">
+          <label class="block"><span class="label">Vary</span>
+            <select class="ctl ctl-row mt-2 w-full" id="cp-sens-axis">
+              <option value="role_calls">Calls per build</option>
+              <option value="tokens_per_call">Tokens per call</option>
+              <option value="model_rates">Model rates</option>
+              <option value="system_success">Whole-system success</option>
+            </select>
+          </label>
+          <label class="block"><span class="label">Range ±%</span>
+            <input class="ctl ctl-row mt-2" id="cp-sens-range" type="number" min="5" max="90" step="1" value="25" style="width:6rem" />
+          </label>
+        </div>
+        <p class="small mt-3" id="cp-sens-status" role="status" aria-live="polite"></p>
+        <div class="mt-4 grid gap-3" id="cp-sens-bands"></div>
+      </div>
+    </section>
+
+    <p class="small mt-6 max-w-2xl">
+      Prototype scope: this preview holds workload and harness inputs fixed and focuses on the
+      chart interaction. Full plan editing, tab-only versions, saved plans and Pro entitlement
+      live at <a class="link" href="/build-planner">Build Composer</a>.
+    </p>
+
+    <div class="demo-gate-toast" id="cp-demo-gate" hidden role="status" aria-live="polite">
+      <p class="demo-gate-title">This is a Pro control</p>
+      <p class="demo-gate-detail" id="cp-demo-gate-detail"></p>
+      <div class="demo-gate-actions">
+        <a class="btn btn-accent" href="/pricing#pro">See Pro</a>
+        <button type="button" class="btn btn-quiet" data-action="dismiss-gate">Dismiss</button>
+      </div>
+    </div>
+  </div>
+</Base>
+
+<script>
+  import { models } from '../lib/data.ts';
+  import { type BuildQuoteV1, type BuildRoleQuote } from '../lib/build-cost.ts';
+  import { validateUntrustedBuildPlanV1 } from '../lib/build-plan-schema.ts';
+  import { analyzeBuildSensitivity, type SensitivityAxis } from '../lib/build-sensitivity.ts';
+  import { buildExportCsv, buildExportFilename, buildExportJson } from '../lib/build-export.ts';
+  import { BUILD_PLAN_LIMITS } from '../lib/build-plan-limits.ts';
+  import { chipMarkup, providerLabel } from '../lib/providers.ts';
+  import { groupsFor, toEnginePlan, TRUNK_STUB_KEY, type ComposerRole, type ComposerPlan, type RoleGroup } from '../lib/composer-tree.ts';
+  import type { Model } from '../lib/engine.ts';
+
+  /**
+   * One-authority state: `plan` is the ONLY state (composer-concept-interaction.md §6).
+   * Every visual is a pure render() of it; interactions mutate it, then call
+   * scheduleRender(), which batches repaints onto a single requestAnimationFrame.
+   *
+   * `parentRoleId` is the one additive, presentational-only field the
+   * architecture doc proposes (§2): never read by quoteBuildPlan() or
+   * analyzeBuildSensitivity(), purely a chart-layout hint. The layout
+   * derivation and the engine-plan sanitizer live in composer-tree.ts
+   * (pure, unit-tested — see test/composer-tree.test.ts) since both are
+   * plain functions of `ComposerPlan` with no DOM dependency.
+   */
+
+  const eligibleModels: Model[] = models.filter((model) => model.status === 'current');
+  const modelById = new Map(eligibleModels.map((model) => [model.model_id, model]));
+
+  // Free-demo role ceiling (composer-concept-interaction.md §7). This
+  // prototype has no account/entitlement layer, so it is always "free" —
+  // the ghost node and gate toast are permanently the visible-but-gated
+  // demonstration, not wired to a real Pro check.
+  const DEMO_ROLE_CEILING = 2;
+  const GATE_ADD_ROLE = 'Model more than two roles in one stack. Free demo covers two roles at catalog prices.';
+
+  const KIND_META: Record<ComposerRole['kind'], { emoji: string; label: string }> = {
+    orchestrator: { emoji: '🧭', label: 'Orchestrator' },
+    worker: { emoji: '🛠️', label: 'Worker' },
+    other: { emoji: '🛟', label: 'Fallback' },
+  };
+
+  const ROLE_DEFAULTS: Record<ComposerRole['kind'], { label: string; modelId: string; calls: number; fresh: number; output: number }> = {
+    orchestrator: { label: 'Lead orchestrator', modelId: 'claude-opus-5', calls: 1, fresh: 6000, output: 600 },
+    worker: { label: 'Worker pool', modelId: 'gpt-5.6-luna', calls: 3, fresh: 20000, output: 3000 },
+    other: { label: 'Fallback route', modelId: 'deepseek-v4-flash', calls: 0.3, fresh: 20000, output: 3000 },
+  };
+
+  let plan: ComposerPlan = {
+    schemaVersion: 1,
+    name: 'Composer preview stack',
+    workload: { buildsPerMonth: 100, volumeBasis: 'attempted_builds' },
+    harness: {
+      name: 'Custom harness', version: null, configBasis: 'user_supplied', assertionOrigin: 'user_asserted',
+      fixedCostPerBuildAttemptUsd: 0, fixedMonthlyCostUsd: 0,
+    },
+    roles: [],
+  };
+
+  let lastChangedRoleId: string | null = null;
+
+  // ---------- helpers ----------
+
+  const esc = (value: unknown): string => String(value).replace(/[&<>"']/g, (c) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string
+  ));
+
+  const money = (n: number | null | undefined): string => (n === null || n === undefined)
+    ? 'Missing'
+    : `$${n.toLocaleString(undefined, { minimumFractionDigits: n < 1 ? 3 : 2, maximumFractionDigits: n < 1 ? 4 : 2 })}`;
+
+  const prefersReducedMotion = (): boolean => matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function providerChipSvg(provider: string, size = 20): string {
+    return `<svg class="logo-chip" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" role="img" aria-label="${esc(providerLabel(provider))}">${chipMarkup(provider, size)}</svg>`;
+  }
+
+  function makeRole(kind: ComposerRole['kind'], overrides: Partial<{ label: string; modelId: string }> = {}): ComposerRole {
+    const d = ROLE_DEFAULTS[kind];
+    return {
+      roleId: `role-${crypto.randomUUID()}`,
+      kind,
+      label: overrides.label ?? d.label,
+      modelId: overrides.modelId ?? d.modelId,
+      expectedInvocationsPerBuildAttempt: d.calls,
+      usagePerInvocation: {
+        uncachedInputTokens: d.fresh, cacheReadTokens: 0, cacheWriteTokens: 0, outputTokens: d.output,
+        basis: 'template_assumption',
+      },
+      parentRoleId: null,
+    };
+  }
+
+  // ---------- mutations (the only writers to `plan`) ----------
+
+  function addRole(kind: ComposerRole['kind']) {
+    if (plan.roles.length >= DEMO_ROLE_CEILING) { showGate(GATE_ADD_ROLE); return; }
+    const role = makeRole(kind);
+    plan.roles.push(role);
+    lastChangedRoleId = role.roleId;
+    scheduleRender();
+  }
+
+  function removeRole(roleId: string) {
+    const idx = plan.roles.findIndex((r) => r.roleId === roleId);
+    if (idx === -1) return;
+    const removedLabel = plan.roles[idx].label;
+    const children = plan.roles.filter((r) => r.parentRoleId === roleId);
+    for (const child of children) child.parentRoleId = null;
+    plan.roles.splice(idx, 1);
+    setStatus(children.length
+      ? `${removedLabel} removed. ${children.length} role${children.length === 1 ? '' : 's'} moved back to the trunk.`
+      : `${removedLabel} removed.`);
+    scheduleRender();
+  }
+
+  function setLabel(roleId: string, value: string) {
+    const role = plan.roles.find((r) => r.roleId === roleId);
+    if (!role) return;
+    const trimmed = value.normalize('NFC').trim().slice(0, BUILD_PLAN_LIMITS.maxRoleLabelChars);
+    if (!trimmed || trimmed === role.label) { scheduleRender(); return; }
+    role.label = trimmed;
+    scheduleRender();
+  }
+
+  function setCalls(roleId: string, value: string) {
+    const role = plan.roles.find((r) => r.roleId === roleId);
+    if (!role) return;
+    const n = Number(value);
+    if (!Number.isFinite(n) || n <= 0) { scheduleRender(); return; }
+    role.expectedInvocationsPerBuildAttempt = Math.min(n, BUILD_PLAN_LIMITS.maxExpectedInvocations);
+    lastChangedRoleId = roleId;
+    scheduleRender();
+  }
+
+  function setParent(roleId: string, parentId: string | null) {
+    const role = plan.roles.find((r) => r.roleId === roleId);
+    if (!role) return;
+    role.parentRoleId = parentId;
+    scheduleRender();
+  }
+
+  function pickModel(roleId: string, modelId: string) {
+    const role = plan.roles.find((r) => r.roleId === roleId);
+    if (!role || !modelById.has(modelId)) return;
+    role.modelId = modelId;
+    lastChangedRoleId = roleId;
+    scheduleRender();
+  }
+
+  function applyPreset(key: string) {
+    if (plan.roles.length > 0) return;
+    const presets: Record<string, { label: string; orchModel: string; workerModel: string }> = {
+      'claude-code': { label: 'Claude Code', orchModel: 'claude-opus-5', workerModel: 'claude-sonnet-5' },
+      cursor: { label: 'Cursor', orchModel: 'gpt-5.6-sol', workerModel: 'gpt-5.6-luna' },
+      openhands: { label: 'OpenHands', orchModel: 'deepseek-v4-pro', workerModel: 'deepseek-v4-flash' },
+      custom: { label: 'Custom harness', orchModel: 'claude-opus-5', workerModel: 'gpt-5.6-luna' },
+    };
+    const preset = presets[key];
+    if (!preset) return;
+    plan.roles = [
+      makeRole('orchestrator', { label: `${preset.label} orchestrator`, modelId: preset.orchModel }),
+      makeRole('worker', { label: `${preset.label} worker`, modelId: preset.workerModel }),
+    ];
+    scheduleRender();
+  }
+
+  // ---------- HTML builders (pure renders of plan + quote) ----------
+  // Layout derivation (groupsFor) lives in composer-tree.ts, pure and unit-tested.
+
+  function trunkStubHtml(): string {
+    return `<div class="cp-trunk-stub" role="img" aria-label="No orchestrator added yet">
+      <span class="cp-badge" style="opacity:.4" aria-hidden="true">🧭</span>
+      <p class="small mt-2">Add your orchestrator</p>
+    </div>`;
+  }
+
+  function ghostNodeHtml(): string {
+    return `<button type="button" class="cp-node cp-node-ghost" data-action="ghost-add" aria-label="Add a third role — Pro">
+      <div class="cp-node-head"><span class="cp-badge cp-badge-lock" aria-hidden="true">🔒</span><span class="cp-kind-label">Locked</span></div>
+      <p class="cp-ghost-text">Add a third role — Pro</p>
+    </button>`;
+  }
+
+  function nodeHtml(role: ComposerRole, quoteRole: BuildRoleQuote | undefined, total: number | null): string {
+    const meta = KIND_META[role.kind];
+    const model = modelById.get(role.modelId);
+    const modelName = model ? model.display_name : role.modelId;
+    const provider = model ? model.provider : 'unknown';
+    const perCall = quoteRole ? money(quoteRole.costPerInvocationUsd) : 'Missing';
+    const perBuild = quoteRole ? money(quoteRole.costPerBuildAttemptUsd) : 'Missing';
+    const share = quoteRole && total ? Math.min(100, (quoteRole.costPerBuildAttemptUsd / total) * 100) : 0;
+    const shareText = quoteRole && total ? `${share.toFixed(0)}%` : '—';
+    const otherOrchestrators = plan.roles.filter((r) => r.kind === 'orchestrator' && r.roleId !== role.roleId);
+    const moveOptions = ['<option value="">Trunk (top level)</option>']
+      .concat(otherOrchestrators.map((o) => `<option value="${o.roleId}" ${role.parentRoleId === o.roleId ? 'selected' : ''}>${esc(o.label)}</option>`))
+      .join('');
+    const ariaLabel = `${esc(role.label)}, ${meta.label}, ${esc(modelName)}, ${perBuild} per build`;
+    const modelOptions = eligibleModels.map((m) => `<button type="button" class="cp-model-option" role="menuitem" data-action="model-pick" data-role-id="${role.roleId}" data-model-id="${m.model_id}">${providerChipSvg(m.provider, 18)}<span class="cp-model-option-name">${esc(m.display_name)}</span><span class="cp-model-option-rate num">$${m.input_per_mtok.toFixed(2)}/M in</span></button>`).join('');
+    return `<article class="cp-node" data-role-id="${role.roleId}" data-kind="${role.kind}" role="group" aria-label="${ariaLabel}">
+      <div class="cp-node-head">
+        <span class="cp-badge" aria-hidden="true">${meta.emoji}</span>
+        <span class="cp-kind-label">${meta.label}</span>
+        <div class="cp-node-menu-wrap">
+          <button type="button" class="cp-kebab" data-popover-toggle="menu-${role.roleId}" aria-haspopup="true" aria-expanded="false" aria-label="${esc(role.label)} options">⋯</button>
+          <div class="cp-node-menu" data-popover="menu-${role.roleId}" hidden role="menu">
+            <label class="small">Move to…
+              <select class="ctl ctl-inline mt-1 w-full" name="move-to-${role.roleId}" data-action="move-to" data-role-id="${role.roleId}" aria-label="Move ${esc(role.label)} to">${moveOptions}</select>
+            </label>
+            <button type="button" class="export-item" data-action="remove" data-role-id="${role.roleId}" role="menuitem">Remove</button>
+          </div>
+        </div>
+      </div>
+      <input class="cp-label-input" name="role-label-${role.roleId}" data-field="label" data-role-id="${role.roleId}" value="${esc(role.label)}" maxlength="${BUILD_PLAN_LIMITS.maxRoleLabelChars}" aria-label="Role name" />
+      <div class="cp-rule"></div>
+      <button type="button" class="cp-model-row" data-popover-toggle="model-${role.roleId}" aria-haspopup="true" aria-expanded="false" aria-label="Change model, currently ${esc(modelName)}">
+        ${providerChipSvg(provider)}
+        <span class="cp-model-name num">${esc(modelName)}</span>
+        <span class="cp-model-caret" aria-hidden="true">▾</span>
+      </button>
+      <div class="cp-model-popover" data-popover="model-${role.roleId}" hidden role="menu" aria-label="Choose a model">${modelOptions}</div>
+      <p class="cp-rate num small">${perCall}/call ·
+        <span class="cp-calls-inline">
+          <input class="cp-calls-input num" name="role-calls-${role.roleId}" type="number" min="0.01" max="${BUILD_PLAN_LIMITS.maxExpectedInvocations}" step="any" data-field="calls" data-role-id="${role.roleId}" value="${role.expectedInvocationsPerBuildAttempt}" aria-label="Expected calls per build for ${esc(role.label)}" /> calls/build
+        </span>
+      </p>
+      <p class="cp-build-cost num">${perBuild}/build <span class="cp-share">· ${shareText}</span></p>
+      <div class="cp-share-bar"><div class="cp-share-fill" style="width:${share}%"></div></div>
+    </article>`;
+  }
+
+  function groupHtml(key: string, orchestrators: ComposerRole[], group: RoleGroup, quoteByRole: Map<string, BuildRoleQuote>, total: number | null, appendGhost: boolean): string {
+    const anchor = key === TRUNK_STUB_KEY ? null : orchestrators.find((o) => o.roleId === key) ?? null;
+    const trunkNode = anchor ? nodeHtml(anchor, quoteByRole.get(anchor.roleId), total) : trunkStubHtml();
+    const trunkLabel = anchor ? esc(anchor.label) : 'the trunk';
+    const workersHtml = group.workers.map((r) => nodeHtml(r, quoteByRole.get(r.roleId), total)).join('');
+    const fallbacksHtml = group.fallbacks.map((r) => nodeHtml(r, quoteByRole.get(r.roleId), total)).join('');
+    const ghostHtml = appendGhost ? ghostNodeHtml() : '';
+    const hasChildren = group.workers.length > 0 || group.fallbacks.length > 0 || appendGhost;
+    return `<div class="cp-group">
+      <div class="cp-trunk-row">${trunkNode}</div>
+      ${hasChildren ? `<div class="cp-children">
+        ${(group.workers.length > 0 || appendGhost) ? `<div class="cp-workers-row">${workersHtml}${ghostHtml}</div>` : ''}
+        ${group.fallbacks.length > 0 ? `<div><p class="cp-fallback-caption">backup for → ${trunkLabel}</p><div class="cp-fallback-row">${fallbacksHtml}</div></div>` : ''}
+      </div>` : ''}
+    </div>`;
+  }
+
+  function emptyStateHtml(): string {
+    return `<div class="cp-empty">
+      ${trunkStubHtml()}
+      <div class="cp-preset-row" role="group" aria-label="Quick-start presets">
+        <button type="button" class="btn btn-quiet" data-action="preset" data-preset="claude-code">Claude Code</button>
+        <button type="button" class="btn btn-quiet" data-action="preset" data-preset="cursor">Cursor</button>
+        <button type="button" class="btn btn-quiet" data-action="preset" data-preset="openhands">OpenHands</button>
+        <button type="button" class="btn btn-quiet" data-action="preset" data-preset="custom">Custom harness</button>
+      </div>
+      <p class="small">One click builds a starter orchestrator + worker pair, live-priced.</p>
+    </div>`;
+  }
+
+  function chartHtml(current: ComposerPlan, quote: BuildQuoteV1 | null, issues: string[]): string {
+    const quoteByRole = new Map((quote?.roles ?? []).map((r) => [r.roleId, r]));
+    const total = quote && quote.valid ? quote.buildAttemptCostUsd : null;
+    const { orchestrators, byParent, parentOrder } = groupsFor(current);
+    const locked = current.roles.length >= DEMO_ROLE_CEILING;
+    const issuesHtml = issues.length ? `<div class="cp-issues">${issues.map((m) => esc(m)).join(' ')}</div>` : '';
+    const groupsHtml = parentOrder.map((key, i) => groupHtml(key, orchestrators, byParent.get(key)!, quoteByRole, total, locked && i === parentOrder.length - 1)).join('');
+    return `${issuesHtml}<div class="cp-tree">${groupsHtml}</div>`;
+  }
+
+  // ---------- paint: count-tween totals, delta chips ----------
+
+  let displayedNum: { attempt: number | null; solved: number | null; month: number | null } = { attempt: null, solved: null, month: null };
+  let previousQuote: BuildQuoteV1 | null = null;
+  let firstStripRender = true;
+
+  function tweenTo(el: HTMLElement, from: number | null, to: number | null, fmt: (n: number | null) => string) {
+    if (from === null || to === null || from === to || prefersReducedMotion()) {
+      el.textContent = fmt(to);
+      return;
+    }
+    const duration = 200;
+    const start = performance.now();
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - (1 - t) * (1 - t);
+      el.textContent = fmt(from + (to - from) * eased);
+      if (t < 1) requestAnimationFrame(step);
+      else el.textContent = fmt(to);
+    };
+    requestAnimationFrame(step);
+  }
+
+  function updateStrip(quote: BuildQuoteV1 | null) {
+    const valid = Boolean(quote && quote.valid);
+    const values: Record<'attempt' | 'solved' | 'month', number | null> = {
+      attempt: valid ? quote!.buildAttemptCostUsd : null,
+      solved: valid ? quote!.variableCostPerSuccessfulBuildUsd : null,
+      month: valid ? quote!.monthlyCostUsd : null,
+    };
+    (['attempt', 'solved', 'month'] as const).forEach((key) => {
+      const el = document.getElementById(`cp-strip-${key}`)!;
+      const to = values[key];
+      if (firstStripRender) el.textContent = money(to);
+      else tweenTo(el, displayedNum[key], to, money);
+      displayedNum[key] = to;
+
+      const deltaEl = document.getElementById(`cp-delta-${key}`)!;
+      if (previousQuote && previousQuote.valid && valid) {
+        const from = key === 'attempt' ? previousQuote.buildAttemptCostUsd
+          : key === 'solved' ? previousQuote.variableCostPerSuccessfulBuildUsd
+          : previousQuote.monthlyCostUsd;
+        if (from !== null && to !== null && Math.abs(to - from) > 1e-9) {
+          const lower = to < from;
+          deltaEl.textContent = `${lower ? '↓' : '↑'} ${money(Math.abs(to - from))} vs last edit`;
+          deltaEl.dataset.direction = lower ? 'lower' : 'higher';
+          el.dataset.flash = lower ? 'lower' : 'higher';
+          window.setTimeout(() => { el.removeAttribute('data-flash'); }, 1500);
+        }
+      }
+    });
+    firstStripRender = false;
+    if (valid) previousQuote = quote;
+  }
+
+  // ---------- paint: sensitivity band ----------
+
+  function bandRowHtml(label: string, low: number | null, base: number | null, high: number | null): string {
+    if (low === null || high === null || base === null) {
+      return `<div class="cp-band-row"><span class="cp-band-label">${esc(label)}</span><span class="small">Missing</span></div>`;
+    }
+    const lo = Math.min(low, high);
+    const hi = Math.max(low, high);
+    const span = hi - lo || 1;
+    const pct = Math.min(100, Math.max(0, ((base - lo) / span) * 100));
+    return `<div class="cp-band-row">
+      <span class="cp-band-label">${esc(label)}</span>
+      <div class="cp-band-track">
+        <span class="cp-band-low num">${money(low)}</span>
+        <div class="cp-band-visual"><div class="cp-band-fill"></div><div class="cp-band-tick" style="left:${pct}%"></div></div>
+        <span class="cp-band-high num">${money(high)}</span>
+      </div>
+    </div>`;
+  }
+
+  function updateSensitivity(validPlan: ComposerPlan | null) {
+    const statusEl = document.getElementById('cp-sens-status')!;
+    const bandsEl = document.getElementById('cp-sens-bands')!;
+    if (!validPlan) {
+      statusEl.textContent = plan.roles.length === 0 ? 'Add a role to see sensitivity.' : 'Fix the current plan before sensitivity can be calculated.';
+      bandsEl.innerHTML = '';
+      return;
+    }
+    const axis = (document.getElementById('cp-sens-axis') as HTMLSelectElement).value as SensitivityAxis;
+    const rangePercent = Number((document.getElementById('cp-sens-range') as HTMLInputElement).value);
+    if (!Number.isFinite(rangePercent) || rangePercent < 5 || rangePercent > 90) {
+      statusEl.textContent = 'Range must be between 5% and 90%.';
+      bandsEl.innerHTML = '';
+      return;
+    }
+    let sensitivity;
+    try {
+      sensitivity = analyzeBuildSensitivity(toEnginePlan(validPlan), eligibleModels, axis, rangePercent / 100);
+    } catch (error) {
+      statusEl.textContent = error instanceof Error ? error.message : 'Sensitivity is unavailable.';
+      bandsEl.innerHTML = '';
+      return;
+    }
+    if (!sensitivity.available) {
+      statusEl.textContent = sensitivity.missingReason ?? 'Sensitivity is unavailable for this plan.';
+      bandsEl.innerHTML = '';
+      return;
+    }
+    statusEl.textContent = sensitivity.assumption;
+    bandsEl.innerHTML = [
+      bandRowHtml('Per attempt', sensitivity.low?.buildAttemptCostUsd ?? null, sensitivity.base.buildAttemptCostUsd, sensitivity.high?.buildAttemptCostUsd ?? null),
+      bandRowHtml('Per completed', sensitivity.low?.variableCostPerSuccessfulBuildUsd ?? null, sensitivity.base.variableCostPerSuccessfulBuildUsd, sensitivity.high?.variableCostPerSuccessfulBuildUsd ?? null),
+      bandRowHtml('Monthly', sensitivity.low?.monthlyCostUsd ?? null, sensitivity.base.monthlyCostUsd, sensitivity.high?.monthlyCostUsd ?? null),
+    ].join('');
+  }
+
+  function updateExportButtons(quote: BuildQuoteV1 | null) {
+    const ok = Boolean(quote && quote.valid);
+    (document.getElementById('cp-export-json') as HTMLButtonElement).disabled = !ok;
+    (document.getElementById('cp-export-csv') as HTMLButtonElement).disabled = !ok;
+  }
+
+  // ---------- render: the one repaint of the one authority ----------
+
+  let renderScheduled = false;
+  function scheduleRender() {
+    if (renderScheduled) return;
+    renderScheduled = true;
+    requestAnimationFrame(() => { renderScheduled = false; render(); });
+  }
+
+  function render() {
+    const chartEl = document.getElementById('cp-chart')!;
+    document.getElementById('cp-role-count')!.textContent = `${plan.roles.length} role${plan.roles.length === 1 ? '' : 's'}`;
+
+    if (plan.roles.length === 0) {
+      chartEl.innerHTML = emptyStateHtml();
+      updateStrip(null);
+      updateSensitivity(null);
+      updateExportButtons(null);
+      return;
+    }
+
+    const result = validateUntrustedBuildPlanV1(toEnginePlan(plan), eligibleModels);
+    const quote = result.ok ? result.quote : null;
+    const issues = result.ok ? (quote!.valid ? [] : quote!.errors) : result.issues.map((i) => i.message);
+    chartEl.innerHTML = chartHtml(plan, quote, issues);
+
+    if (lastChangedRoleId) {
+      const node = chartEl.querySelector<HTMLElement>(`[data-role-id="${lastChangedRoleId}"]`);
+      if (node) {
+        if (prefersReducedMotion()) {
+          const dot = document.createElement('span');
+          dot.className = 'cp-node-changed-dot';
+          dot.setAttribute('aria-hidden', 'true');
+          node.querySelector('.cp-build-cost')?.appendChild(dot);
+          window.setTimeout(() => dot.remove(), 1000);
+        } else {
+          node.dataset.justChanged = 'true';
+          window.setTimeout(() => { if (node.isConnected) node.dataset.justChanged = 'false'; }, 320);
+        }
+      }
+      lastChangedRoleId = null;
+    }
+
+    updateStrip(quote);
+    updateSensitivity(result.ok && result.quote.valid ? plan : null);
+    updateExportButtons(quote);
+  }
+
+  // ---------- exports (reuse the untouched export lib, unchanged) ----------
+
+  function exportCurrent(format: 'json' | 'csv') {
+    if (plan.roles.length === 0) return;
+    const result = validateUntrustedBuildPlanV1(toEnginePlan(plan), eligibleModels);
+    if (!result.ok || !result.quote.valid) return;
+    // assertExportable() requires byte-for-byte equality with the plan the
+    // quote was actually derived from — that's result.value (re-parsed by
+    // the schema), not the hand-built plan passed in, even though the two
+    // are semantically identical.
+    const text = format === 'json' ? buildExportJson(result.value, result.quote) : buildExportCsv(result.value, result.quote);
+    const blob = new Blob([text], { type: format === 'json' ? 'application/json' : 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = buildExportFilename(plan.name, format);
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  // ---------- gate toast + status line ----------
+
+  function showGate(detail: string) {
+    document.getElementById('cp-demo-gate-detail')!.textContent = detail;
+    (document.getElementById('cp-demo-gate') as HTMLElement).hidden = false;
+  }
+
+  function setStatus(text: string) {
+    document.getElementById('cp-status')!.textContent = text;
+  }
+
+  // ---------- popovers (kebab menus, model picker, export menu) ----------
+
+  function closeAllPopovers() {
+    document.querySelectorAll<HTMLElement>('[data-popover]:not([hidden])').forEach((popover) => {
+      popover.hidden = true;
+      const id = popover.getAttribute('data-popover');
+      const toggle = document.querySelector(`[data-popover-toggle="${id}"]`);
+      toggle?.setAttribute('aria-expanded', 'false');
+    });
+  }
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    const open = document.querySelector<HTMLElement>('[data-popover]:not([hidden])');
+    if (!open) return;
+    const id = open.getAttribute('data-popover');
+    closeAllPopovers();
+    document.querySelector<HTMLElement>(`[data-popover-toggle="${id}"]`)?.focus();
+  });
+
+  // ---------- click delegation (chart is fully rebuilt each render, so
+  // listeners live on document rather than being re-attached per node) ----------
+
+  document.addEventListener('click', (event) => {
+    const target = event.target as Element;
+    const toggle = target.closest<HTMLElement>('[data-popover-toggle]');
+    if (toggle) {
+      event.stopPropagation();
+      const id = toggle.dataset.popoverToggle!;
+      const popover = document.querySelector<HTMLElement>(`[data-popover="${id}"]`);
+      if (popover) {
+        const willOpen = popover.hidden;
+        closeAllPopovers();
+        popover.hidden = !willOpen;
+        toggle.setAttribute('aria-expanded', String(willOpen));
+      }
+      return;
+    }
+    const action = target.closest<HTMLElement>('[data-action]');
+    if (action) {
+      const kind = action.dataset.action;
+      const roleId = action.dataset.roleId ?? '';
+      if (kind === 'remove') removeRole(roleId);
+      else if (kind === 'model-pick') pickModel(roleId, action.dataset.modelId ?? '');
+      else if (kind === 'ghost-add') showGate(GATE_ADD_ROLE);
+      else if (kind === 'add-orchestrator') addRole('orchestrator');
+      else if (kind === 'add-worker') addRole('worker');
+      else if (kind === 'add-fallback') addRole('other');
+      else if (kind === 'preset') applyPreset(action.dataset.preset ?? '');
+      else if (kind === 'export-json') exportCurrent('json');
+      else if (kind === 'export-csv') exportCurrent('csv');
+      else if (kind === 'dismiss-gate') (document.getElementById('cp-demo-gate') as HTMLElement).hidden = true;
+      closeAllPopovers();
+      return;
+    }
+    if (!target.closest('[data-popover]')) closeAllPopovers();
+  });
+
+  document.addEventListener('change', (event) => {
+    const el = event.target as HTMLElement;
+    if (el.matches('[data-field="label"]')) setLabel(el.dataset.roleId!, (el as HTMLInputElement).value);
+    else if (el.matches('[data-field="calls"]')) setCalls(el.dataset.roleId!, (el as HTMLInputElement).value);
+    else if (el.matches('[data-action="move-to"]')) setParent(el.dataset.roleId!, (el as HTMLSelectElement).value || null);
+    else if (el.id === 'cp-sens-axis' || el.id === 'cp-sens-range') scheduleRender();
+  });
+
+  // ---------- hover / focus cross-highlight: node <-> sensitivity band ----------
+
+  function setHover(node: HTMLElement, on: boolean) {
+    node.dataset.hovered = on ? 'true' : 'false';
+    const bandsEl = document.getElementById('cp-sens-bands')!;
+    const axis = (document.getElementById('cp-sens-axis') as HTMLSelectElement).value;
+    const relevant = axis !== 'system_success';
+    bandsEl.dataset.linked = (on && relevant) ? 'true' : 'false';
+  }
+
+  document.addEventListener('mouseover', (event) => {
+    const node = (event.target as Element).closest<HTMLElement>('.cp-node[data-role-id]');
+    if (node && node.dataset.hovered !== 'true') setHover(node, true);
+  });
+  document.addEventListener('mouseout', (event) => {
+    const node = (event.target as Element).closest<HTMLElement>('.cp-node[data-role-id]');
+    if (node && !node.contains(event.relatedTarget as Node)) setHover(node, false);
+  });
+  document.addEventListener('focusin', (event) => {
+    const node = (event.target as Element).closest<HTMLElement>('.cp-node[data-role-id]');
+    if (node) setHover(node, true);
+  });
+  document.addEventListener('focusout', (event) => {
+    const node = (event.target as Element).closest<HTMLElement>('.cp-node[data-role-id]');
+    if (node && !node.contains(event.relatedTarget as Node)) setHover(node, false);
+  });
+
+  render();
+</script>
+
+<style is:global>
+  /*
+   * is:global: the org-chart nodes are built via innerHTML at runtime
+   * (one-authority render, not Astro template markup), so they never
+   * receive Astro's scoped data-astro-cid-* attribute. A scoped <style>
+   * block's selectors would silently never match them. The cp- prefix
+   * keeps this collision-free without scoping.
+   */
+  .palette-btn { gap: .5rem; }
+
+  .cp-chart { min-height: 12rem; }
+  .cp-empty { display: flex; flex-direction: column; align-items: center; gap: 1rem; padding: 2.5rem 1rem; text-align: center; }
+  .cp-trunk-stub { display: flex; flex-direction: column; align-items: center; padding: 1.25rem 1.5rem; border: 1px dashed var(--color-rule-strong); border-radius: 8px; }
+  .cp-preset-row { display: flex; flex-wrap: wrap; justify-content: center; gap: .5rem; }
+  .cp-issues { margin-bottom: 1rem; padding: .65rem .8rem; border: 1px solid var(--color-worse); border-radius: 6px; color: var(--color-worse); font-size: .78rem; }
+
+  .cp-tree { display: flex; flex-wrap: wrap; justify-content: center; gap: 2.5rem; }
+  .cp-group { display: flex; flex-direction: column; align-items: center; }
+  .cp-trunk-row { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; }
+  .cp-children { position: relative; margin-top: 1.75rem; display: flex; flex-direction: column; gap: 1rem; align-items: center; }
+  .cp-children::before { content: ''; position: absolute; top: -1.75rem; left: 50%; width: 1px; height: 1.75rem; background: var(--color-rule-strong); }
+  .cp-workers-row, .cp-fallback-row { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; }
+  .cp-fallback-caption { font-family: var(--font-mono); font-size: .66rem; letter-spacing: .06em; text-transform: uppercase; color: var(--color-muted); margin-bottom: .35rem; text-align: center; }
+
+  .cp-node { position: relative; width: 15.5rem; padding: .85rem .95rem; border: 1px solid var(--color-rule); border-radius: 8px; background: var(--color-panel); text-align: left; transition: background-color .25s ease-out; }
+  .cp-node[data-hovered="true"], .cp-node:focus-within { outline: 2px solid var(--color-purple); outline-offset: 1px; background: color-mix(in srgb, var(--color-purple) 5%, var(--color-panel)); }
+  .cp-node[data-kind="other"] { border-style: dashed; }
+  .cp-node[data-just-changed="true"] { background-color: color-mix(in srgb, var(--color-purple) 14%, var(--color-panel)); }
+  .cp-node-changed-dot { display: inline-block; width: .4rem; height: .4rem; border-radius: 50%; background: var(--color-purple); margin-left: .35rem; }
+
+  .cp-node-head { display: flex; align-items: center; gap: .5rem; }
+  .cp-badge { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; font-size: 20px; line-height: 1; border: 1px solid var(--color-rule-strong); border-radius: 8px; background: var(--color-panel-2); flex: none; }
+  .cp-kind-label { font-family: var(--font-mono); font-size: .66rem; letter-spacing: .08em; text-transform: uppercase; color: var(--color-muted); }
+  .cp-node-menu-wrap { margin-left: auto; position: relative; }
+  .cp-kebab { border: 0; background: none; color: var(--color-muted); cursor: pointer; padding: .25rem .4rem; border-radius: 4px; font-size: 1rem; line-height: 1; min-height: auto; }
+  .cp-kebab:hover { color: var(--color-ink); background: var(--color-panel-2); }
+  .cp-node-menu { position: absolute; right: 0; top: 100%; z-index: 20; margin-top: .25rem; width: 12rem; padding: .6rem; border: 1px solid var(--color-rule-strong); border-radius: 8px; background: var(--color-panel); box-shadow: 0 8px 24px rgb(0 0 0 / .18); display: flex; flex-direction: column; gap: .5rem; }
+
+  .cp-label-input { margin-top: .55rem; width: 100%; border: 0; border-bottom: 1px solid transparent; background: none; padding: .15rem 0; border-radius: 2px; font-family: var(--font-sans); font-weight: 600; color: var(--color-ink); font-size: .92rem; }
+  .cp-label-input:hover { border-bottom-color: var(--color-rule-strong); }
+
+  .cp-rule { margin: .6rem 0; border-top: 1px solid var(--color-rule); }
+
+  .cp-model-row { display: flex; align-items: center; gap: .5rem; width: 100%; border: 0; background: none; padding: .15rem 0; cursor: pointer; text-align: left; border-radius: 2px; min-height: auto; }
+  .cp-model-row:hover .cp-model-name { color: var(--color-purple); }
+  .cp-model-name { font-family: var(--font-mono); font-size: .8rem; color: var(--color-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cp-model-caret { margin-left: auto; color: var(--color-muted); font-size: .7rem; }
+
+  .cp-model-popover { position: absolute; z-index: 20; left: 0; right: 0; top: 100%; margin-top: .35rem; max-height: 16rem; overflow-y: auto; padding: .4rem; border: 1px solid var(--color-rule-strong); border-radius: 8px; background: var(--color-panel); box-shadow: 0 8px 24px rgb(0 0 0 / .18); }
+  .cp-model-option { display: flex; align-items: center; gap: .55rem; width: 100%; padding: .4rem .5rem; border: 0; background: none; border-radius: 6px; cursor: pointer; text-align: left; min-height: auto; }
+  .cp-model-option:hover, .cp-model-option:focus-visible { background: var(--color-panel-2); }
+  .cp-model-option-name { font-family: var(--font-mono); font-size: .76rem; color: var(--color-ink); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cp-model-option-rate { font-family: var(--font-mono); font-size: .68rem; color: var(--color-muted); flex: none; }
+
+  .cp-rate { margin-top: .55rem; color: var(--color-body); }
+  .cp-calls-inline { display: inline-flex; align-items: center; gap: .3rem; }
+  .cp-calls-input { width: 3.6rem; border: 1px solid var(--color-rule-strong); border-radius: 4px; background: var(--color-panel); padding: .1rem .3rem; font-family: var(--font-mono); font-size: .78rem; color: var(--color-ink); }
+  .cp-build-cost { margin-top: .3rem; font-weight: 600; color: var(--color-ink); }
+  .cp-build-cost .cp-share { color: var(--color-muted); font-weight: 400; }
+
+  .cp-share-bar { margin-top: .5rem; height: 4px; border-radius: 2px; background: var(--color-panel-3); overflow: hidden; }
+  .cp-share-fill { height: 100%; background: var(--color-purple); border-radius: 2px; transition: width .2s ease-out; }
+
+  .cp-node-ghost { border-style: dashed; border-color: color-mix(in srgb, var(--color-purple) 45%, var(--color-rule-strong)); background: color-mix(in srgb, var(--color-purple) 4%, var(--color-panel)); cursor: pointer; display: flex; flex-direction: column; align-items: flex-start; }
+  .cp-badge-lock { opacity: .7; }
+  .cp-ghost-text { margin-top: .7rem; color: var(--color-muted); font-size: .85rem; }
+  .cp-node-ghost:hover { outline: 2px solid var(--color-purple); outline-offset: 1px; }
+
+  .export-menu { position: absolute; right: 0; top: 100%; z-index: 20; margin-top: .35rem; width: 12.5rem; padding: .4rem; border: 1px solid var(--color-rule-strong); border-radius: 8px; background: var(--color-panel); box-shadow: 0 8px 24px rgb(0 0 0 / .18); display: flex; flex-direction: column; gap: .15rem; }
+  .export-item { display: block; width: 100%; text-align: left; padding: .5rem .6rem; border: 0; background: none; border-radius: 6px; font-family: var(--font-mono); font-size: .72rem; letter-spacing: .04em; text-transform: uppercase; color: var(--color-ink); cursor: pointer; min-height: auto; }
+  .export-item:hover { background: var(--color-panel-2); }
+  .export-item:disabled { color: var(--color-muted); cursor: not-allowed; }
+
+  .cp-band-row { display: grid; grid-template-columns: 6.5rem 1fr; gap: .75rem; align-items: center; }
+  .cp-band-label { font-family: var(--font-mono); font-size: .72rem; color: var(--color-muted); }
+  .cp-band-track { position: relative; display: flex; align-items: center; gap: .5rem; }
+  .cp-band-low, .cp-band-high { font-family: var(--font-mono); font-size: .68rem; color: var(--color-muted); flex: none; }
+  .cp-band-visual { position: relative; flex: 1; height: 6px; border-radius: 3px; background: var(--color-panel-3); }
+  .cp-band-fill { position: absolute; top: 0; height: 100%; left: 0; width: 100%; border-radius: 3px; background: color-mix(in srgb, var(--color-purple) 35%, transparent); }
+  .cp-band-tick { position: absolute; top: 50%; width: 2px; height: 14px; background: var(--color-purple); transform: translate(-1px, -50%); transition: left .2s ease-out; }
+  #cp-sens-bands[data-linked="true"] .cp-band-tick { box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-purple) 35%, transparent); }
+
+  .tile-n[data-direction="lower"] { color: var(--color-better); }
+  .tile-n[data-direction="higher"] { color: var(--color-worse); }
+  .tile-v[data-flash="lower"] { color: var(--color-better); }
+  .tile-v[data-flash="higher"] { color: var(--color-worse); }
+
+  @media (max-width: 1023px) {
+    .cp-tree { flex-direction: column; align-items: stretch; gap: 1.5rem; }
+    .cp-group { align-items: stretch; }
+    .cp-trunk-row, .cp-workers-row, .cp-fallback-row { flex-direction: column; align-items: stretch; }
+    .cp-children { padding-left: 1rem; }
+    .cp-children::before { left: 1rem; }
+    .cp-node { width: 100%; }
+  }
+
+  /* Reuses the exact demo-gate-toast pattern from build-planner.astro
+     (title/detail/actions, fixed bottom-right, accent left rule). */
+  .demo-gate-toast {
+    position: fixed; z-index: 9000; left: 1rem; right: 1rem; bottom: 1rem;
+    max-width: 26rem; margin-inline: auto; padding: 1rem 1.15rem;
+    border: 1px solid var(--color-rule-strong); border-left: 3px solid var(--color-accent);
+    background: var(--color-panel); box-shadow: 0 8px 24px rgb(0 0 0 / .25);
+  }
+  .demo-gate-toast[hidden] { display: none; }
+  .demo-gate-title {
+    font-family: var(--font-mono); font-size: .68rem; font-weight: 700;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--color-accent);
+  }
+  .demo-gate-detail { margin-top: .4rem; font-size: .85rem; line-height: 1.5; color: var(--color-body); }
+  .demo-gate-actions { margin-top: .8rem; display: flex; flex-wrap: wrap; gap: .5rem; }
+  @media (min-width: 640px) { .demo-gate-toast { left: auto; margin-inline: 0; } }
+</style>
