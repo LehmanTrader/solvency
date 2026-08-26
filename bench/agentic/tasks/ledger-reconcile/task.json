@@ -1,0 +1,6 @@
+{
+  "id": "ledger-reconcile",
+  "goal": "Implement src/reconcile.js `reconcile()` per SPEC.md: compare data/bank.csv against data/ledger.csv and produce the structured discrepancy report. Read both files with node:fs relative to the repo root. The hidden grader checks every category and the ordering rules.",
+  "timeoutMs": 420000,
+  "maxTurns": 40
+}

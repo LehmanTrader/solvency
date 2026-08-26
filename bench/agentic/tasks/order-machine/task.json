@@ -1,0 +1,6 @@
+{
+  "id": "order-machine",
+  "goal": "Implement src/machine.js per SPEC.md: an order-lifecycle state machine factory with guarded transitions, exact error messages, and a transition history. The hidden grader runs full lifecycles including the refund window rule.",
+  "timeoutMs": 420000,
+  "maxTurns": 40
+}

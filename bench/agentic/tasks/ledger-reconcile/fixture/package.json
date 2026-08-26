@@ -1,0 +1,5 @@
+{
+  "name": "reconcile",
+  "type": "module",
+  "scripts": { "test": "node --test" }
+}

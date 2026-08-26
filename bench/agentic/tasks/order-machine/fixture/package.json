@@ -1,0 +1,5 @@
+{
+  "name": "ordermachine",
+  "type": "module",
+  "scripts": { "test": "node --test" }
+}

@@ -1,0 +1,6 @@
+{
+  "id": "broken-build",
+  "goal": "This inventory service's own test suite (`npm test`) is failing. There are multiple distinct defects across src/ \u2014 trace them from the failures and fix the source so the entire suite passes. Do not modify anything under test/.",
+  "timeoutMs": 420000,
+  "maxTurns": 40
+}

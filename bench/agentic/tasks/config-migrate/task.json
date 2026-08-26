@@ -1,0 +1,6 @@
+{
+  "id": "config-migrate",
+  "goal": "Implement src/migrate.js `migrateConfig(v1)` per MIGRATION.md, upgrading v1 config objects to the v2 shape. Follow the spec exactly \u2014 the grader enforces every rule, including edge cases the examples don't show.",
+  "timeoutMs": 420000,
+  "maxTurns": 40
+}

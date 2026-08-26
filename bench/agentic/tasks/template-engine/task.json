@@ -1,0 +1,6 @@
+{
+  "id": "template-engine",
+  "goal": "Implement src/render.js `render(template, data)` per SPEC.md: variables, HTML escaping, raw variables, and repeating sections with nesting. The hidden grader includes nested sections and escaping edge cases.",
+  "timeoutMs": 420000,
+  "maxTurns": 40
+}
