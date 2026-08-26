@@ -395,7 +395,7 @@ export function rankedHarnessCardData(): RankedCardData | null {
 
   return {
     key: `ranked-harness-${model.model_id}`,
-    eyebrow: `SAME MODEL, ${rows.length} HARNESSES`,
+    eyebrow: `SAME MODEL, ${rows.length} HARNESSES · COST PER SOLVED TASK`,
     headlinePrefix: '',
     headlineHighlight: model.display_name,
     headlineSuffix: `, ${rows.length} harnesses, ${spread} apart on cost.`,

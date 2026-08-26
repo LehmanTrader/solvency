@@ -240,7 +240,11 @@ function rankedCardHtml(card: RankedCardData): string {
 }
 
 function renderRanked(card: RankedCardData) {
-  shot(rankedCardHtml(card), 1200, 630, join(OUT, `${card.key}.png`), 2);
+  // ONLY=<substring> renders just matching cards' PNGs (fast selective
+  // regen); every card's DATA still lands in the manifest either way.
+  if (!process.env.ONLY || card.key.includes(process.env.ONLY)) {
+    shot(rankedCardHtml(card), 1200, 630, join(OUT, `${card.key}.png`), 2);
+  }
   return card;
 }
 
