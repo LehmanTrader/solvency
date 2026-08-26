@@ -6,10 +6,16 @@ import { join } from 'node:path';
 const ROOT = join(import.meta.dirname, '..');
 const read = (path: string) => readFileSync(join(ROOT, path), 'utf8');
 
-test('pricing is discoverable in both primary and footer navigation', () => {
+test('pricing is hidden from navigation but reachable from pro gates', () => {
+  // Operator direction 2026-08-26: pricing leaves the header and footer
+  // entirely and surfaces only where a user hits a pro feature or signs up.
   const base = read('site/src/layouts/Base.astro');
-  assert.match(base, /\['\/pricing', 'Pricing'\]/);
-  assert.equal(base.match(/NAV\.map/g)?.length, 2, 'the shared nav list should render in header and footer');
+  assert.doesNotMatch(base, /\['\/pricing'/, 'no nav or footer entry may link /pricing');
+  assert.equal(base.match(/\bNAV\.map/g)?.length, 1, 'header renders the four-item primary nav');
+  assert.equal(base.match(/FOOTER_NAV\.map/g)?.length, 1, 'footer renders the extended list');
+  for (const page of ['site/src/pages/build-planner.astro', 'site/src/pages/local-hardware.astro']) {
+    assert.match(read(page), /href="\/pricing#pro"/, `${page} keeps its pro-gate link to pricing`);
+  }
 });
 
 test('pricing page separates what is free now from planned Pro', () => {
