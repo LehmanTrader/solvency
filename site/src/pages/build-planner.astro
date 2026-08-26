@@ -13,6 +13,10 @@ import Base from '../layouts/Base.astro';
 import { models } from '../lib/data.ts';
 import { BUILD_PLAN_LIMITS } from '../lib/build-plan-limits.ts';
 
+// Reviewed production client gate (deploy attestation checks the live page
+// for this attribute): the org-chart Composer carries the same plans-gate
+// declaration the classic page exposed, from the same env literal.
+const ACCOUNT_PLANS_ENABLED = import.meta.env.PUBLIC_ACCOUNT_PLANS_ENABLED === 'true';
 const currentModels = models.filter((model) => model.status === 'current');
 const harnessExamples = [
   'Custom harness', 'Hermes Agent', 'Claude Code', 'Codex', 'Pi', 'Grok Build',
@@ -21,7 +25,8 @@ const harnessExamples = [
 ---
 <Base title="Composer preview — interactive org chart — Solvency"
       description="Prototype: an interactive org-chart view of the Build Composer. Add orchestrator, worker and fallback roles, assign models, and watch price and sensitivity update live.">
-  <div class="wrap pt-8 md:pt-12" id="composer-preview">
+  <div class="wrap pt-8 md:pt-12" id="composer-preview"
+       data-account-plans-enabled={ACCOUNT_PLANS_ENABLED ? 'true' : 'false'}>
     <p class="eyebrow">Composer · prototype preview</p>
     <div class="mt-3 flex flex-wrap items-center gap-3">
       <h1 class="h-page">Build your stack.</h1>
