@@ -1,0 +1,1 @@
+export function wrapText(text,width){if(!text)return[];const words=text.split(' ');const lines=[];let cur='';for(const w of words){if(!cur)cur=w;else if((cur+' '+w).length<=width)cur+=' '+w;else{lines.push(cur);cur=w;}}if(cur)lines.push(cur);return lines;}

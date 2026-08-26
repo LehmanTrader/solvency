@@ -1,0 +1,7 @@
+{
+  "id": "deep-equal",
+  "func": "deepEqual",
+  "title": "Deep equality",
+  "timeoutMs": 8000,
+  "prompt": "Write `deepEqual(a, b)`: structural equality for JSON-style values (primitives, arrays, plain objects) plus these rules: NaN equals NaN, +0 equals -0, objects compare by own enumerable keys regardless of order. Return a boolean. Reply with exactly one JavaScript code block (```js ... ```) that uses `export function` for the required function. ES module syntax, no external imports, no I/O, no comments needed."
+}

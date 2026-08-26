@@ -44,3 +44,354 @@ ling-2.6-flash,ant-ling,Ling 2.6 Flash,current,small,0.1,0.3,0.02,,https://devel
 ring-2.6-1t,ant-ling,Ring 2.6 1T,current,frontier,0.3,2.5,0.06,262144,https://developer.ant-ling.com/en/docs/models/price,2026-08-26
 north-mini-code-cohere-free,cohere,North Mini Code (Cohere free),current,small,0,0,0,256000,https://cohere.com/pricing,2026-08-26
 laguna-s-2.1,poolside,Laguna S 2.1,current,frontier,0.09,0.18,0.009,1048576,https://openrouter.ai/poolside/laguna-s-2.1,2026-08-26
+glm-5.3-flash,zai,GLM 5.3 Flash,current,small,0.075,0.25,0.015,1048576,https://openrouter.ai/z-ai/glm-5.3-flash,2026-08-26
+muse-spark-1.2-contributor,meta,Muse Spark 1.2 Contributor,current,small,0.1,0.2,0.002,1048576,https://openrouter.ai/meta/muse-spark-1.2-contributor,2026-08-26
+deepseek-v4-flash-vision-exp,deepseek,DeepSeek V4 Flash Vision Exp,current,small,0.22,0.66,0.007,1048576,https://openrouter.ai/deepseek/deepseek-v4-flash-vision-exp,2026-08-26
+hy-mt2-1.8b,tencent,Hy-MT2-1.8B,current,small,0.044,0.177,0.044,8192,https://openrouter.ai/tencent/hy-mt2-1.8b,2026-08-26
+hy-mt2-30b-a3b,tencent,Hy-MT2-30B-A3B,current,small,0.074,0.295,0.074,8192,https://openrouter.ai/tencent/hy-mt2-30b-a3b,2026-08-26
+hy-mt2-7b,tencent,Hy-MT2-7B,current,small,0.074,0.295,0.074,8192,https://openrouter.ai/tencent/hy-mt2-7b,2026-08-26
+qwen3.8-27b,qwen,Qwen3.8 27B,current,small,0.425,2.55,0.085,1000000,https://openrouter.ai/qwen/qwen3.8-27b,2026-08-26
+dots-3-note-preview-or-free,dots-studio,Dots3-Note Preview (free),current,small,0,0,0,512000,https://openrouter.ai/dots-studio/dots-3-note-preview:free,2026-08-26
+gemini-3.7-flash-batch,google,Gemini 3.7 Flash (batch),current,small,0.1875,0.9375,0.01875,1048576,https://openrouter.ai/google/gemini-3.7-flash:batch,2026-08-26
+seed-2-1-turbo,bytedance,Seed 2.1 Turbo,current,small,0.5,2.5,0.5,262144,https://openrouter.ai/bytedance-seed/seed-2-1-turbo,2026-08-26
+qwen3.8-2.4t-a95b,qwen,Qwen3.8 2.4T A95B,current,frontier,2,6,0.25,1048576,https://openrouter.ai/qwen/qwen3.8-2.4t-a95b,2026-08-26
+seed-2.0-code,bytedance,Seed-2.0-Code,current,small,0.5,3,0.5,262144,https://openrouter.ai/bytedance-seed/seed-2.0-code,2026-08-26
+deepseek-v4-pro-0813,deepseek,DeepSeek V4 Pro 0813,current,small,1.32,3.96,0.044,1048576,https://openrouter.ai/deepseek/deepseek-v4-pro-0813,2026-08-26
+lfm-2.5-2.6b-or-free,liquid,LFM2.5-2.6B (free),current,small,0,0,0,65536,https://openrouter.ai/liquid/lfm-2.5-2.6b:free,2026-08-26
+nemotron-3.5-lightning,nvidia,Nemotron 3.5 Lightning,current,small,0.08,0.2,0.04,262144,https://openrouter.ai/nvidia/nemotron-3.5-lightning,2026-08-26
+sakana-namazu,sakana,Sakana Namazu,current,small,0.95,4,0.15,262144,https://openrouter.ai/sakana/sakana-namazu,2026-08-26
+muse-glimmer-30b,meta,Muse Glimmer 30B,current,small,0.35,1.5,0.04,131072,https://openrouter.ai/meta/muse-glimmer-30b,2026-08-26
+muse-spark-1.2,meta,Muse Spark 1.2,current,small,1.25,4.25,0.15,1048576,https://openrouter.ai/meta/muse-spark-1.2,2026-08-26
+qwen3.8-max,qwen,Qwen3.8 Max,current,frontier,2,6,0.25,1000000,https://openrouter.ai/qwen/qwen3.8-max,2026-08-26
+deepseek-v4-flash-0731,deepseek,DeepSeek V4 Flash 0731,current,small,0.06,0.12,0.012,1310720,https://openrouter.ai/deepseek/deepseek-v4-flash-0731,2026-08-26
+inkling-small,thinkingmachines,Inkling Small,current,small,0.45,1.2,0.1,1048576,https://openrouter.ai/thinkingmachines/inkling-small,2026-08-26
+qwen3.7-flash,qwen,Qwen3.7 Flash,current,small,0.03,0.13,0.006,1000000,https://openrouter.ai/qwen/qwen3.7-flash,2026-08-26
+claude-opus-5-fast,anthropic,Claude Opus 5 (Fast),current,frontier,10,50,1,1000000,https://openrouter.ai/anthropic/claude-opus-5-fast,2026-08-26
+claude-opus-5-batch,anthropic,Claude Opus 5 (batch),current,frontier,2.5,12.5,0.25,1000000,https://openrouter.ai/anthropic/claude-opus-5:batch,2026-08-26
+gemini-3.6-flash,google,Gemini 3.6 Flash,current,small,0.75,3.75,0.075,1048576,https://openrouter.ai/google/gemini-3.6-flash,2026-08-26
+gemini-3.6-flash-batch,google,Gemini 3.6 Flash (batch),current,small,0.375,1.875,0.0375,1048576,https://openrouter.ai/google/gemini-3.6-flash:batch,2026-08-26
+gemini-3.5-flash-lite,google,Gemini 3.5 Flash Lite,current,small,0.3,2.5,0.03,1048576,https://openrouter.ai/google/gemini-3.5-flash-lite,2026-08-26
+gemini-3.5-flash-lite-batch,google,Gemini 3.5 Flash Lite (batch),current,small,0.15,1.25,0.015,1048576,https://openrouter.ai/google/gemini-3.5-flash-lite:batch,2026-08-26
+longcat-2.0,meituan,LongCat 2.0,current,small,0.3,1.2,0.006,1048756,https://openrouter.ai/meituan/longcat-2.0,2026-08-26
+inkling,thinkingmachines,Inkling,current,small,0.95,4.05,0.16,1048576,https://openrouter.ai/thinkingmachines/inkling,2026-08-26
+inkling-batch,thinkingmachines,Inkling (batch),current,small,1,4.05,0.17,524288,https://openrouter.ai/thinkingmachines/inkling:batch,2026-08-26
+muse-spark-1.1,meta,Muse Spark 1.1,current,small,1.25,4.25,0.15,1048576,https://openrouter.ai/meta/muse-spark-1.1,2026-08-26
+kat-coder-air-v2.5,kwaipilot,KAT-Coder-Air V2.5,current,small,0.15,0.6,0.03,256000,https://openrouter.ai/kwaipilot/kat-coder-air-v2.5,2026-08-26
+kat-coder-pro-v2.5,kwaipilot,KAT-Coder-Pro V2.5,current,small,0.74,2.96,0.15,256000,https://openrouter.ai/kwaipilot/kat-coder-pro-v2.5,2026-08-26
+gpt-5.6-luna-pro,openai,GPT-5.6 Luna Pro,current,small,0.2,1.2,0.02,1050000,https://openrouter.ai/openai/gpt-5.6-luna-pro,2026-08-26
+gpt-5.6-luna-pro-batch,openai,GPT-5.6 Luna Pro (batch),current,small,0.1,0.6,0.01,1050000,https://openrouter.ai/openai/gpt-5.6-luna-pro:batch,2026-08-26
+gpt-5.6-luna-batch,openai,GPT-5.6 Luna (batch),current,small,0.1,0.6,0.01,1050000,https://openrouter.ai/openai/gpt-5.6-luna:batch,2026-08-26
+gpt-5.6-terra-pro,openai,GPT-5.6 Terra Pro,current,frontier,2,12,0.2,1050000,https://openrouter.ai/openai/gpt-5.6-terra-pro,2026-08-26
+gpt-5.6-terra-pro-batch,openai,GPT-5.6 Terra Pro (batch),current,frontier,1,6,0.1,1050000,https://openrouter.ai/openai/gpt-5.6-terra-pro:batch,2026-08-26
+gpt-5.6-terra-batch,openai,GPT-5.6 Terra (batch),current,frontier,1,6,0.1,1050000,https://openrouter.ai/openai/gpt-5.6-terra:batch,2026-08-26
+gpt-5.6-sol-pro,openai,GPT-5.6 Sol Pro,current,frontier,2,10,0.2,1050000,https://openrouter.ai/openai/gpt-5.6-sol-pro,2026-08-26
+gpt-5.6-sol-pro-batch,openai,GPT-5.6 Sol Pro (batch),current,frontier,1,5,0.1,1050000,https://openrouter.ai/openai/gpt-5.6-sol-pro:batch,2026-08-26
+gpt-5.6-sol-batch,openai,GPT-5.6 Sol (batch),current,frontier,1,5,0.1,1050000,https://openrouter.ai/openai/gpt-5.6-sol:batch,2026-08-26
+aion-3.0-mini,aion-labs,Aion-3.0-Mini,current,small,0.7,1.4,0.18,131072,https://openrouter.ai/aion-labs/aion-3.0-mini,2026-08-26
+aion-3.0,aion-labs,Aion-3.0,current,frontier,3,6,0.75,131072,https://openrouter.ai/aion-labs/aion-3.0,2026-08-26
+hy3,tencent,Hy3,current,small,0.0825,0.33,0.020625,262144,https://openrouter.ai/tencent/hy3,2026-08-26
+laguna-xs-2.1,poolside,Laguna XS 2.1,current,small,0.06,0.12,0.03,262144,https://openrouter.ai/poolside/laguna-xs-2.1,2026-08-26
+claude-sonnet-5-batch,anthropic,Claude Sonnet 5 (batch),current,frontier,1,5,0.1,1000000,https://openrouter.ai/anthropic/claude-sonnet-5:batch,2026-08-26
+gemini-3.1-flash-lite-image,google,Nano Banana 2 Lite (Gemini 3.1 Flash Lite Image),current,small,0.25,1.5,0.25,65536,https://openrouter.ai/google/gemini-3.1-flash-lite-image,2026-08-26
+nex-n2-mini,nex-agi,Nex-N2-Mini,current,small,0.025,0.1,0.0025,262144,https://openrouter.ai/nex-agi/nex-n2-mini,2026-08-26
+fugu-ultra,sakana,Fugu Ultra,current,frontier,5,30,0.5,1000000,https://openrouter.ai/sakana/fugu-ultra,2026-08-26
+gemini-3.1-flash-image,google,Nano Banana 2 (Gemini 3.1 Flash Image),current,small,0.5,3,0.5,131072,https://openrouter.ai/google/gemini-3.1-flash-image,2026-08-26
+gemini-3-pro-image,google,Nano Banana Pro (Gemini 3 Pro Image),current,frontier,2,12,0.2,131072,https://openrouter.ai/google/gemini-3-pro-image,2026-08-26
+glm-5.2,zai,GLM 5.2,current,small,1.19,3.74,0.221,1048576,https://openrouter.ai/z-ai/glm-5.2,2026-08-26
+glm-5.2-batch,zai,GLM 5.2 (batch),current,small,1.4,4.4,0.26,1048575,https://openrouter.ai/z-ai/glm-5.2:batch,2026-08-26
+kimi-k2.7-code,moonshot,Kimi K2.7 Code,current,small,0.67,3.4,0.19,262144,https://openrouter.ai/moonshotai/kimi-k2.7-code,2026-08-26
+kimi-k2.7-code-batch,moonshot,Kimi K2.7 Code (batch),current,small,0.95,4,0.19,262144,https://openrouter.ai/moonshotai/kimi-k2.7-code:batch,2026-08-26
+claude-fable-5-batch,anthropic,Claude Fable 5 (batch),current,frontier,5,25,0.5,1000000,https://openrouter.ai/anthropic/claude-fable-5:batch,2026-08-26
+nex-n2-pro,nex-agi,Nex-N2-Pro,current,small,0.25,1,0.025,262144,https://openrouter.ai/nex-agi/nex-n2-pro,2026-08-26
+nemotron-3.5-content-safety-or-free,nvidia,Nemotron 3.5 Content Safety (free),current,small,0,0,0,128000,https://openrouter.ai/nvidia/nemotron-3.5-content-safety:free,2026-08-26
+nemotron-3-ultra-550b-a55b,nvidia,Nemotron 3 Ultra,current,small,0.6,3.6,0.2,512288,https://openrouter.ai/nvidia/nemotron-3-ultra-550b-a55b,2026-08-26
+nemotron-3-ultra-550b-a55b-batch,nvidia,Nemotron 3 Ultra (batch),current,small,0.6,3.6,0.2,512288,https://openrouter.ai/nvidia/nemotron-3-ultra-550b-a55b:batch,2026-08-26
+qwen3.7-plus,qwen,Qwen3.7 Plus,current,small,0.32,1.28,0.064,1000000,https://openrouter.ai/qwen/qwen3.7-plus,2026-08-26
+minimax-m3-batch,minimax,MiniMax M3 (batch),current,small,0.3,1.2,0.06,524288,https://openrouter.ai/minimax/minimax-m3:batch,2026-08-26
+step-3.7-flash,stepfun,Step 3.7 Flash,current,small,0.2,1.15,0.04,262144,https://openrouter.ai/stepfun/step-3.7-flash,2026-08-26
+claude-opus-4.8-fast,anthropic,Claude Opus 4.8 (Fast),current,frontier,10,50,1,1000000,https://openrouter.ai/anthropic/claude-opus-4.8-fast,2026-08-26
+claude-opus-4.8,anthropic,Claude Opus 4.8,current,frontier,5,25,0.5,1000000,https://openrouter.ai/anthropic/claude-opus-4.8,2026-08-26
+claude-opus-4.8-batch,anthropic,Claude Opus 4.8 (batch),current,frontier,2.5,12.5,0.25,1000000,https://openrouter.ai/anthropic/claude-opus-4.8:batch,2026-08-26
+qwen3.7-max,qwen,Qwen3.7 Max,current,small,1.475,4.425,0.295,1000000,https://openrouter.ai/qwen/qwen3.7-max,2026-08-26
+grok-build-0.1,xai,Grok Build 0.1,current,small,1,2,0.2,256000,https://openrouter.ai/x-ai/grok-build-0.1,2026-08-26
+gemini-3.5-flash,google,Gemini 3.5 Flash,current,frontier,1.5,9,0.15,1048576,https://openrouter.ai/google/gemini-3.5-flash,2026-08-26
+gemini-3.5-flash-batch,google,Gemini 3.5 Flash (batch),current,small,0.75,4.5,0.075,1048576,https://openrouter.ai/google/gemini-3.5-flash:batch,2026-08-26
+claude-opus-4.7-fast,anthropic,Claude Opus 4.7 (Fast),current,frontier,30,150,3,1000000,https://openrouter.ai/anthropic/claude-opus-4.7-fast,2026-08-26
+perceptron-mk1,perceptron,Perceptron Mk1,current,small,0.15,1.5,0.15,32768,https://openrouter.ai/perceptron/perceptron-mk1,2026-08-26
+gemini-3.1-flash-lite,google,Gemini 3.1 Flash Lite,current,small,0.25,1.5,0.025,1048576,https://openrouter.ai/google/gemini-3.1-flash-lite,2026-08-26
+gemini-3.1-flash-lite-batch,google,Gemini 3.1 Flash Lite (batch),current,small,0.125,0.75,0.0125,1048576,https://openrouter.ai/google/gemini-3.1-flash-lite:batch,2026-08-26
+gpt-chat-latest,openai,GPT Chat Latest,current,frontier,5,30,0.5,400000,https://openrouter.ai/openai/gpt-chat-latest,2026-08-26
+grok-4.3,xai,Grok 4.3,current,small,1.25,2.5,0.2,1000000,https://openrouter.ai/x-ai/grok-4.3,2026-08-26
+granite-4.1-8b,ibm-granite,Granite 4.1 8B,current,small,0.05,0.1,0.05,131072,https://openrouter.ai/ibm-granite/granite-4.1-8b,2026-08-26
+mistral-medium-3-5,mistral,Mistral Medium 3.5,current,frontier,1.5,7.5,1.5,262144,https://openrouter.ai/mistralai/mistral-medium-3-5,2026-08-26
+nemotron-3-nano-omni-30b-a3b-reasoning-or-free,nvidia,Nemotron 3 Nano Omni (free),current,small,0,0,0,256000,https://openrouter.ai/nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free,2026-08-26
+qwen3.5-plus-20260420,qwen,Qwen3.5 Plus 2026-04-20,current,small,0.3,1.8,0.3,1000000,https://openrouter.ai/qwen/qwen3.5-plus-20260420,2026-08-26
+qwen3.6-flash,qwen,Qwen3.6 Flash,current,small,0.1875,1.125,0.1875,1000000,https://openrouter.ai/qwen/qwen3.6-flash,2026-08-26
+qwen3.6-35b-a3b,qwen,Qwen3.6 35B A3B,current,small,0.14,1,0.05,262144,https://openrouter.ai/qwen/qwen3.6-35b-a3b,2026-08-26
+qwen3.6-max-preview,qwen,Qwen3.6 Max Preview,current,frontier,1.027,6.162,1.027,262144,https://openrouter.ai/qwen/qwen3.6-max-preview,2026-08-26
+qwen3.6-27b,qwen,Qwen3.6 27B,current,small,0.32,3.2,0.32,262144,https://openrouter.ai/qwen/qwen3.6-27b,2026-08-26
+gpt-5.5-pro,openai,GPT-5.5 Pro,current,frontier,30,180,30,1050000,https://openrouter.ai/openai/gpt-5.5-pro,2026-08-26
+gpt-5.5-pro-batch,openai,GPT-5.5 Pro (batch),current,frontier,15,90,15,1050000,https://openrouter.ai/openai/gpt-5.5-pro:batch,2026-08-26
+gpt-5.5,openai,GPT-5.5,current,frontier,5,30,0.5,1050000,https://openrouter.ai/openai/gpt-5.5,2026-08-26
+gpt-5.5-batch,openai,GPT-5.5 (batch),current,frontier,2.5,15,0.25,1050000,https://openrouter.ai/openai/gpt-5.5:batch,2026-08-26
+hy3-preview,tencent,Hy3 preview,current,small,0.18,0.6,0.06,262144,https://openrouter.ai/tencent/hy3-preview,2026-08-26
+mimo-v2.5-pro,xiaomi,MiMo-V2.5-Pro,current,small,0.435,0.87,0.0036,1050000,https://openrouter.ai/xiaomi/mimo-v2.5-pro,2026-08-26
+mimo-v2.5,xiaomi,MiMo-V2.5,current,small,0.14,0.28,0.0028,1050000,https://openrouter.ai/xiaomi/mimo-v2.5,2026-08-26
+gpt-5.4-image-2,openai,GPT-5.4 Image 2,current,frontier,8,15,2,272000,https://openrouter.ai/openai/gpt-5.4-image-2,2026-08-26
+kimi-k2.6,moonshot,Kimi K2.6,current,small,0.95,4,0.16,262144,https://openrouter.ai/moonshotai/kimi-k2.6,2026-08-26
+claude-opus-4.7,anthropic,Claude Opus 4.7,current,frontier,5,25,0.5,1000000,https://openrouter.ai/anthropic/claude-opus-4.7,2026-08-26
+claude-opus-4.7-batch,anthropic,Claude Opus 4.7 (batch),current,frontier,2.5,12.5,0.25,1000000,https://openrouter.ai/anthropic/claude-opus-4.7:batch,2026-08-26
+glm-5.1,zai,GLM 5.1,current,small,1.26,3.96,0.234,204800,https://openrouter.ai/z-ai/glm-5.1,2026-08-26
+gemma-4-26b-a4b-it,google,Gemma 4 26B A4B ,current,small,0.07,0.34,0.07,262144,https://openrouter.ai/google/gemma-4-26b-a4b-it,2026-08-26
+gemma-4-31b-it,google,Gemma 4 31B,current,small,0.09,0.34,0.05,262144,https://openrouter.ai/google/gemma-4-31b-it,2026-08-26
+qwen3.6-plus,qwen,Qwen3.6 Plus,current,small,0.325,1.95,0.325,1000000,https://openrouter.ai/qwen/qwen3.6-plus,2026-08-26
+glm-5v-turbo,zai,GLM 5V Turbo,current,small,1.2,4,0.24,202752,https://openrouter.ai/z-ai/glm-5v-turbo,2026-08-26
+trinity-large-thinking,arcee-ai,Trinity Large Thinking,current,small,0.22,0.85,0.06,262144,https://openrouter.ai/arcee-ai/trinity-large-thinking,2026-08-26
+grok-4.20-multi-agent,xai,Grok 4.20 Multi-Agent,current,small,1.25,2.5,0.2,2000000,https://openrouter.ai/x-ai/grok-4.20-multi-agent,2026-08-26
+grok-4.20,xai,Grok 4.20,current,small,1.25,2.5,0.2,2000000,https://openrouter.ai/x-ai/grok-4.20,2026-08-26
+lyria-3-pro-preview,google,Lyria 3 Pro Preview,current,small,0,0,0,1048576,https://openrouter.ai/google/lyria-3-pro-preview,2026-08-26
+lyria-3-clip-preview,google,Lyria 3 Clip Preview,current,small,0,0,0,1048576,https://openrouter.ai/google/lyria-3-clip-preview,2026-08-26
+kat-coder-pro-v2,kwaipilot,KAT-Coder-Pro V2,current,small,0.3,1.2,0.06,262144,https://openrouter.ai/kwaipilot/kat-coder-pro-v2,2026-08-26
+reka-edge,rekaai,Reka Edge,current,small,0.1,0.1,0.1,16384,https://openrouter.ai/rekaai/reka-edge,2026-08-26
+gpt-5.4-nano,openai,GPT-5.4 Nano,current,small,0.2,1.25,0.02,400000,https://openrouter.ai/openai/gpt-5.4-nano,2026-08-26
+gpt-5.4-nano-batch,openai,GPT-5.4 Nano (batch),current,small,0.1,0.625,0.01,400000,https://openrouter.ai/openai/gpt-5.4-nano:batch,2026-08-26
+gpt-5.4-mini,openai,GPT-5.4 Mini,current,small,0.75,4.5,0.075,400000,https://openrouter.ai/openai/gpt-5.4-mini,2026-08-26
+gpt-5.4-mini-batch,openai,GPT-5.4 Mini (batch),current,small,0.375,2.25,0.0375,400000,https://openrouter.ai/openai/gpt-5.4-mini:batch,2026-08-26
+mistral-small-2603,mistral,Mistral Small 4,current,small,0.15,0.6,0.015,262144,https://openrouter.ai/mistralai/mistral-small-2603,2026-08-26
+glm-5-turbo,zai,GLM 5 Turbo,current,small,1.2,4,0.24,202752,https://openrouter.ai/z-ai/glm-5-turbo,2026-08-26
+nemotron-3-super-120b-a12b,nvidia,Nemotron 3 Super,current,small,0.085,0.4,0.085,1000000,https://openrouter.ai/nvidia/nemotron-3-super-120b-a12b,2026-08-26
+seed-2.0-lite,bytedance,Seed-2.0-Lite,current,small,0.25,2,0.25,262144,https://openrouter.ai/bytedance-seed/seed-2.0-lite,2026-08-26
+qwen3.5-9b,qwen,Qwen3.5-9B,current,small,0.1,0.15,0.1,262144,https://openrouter.ai/qwen/qwen3.5-9b,2026-08-26
+gpt-5.4-pro,openai,GPT-5.4 Pro,current,frontier,30,180,30,1050000,https://openrouter.ai/openai/gpt-5.4-pro,2026-08-26
+gpt-5.4-pro-batch,openai,GPT-5.4 Pro (batch),current,frontier,15,90,15,1050000,https://openrouter.ai/openai/gpt-5.4-pro:batch,2026-08-26
+gpt-5.4-batch,openai,GPT-5.4 (batch),current,frontier,1.25,7.5,0.125,1050000,https://openrouter.ai/openai/gpt-5.4:batch,2026-08-26
+mercury-2,inception,Mercury 2,current,small,0.25,0.75,0.025,128000,https://openrouter.ai/inception/mercury-2,2026-08-26
+gemini-3.1-flash-lite-preview,google,Gemini 3.1 Flash Lite Preview,current,small,0.25,1.5,0.025,1048576,https://openrouter.ai/google/gemini-3.1-flash-lite-preview,2026-08-26
+seed-2.0-mini,bytedance,Seed-2.0-Mini,current,small,0.1,0.4,0.1,262144,https://openrouter.ai/bytedance-seed/seed-2.0-mini,2026-08-26
+gemini-3.1-flash-image-preview,google,Nano Banana 2 (Gemini 3.1 Flash Image Preview),current,small,0.5,3,0.5,65536,https://openrouter.ai/google/gemini-3.1-flash-image-preview,2026-08-26
+qwen3.5-35b-a3b,qwen,Qwen3.5-35B-A3B,current,small,0.25,1.25,0.25,262144,https://openrouter.ai/qwen/qwen3.5-35b-a3b,2026-08-26
+qwen3.5-27b,qwen,Qwen3.5-27B,current,small,0.195,1.56,0.195,262144,https://openrouter.ai/qwen/qwen3.5-27b,2026-08-26
+qwen3.5-122b-a10b,qwen,Qwen3.5-122B-A10B,current,small,0.26,2.08,0.26,262144,https://openrouter.ai/qwen/qwen3.5-122b-a10b,2026-08-26
+qwen3.5-flash-02-23,qwen,Qwen3.5-Flash,current,small,0.065,0.26,0.065,1000000,https://openrouter.ai/qwen/qwen3.5-flash-02-23,2026-08-26
+gemini-3.1-pro-preview-customtools,google,Gemini 3.1 Pro Preview Custom Tools,current,frontier,2,12,0.2,1048576,https://openrouter.ai/google/gemini-3.1-pro-preview-customtools,2026-08-26
+aion-2.0,aion-labs,Aion-2.0,current,small,0.8,1.6,0.2,131072,https://openrouter.ai/aion-labs/aion-2.0,2026-08-26
+gemini-3.1-pro-preview-batch,google,Gemini 3.1 Pro Preview (batch),current,frontier,1,6,1,1048576,https://openrouter.ai/google/gemini-3.1-pro-preview:batch,2026-08-26
+claude-sonnet-4.6,anthropic,Claude Sonnet 4.6,current,frontier,3,15,0.3,1000000,https://openrouter.ai/anthropic/claude-sonnet-4.6,2026-08-26
+claude-sonnet-4.6-batch,anthropic,Claude Sonnet 4.6 (batch),current,frontier,1.5,7.5,0.15,1000000,https://openrouter.ai/anthropic/claude-sonnet-4.6:batch,2026-08-26
+qwen3.5-plus-02-15,qwen,Qwen3.5 Plus 2026-02-15,current,small,0.26,1.56,0.26,1000000,https://openrouter.ai/qwen/qwen3.5-plus-02-15,2026-08-26
+qwen3.5-397b-a17b,qwen,Qwen3.5 397B A17B,current,small,0.39,2.34,0.39,262144,https://openrouter.ai/qwen/qwen3.5-397b-a17b,2026-08-26
+glm-5,zai,GLM 5,current,small,0.6,1.92,0.12,204800,https://openrouter.ai/z-ai/glm-5,2026-08-26
+qwen3-max-thinking,qwen,Qwen3 Max Thinking,current,small,0.78,3.9,0.78,262144,https://openrouter.ai/qwen/qwen3-max-thinking,2026-08-26
+claude-opus-4.6-batch,anthropic,Claude Opus 4.6 (batch),current,frontier,2.5,12.5,0.25,1000000,https://openrouter.ai/anthropic/claude-opus-4.6:batch,2026-08-26
+qwen3-coder-next,qwen,Qwen3 Coder Next,current,small,0.12,0.8,0.07,262144,https://openrouter.ai/qwen/qwen3-coder-next,2026-08-26
+step-3.5-flash,stepfun,Step 3.5 Flash,current,small,0.1,0.3,0.1,262144,https://openrouter.ai/stepfun/step-3.5-flash,2026-08-26
+kimi-k2.5,moonshot,Kimi K2.5,current,small,0.45,2.25,0.07,262144,https://openrouter.ai/moonshotai/kimi-k2.5,2026-08-26
+minimax-m2-her,minimax,MiniMax M2-her,current,small,0.3,1.2,0.03,65536,https://openrouter.ai/minimax/minimax-m2-her,2026-08-26
+palmyra-x5,writer,Palmyra X5,current,frontier,0.6,6,0.6,1040000,https://openrouter.ai/writer/palmyra-x5,2026-08-26
+gpt-audio,openai,GPT Audio,current,frontier,2.5,10,2.5,128000,https://openrouter.ai/openai/gpt-audio,2026-08-26
+gpt-audio-mini,openai,GPT Audio Mini,current,small,0.6,2.4,0.6,128000,https://openrouter.ai/openai/gpt-audio-mini,2026-08-26
+glm-4.7-flash,zai,GLM 4.7 Flash,current,small,0.06,0.4,0.01,202752,https://openrouter.ai/z-ai/glm-4.7-flash,2026-08-26
+gpt-5.2-codex,openai,GPT-5.2-Codex,current,frontier,1.75,14,0.175,400000,https://openrouter.ai/openai/gpt-5.2-codex,2026-08-26
+seed-1.6-flash,bytedance,Seed 1.6 Flash,current,small,0.075,0.3,0.075,262144,https://openrouter.ai/bytedance-seed/seed-1.6-flash,2026-08-26
+seed-1.6,bytedance,Seed 1.6,current,small,0.25,2,0.25,262144,https://openrouter.ai/bytedance-seed/seed-1.6,2026-08-26
+glm-4.7,zai,GLM 4.7,current,small,0.4,1.75,0.08,204800,https://openrouter.ai/z-ai/glm-4.7,2026-08-26
+gemini-3-flash-preview,google,Gemini 3 Flash Preview,current,small,0.5,3,0.05,1048576,https://openrouter.ai/google/gemini-3-flash-preview,2026-08-26
+gemini-3-flash-preview-batch,google,Gemini 3 Flash Preview (batch),current,small,0.25,1.5,0.25,1048576,https://openrouter.ai/google/gemini-3-flash-preview:batch,2026-08-26
+nemotron-3-nano-30b-a3b,nvidia,Nemotron 3 Nano 30B A3B,current,small,0.05,0.2,0.03,262144,https://openrouter.ai/nvidia/nemotron-3-nano-30b-a3b,2026-08-26
+gpt-5.2-chat,openai,GPT-5.2 Chat,current,frontier,1.75,14,0.175,128000,https://openrouter.ai/openai/gpt-5.2-chat,2026-08-26
+gpt-5.2-pro,openai,GPT-5.2 Pro,current,frontier,21,168,21,400000,https://openrouter.ai/openai/gpt-5.2-pro,2026-08-26
+gpt-5.2-pro-batch,openai,GPT-5.2 Pro (batch),current,frontier,10.5,84,10.5,400000,https://openrouter.ai/openai/gpt-5.2-pro:batch,2026-08-26
+gpt-5.2,openai,GPT-5.2,current,frontier,1.75,14,0.175,400000,https://openrouter.ai/openai/gpt-5.2,2026-08-26
+gpt-5.2-batch,openai,GPT-5.2 (batch),current,frontier,0.875,7,0.0875,400000,https://openrouter.ai/openai/gpt-5.2:batch,2026-08-26
+devstral-2512,mistral,Devstral 2 2512,current,small,0.44,2.2,0.044,262144,https://openrouter.ai/mistralai/devstral-2512,2026-08-26
+relace-search,relace,Relace Search,current,small,1,3,1,256000,https://openrouter.ai/relace/relace-search,2026-08-26
+glm-4.6v,zai,GLM 4.6V,current,small,0.3,0.9,0.055,131072,https://openrouter.ai/z-ai/glm-4.6v,2026-08-26
+gpt-5.1-codex-max,openai,GPT-5.1-Codex-Max,current,frontier,1.25,10,0.125,400000,https://openrouter.ai/openai/gpt-5.1-codex-max,2026-08-26
+nova-2-lite-v1,amazon,Nova 2 Lite,current,small,0.3,2.5,0.3,1000000,https://openrouter.ai/amazon/nova-2-lite-v1,2026-08-26
+ministral-14b-2512,mistral,Ministral 3 14B 2512,current,small,0.2,0.2,0.02,262144,https://openrouter.ai/mistralai/ministral-14b-2512,2026-08-26
+ministral-8b-2512,mistral,Ministral 3 8B 2512,current,small,0.15,0.15,0.015,262144,https://openrouter.ai/mistralai/ministral-8b-2512,2026-08-26
+ministral-3b-2512,mistral,Ministral 3 3B 2512,current,small,0.1,0.1,0.01,131072,https://openrouter.ai/mistralai/ministral-3b-2512,2026-08-26
+mistral-large-2512,mistral,Mistral Large 3 2512,current,small,0.5,1.5,0.05,262144,https://openrouter.ai/mistralai/mistral-large-2512,2026-08-26
+deepseek-v3.2,deepseek,DeepSeek V3.2,current,small,0.26,0.38,0.13,163840,https://openrouter.ai/deepseek/deepseek-v3.2,2026-08-26
+claude-opus-4.5-batch,anthropic,Claude Opus 4.5 (batch),current,frontier,2.5,12.5,0.25,200000,https://openrouter.ai/anthropic/claude-opus-4.5:batch,2026-08-26
+olmo-3-32b-think,allenai,Olmo 3 32B Think,current,small,0.15,0.5,0.15,65536,https://openrouter.ai/allenai/olmo-3-32b-think,2026-08-26
+gemini-3-pro-image-preview,google,Nano Banana Pro (Gemini 3 Pro Image Preview),current,frontier,2,12,0.2,65536,https://openrouter.ai/google/gemini-3-pro-image-preview,2026-08-26
+gpt-5.1,openai,GPT-5.1,current,frontier,1.25,10,0.125,400000,https://openrouter.ai/openai/gpt-5.1,2026-08-26
+gpt-5.1-batch,openai,GPT-5.1 (batch),current,frontier,0.625,5,0.0625,400000,https://openrouter.ai/openai/gpt-5.1:batch,2026-08-26
+gpt-5.1-codex,openai,GPT-5.1-Codex,current,frontier,1.25,10,0.13,400000,https://openrouter.ai/openai/gpt-5.1-codex,2026-08-26
+gpt-5.1-codex-mini,openai,GPT-5.1-Codex-Mini,current,small,0.25,2,0.03,400000,https://openrouter.ai/openai/gpt-5.1-codex-mini,2026-08-26
+kimi-k2-thinking,moonshot,Kimi K2 Thinking,current,small,0.6,2.5,0.15,262144,https://openrouter.ai/moonshotai/kimi-k2-thinking,2026-08-26
+nova-premier-v1,amazon,Nova Premier 1.0,current,frontier,2.5,12.5,0.625,1000000,https://openrouter.ai/amazon/nova-premier-v1,2026-08-26
+sonar-pro-search,perplexity,Sonar Pro Search,current,frontier,3,15,3,200000,https://openrouter.ai/perplexity/sonar-pro-search,2026-08-26
+voxtral-small-24b-2507,mistral,Voxtral Small 24B 2507,current,small,0.1,0.3,0.01,32000,https://openrouter.ai/mistralai/voxtral-small-24b-2507,2026-08-26
+gpt-oss-safeguard-20b,openai,gpt-oss-safeguard-20b,current,small,0.075,0.3,0.0375,131072,https://openrouter.ai/openai/gpt-oss-safeguard-20b,2026-08-26
+qwen3-vl-32b-instruct,qwen,Qwen3 VL 32B Instruct,current,small,0.104,0.416,0.104,131072,https://openrouter.ai/qwen/qwen3-vl-32b-instruct,2026-08-26
+granite-4.0-h-micro,ibm-granite,Granite 4.0 Micro,current,small,0.017,0.112,0.017,131000,https://openrouter.ai/ibm-granite/granite-4.0-h-micro,2026-08-26
+gpt-5-image-mini,openai,GPT-5 Image Mini,current,small,2.5,2,0.25,400000,https://openrouter.ai/openai/gpt-5-image-mini,2026-08-26
+claude-haiku-4.5-batch,anthropic,Claude Haiku 4.5 (batch),current,small,0.5,2.5,0.05,200000,https://openrouter.ai/anthropic/claude-haiku-4.5:batch,2026-08-26
+qwen3-vl-8b-thinking,qwen,Qwen3 VL 8B Thinking,current,small,0.18,2.1,0.18,131072,https://openrouter.ai/qwen/qwen3-vl-8b-thinking,2026-08-26
+qwen3-vl-8b-instruct,qwen,Qwen3 VL 8B Instruct,current,small,0.117,0.455,0.117,262144,https://openrouter.ai/qwen/qwen3-vl-8b-instruct,2026-08-26
+gpt-5-image,openai,GPT-5 Image,current,frontier,10,10,1.25,400000,https://openrouter.ai/openai/gpt-5-image,2026-08-26
+gemini-2.5-flash-image,google,Nano Banana (Gemini 2.5 Flash Image),current,small,0.3,2.5,0.03,32768,https://openrouter.ai/google/gemini-2.5-flash-image,2026-08-26
+qwen3-vl-30b-a3b-thinking,qwen,Qwen3 VL 30B A3B Thinking,current,small,0.2,2.4,0.2,262144,https://openrouter.ai/qwen/qwen3-vl-30b-a3b-thinking,2026-08-26
+qwen3-vl-30b-a3b-instruct,qwen,Qwen3 VL 30B A3B Instruct,current,small,0.13,0.52,0.13,262144,https://openrouter.ai/qwen/qwen3-vl-30b-a3b-instruct,2026-08-26
+gpt-5-pro,openai,GPT-5 Pro,current,frontier,15,120,15,400000,https://openrouter.ai/openai/gpt-5-pro,2026-08-26
+gpt-5-pro-batch,openai,GPT-5 Pro (batch),current,frontier,7.5,60,7.5,400000,https://openrouter.ai/openai/gpt-5-pro:batch,2026-08-26
+glm-4.6,zai,GLM 4.6,current,small,0.5,2,0.1,204800,https://openrouter.ai/z-ai/glm-4.6,2026-08-26
+claude-sonnet-4.5,anthropic,Claude Sonnet 4.5,current,frontier,3,15,0.3,1000000,https://openrouter.ai/anthropic/claude-sonnet-4.5,2026-08-26
+claude-sonnet-4.5-batch,anthropic,Claude Sonnet 4.5 (batch),current,frontier,1.5,7.5,0.15,1000000,https://openrouter.ai/anthropic/claude-sonnet-4.5:batch,2026-08-26
+deepseek-v3.2-exp,deepseek,DeepSeek V3.2 Exp,current,small,0.27,0.41,0.27,163840,https://openrouter.ai/deepseek/deepseek-v3.2-exp,2026-08-26
+cydonia-24b-v4.1,thedrummer,Cydonia 24B V4.1,current,small,0.3,0.5,0.15,131072,https://openrouter.ai/thedrummer/cydonia-24b-v4.1,2026-08-26
+relace-apply-3,relace,Relace Apply 3,current,small,0.85,1.25,0.85,256000,https://openrouter.ai/relace/relace-apply-3,2026-08-26
+qwen3-vl-235b-a22b-thinking,qwen,Qwen3 VL 235B A22B Thinking,current,small,0.4,4,0.4,131072,https://openrouter.ai/qwen/qwen3-vl-235b-a22b-thinking,2026-08-26
+qwen3-vl-235b-a22b-instruct,qwen,Qwen3 VL 235B A22B Instruct,current,small,0.21,1.9,0.1,262144,https://openrouter.ai/qwen/qwen3-vl-235b-a22b-instruct,2026-08-26
+qwen3-max,qwen,Qwen3 Max,current,small,0.78,3.9,0.156,262144,https://openrouter.ai/qwen/qwen3-max,2026-08-26
+qwen3-coder-plus,qwen,Qwen3 Coder Plus,current,small,0.65,3.25,0.13,1000000,https://openrouter.ai/qwen/qwen3-coder-plus,2026-08-26
+gpt-5-codex-batch,openai,GPT-5 Codex (batch),current,frontier,0.625,5,0.0625,400000,https://openrouter.ai/openai/gpt-5-codex:batch,2026-08-26
+deepseek-v3.1-terminus,deepseek,DeepSeek V3.1 Terminus,current,small,0.27,1,0.135,163840,https://openrouter.ai/deepseek/deepseek-v3.1-terminus,2026-08-26
+qwen3-coder-flash,qwen,Qwen3 Coder Flash,current,small,0.195,0.975,0.039,1000000,https://openrouter.ai/qwen/qwen3-coder-flash,2026-08-26
+qwen3-next-80b-a3b-thinking,qwen,Qwen3 Next 80B A3B Thinking,current,small,0.15,1.2,0.15,262144,https://openrouter.ai/qwen/qwen3-next-80b-a3b-thinking,2026-08-26
+qwen3-next-80b-a3b-instruct,qwen,Qwen3 Next 80B A3B Instruct,current,small,0.1,1.1,0.07,262144,https://openrouter.ai/qwen/qwen3-next-80b-a3b-instruct,2026-08-26
+qwen-plus-2025-07-28,qwen,Qwen Plus 0728,current,small,0.26,0.78,0.26,1000000,https://openrouter.ai/qwen/qwen-plus-2025-07-28,2026-08-26
+kimi-k2-0905,moonshot,Kimi K2 0905,current,small,0.6,2.5,0.6,262144,https://openrouter.ai/moonshotai/kimi-k2-0905,2026-08-26
+qwen3-30b-a3b-thinking-2507,qwen,Qwen3 30B A3B Thinking 2507,current,small,0.2,2.4,0.2,81920,https://openrouter.ai/qwen/qwen3-30b-a3b-thinking-2507,2026-08-26
+hermes-4-70b,nousresearch,Hermes 4 70B,current,small,0.13,0.4,0.13,131072,https://openrouter.ai/nousresearch/hermes-4-70b,2026-08-26
+hermes-4-405b,nousresearch,Hermes 4 405B,current,small,1,3,1,131072,https://openrouter.ai/nousresearch/hermes-4-405b,2026-08-26
+deepseek-chat-v3.1,deepseek,DeepSeek V3.1,current,small,0.55,1.65,0.55,163840,https://openrouter.ai/deepseek/deepseek-chat-v3.1,2026-08-26
+mistral-medium-3.1,mistral,Mistral Medium 3.1,current,small,0.4,2,0.04,131072,https://openrouter.ai/mistralai/mistral-medium-3.1,2026-08-26
+glm-4.5v,zai,GLM 4.5V,current,small,0.6,1.8,0.11,65536,https://openrouter.ai/z-ai/glm-4.5v,2026-08-26
+gpt-5-batch,openai,GPT-5 (batch),current,frontier,0.625,5,0.0625,400000,https://openrouter.ai/openai/gpt-5:batch,2026-08-26
+gpt-5-mini,openai,GPT-5 Mini,current,small,0.25,2,0.025,400000,https://openrouter.ai/openai/gpt-5-mini,2026-08-26
+gpt-5-mini-batch,openai,GPT-5 Mini (batch),current,small,0.125,1,0.0125,400000,https://openrouter.ai/openai/gpt-5-mini:batch,2026-08-26
+gpt-5-nano,openai,GPT-5 Nano,current,small,0.05,0.4,0.005,400000,https://openrouter.ai/openai/gpt-5-nano,2026-08-26
+gpt-5-nano-batch,openai,GPT-5 Nano (batch),current,small,0.025,0.2,0.0025,400000,https://openrouter.ai/openai/gpt-5-nano:batch,2026-08-26
+gpt-oss-120b,openai,gpt-oss-120b,current,small,0.037,0.17,0.037,131072,https://openrouter.ai/openai/gpt-oss-120b,2026-08-26
+gpt-oss-20b,openai,gpt-oss-20b,current,small,0.03,0.13,0.03,131072,https://openrouter.ai/openai/gpt-oss-20b,2026-08-26
+claude-opus-4.1,anthropic,Claude Opus 4.1,current,frontier,15,75,1.5,200000,https://openrouter.ai/anthropic/claude-opus-4.1,2026-08-26
+claude-opus-4.1-batch,anthropic,Claude Opus 4.1 (batch),current,frontier,7.5,37.5,0.75,200000,https://openrouter.ai/anthropic/claude-opus-4.1:batch,2026-08-26
+codestral-2508,mistral,Codestral 2508,current,small,0.3,0.9,0.03,256000,https://openrouter.ai/mistralai/codestral-2508,2026-08-26
+qwen3-coder-30b-a3b-instruct,qwen,Qwen3 Coder 30B A3B Instruct,current,small,0.07,0.28,0.07,262144,https://openrouter.ai/qwen/qwen3-coder-30b-a3b-instruct,2026-08-26
+qwen3-30b-a3b-instruct-2507,qwen,Qwen3 30B A3B Instruct 2507,current,small,0.04815,0.19305,0.04815,262144,https://openrouter.ai/qwen/qwen3-30b-a3b-instruct-2507,2026-08-26
+glm-4.5,zai,GLM 4.5,current,small,0.6,2.2,0.11,131072,https://openrouter.ai/z-ai/glm-4.5,2026-08-26
+glm-4.5-air,zai,GLM 4.5 Air,current,small,0.13,0.85,0.025,131072,https://openrouter.ai/z-ai/glm-4.5-air,2026-08-26
+qwen3-235b-a22b-thinking-2507,qwen,Qwen3 235B A22B Thinking 2507,current,small,0.23,2.3,0.23,131072,https://openrouter.ai/qwen/qwen3-235b-a22b-thinking-2507,2026-08-26
+qwen3-coder,qwen,Qwen3 Coder 480B A35B,current,small,0.3,1,0.1,262144,https://openrouter.ai/qwen/qwen3-coder,2026-08-26
+ui-tars-1.5-7b,bytedance,UI-TARS 7B ,current,small,0.1,0.2,0.1,128000,https://openrouter.ai/bytedance/ui-tars-1.5-7b,2026-08-26
+gemini-2.5-flash-lite,google,Gemini 2.5 Flash Lite,current,small,0.1,0.4,0.01,1048576,https://openrouter.ai/google/gemini-2.5-flash-lite,2026-08-26
+gemini-2.5-flash-lite-batch,google,Gemini 2.5 Flash Lite (batch),current,small,0.05,0.2,0.01,1048576,https://openrouter.ai/google/gemini-2.5-flash-lite:batch,2026-08-26
+qwen3-235b-a22b-2507,qwen,Qwen3 235B A22B Instruct 2507,current,small,0.09,0.55,0.09,262144,https://openrouter.ai/qwen/qwen3-235b-a22b-2507,2026-08-26
+kimi-k2,moonshot,Kimi K2 0711,current,small,0.57,2.3,0.57,131072,https://openrouter.ai/moonshotai/kimi-k2,2026-08-26
+dolphin-mistral-24b-venice-edition,cognitivecomputations,Uncensored,current,small,0.2,0.9,0.2,128000,https://openrouter.ai/cognitivecomputations/dolphin-mistral-24b-venice-edition,2026-08-26
+hunyuan-a13b-instruct,tencent,Hunyuan A13B Instruct,current,small,0.14,0.57,0.14,131072,https://openrouter.ai/tencent/hunyuan-a13b-instruct,2026-08-26
+morph-v3-large,morph,Morph V3 Large,current,small,0.9,1.9,0.9,262144,https://openrouter.ai/morph/morph-v3-large,2026-08-26
+morph-v3-fast,morph,Morph V3 Fast,current,small,0.8,1.2,0.8,81920,https://openrouter.ai/morph/morph-v3-fast,2026-08-26
+ernie-4.5-vl-424b-a47b,baidu,ERNIE 4.5 VL 424B A47B ,current,small,0.42,1.25,0.42,123000,https://openrouter.ai/baidu/ernie-4.5-vl-424b-a47b,2026-08-26
+mistral-small-3.2-24b-instruct,mistral,Mistral Small 3.2 24B,current,small,0.075,0.2,0.075,131072,https://openrouter.ai/mistralai/mistral-small-3.2-24b-instruct,2026-08-26
+minimax-m1,minimax,MiniMax M1,current,small,0.55,2.2,0.55,1000000,https://openrouter.ai/minimax/minimax-m1,2026-08-26
+gemini-2.5-flash,google,Gemini 2.5 Flash,current,small,0.3,2.5,0.03,1048576,https://openrouter.ai/google/gemini-2.5-flash,2026-08-26
+gemini-2.5-flash-batch,google,Gemini 2.5 Flash (batch),current,small,0.15,1.25,0.03,1048576,https://openrouter.ai/google/gemini-2.5-flash:batch,2026-08-26
+gemini-2.5-pro-batch,google,Gemini 2.5 Pro (batch),current,frontier,0.625,5,0.125,1048576,https://openrouter.ai/google/gemini-2.5-pro:batch,2026-08-26
+o3-pro-batch,openai,o3 Pro (batch),current,frontier,10,40,10,200000,https://openrouter.ai/openai/o3-pro:batch,2026-08-26
+gemini-2.5-pro-preview,google,Gemini 2.5 Pro Preview 06-05,current,frontier,1.25,10,0.125,1048576,https://openrouter.ai/google/gemini-2.5-pro-preview,2026-08-26
+deepseek-r1-0528,deepseek,R1 0528,current,small,0.5,2.15,0.35,163840,https://openrouter.ai/deepseek/deepseek-r1-0528,2026-08-26
+mistral-medium-3,mistral,Mistral Medium 3,current,small,0.4,2,0.04,131072,https://openrouter.ai/mistralai/mistral-medium-3,2026-08-26
+gemini-2.5-pro-preview-05-06,google,Gemini 2.5 Pro Preview 05-06,current,frontier,1.25,10,0.125,1048576,https://openrouter.ai/google/gemini-2.5-pro-preview-05-06,2026-08-26
+virtuoso-large,arcee-ai,Virtuoso Large,current,small,0.75,1.2,0.75,131072,https://openrouter.ai/arcee-ai/virtuoso-large,2026-08-26
+llama-guard-4-12b,meta,Llama Guard 4 12B,current,small,0.18,0.18,0.18,163840,https://openrouter.ai/meta-llama/llama-guard-4-12b,2026-08-26
+qwen3-30b-a3b,qwen,Qwen3 30B A3B,current,small,0.12,0.5,0.12,131072,https://openrouter.ai/qwen/qwen3-30b-a3b,2026-08-26
+qwen3-8b,qwen,Qwen3 8B,current,small,0.117,0.455,0.117,131072,https://openrouter.ai/qwen/qwen3-8b,2026-08-26
+qwen3-14b,qwen,Qwen3 14B,current,small,0.12,0.24,0.12,131072,https://openrouter.ai/qwen/qwen3-14b,2026-08-26
+qwen3-32b,qwen,Qwen3 32B,current,small,0.08,0.28,0.08,131072,https://openrouter.ai/qwen/qwen3-32b,2026-08-26
+qwen3-235b-a22b,qwen,Qwen3 235B A22B,current,small,0.455,1.82,0.455,131072,https://openrouter.ai/qwen/qwen3-235b-a22b,2026-08-26
+o4-mini-high,openai,o4 Mini High,current,small,1.1,4.4,0.275,200000,https://openrouter.ai/openai/o4-mini-high,2026-08-26
+o4-mini-high-batch,openai,o4 Mini High (batch),current,small,0.55,2.2,0.1375,200000,https://openrouter.ai/openai/o4-mini-high:batch,2026-08-26
+o3-batch,openai,o3 (batch),current,small,1,4,0.25,200000,https://openrouter.ai/openai/o3:batch,2026-08-26
+o4-mini,openai,o4 Mini,current,small,1.1,4.4,0.275,200000,https://openrouter.ai/openai/o4-mini,2026-08-26
+o4-mini-batch,openai,o4 Mini (batch),current,small,0.55,2.2,0.1375,200000,https://openrouter.ai/openai/o4-mini:batch,2026-08-26
+gpt-4.1-batch,openai,GPT-4.1 (batch),current,small,1,4,0.25,1047576,https://openrouter.ai/openai/gpt-4.1:batch,2026-08-26
+gpt-4.1-mini,openai,GPT-4.1 Mini,current,small,0.4,1.6,0.1,1047576,https://openrouter.ai/openai/gpt-4.1-mini,2026-08-26
+gpt-4.1-mini-batch,openai,GPT-4.1 Mini (batch),current,small,0.2,0.8,0.05,1047576,https://openrouter.ai/openai/gpt-4.1-mini:batch,2026-08-26
+gpt-4.1-nano,openai,GPT-4.1 Nano,current,small,0.1,0.4,0.025,1047576,https://openrouter.ai/openai/gpt-4.1-nano,2026-08-26
+gpt-4.1-nano-batch,openai,GPT-4.1 Nano (batch),current,small,0.05,0.2,0.0125,1047576,https://openrouter.ai/openai/gpt-4.1-nano:batch,2026-08-26
+llama-4-maverick,meta,Llama 4 Maverick,current,small,0.2,0.8,0.2,1048576,https://openrouter.ai/meta-llama/llama-4-maverick,2026-08-26
+llama-4-scout,meta,Llama 4 Scout,current,small,0.11,0.34,0.055,1310720,https://openrouter.ai/meta-llama/llama-4-scout,2026-08-26
+deepseek-chat-v3-0324,deepseek,DeepSeek V3 0324,current,small,0.25,1,0.25,163840,https://openrouter.ai/deepseek/deepseek-chat-v3-0324,2026-08-26
+o1-pro,openai,o1-pro,current,frontier,150,600,150,200000,https://openrouter.ai/openai/o1-pro,2026-08-26
+o1-pro-batch,openai,o1-pro (batch),current,frontier,75,300,75,200000,https://openrouter.ai/openai/o1-pro:batch,2026-08-26
+mistral-small-3.1-24b-instruct,mistral,Mistral Small 3.1 24B,current,small,0.351,0.555,0.351,128000,https://openrouter.ai/mistralai/mistral-small-3.1-24b-instruct,2026-08-26
+gemma-3-4b-it,google,Gemma 3 4B,current,small,0.05,0.1,0.05,131072,https://openrouter.ai/google/gemma-3-4b-it,2026-08-26
+gemma-3-12b-it,google,Gemma 3 12B,current,small,0.05,0.15,0.05,131072,https://openrouter.ai/google/gemma-3-12b-it,2026-08-26
+command-a,cohere,Command A,current,frontier,2.5,10,2.5,256000,https://openrouter.ai/cohere/command-a,2026-08-26
+reka-flash-3,rekaai,Reka Flash 3,current,small,0.1,0.2,0.1,65536,https://openrouter.ai/rekaai/reka-flash-3,2026-08-26
+gemma-3-27b-it,google,Gemma 3 27B,current,small,0.08,0.45,0.04,262144,https://openrouter.ai/google/gemma-3-27b-it,2026-08-26
+skyfall-36b-v2,thedrummer,Skyfall 36B V2,current,small,0.55,0.8,0.25,32768,https://openrouter.ai/thedrummer/skyfall-36b-v2,2026-08-26
+sonar-reasoning-pro,perplexity,Sonar Reasoning Pro,current,frontier,2,8,2,128000,https://openrouter.ai/perplexity/sonar-reasoning-pro,2026-08-26
+sonar-pro,perplexity,Sonar Pro,current,frontier,3,15,3,200000,https://openrouter.ai/perplexity/sonar-pro,2026-08-26
+sonar-deep-research,perplexity,Sonar Deep Research,current,frontier,2,8,2,128000,https://openrouter.ai/perplexity/sonar-deep-research,2026-08-26
+mistral-saba,mistral,Saba,current,small,0.2,0.6,0.02,32768,https://openrouter.ai/mistralai/mistral-saba,2026-08-26
+o3-mini-high,openai,o3 Mini High,current,small,1.1,4.4,0.55,200000,https://openrouter.ai/openai/o3-mini-high,2026-08-26
+o3-mini-high-batch,openai,o3 Mini High (batch),current,small,0.55,2.2,0.275,200000,https://openrouter.ai/openai/o3-mini-high:batch,2026-08-26
+aion-rp-llama-3.1-8b,aion-labs,Aion-RP 1.0 (8B),current,small,0.8,1.6,0.8,32768,https://openrouter.ai/aion-labs/aion-rp-llama-3.1-8b,2026-08-26
+qwen2.5-vl-72b-instruct,qwen,Qwen2.5 VL 72B Instruct,current,small,0.25,0.75,0.25,128000,https://openrouter.ai/qwen/qwen2.5-vl-72b-instruct,2026-08-26
+qwen-plus,qwen,Qwen-Plus,current,small,0.26,0.78,0.052,1000000,https://openrouter.ai/qwen/qwen-plus,2026-08-26
+o3-mini,openai,o3 Mini,current,small,1.1,4.4,0.55,200000,https://openrouter.ai/openai/o3-mini,2026-08-26
+o3-mini-batch,openai,o3 Mini (batch),current,small,0.55,2.2,0.275,200000,https://openrouter.ai/openai/o3-mini:batch,2026-08-26
+mistral-small-24b-instruct-2501,mistral,Mistral Small 3,current,small,0.05,0.08,0.05,32768,https://openrouter.ai/mistralai/mistral-small-24b-instruct-2501,2026-08-26
+sonar,perplexity,Sonar,current,small,1,1,1,127072,https://openrouter.ai/perplexity/sonar,2026-08-26
+deepseek-r1-distill-llama-70b,deepseek,R1 Distill Llama 70B,current,small,0.8,0.8,0.8,8192,https://openrouter.ai/deepseek/deepseek-r1-distill-llama-70b,2026-08-26
+deepseek-r1,deepseek,R1,current,small,0.7,2.5,0.7,64000,https://openrouter.ai/deepseek/deepseek-r1,2026-08-26
+minimax-01,minimax,MiniMax-01,current,small,0.2,1.1,0.2,1000192,https://openrouter.ai/minimax/minimax-01,2026-08-26
+phi-4,microsoft,Phi 4,current,small,0.07,0.14,0.07,16384,https://openrouter.ai/microsoft/phi-4,2026-08-26
+deepseek-chat,deepseek,DeepSeek V3,current,small,0.2574,1.0287,0.2574,163840,https://openrouter.ai/deepseek/deepseek-chat,2026-08-26
+l3.3-euryale-70b,sao10k,Llama 3.3 Euryale 70B,current,small,0.65,0.75,0.65,131072,https://openrouter.ai/sao10k/l3.3-euryale-70b,2026-08-26
+o1,openai,o1,current,frontier,15,60,7.5,200000,https://openrouter.ai/openai/o1,2026-08-26
+o1-batch,openai,o1 (batch),current,frontier,7.5,30,3.75,200000,https://openrouter.ai/openai/o1:batch,2026-08-26
+command-r7b-12-2024,cohere,Command R7B (12-2024),current,small,0.0375,0.15,0.0375,128000,https://openrouter.ai/cohere/command-r7b-12-2024,2026-08-26
+llama-3.3-70b-instruct,meta,Llama 3.3 70B Instruct,current,small,0.71,0.71,0.71,131072,https://openrouter.ai/meta-llama/llama-3.3-70b-instruct,2026-08-26
+nova-lite-v1,amazon,Nova Lite 1.0,current,small,0.06,0.24,0.06,300000,https://openrouter.ai/amazon/nova-lite-v1,2026-08-26
+nova-micro-v1,amazon,Nova Micro 1.0,current,small,0.035,0.14,0.035,128000,https://openrouter.ai/amazon/nova-micro-v1,2026-08-26
+nova-pro-v1,amazon,Nova Pro 1.0,current,small,0.8,3.2,0.8,300000,https://openrouter.ai/amazon/nova-pro-v1,2026-08-26
+gpt-4o-2024-11-20,openai,GPT-4o (2024-11-20),current,frontier,2.5,10,1.25,128000,https://openrouter.ai/openai/gpt-4o-2024-11-20,2026-08-26
+mistral-large-2407,mistral,Mistral Large 2407,current,frontier,2,6,0.2,131072,https://openrouter.ai/mistralai/mistral-large-2407,2026-08-26
+qwen-2.5-coder-32b-instruct,qwen,Qwen2.5 Coder 32B Instruct,current,small,0.66,1,0.66,32768,https://openrouter.ai/qwen/qwen-2.5-coder-32b-instruct,2026-08-26
+unslopnemo-12b,thedrummer,UnslopNemo 12B,current,small,0.4,0.4,0.4,1024000,https://openrouter.ai/thedrummer/unslopnemo-12b,2026-08-26
+magnum-v4-72b,anthracite-org,Magnum v4 72B,current,frontier,3,5,3,32768,https://openrouter.ai/anthracite-org/magnum-v4-72b,2026-08-26
+ministral-8b,mistral,Ministral 8B,current,small,0.11,0.11,0.11,128000,https://openrouter.ai/mistralai/ministral-8b,2026-08-26
+qwen-2.5-7b-instruct,qwen,Qwen2.5 7B Instruct,current,small,0.1,0.2,0.1,32768,https://openrouter.ai/qwen/qwen-2.5-7b-instruct,2026-08-26
+rocinante-12b,thedrummer,Rocinante 12B,current,small,0.25,0.5,0.25,65536,https://openrouter.ai/thedrummer/rocinante-12b,2026-08-26
+llama-3.2-1b-instruct,meta,Llama 3.2 1B Instruct,current,small,0.027,0.201,0.027,60000,https://openrouter.ai/meta-llama/llama-3.2-1b-instruct,2026-08-26
+llama-3.2-3b-instruct,meta,Llama 3.2 3B Instruct,current,small,0.05,0.33,0.05,131072,https://openrouter.ai/meta-llama/llama-3.2-3b-instruct,2026-08-26
+qwen-2.5-72b-instruct,qwen,Qwen2.5 72B Instruct,current,small,0.36,0.4,0.36,32768,https://openrouter.ai/qwen/qwen-2.5-72b-instruct,2026-08-26
+command-r-08-2024,cohere,Command R (08-2024),current,small,0.15,0.6,0.15,128000,https://openrouter.ai/cohere/command-r-08-2024,2026-08-26
+command-r-plus-08-2024,cohere,Command R+ (08-2024),current,frontier,2.5,10,2.5,128000,https://openrouter.ai/cohere/command-r-plus-08-2024,2026-08-26
+l3.1-euryale-70b,sao10k,Llama 3.1 Euryale 70B v2.2,current,small,0.85,0.85,0.85,131072,https://openrouter.ai/sao10k/l3.1-euryale-70b,2026-08-26
+hermes-3-llama-3.1-70b,nousresearch,Hermes 3 70B Instruct,current,small,0.7,0.7,0.7,131072,https://openrouter.ai/nousresearch/hermes-3-llama-3.1-70b,2026-08-26
+hermes-3-llama-3.1-405b,nousresearch,Hermes 3 405B Instruct,current,small,1,1,1,131072,https://openrouter.ai/nousresearch/hermes-3-llama-3.1-405b,2026-08-26
+l3-lunaris-8b,sao10k,Llama 3 8B Lunaris,current,small,0.04,0.05,0.04,8192,https://openrouter.ai/sao10k/l3-lunaris-8b,2026-08-26
+gpt-4o-2024-08-06,openai,GPT-4o (2024-08-06),current,frontier,2.5,10,1.25,128000,https://openrouter.ai/openai/gpt-4o-2024-08-06,2026-08-26
+llama-3.1-70b-instruct,meta,Llama 3.1 70B Instruct,current,small,0.4,0.4,0.4,131072,https://openrouter.ai/meta-llama/llama-3.1-70b-instruct,2026-08-26
+llama-3.1-8b-instruct,meta,Llama 3.1 8B Instruct,current,small,0.05,0.08,0.025,131072,https://openrouter.ai/meta-llama/llama-3.1-8b-instruct,2026-08-26
+mistral-nemo,mistral,Mistral Nemo,current,small,0.019,0.03,0.019,131072,https://openrouter.ai/mistralai/mistral-nemo,2026-08-26
+gpt-4o-mini,openai,GPT-4o-mini,current,small,0.15,0.6,0.075,128000,https://openrouter.ai/openai/gpt-4o-mini,2026-08-26
+gpt-4o-mini-2024-07-18,openai,GPT-4o-mini (2024-07-18),current,small,0.15,0.6,0.075,128000,https://openrouter.ai/openai/gpt-4o-mini-2024-07-18,2026-08-26
+gpt-4o-mini-batch,openai,GPT-4o-mini (batch),current,small,0.075,0.3,0.0375,128000,https://openrouter.ai/openai/gpt-4o-mini:batch,2026-08-26
+gemma-2-27b-it,google,Gemma 2 27B,current,small,0.65,0.65,0.65,8192,https://openrouter.ai/google/gemma-2-27b-it,2026-08-26
+gpt-4o,openai,GPT-4o,current,frontier,2.5,10,1.25,128000,https://openrouter.ai/openai/gpt-4o,2026-08-26
+gpt-4o-2024-05-13,openai,GPT-4o (2024-05-13),current,frontier,5,15,5,128000,https://openrouter.ai/openai/gpt-4o-2024-05-13,2026-08-26
+gpt-4o-batch,openai,GPT-4o (batch),current,frontier,1.25,5,0.625,128000,https://openrouter.ai/openai/gpt-4o:batch,2026-08-26
+mixtral-8x22b-instruct,mistral,Mixtral 8x22B Instruct,current,frontier,2,6,0.2,65536,https://openrouter.ai/mistralai/mixtral-8x22b-instruct,2026-08-26
+wizardlm-2-8x22b,microsoft,WizardLM-2 8x22B,current,small,0.62,0.62,0.62,65535,https://openrouter.ai/microsoft/wizardlm-2-8x22b,2026-08-26
+gpt-4-turbo,openai,GPT-4 Turbo,current,frontier,10,30,10,128000,https://openrouter.ai/openai/gpt-4-turbo,2026-08-26
+gpt-4-turbo-batch,openai,GPT-4 Turbo (batch),current,frontier,5,15,5,128000,https://openrouter.ai/openai/gpt-4-turbo:batch,2026-08-26
+claude-3-haiku,anthropic,Claude 3 Haiku,current,small,0.25,1.25,0.03,200000,https://openrouter.ai/anthropic/claude-3-haiku,2026-08-26
+mistral-large,mistral,Mistral Large,current,frontier,2,6,0.2,128000,https://openrouter.ai/mistralai/mistral-large,2026-08-26
+gpt-3.5-turbo-0613,openai,GPT-3.5 Turbo (older v0613),current,small,1,2,1,4095,https://openrouter.ai/openai/gpt-3.5-turbo-0613,2026-08-26
+gpt-4-turbo-preview,openai,GPT-4 Turbo Preview,current,frontier,10,30,10,128000,https://openrouter.ai/openai/gpt-4-turbo-preview,2026-08-26
+gpt-3.5-turbo-instruct,openai,GPT-3.5 Turbo Instruct,current,small,1.5,2,1.5,4095,https://openrouter.ai/openai/gpt-3.5-turbo-instruct,2026-08-26
+gpt-3.5-turbo-16k,openai,GPT-3.5 Turbo 16k,current,small,3,4,3,16385,https://openrouter.ai/openai/gpt-3.5-turbo-16k,2026-08-26
+weaver,mancer,Weaver (alpha),current,small,0.5,0.75,0.5,8000,https://openrouter.ai/mancer/weaver,2026-08-26
+remm-slerp-l2-13b,undi95,ReMM SLERP 13B,current,small,0.45,0.65,0.45,6144,https://openrouter.ai/undi95/remm-slerp-l2-13b,2026-08-26
+mythomax-l2-13b,gryphe,MythoMax 13B,current,small,0.06,0.06,0.06,8192,https://openrouter.ai/gryphe/mythomax-l2-13b,2026-08-26
+gpt-3.5-turbo,openai,GPT-3.5 Turbo,current,small,0.5,1.5,0.5,16385,https://openrouter.ai/openai/gpt-3.5-turbo,2026-08-26
+gpt-3.5-turbo-batch,openai,GPT-3.5 Turbo (batch),current,small,0.25,0.75,0.25,16385,https://openrouter.ai/openai/gpt-3.5-turbo:batch,2026-08-26
+gpt-4,openai,GPT-4,current,frontier,30,60,30,8191,https://openrouter.ai/openai/gpt-4,2026-08-26

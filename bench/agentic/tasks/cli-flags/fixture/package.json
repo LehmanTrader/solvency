@@ -1,0 +1,5 @@
+{
+  "name": "wordcount",
+  "type": "module",
+  "scripts": { "test": "node --test" }
+}

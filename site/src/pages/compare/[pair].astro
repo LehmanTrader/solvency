@@ -9,11 +9,17 @@ import { volumeLines, money, moneyMonth, capsLabel } from '../../lib/charts.ts';
 import { fmtX, ratio } from '../../lib/headline.ts';
 
 export async function getStaticPaths() {
-  const { models } = await import('../../lib/data.ts');
+  const { models, bestResultFor } = await import('../../lib/data.ts');
+  // With the full-router catalog (396 models, 2026-08-26) an all-pairs build
+  // is ~78k pages — past Cloudflare Pages' per-deploy file limit and useless
+  // besides: a compare verdict needs a cost-per-solved-task on each side.
+  // Build pairs only where BOTH models carry a benchmark result; every
+  // compare link the site emits (chartRows/pairHref) stays inside that set.
+  const withData = models.filter((m: any) => bestResultFor(m.model_id));
   const paths = [];
-  for (let i = 0; i < models.length; i++)
-    for (let j = i + 1; j < models.length; j++)
-      paths.push({ params: { pair: `${models[i].model_id}-vs-${models[j].model_id}` }, props: { a: models[i], b: models[j] } });
+  for (let i = 0; i < withData.length; i++)
+    for (let j = i + 1; j < withData.length; j++)
+      paths.push({ params: { pair: `${withData[i].model_id}-vs-${withData[j].model_id}` }, props: { a: withData[i], b: withData[j] } });
   return paths;
 }
 

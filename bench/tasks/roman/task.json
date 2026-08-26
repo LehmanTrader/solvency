@@ -1,0 +1,7 @@
+{
+  "id": "roman",
+  "func": "romanToInt",
+  "title": "Roman numerals",
+  "timeoutMs": 8000,
+  "prompt": "Write `romanToInt(s)`: convert a Roman numeral string (I,V,X,L,C,D,M with standard subtractive pairs) to an integer. Return null if the string contains any character outside IVXLCDM or is empty. Do not validate canonical form beyond that. Reply with exactly one JavaScript code block (```js ... ```) that uses `export function` for the required function. ES module syntax, no external imports, no I/O, no comments needed."
+}

@@ -1,0 +1,6 @@
+{
+  "id": "csv-report",
+  "goal": "data/orders.csv holds order rows. Implement src/report.js `revenueByRegion()` per README.md: parse the CSV (no quoting involved), sum amount per region, round to 2 decimals, and return regions sorted by revenue descending as [region, revenue] pairs. Read the file with node:fs from data/orders.csv relative to the repo root (process.cwd()).",
+  "timeoutMs": 240000,
+  "maxTurns": 24
+}

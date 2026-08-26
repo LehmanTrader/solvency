@@ -1,0 +1,5 @@
+{
+  "name": "paginate",
+  "type": "module",
+  "scripts": { "test": "node --test" }
+}

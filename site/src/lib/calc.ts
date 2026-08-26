@@ -40,9 +40,14 @@ export const GROUPS: { key: string; basis: Basis; title: string; note: string }[
   // cost, inside rankedBars/groupsHtml, since every row here ties at $0.
   { key: 'free_tier_capped', basis: 'free', title: 'FREE · rate-capped',
     note: 'Zero-dollar access paths with a provider-set rate cap — not comparable to an uncapped paid price, and never counted toward a "cheapest" figure. $0 rows stay off the log-scale Frontier chart; cost is uniformly $0, which cannot be plotted on a log axis.' },
-  { key: 'historical_at_run_date', basis: 'stale', title: 'Stale',
-    note: 'Pass rates published before 2026. Cost recomputed at current prices; the pass rate is old.' },
 ];
+
+// Operator directive (2026-08-26): the collapsed "Stale pass rates" section
+// is gone. Rows whose only result is a pre-2026 pass rate
+// (historical_at_run_date) are no longer ranked on a years-old number — the
+// model itself stays fully visible in the priced awaiting-measurement table
+// below the groups, like every other model without a current pass rate.
+const RETIRED_RESULT_BASES = new Set(['historical_at_run_date']);
 
 /**
  * The three bases a "cheapest"/superlative comparison is allowed to draw
@@ -73,7 +78,10 @@ export function compute(s: Settings): { rows: Row[]; missing: string[] } {
   const missing: string[] = [];
   for (const m of models) {
     const r = bestResultFor(m.model_id);
-    if (!r) { if (m.status === 'current') missing.push(m.display_name); continue; }
+    if (!r || RETIRED_RESULT_BASES.has(r.cost_basis)) {
+      if (m.status === 'current') missing.push(m.display_name);
+      continue;
+    }
     // An assumption may move a modelled row; it may never move it out of its
     // group. A model with no published cached-input price is computed at the
     // uncached price and annotated, rather than dropping into "Not shown".
@@ -159,12 +167,6 @@ export function groupsHtml(rows: Row[], s: Settings, o: GroupOpts): string {
     const emptyWord = g.basis === 'free' ? 'free-tier' : g.basis;
     const empty = `<p class="small py-2">No ${emptyWord} row has both a verified price and a published pass rate under these settings.</p>`;
     const head = `<p class="ghead"><span class="gword t-${g.basis}">${g.title}</span> · ${g.note}</p>`;
-    if (g.basis === 'stale') {
-      return `<details class="disc group-${g.basis} px-5 py-3 border-t border-[var(--color-rule)]" data-group="${g.basis}">
-        <summary><span class="t-stale">Stale pass rates</span> (<span data-count>${cr.length}</span>) · ${g.note}</summary>
-        <div class="chart-slot mt-3" data-chart>${svg || empty}</div>
-      </details>`;
-    }
     // FREE · rate-capped renders as its own always-visible section (same
     // grammar as Measured/Modelled), positioned below them and above the
     // collapsed Stale disclosure — never interleaved by cost, per
@@ -273,11 +275,37 @@ export function gateDelta(before: Row[], after: Row[], control: string, highligh
 }
 
 const escText = (t: string) => t.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!));
-/** The "Not shown" sentence; the pinned model's name (from Find a model) is emphasised at the destination. */
-export const missingHtml = (missing: string[], emphasise?: string) =>
-  missing.length
-    ? `No published pass rate, so reported as missing rather than estimated: ${missing.map((n) => emphasise && n.replace(/ \(.*$/, '') === emphasise ? `<strong class="text-[var(--color-ink)]">${escText(n)}</strong>` : escText(n)).join(', ')}.`
-    : 'Every tracked current model has a published pass rate under these settings.';
+/**
+ * The always-visible "priced, awaiting measurement" table (operator
+ * directive 2026-08-26: no hidden "Not shown" section — every model appears,
+ * with its verified prices; cost per solved task stays MISSING, never
+ * estimated). Sorted by input price ascending; the pinned model's row (from
+ * Find a model) is emphasised at the destination.
+ */
+export const missingHtml = (missing: string[], emphasise?: string) => {
+  if (!missing.length) return 'Every tracked current model has a published pass rate under these settings.';
+  const rows = missing.map((entry) => {
+    const name = entry.replace(/ \(.*$/, '');
+    const reason = entry.includes(' (') ? entry.replace(/^.*? \((.*)\)$/, '$1') : '';
+    const m = models.find((x) => x.display_name === name);
+    return { entry, name, reason, m };
+  }).sort((a, b) => (a.m?.input_per_mtok ?? Infinity) - (b.m?.input_per_mtok ?? Infinity) || a.name.localeCompare(b.name));
+  const fmtP = (v: number | null | undefined) =>
+    v === null || v === undefined ? '—' : v === 0 ? '$0' : `$${v < 0.01 ? v.toFixed(4) : v.toFixed(2)}`;
+  const body = rows.map(({ name, reason, m }) => {
+    const strong = emphasise && name === emphasise;
+    const label = m ? `<a class="hover:underline" href="/models/${m.model_id}">${escText(name)}</a>` : escText(name);
+    return `<div class="mrow${strong ? ' mrow-hit' : ''}" role="row">
+      <span role="cell" class="mname${strong ? ' font-semibold text-[var(--color-ink)]' : ''}">${label}${m?.access_tier === 'free' ? ' <span class="mfree">free</span>' : ''}${reason ? ` <span class="mwhy">· ${escText(reason)}</span>` : ''}</span>
+      <span role="cell" class="num">${fmtP(m?.input_per_mtok)}</span>
+      <span role="cell" class="num">${fmtP(m?.output_per_mtok)}</span>
+    </div>`;
+  }).join('');
+  return `<div class="mtable" role="table" aria-label="Priced models awaiting measurement">
+    <div class="mrow mhead" role="row"><span role="columnheader">Model</span><span role="columnheader" class="num">$ in / M</span><span role="columnheader" class="num">$ out / M</span></div>
+    ${body}
+  </div>`;
+};
 
 /** Validated model id for ?highlight= */
 export const validModelId = (id: string | null) => (id && models.some((m) => m.model_id === id)) ? id : undefined;

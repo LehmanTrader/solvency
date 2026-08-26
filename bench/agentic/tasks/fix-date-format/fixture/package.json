@@ -1,0 +1,5 @@
+{
+  "name": "timefmt",
+  "type": "module",
+  "scripts": { "test": "node --test" }
+}

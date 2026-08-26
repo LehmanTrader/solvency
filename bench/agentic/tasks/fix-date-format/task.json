@@ -1,0 +1,6 @@
+{
+  "id": "fix-date-format",
+  "goal": "The repo's relative-time formatter is wrong: `timeAgo` shows '1 minutes ago' (bad pluralisation) and mislabels anything over 24h as 'yesterday' even when it is many days old. Fix src/time.js so the visible test passes and the behaviour matches the README rules. Do not change the test file.",
+  "timeoutMs": 240000,
+  "maxTurns": 24
+}

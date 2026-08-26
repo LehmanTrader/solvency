@@ -1,0 +1,7 @@
+{
+  "id": "lru",
+  "func": "createLru",
+  "title": "LRU cache",
+  "timeoutMs": 8000,
+  "prompt": "Write `createLru(capacity)`: return an object with `get(key)` and `put(key, value)`. `get` returns the value or -1 and marks the key most-recently used; `put` inserts/updates and marks most-recently used, evicting the least-recently used entry when over capacity. Reply with exactly one JavaScript code block (```js ... ```) that uses `export function` for the required function. ES module syntax, no external imports, no I/O, no comments needed."
+}

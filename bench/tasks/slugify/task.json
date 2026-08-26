@@ -1,0 +1,7 @@
+{
+  "id": "slugify",
+  "func": "slugify",
+  "title": "URL slug",
+  "timeoutMs": 8000,
+  "prompt": "Write `slugify(title)`: lowercase the string, replace every run of non-alphanumeric characters with a single dash, and trim leading/trailing dashes. Reply with exactly one JavaScript code block (```js ... ```) that uses `export function` for the required function. ES module syntax, no external imports, no I/O, no comments needed."
+}

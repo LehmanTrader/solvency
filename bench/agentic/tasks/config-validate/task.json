@@ -1,0 +1,6 @@
+{
+  "id": "config-validate",
+  "goal": "Implement src/validate.js `validateConfig(cfg)` per README.md: return the normalized config or throw an Error whose message names every problem. The exact message contract is in the README; the grader depends on it.",
+  "timeoutMs": 240000,
+  "maxTurns": 24
+}

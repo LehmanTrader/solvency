@@ -1,0 +1,7 @@
+{
+  "id": "group-by",
+  "func": "groupBy",
+  "title": "Group by key",
+  "timeoutMs": 8000,
+  "prompt": "Write `groupBy(items, keyFn)`: return a plain object mapping each key (as produced by keyFn) to the array of items that produced it, preserving item order. Reply with exactly one JavaScript code block (```js ... ```) that uses `export function` for the required function. ES module syntax, no external imports, no I/O, no comments needed."
+}

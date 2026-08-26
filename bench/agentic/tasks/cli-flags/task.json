@@ -1,0 +1,6 @@
+{
+  "id": "cli-flags",
+  "goal": "bin/wordcount.js is a CLI that should support `--lines` (count lines instead of words) and `--file <path>` (read that file instead of stdin), per README.md. Right now it ignores flags entirely. Make the CLI behave as documented; the grader runs the executable with child_process.",
+  "timeoutMs": 240000,
+  "maxTurns": 24
+}

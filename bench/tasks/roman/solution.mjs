@@ -1,0 +1,1 @@
+export function romanToInt(s){if(!s)return null;const v={I:1,V:5,X:10,L:50,C:100,D:500,M:1000};let t=0;for(let i=0;i<s.length;i++){const c=v[s[i]];if(c===undefined)return null;const n=v[s[i+1]];t+=n>c?-c:c;}return t;}

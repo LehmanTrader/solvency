@@ -1,0 +1,1 @@
+export function semverCompare(a,b){const pa=a.split('.').map(Number),pb=b.split('.').map(Number);const n=Math.max(pa.length,pb.length);for(let i=0;i<n;i++){const x=pa[i]||0,y=pb[i]||0;if(x!==y)return x<y?-1:1;}return 0;}

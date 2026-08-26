@@ -1,0 +1,7 @@
+{
+  "id": "word-wrap",
+  "func": "wrapText",
+  "title": "Word wrap",
+  "timeoutMs": 8000,
+  "prompt": "Write `wrapText(text, width)`: greedy word wrap. Split text on single spaces, pack words greedily into lines of at most `width` characters (the joining spaces count; a word longer than width gets its own line, unbroken). Return the array of lines; empty text gives an empty array. Reply with exactly one JavaScript code block (```js ... ```) that uses `export function` for the required function. ES module syntax, no external imports, no I/O, no comments needed."
+}

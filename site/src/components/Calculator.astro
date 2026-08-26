@@ -83,7 +83,10 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
         <option value="other">something else</option>
       </select>.
     </p>
-    <p id="c-other-row" class="mode-bucket small mt-2 hidden">
+    <!-- Founder note (screenshot review, 2026-08-26): this row used to be
+         `.small` mono, comically undersized against the hero sentence above
+         it. It now continues the hero's own grammar one step down. -->
+    <p id="c-other-row" class="mode-bucket sentence sentence-sub mt-2 hidden">
       How many tasks?{' '}<input id="c-taskcount" class="ctl ctl-inline" type="number" inputmode="numeric" min="1" max="1000000" step="1" value={defaultBucket.median} aria-label="Task count" data-ctl="taskcount" />
     </p>
 
@@ -157,8 +160,8 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
         <datalist id="c-find-list">{names.map((m) => <option value={m.display_name} />)}</datalist>
         <p id="c-find-msg" class="small find-msg" role="status"></p>
       </form>
-      <div class="hidden sm:block" data-layout="wide" set:html={wide}></div>
-      <div class="sm:hidden" data-layout="narrow" set:html={narrow}></div>
+      <div class="hidden sm:block" data-layout="wide" data-bars-animate set:html={wide}></div>
+      <div class="sm:hidden" data-layout="narrow" data-bars-animate set:html={narrow}></div>
     </div>
     <div id="c-frontier" class="relative px-5 pb-4 hidden" data-wide={WIDE} data-narrow={NARROW}>
       <p class="text-[var(--color-body)] leading-relaxed max-w-[64ch] text-[0.875rem] mb-3">
@@ -169,8 +172,7 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
       <div class="hidden sm:block" data-chart data-layout="wide" data-w={WIDE} set:html={frontierWide}></div>
       <div class="sm:hidden" data-chart data-layout="narrow" data-w={NARROW} set:html={frontierNarrow}></div>
       <div class="tip" id="c-frontier-tip" role="presentation" aria-hidden="true"></div>
-      <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
-        <label class="small inline-flex items-center gap-2 min-h-11 cursor-pointer"><input id="c-frontier-stale" type="checkbox" class="chk" /> Show stale pass rates</label>
+      <div class="mt-3 flex flex-wrap items-center justify-end gap-3">
         <a class="link small" href="/methodology#frontier">See how the frontier is computed →</a>
       </div>
     </div>
@@ -189,11 +191,11 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
       </div>
     </div>
 
-    <details class="disc px-5 py-3 border-t border-[var(--color-rule)]" id="c-missing-d">
-      <summary>Not shown (<span data-count>{missing.length}</span>) · no published pass rate, reported as missing, never estimated</summary>
+    <section class="px-5 py-4 border-t border-[var(--color-rule)]" id="c-missing-d" aria-labelledby="c-missing-h">
+      <p class="ghead" id="c-missing-h">Priced, awaiting measurement (<span data-count>{missing.length}</span>) · verified prices for every listed model; cost per solved task stays missing until a benchmark measures it — shown in full, never estimated.</p>
       <p id="c-missing-find" class="small mt-2 text-[var(--color-ink)]" role="status"></p>
-      <p id="c-missing" class="small mt-2 max-w-3xl" set:html={missingHtml(missing)}></p>
-    </details>
+      <div id="c-missing" class="small mt-3" set:html={missingHtml(missing)}></div>
+    </section>
 
     <div id="c-actions" class="px-5 py-3 border-t border-[var(--color-rule)]">
       <div class="flex flex-wrap gap-x-6 gap-y-3 items-start justify-between">
@@ -292,6 +294,10 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
     frontier: $<HTMLInputElement>('c-frontier')!,
   };
   const groupsEl = $('c-groups')!;
+  // First-load bar entrance: the SSR wrapper carries data-bars-animate (see
+  // global.css). Drop it once the entrance has played, so settings changes
+  // and sorts never replay the animation.
+  setTimeout(() => groupsEl.querySelectorAll('[data-bars-animate]').forEach((el) => el.removeAttribute('data-bars-animate')), 1800);
 
   // ---- Sortable Ranking table (stage 2, deferred from stage 1) ------------
   // One sort state per basis group ("sort state per basis group" in the
@@ -471,16 +477,14 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
   const frontier = document.querySelector<HTMLElement>('#c-frontier');
   function renderScatter(rows: Row[], s: Settings) {
     if (!frontier || frontier.classList.contains('hidden')) return;
-    const showStale = (frontier.querySelector<HTMLInputElement>('#c-frontier-stale')?.checked) ?? false;
     const all = allChartRows(rows, s);
     const lead = all.find((r) => r.basis === 'measured')?.id;
     frontier.querySelectorAll<HTMLElement>('[data-chart]').forEach((slot) => {
       const compact = slot.dataset.layout === 'narrow';
       const w = slot.offsetParent ? widthOf(slot) : Number(slot.dataset.w);
-      slot.innerHTML = scatterPareto(all, { width: w, height: compact ? w : undefined, compact, lead, showStale, rail: !compact });
+      slot.innerHTML = scatterPareto(all, { width: w, height: compact ? w : undefined, compact, lead, rail: !compact });
     });
   }
-  frontier?.querySelector('#c-frontier-stale')?.addEventListener('change', () => render(false));
 
   // ---- Ranking | Frontier toggle: instant swap, no scrolling --------------
   const viewRankingBtn = $<HTMLButtonElement>('c-view-ranking')!, viewFrontierBtn = $<HTMLButtonElement>('c-view-frontier')!;
@@ -545,9 +549,9 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
       row.scrollIntoView({ block: 'center' });
     } else {
       // the message is rendered at the destination, not beside the input
-      const missingD = $<HTMLDetailsElement>('c-missing-d')!; missingD.open = true;
+      const missingD = $('c-missing-d')!;
       findMsg.textContent = '';
-      missingFind.textContent = `${m.display_name} has no published pass rate — listed here under Not shown, never estimated.`;
+      missingFind.textContent = `${m.display_name} has no published pass rate — listed below with its verified prices, awaiting measurement.`;
       missingD.scrollIntoView({ block: 'center' });
     }
   }

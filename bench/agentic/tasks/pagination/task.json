@@ -1,0 +1,6 @@
+{
+  "id": "pagination",
+  "goal": "src/paginate.js backs an API's pagination and has real bugs: the last page can repeat items, page numbers below 1 crash, and totalPages is wrong for exact multiples. Fix `paginate(items, page, perPage)` to match README.md. Do not change the visible test.",
+  "timeoutMs": 240000,
+  "maxTurns": 24
+}

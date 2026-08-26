@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Solvency Bench</title>
+<style>
+  :root { --bg:#F8F6EE; --panel:#FFFFFF; --ink:#1A1714; --body:#575044; --rule:#E3DFD3;
+          --purple:#6C3BF4; --amber:#E0A02E; --pass:#2E7D46; --fail:#B3372F;
+          --mono: ui-monospace, "JetBrains Mono", SFMono-Regular, Menlo, monospace;
+          --sans: "IBM Plex Sans", system-ui, sans-serif; --serif: "Source Serif 4", Georgia, serif; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family:var(--sans); line-height:1.5; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 40px 24px 80px; }
+  header { display:flex; align-items:center; justify-content:space-between; }
+  .lockup { display:flex; align-items:center; gap:10px; font-family:var(--mono); letter-spacing:.18em; }
+  .lockup img { width:26px; height:26px; }
+  .lockup b { font-weight:700; }
+  .tag { font-family:var(--mono); font-size:12px; color:var(--body); letter-spacing:.1em; }
+  h1 { font-family:var(--serif); font-size: clamp(30px, 4vw, 42px); margin:.6em 0 .2em; }
+  .lede { max-width: 60ch; color: var(--body); margin: 0; }
+  .grid { display:grid; gap:20px; grid-template-columns: minmax(0,22rem) minmax(0,1fr); margin-top:32px; }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+  .card { background:var(--panel); border:1px solid var(--rule); border-radius:12px; padding:20px; }
+  .label { font-family:var(--mono); font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--body); }
+  input, select { font: inherit; font-family:var(--mono); width:100%; margin-top:6px; padding:8px 10px;
+    border:1px solid var(--rule); border-radius:8px; background:var(--bg); color:var(--ink); }
+  input:focus { outline:2px solid var(--purple); outline-offset:1px; }
+  .field { margin-top:14px; }
+  .tasks { margin-top:8px; max-height:240px; overflow-y:auto; border:1px solid var(--rule);
+    border-radius:8px; background:var(--bg); }
+  .tasks label { display:grid; grid-template-columns:16px 1fr; gap:10px; align-items:center;
+    font-size:14px; padding:7px 12px; border-top:1px solid var(--rule); cursor:pointer; }
+  .tasks label:first-child { border-top:0; }
+  .tasks label:hover { background:color-mix(in srgb, var(--purple) 5%, transparent); }
+  .tasks input { margin:0; width:16px; height:16px; accent-color: var(--purple); }
+  .btn { font-family:var(--mono); font-size:14px; border:1px solid var(--ink); background:var(--panel);
+    color:var(--ink); border-radius:8px; padding:10px 16px; cursor:pointer; }
+  .btn:disabled { opacity:.4; cursor:not-allowed; }
+  .btn-run { background:var(--amber); border-color:var(--amber); font-weight:700; }
+  .btn-stop { background:var(--fail); border-color:var(--fail); color:#fff; }
+  .row-btns { display:flex; gap:10px; margin-top:18px; flex-wrap:wrap; }
+  .meters { display:grid; grid-template-columns:repeat(4, 1fr); gap:14px; }
+  @media (max-width: 640px) { .meters { grid-template-columns:repeat(2, 1fr); } }
+  .meter .v { font-family:var(--mono); font-size:26px; font-weight:700; margin-top:2px; font-variant-numeric: tabular-nums; }
+  .estimate { margin-top:14px; font-size:14px; color:var(--body); border-left:3px solid var(--purple); padding-left:12px; }
+  .estimate b { color:var(--ink); }
+  .warn { color:var(--fail); }
+  table { width:100%; border-collapse:collapse; margin-top:16px; font-size:14px; }
+  th { text-align:left; font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+       color:var(--body); border-bottom:1px solid var(--rule); padding:6px 8px; }
+  td { border-bottom:1px solid var(--rule); padding:6px 8px; }
+  td.num { font-family:var(--mono); text-align:right; font-variant-numeric:tabular-nums; }
+  .cell { display:inline-flex; width:22px; height:22px; border-radius:6px; border:1px solid var(--rule);
+    align-items:center; justify-content:center; font-family:var(--mono); font-size:11px; margin-right:4px;
+    background:var(--bg); color:var(--body); }
+  .cell.run { border-color:var(--purple); color:var(--purple); animation: pulse 1s infinite alternate; }
+  .cell.pass { background:var(--pass); border-color:var(--pass); color:#fff; }
+  .cell.fail { background:var(--fail); border-color:var(--fail); color:#fff; }
+  .cell.infra { background:var(--rule); }
+  @keyframes pulse { from { opacity:.5 } to { opacity:1 } }
+  #log { font-family:var(--mono); font-size:12px; color:var(--body); margin-top:14px; max-height:160px;
+    overflow-y:auto; white-space:pre-wrap; }
+  .done { border-left:3px solid var(--amber); padding-left:12px; margin-top:16px; }
+  .done .big { font-family:var(--mono); font-size:22px; font-weight:700; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="lockup"><img src="/brand-mark.png" alt=""><span><b>S</b>OLVENCY BENCH</span></span>
+    <span class="tag" id="proto">solvency-bench-v0 · single-turn code tasks</span>
+  </header>
+  <h1>Measure it yourself.</h1>
+  <p class="lede">Pick a model, see the ceiling price before anything runs, set a hard cap, press run.
+  Deterministic checkers grade every attempt; every token is billed against verified prices; the run
+  aborts itself at the cap.</p>
+
+  <div class="grid">
+    <div class="card">
+      <p class="label">Run configuration</p>
+      <div class="field"><span class="label">OpenRouter model slug</span>
+        <input id="slug" placeholder="z-ai/glm-5.3-flash" value="z-ai/glm-5.3-flash"></div>
+      <div class="field" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><span class="label">Trials / task</span><input id="trials" type="number" min="1" max="5" value="3"></div>
+        <div><span class="label">Max tokens</span><input id="maxtok" type="number" min="256" max="8000" value="1600"></div>
+      </div>
+      <div class="field"><span class="label">Hard budget cap (USD)</span>
+        <input id="budget" type="number" min="0.1" step="0.1" value="5"></div>
+      <div class="field"><span class="label">Tasks</span><div class="tasks" id="tasklist"></div></div>
+      <div class="row-btns">
+        <button class="btn" id="btn-selftest">Self-test graders (free)</button>
+        <button class="btn" id="btn-est">Estimate</button>
+        <button class="btn btn-run" id="btn-run" disabled>Run</button>
+        <button class="btn btn-stop" id="btn-stop" disabled>Stop</button>
+      </div>
+      <div class="estimate" id="est">No estimate yet — Run stays disabled until you price the exact
+        selection. That is the point.</div>
+    </div>
+
+    <div class="card">
+      <div class="meters">
+        <div class="meter"><span class="label">Spent</span><div class="v" id="m-spent">$0.00</div></div>
+        <div class="meter"><span class="label">Attempts</span><div class="v" id="m-att">0</div></div>
+        <div class="meter"><span class="label">Pass rate</span><div class="v" id="m-pass">—</div></div>
+        <div class="meter"><span class="label">$ / solved</span><div class="v" id="m-solved">—</div></div>
+      </div>
+      <table aria-label="Attempts by task">
+        <thead><tr><th>Task</th><th>Trials</th><th style="text-align:right">$</th></tr></thead>
+        <tbody id="board"></tbody>
+      </table>
+      <div class="done" id="done" hidden>
+        <p class="label">Run complete</p>
+        <div class="big" id="done-line"></div>
+        <p class="lede" style="font-size:13px" id="done-note"></p>
+      </div>
+      <div id="log"></div>
+    </div>
+  </div>
+</div>
+<script>
+const $ = (id) => document.getElementById(id);
+let tasks = [], cells = {}, spentByTask = {}, stats = { pass:0, fail:0, infra:0, spent:0 };
+const log = (s) => { const el = $('log'); el.textContent = `${s}\n` + el.textContent.slice(0, 4000); };
+
+fetch('/api/tasks').then(r => r.json()).then((ts) => {
+  tasks = ts;
+  $('tasklist').innerHTML = ts.map(t =>
+    `<label><input type="checkbox" data-task="${t.id}" checked><span>${t.title}</span></label>`).join('');
+  const trials = +$('trials').value;
+  renderBoard(trials);
+});
+
+function chosen() { return [...document.querySelectorAll('[data-task]:checked')].map(c => c.dataset.task); }
+function cfg() {
+  return { slug: $('slug').value.trim(), trials: +$('trials').value, maxTokens: +$('maxtok').value,
+           budgetUsd: +$('budget').value, taskIds: chosen() };
+}
+function renderBoard(trials) {
+  cells = {}; spentByTask = {};
+  $('board').innerHTML = tasks.filter(t => chosen().includes(t.id)).map(t => {
+    const c = Array.from({length: trials}, (_, i) =>
+      `<span class="cell" id="c-${t.id}-${i+1}">${i+1}</span>`).join('');
+    return `<tr><td>${t.title}</td><td>${c}</td><td class="num" id="s-${t.id}">—</td></tr>`;
+  }).join('');
+}
+['trials'].forEach(id => $(id).addEventListener('input', () => renderBoard(+$('trials').value)));
+$('tasklist').addEventListener('change', () => renderBoard(+$('trials').value));
+
+$('btn-selftest').onclick = async () => {
+  log('self-testing graders…');
+  const r = await fetch('/api/selftest', { method:'POST' }).then(r => r.json());
+  log(r.ok ? 'self-test clean — every checker accepts its reference and rejects a stub'
+           : 'SELF-TEST FAILED — do not run until fixed');
+};
+
+$('btn-est').onclick = async () => {
+  const r = await fetch('/api/estimate', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(cfg()) }).then(r => r.json());
+  if (r.error) { $('est').innerHTML = `<span class="warn">${r.error}</span>`; $('btn-run').disabled = true; return; }
+  $('est').innerHTML = `<b>${r.attempts} attempts</b> · ceiling <b>$${r.estUsdCeiling.toFixed(3)}</b>` +
+    ` (completion counted at the full max-tokens cap — the real bill lands under this)` +
+    `<br>prices: ${r.prices.priceNote}` +
+    (r.estUsdCeiling > +$('budget').value ? `<br><span class="warn">ceiling exceeds your cap — the run would stop early at $${(+$('budget').value).toFixed(2)}</span>` : '');
+  $('btn-run').disabled = false;
+};
+
+['slug','trials','maxtok','budget'].forEach(id => $(id).addEventListener('input', () => { $('btn-run').disabled = true; }));
+$('tasklist').addEventListener('change', () => { $('btn-run').disabled = true; });
+
+$('btn-run').onclick = async () => {
+  stats = { pass:0, fail:0, infra:0, spent:0 };
+  renderBoard(+$('trials').value); $('done').hidden = true;
+  const r = await fetch('/api/run', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(cfg()) }).then(r => r.json());
+  if (r.error) { log('refused: ' + r.error); return; }
+  log(`run ${r.runId} started`);
+  $('btn-run').disabled = true; $('btn-stop').disabled = false;
+};
+$('btn-stop').onclick = () => fetch('/api/stop', { method:'POST' }).then(() => log('stop requested — finishing the in-flight attempt'));
+
+const es = new EventSource('/api/events');
+es.onmessage = (m) => {
+  const e = JSON.parse(m.data);
+  if (e.type === 'attempt-start') {
+    document.getElementById(`c-${e.taskId}-${e.trial}`)?.classList.add('run');
+  }
+  if (e.type === 'attempt-done') {
+    const cell = document.getElementById(`c-${e.taskId}-${e.trial}`);
+    if (cell) { cell.classList.remove('run'); cell.classList.add(e.infra ? 'infra' : e.pass ? 'pass' : 'fail'); }
+    stats[e.infra ? 'infra' : e.pass ? 'pass' : 'fail']++;
+    stats.spent = e.spent;
+    spentByTask[e.taskId] = (spentByTask[e.taskId] ?? 0) + (e.costUsd ?? 0);
+    const st = document.getElementById(`s-${e.taskId}`);
+    if (st) st.textContent = '$' + spentByTask[e.taskId].toFixed(4);
+    const countable = stats.pass + stats.fail;
+    $('m-spent').textContent = '$' + e.spent.toFixed(3);
+    $('m-att').textContent = String(countable + stats.infra);
+    $('m-pass').textContent = countable ? Math.round(100 * stats.pass / countable) + '%' : '—';
+    $('m-solved').textContent = (countable && stats.pass) ? '$' + ((e.spent / countable) / (stats.pass / countable)).toFixed(3) : '—';
+    if (!e.pass && !e.infra && e.detail) log(`fail ${e.taskId}#${e.trial}: ${e.detail.split('\n')[0].slice(0, 90)}`);
+    if (e.infra) log(`infra ${e.taskId}#${e.trial}: ${e.detail}`);
+  }
+  if (e.type === 'run-done') {
+    $('btn-stop').disabled = true;
+    const s = e.summary;
+    $('done').hidden = false;
+    $('done-line').textContent = s.passRate == null ? 'no countable attempts'
+      : `${Math.round(s.passRate * 100)}% pass · $${s.costPerTaskUsd.toFixed(4)}/task · $${(s.costPerSolvedUsd ?? 0).toFixed(4)}/solved · $${s.spentUsd} spent`;
+    $('done-note').textContent = `${s.model} · ${s.attemptsCountable} countable attempts, ${s.infraExcluded} infra-excluded · protocol ${s.protocol} (${s.protocolHash})` +
+      (s.aborted ? ` · ABORTED: ${s.aborted}` : '') + ` · own population, never merged with AA/OpenBench/WildClawBench.`;
+    log('summary written to bench/results/' + s.runId + '/summary.json');
+  }
+  if (e.type === 'run-error') { log('run error: ' + e.error); $('btn-stop').disabled = true; }
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+{
+  "id": "csv-line",
+  "func": "parseCsvLine",
+  "title": "CSV line parser",
+  "timeoutMs": 8000,
+  "prompt": "Write `parseCsvLine(line)`: split one CSV line into an array of field strings. Fields may be double-quoted; inside quotes, commas are literal and doubled double-quotes mean one literal quote. Unquoted fields are taken verbatim. Assume well-formed input. Reply with exactly one JavaScript code block (```js ... ```) that uses `export function` for the required function. ES module syntax, no external imports, no I/O, no comments needed."
+}

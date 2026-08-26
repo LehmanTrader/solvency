@@ -108,7 +108,7 @@ const MONOGRAM_COLORS: Record<string, string> = {};
 function chipHtml(provider: string | undefined, text: string): string {
   const markFile = provider ? PROVIDER_MARK_FILES[provider] : undefined;
   if (markFile) {
-    return `<span class="chip chip-mark"><img src="${providerMarkUrl(markFile)}" width="14" height="14" alt=""/></span>`;
+    return `<span class="chip chip-mark"><img src="${providerMarkUrl(markFile)}" width="18" height="18" alt=""/></span>`;
   }
   const mono = provider ? MONOGRAM_COLORS[provider] : undefined;
   const bg = mono ?? CHIP_BG, fg = mono ? '#FFFFFF' : RC_INK, border = mono ?? CHIP_BORDER;
@@ -151,11 +151,13 @@ function rankedRowHtml(r: RankedRow, rank: number, maxCost: number, rowH: number
   // original leaderboard-card behaviour (rankedCostCardData and friends
   // never set `lead`, so nothing changes for them).
   const lead = r.lead ?? rank === 1;
-  const secondary = r.sub ? `<span class="sub">${esc(r.sub)}</span>`
-    : r.chip ? chipHtml(r.provider, r.chip) : '';
+  // Founder review 2026-08-26: the provider chip sits BESIDE the name, the
+  // whole row is one vertically-centered line, sub text trails the name.
+  const chip = r.chip ? chipHtml(r.provider, r.chip) : '';
+  const secondary = r.sub ? `<span class="sub">${esc(r.sub)}</span>` : '';
   return `<div class="row${lead ? ' lead' : ''}" style="height:${rowH}px">
       <div class="rank">${rank}</div>
-      <div class="who"><span class="name">${esc(r.name)}</span>${secondary}</div>
+      <div class="who">${chip}<span class="name">${esc(r.name)}</span>${secondary}</div>
       <div class="track"><div class="bar" style="width:${pct}%;${basisBarCss(r.basis)}"></div></div>
       <div class="val">${esc(r.value)}</div>
     </div>`;
@@ -171,8 +173,8 @@ function rankedRowHtml(r: RankedRow, rank: number, maxCost: number, rowH: number
  * makes the budget not add up rather than silently overlapping again.
  */
 function rankedLayout(rowCount: number) {
-  const padTop = 44, padSide = 60, padBottom = 26;
-  const topH = 30, gap1 = 14, headH = 88, gap2 = 18, gap3 = 14, footH = 24;
+  const padTop = 44, padSide = 60, padBottom = 40;
+  const topH = 30, gap1 = 14, headH = 88, gap2 = 18, gap3 = 0, footH = 0;
   const fixed = padTop + topH + gap1 + headH + gap2 + gap3 + footH + padBottom;
   const rowsH = 630 - fixed;
   if (rowsH < rowCount * 40) throw new Error(`rankedLayout: ${rowCount} rows do not fit the card (only ${rowsH}px available)`);
@@ -215,9 +217,9 @@ function rankedCardHtml(card: RankedCardData): string {
       display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;
       font-size:14px;font-weight:700;color:${RC_INK}}
     .row.lead .rank{background:${BRAND_AMBER};border-color:${BRAND_AMBER}}
-    .who{display:flex;flex-direction:column;gap:2px;min-width:0}
+    .who{display:flex;flex-direction:row;align-items:center;gap:10px;min-width:0}
     .name{font-weight:600;font-size:19px;color:${RC_INK};white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .sub{font-size:12px;color:${RC_MUTED}}
+    .sub{font-size:12px;color:${RC_MUTED};white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .chip{width:fit-content;padding:1px 6px;border-radius:4px;border:1px solid transparent;
       font-size:11px;font-weight:700;letter-spacing:.04em}
     .chip-mark{padding:3px;display:flex;align-items:center;justify-content:center;
@@ -226,12 +228,6 @@ function rankedCardHtml(card: RankedCardData): string {
     .track{position:relative;height:12px;border-radius:4px;background:${RC_RULE}}
     .bar{position:absolute;left:0;top:0;height:100%;border-radius:4px}
     .val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:18px;color:${RC_INK};text-align:right}
-    .foot{height:${L.footH}px;margin-top:${L.gap3}px;display:flex;justify-content:space-between;
-      align-items:center;gap:24px;border-top:1px solid ${RC_RULE};padding-top:12px}
-    .foot span{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.04em;
-      color:${RC_MUTED};text-transform:uppercase;max-width:520px;white-space:nowrap;
-      overflow:hidden;text-overflow:ellipsis}
-    .foot span.note{text-align:right}
   </style>
   <div class="wrap">
     <div class="top">
@@ -240,7 +236,6 @@ function rankedCardHtml(card: RankedCardData): string {
     </div>
     <div class="headline">${esc(card.headlinePrefix)}<span class="hl">${esc(card.headlineHighlight)}</span>${esc(card.headlineSuffix)}</div>
     <div class="rows">${rows}</div>
-    <div class="foot"><span>${esc(card.sourceLine)}</span><span class="note">${esc(card.noteLine)}</span></div>
   </div>`;
 }
 

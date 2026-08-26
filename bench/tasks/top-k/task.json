@@ -1,0 +1,7 @@
+{
+  "id": "top-k",
+  "func": "topK",
+  "title": "Top-K frequent",
+  "timeoutMs": 8000,
+  "prompt": "Write `topK(words, k)`: given an array of lowercase words, return the k most frequent words, most frequent first; break frequency ties alphabetically. Assume 0 <= k <= number of distinct words. Reply with exactly one JavaScript code block (```js ... ```) that uses `export function` for the required function. ES module syntax, no external imports, no I/O, no comments needed."
+}

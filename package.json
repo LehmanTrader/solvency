@@ -27,6 +27,9 @@
     "queue:miner": "node scripts/content-miner.ts",
     "queue:price-watch": "node scripts/price-watch-draft.ts",
     "queue:dashboard": "node scripts/queue-dashboard.ts",
-    "site": "cd site && npm run build"
+    "site": "cd site && npm run build",
+    "bench": "node bench/runner.mjs",
+    "bench:selftest": "node bench/runner.mjs --selftest",
+    "bench:gui": "node bench/server.mjs"
   }
 }

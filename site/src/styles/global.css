@@ -703,3 +703,39 @@
     border-radius: 8px; background: var(--color-bg); margin-top: 1.5rem;
   }
 }
+
+/* First-load entrance for the ranked purple bars (operator direction
+   2026-08-26): each bar fills from zero, staggered by its row index. The
+   data-bars-animate attribute exists only on the server-rendered wrapper and
+   is removed by the Calculator island shortly after load, so later
+   re-renders (settings changes, sorts) never replay it. Animations sit above
+   inline styles in the cascade, so the rect's inline width is the implicit
+   "to" keyframe. */
+@keyframes bar-load { from { width: 0; } }
+@media (prefers-reduced-motion: no-preference) {
+  [data-bars-animate] svg.ranked rect.bar {
+    animation: bar-load 0.7s cubic-bezier(0.25, 0.72, 0.3, 1) both;
+    animation-delay: calc(var(--i, 0) * 55ms);
+  }
+}
+
+/* The always-visible "priced, awaiting measurement" table (no hidden
+   Not-shown section, operator directive 2026-08-26). Scroll container keeps
+   the page height sane at 380+ rows while every row stays reachable. */
+.mtable { max-height: 26rem; overflow-y: auto; border: 1px solid var(--color-rule); border-radius: 8px; }
+.mtable .mrow { display: grid; grid-template-columns: minmax(0, 1fr) 6.5rem 6.5rem; gap: 0 12px; padding: 6px 12px; border-top: 1px solid var(--color-rule); align-items: baseline; }
+.mtable .mrow:first-child { border-top: 0; }
+.mtable .mhead { position: sticky; top: 0; background: var(--color-panel-2); font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.6875rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-body); z-index: 1; }
+.mtable .num { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--font-mono, ui-monospace, monospace); }
+.mtable .mname { overflow-wrap: anywhere; }
+.mtable .mfree { font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.6875rem; letter-spacing: 0.06em; text-transform: uppercase; border: 1px dotted var(--color-purple); color: var(--color-purple); border-radius: 4px; padding: 0 4px; margin-left: 4px; }
+.mtable .mwhy { color: var(--color-body); }
+.mtable .mrow-hit { background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
+
+/* The hero's follow-up line ("How many tasks?" after picking "something
+   else"): same display grammar as .sentence, one step down, so it reads as
+   part of the hero rather than a stray form caption (founder note,
+   2026-08-26 screenshot review). */
+.sentence-sub { font-size: 1.05rem; color: var(--color-body); }
+@media (min-width: 640px) { .sentence.sentence-sub { font-size: 1.3rem; } }
+.sentence-sub .ctl-inline { min-width: 3.2em; text-align: center; }

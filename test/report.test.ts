@@ -22,8 +22,8 @@ const num = (s: string) => Number(s.replace(/[*$%d,]/g, ''));
 
 describe('report matches the dataset', () => {
   test('measured table figures re-derive from the engine', () => {
-    const rows = md.split('\n').filter((l) => /^\| .+ \| (Claude Code|Codex|Grok Build|Opencode) \|/.test(l));
-    assert.equal(rows.length, 6, 'expected 6 measured rows in the report');
+    const rows = md.split('\n').filter((l) => /^\| .+ \| (Claude Code|Codex|Grok Build|Opencode|Kimi Code CLI|Muse Code) \|/.test(l));
+    assert.equal(rows.length, 13, 'expected 13 measured rows in the report (2026-08-26 AA re-read)');
     for (const line of rows) {
       const [name, harness, idx, perTask, perSolved] = cells(line);
       const m = byName(name);
@@ -52,15 +52,21 @@ describe('report matches the dataset', () => {
     }
   });
 
-  test('the models listed as having no pass rate really have none', () => {
-    // The list wraps across lines, so read the whole paragraph up to the
-    // sentence that follows it rather than a single line.
-    const m0 = md.match(/\*\*Not in either table:\*\*([\s\S]*?)\.\s+All are priced/);
-    assert.ok(m0, 'could not locate the missing-models list');
-    const named = m0![1].replace(/\s+/g, ' ').split(',').map((s) => s.trim()).filter(Boolean);
+  test('the missing-models counts match the dataset exactly', () => {
+    // Since the catalog ingested the full OpenRouter listing (2026-08-26,
+    // operator directive), the note states counts rather than naming every
+    // model. Both stated counts must re-derive from the dataset.
     const actual = models.filter((m) => m.status === 'current' && !bestResultFor(m.model_id));
-    assert.equal(named.length, actual.length, `report lists ${named.length}, dataset has ${actual.length}`);
-    for (const n of named) {
+    const current = models.filter((m) => m.status === 'current');
+    const para = md.match(/\*\*Not in either table:\*\* the remaining (\d+) priced, current models/);
+    assert.ok(para, 'could not locate the missing-models paragraph');
+    assert.equal(Number(para![1]), actual.length, `paragraph says ${para![1]}, dataset has ${actual.length}`);
+    const bullet = md.match(/\*\*(\d+) of (\d+) current, priced models have no pass rate/);
+    assert.ok(bullet, 'could not locate the missing-models count bullet');
+    assert.equal(Number(bullet![1]), actual.length);
+    assert.equal(Number(bullet![2]), current.length);
+    // The names the paragraph does single out must be real, current and data-less.
+    for (const n of ['Claude Sonnet 5', 'Claude Haiku 4.5', 'GPT-5.3 Codex', 'GLM-5.3']) {
       const m = byName(n);
       assert.ok(m, `report names an unknown model: ${n}`);
       assert.equal(bestResultFor(m!.model_id), null, `${n} actually has a pass rate`);

@@ -1,0 +1,1 @@
+export function createLru(capacity){const m=new Map();return{get(k){if(!m.has(k))return -1;const v=m.get(k);m.delete(k);m.set(k,v);return v;},put(k,v){if(m.has(k))m.delete(k);m.set(k,v);if(m.size>capacity)m.delete(m.keys().next().value);}};}

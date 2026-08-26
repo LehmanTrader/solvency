@@ -1,0 +1,5 @@
+{
+  "name": "validate",
+  "type": "module",
+  "scripts": { "test": "node --test" }
+}

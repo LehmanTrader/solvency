@@ -1,0 +1,1 @@
+export function parseCsvLine(line){const Q='\u0022';const out=[];let cur='',q=false;for(let i=0;i<line.length;i++){const c=line[i];if(q){if(c===Q&&line[i+1]===Q){cur+=Q;i++;}else if(c===Q)q=false;else cur+=c;}else if(c===Q)q=true;else if(c===','){out.push(cur);cur='';}else cur+=c;}out.push(cur);return out;}

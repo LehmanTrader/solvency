@@ -1,0 +1,5 @@
+{
+  "name": "pool",
+  "type": "module",
+  "scripts": { "test": "node --test" }
+}

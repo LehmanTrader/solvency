@@ -50,7 +50,7 @@ This is not a bespoke definition. It's the unit the benchmarks Solvency already 
   one closeable unit of work an agent either solves or doesn't.
 - **SWE-bench-style benchmarks** are built directly from issue→patch cycles: a real GitHub
   issue, the PR that closed it, and the tests that verify it.
-- **OpenBench task trials** (used in [Same Model, Four Harnesses](/research/same-model-four-harnesses))
+- **OpenBench task trials** (used in [Same Model, Six Harnesses](/research/same-model-four-harnesses))
   count discrete admission-gated tasks per harness run.
 
 So "a task" in this note, in the calculator, and in Solvency's cost-per-solved-task tables is

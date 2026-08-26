@@ -1,0 +1,7 @@
+{
+  "id": "merge-intervals",
+  "func": "mergeIntervals",
+  "title": "Interval merge",
+  "timeoutMs": 8000,
+  "prompt": "Write `mergeIntervals(intervals)`: given an array of [start, end] number pairs (unsorted, possibly touching or overlapping; touching intervals like [1,2] and [2,3] merge), return the merged intervals sorted by start. Do not mutate the input. Reply with exactly one JavaScript code block (```js ... ```) that uses `export function` for the required function. ES module syntax, no external imports, no I/O, no comments needed."
+}

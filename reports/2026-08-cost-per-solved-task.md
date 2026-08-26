@@ -1,8 +1,8 @@
 ---
 title: Cost Per Solved Task
 note: 1
-date: 2026-08-21
-description: Per-token pricing does not predict what a coding task actually costs. Measured across six current models, the gap widens from 38x to 146x.
+date: 2026-08-26
+description: Per-token pricing does not predict what a coding task actually costs. Measured across thirteen current configurations, the gap widens from 42x to 145x.
 price_verified: 2026-08-21
 pdf_sources: AA · SEAL · Aider
 pdf_method: cost ÷ pass rate
@@ -11,7 +11,8 @@ pdf_method: cost ÷ pass rate
 # Cost Per Solved Task
 
 **AI coding models, August 2026.** Every price in this report was verified against the
-provider's own pricing page on 2026-08-21. Every pass rate is linked to its source. Nothing
+provider's own pricing page or listing (2026-08-21 for the modelled table's rates; catalog
+rows added since carry their own dates). Every pass rate is linked to its source. Nothing
 is interpolated; where a number does not exist, this report says so.
 
 ---
@@ -37,19 +38,30 @@ Two tables, because there are two kinds of number here and merging them would be
 ### A. Measured
 
 The benchmark source ran the model and observed what it cost. **No assumption of ours is
-inside these figures.**
+inside these figures.** Re-read 2026-08-26: the index now carries thirteen priceable
+configurations, up from six — Kimi K3, Qwen3.8 Max, GPT-5.6 Terra and Luna, Muse Spark 1.2,
+GLM-5.2 and DeepSeek V4 Pro enter the table.
 
 | Model | Harness | Index | $ / task | **$ / solved task** |
 |---|---|---:|---:|---:|
 | Claude Opus 5 | Claude Code | 68 | $8.17 | **$12.01** |
-| Claude Fable 5 | Claude Code | 67 | $11.70 | **$17.46** |
+| Claude Fable 5 | Claude Code | 67 | $11.69 | **$17.45** |
 | GPT-5.6 Sol | Codex | 65 | $6.42 | **$9.88** |
 | Grok 4.5 | Grok Build | 64 | $2.44 | **$3.81** |
+| Kimi K3 | Kimi Code CLI | 63 | $3.08 | **$4.89** |
+| Muse Spark 1.2 | Muse Code | 62 | $2.07 | **$3.34** |
+| Qwen3.8 Max | Claude Code | 61 | $3.23 | **$5.30** |
+| GPT-5.6 Terra | Codex | 60 | $2.70 | **$4.50** |
 | Gemini 3.7 Flash | Opencode | 60 | $1.27 | **$2.12** |
+| GPT-5.6 Luna | Codex | 57 | $1.51 | **$2.65** |
 | DeepSeek V4 Flash | Codex | 50 | $0.06 | **$0.12** |
+| GLM 5.2 | Claude Code | 43 | $6.66 | **$15.49** |
+| DeepSeek V4 Pro | Codex | 43 | $0.09 | **$0.21** |
 
-Source: [Artificial Analysis (artificialanalysis.ai)](https://artificialanalysis.ai/agents/coding-agents) — Coding Agent Index v1.4,
-326 tasks, 3 attempts each, read 2026-08-21.
+Source: [Artificial Analysis (artificialanalysis.ai)](https://artificialanalysis.ai/agents/coding-agents) — Coding Agent Index,
+326 tasks, 3 attempts each, read 2026-08-26. Two of the index's entries carry no public
+per-token price and no OpenRouter listing (Cursor's Composer 2.5 Fast, Cognition's SWE-1.7
+Lightning Max); they are recorded as observed but cannot join a cost-per-solved comparison.
 
 ### B. Modelled
 
@@ -75,13 +87,11 @@ model priced at today's verified rates. The assumptions are listed in full in th
 > measured on 326 agentic tasks; B is our loop model applied to a pass rate from a different
 > benchmark. Read each table against itself only.
 
-**Not in either table:** Claude Sonnet 5, Claude Haiku 4.5, GPT-5.6 Terra, GPT-5.6 Luna,
-GPT-5.3 Codex, DeepSeek V4 Pro, Grok 4.6, Mistral Medium 3.5, GLM-5.3, Kimi K3, MiniMax M3,
-MiniMax M2.7, MiniMax M2.5, MiniMax M2.1, MiniMax M2, Solar Pro 4, Solar Pro 3, Solar Pro 2,
-Solar Mini, Ling 3.0 Flash, Ling 2.6 1T, Ling 2.6 Flash, Ring 2.6 1T, Laguna S 2.1, GLM 4.7
-Flash (Z.ai free), GLM 4.5 Flash (Z.ai free), North Mini Code (Cohere free). All are priced
-and current. None has a published pass rate we could find. They
-are missing, not zero.
+**Not in either table:** the remaining 371 priced, current models in the catalog — which,
+as of 2026-08-26, spans every text model listed on OpenRouter plus vendor-direct rows.
+Widely used names sit in this set: Claude Sonnet 5, Claude Haiku 4.5, GPT-5.3 Codex,
+GLM-5.3, MiniMax M3, the Llama 4 line, and hundreds more. None has a published pass rate
+we could find. They are missing, not zero.
 
 ---
 
@@ -89,9 +99,9 @@ are missing, not zero.
 
 ![Token price is not task cost](charts/divergence.svg)
 
-Rank the six measured models by output token price and you get one order. Rank them by cost
+Rank the thirteen measured configurations by output token price and you get one order. Rank them by cost
 per solved task and you get a different order with a **much** wider spread: the gap between
-cheapest and dearest goes from **38x on token price to 146x on cost per solved task**.
+cheapest and dearest goes from **42x on token price to 145x on cost per solved task**.
 
 Two mechanisms drive the divergence, and neither is visible on a pricing page:
 
@@ -126,7 +136,7 @@ depends entirely on what a failure costs you — which is a question about your 
 about the model. What the data can say is that the premium is real, large, and rarely priced
 deliberately.
 
-Claude Fable 5 is the instructive outlier: it costs $17.46 per solved task and scores *below*
+Claude Fable 5 is the instructive outlier: it costs $17.45 per solved task and scores *below*
 Opus 5, which costs $12.01. On this benchmark mix it is dominated outright — it sits off the
 frontier in the chart above. That is not a claim that Fable 5 is a weaker model; it is a claim
 that on these 326 tasks, in this harness, it did not convert its extra spend into extra solves.
@@ -164,7 +174,7 @@ Two further consequences of the staleness, visible in our own data:
 
 Stated plainly, because a methodology section that only lists strengths is marketing.
 
-- **Twenty-four paid and three free current, priced models have no pass rate anywhere we could find.** Sonnet 5 and
+- **371 of 387 current, priced models have no pass rate anywhere we could find.** Sonnet 5 and
   Haiku 4.5 in particular are widely used and entirely absent from this analysis.
 - **Measured rows are harness+model pairs, not models.** "Claude Code + Opus 5" is not a
   property of Opus 5. Artificial Analysis's own harness comparison shows that holding the model
@@ -253,7 +263,7 @@ Several providers do not have a single price. We record the tier used and state 
 
 | Source | Tasks | Covers 2026 models | Publishes cost | Newest entry |
 |---|---|---:|---|---|
-| [Artificial Analysis (artificialanalysis.ai)](https://artificialanalysis.ai/agents/coding-agents) — Coding Agent Index v1.4 | 326 | Yes | Yes, measured | Read 2026-08-21 |
+| [Artificial Analysis (artificialanalysis.ai)](https://artificialanalysis.ai/agents/coding-agents) — Coding Agent Index | 326 | Yes | Yes, measured | Read 2026-08-26 |
 | [Scale SEAL — SWE-bench Pro](https://labs.scale.com/leaderboard/swe_bench_pro_public) | 1,865 | Yes | Not published | **Unknown** |
 | [Aider polyglot](https://aider.chat/docs/leaderboards/) | 225 | No | Historical only | 2025-10-03 |
 
@@ -294,6 +304,6 @@ number is wrong, the fastest way to prove it is to change it and see what happen
 
 ---
 
-*Prices verified 2026-08-21 against provider pricing pages. Benchmark data read 2026-08-21.
+*Modelled-table prices verified 2026-08-21 against provider pricing pages. Coding Agent Index read 2026-08-26.
 Filed under the verification date rather than a publication date; if this is published later,
 the numbers above still carry the date they were checked.*

@@ -1,0 +1,6 @@
+{
+  "id": "event-store",
+  "goal": "This tiny event-sourcing repo has src/store.js (append-only log, works) and src/projector.js (stub). Implement the projector per README.md so account balances derive from the event log, and wire src/index.js `balanceOf` to use both. The hidden grader exercises the whole pipeline.",
+  "timeoutMs": 240000,
+  "maxTurns": 24
+}

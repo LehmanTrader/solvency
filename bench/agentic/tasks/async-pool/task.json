@@ -1,0 +1,6 @@
+{
+  "id": "async-pool",
+  "goal": "src/pool.js `mapPool(items, fn, limit)` is supposed to run `fn` over items with at most `limit` in flight and return results in input order \u2014 but it currently runs everything at once and can return results out of order. Fix it. The hidden grader measures true concurrency, so a sequential rewrite will fail too.",
+  "timeoutMs": 240000,
+  "maxTurns": 24
+}

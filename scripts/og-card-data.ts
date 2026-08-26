@@ -22,6 +22,7 @@ import {
 } from '../site/src/lib/data.ts';
 import { costPerSolvedTask, defaultOptions } from '../site/src/lib/engine.ts';
 import { providerLabel } from '../site/src/lib/providers.ts';
+import { quoteBuildPlan } from '../site/src/lib/build-cost.ts';
 
 export const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 export const REPORTS_DIR = join(ROOT, 'reports');
@@ -125,6 +126,7 @@ export function noteCardData(fm: ReportFrontmatter): RankedCardData {
   if (fm.note === 1) return note01CardData(fm);
   if (fm.note === 2) return note02CardData(fm);
   if (fm.note === 3) return note03CardData(fm);
+  if (fm.note === 4) return note04CardData(fm);
   throw new Error(`no og-card builder for research note ${fm.note} (${fm.file}) — add one before generating cards`);
 }
 
@@ -136,6 +138,65 @@ export function homeCardData(): RankedCardData {
 
 export function currentModels() {
   return models.filter((m: any) => m.status === 'current');
+}
+
+/**
+ * Note 04 ("Composing the Stack"): the three worked compositions, quoted
+ * live through the Build Composer engine — the same three plans
+ * test/composer-report.test.ts pins, so the card can never drift from the
+ * note or the engine.
+ */
+function note04Rows(): RankedRow[] {
+  const usage = (fresh: number, output: number) => ({
+    uncachedInputTokens: fresh, cacheReadTokens: 0, cacheWriteTokens: 0, outputTokens: output,
+    basis: 'template_assumption' as const,
+  });
+  const mk = (name: string, sub: string, orch: string, worker: string, fallback: string) => ({
+    name, sub,
+    plan: {
+      schemaVersion: 1 as const, name,
+      workload: { buildsPerMonth: 200, volumeBasis: 'attempted_builds' as const },
+      harness: { name: 'Claude Code', version: null, configBasis: 'solvency_template' as const, fixedCostPerBuildAttemptUsd: 0, fixedMonthlyCostUsd: 0 },
+      roles: [
+        { roleId: 'r1', kind: 'orchestrator' as const, label: 'Lead orchestrator', modelId: orch, expectedInvocationsPerBuildAttempt: 1, usagePerInvocation: usage(6000, 600) },
+        { roleId: 'r2', kind: 'worker' as const, label: 'Worker pool', modelId: worker, expectedInvocationsPerBuildAttempt: 3, usagePerInvocation: usage(20000, 3000) },
+        { roleId: 'r3', kind: 'other' as const, label: 'Fallback route', modelId: fallback, expectedInvocationsPerBuildAttempt: 0.3, usagePerInvocation: usage(20000, 3000) },
+      ],
+    },
+  });
+  const plans = [
+    mk('All-frontier monolith', 'Fable 5 in every seat', 'claude-fable-5', 'claude-fable-5', 'claude-fable-5'),
+    mk('Composed stack', 'Fable conducts · DeepSeek types · Opus catches', 'claude-fable-5', 'deepseek-v4-flash', 'claude-opus-5'),
+    mk('All-value monolith', 'DeepSeek V4 Flash in every seat', 'deepseek-v4-flash', 'deepseek-v4-flash', 'deepseek-v4-flash'),
+  ];
+  return plans.map(({ name, sub, plan }) => {
+    const q = quoteBuildPlan(plan as any, models as any, '2026-08-26T00:00:00Z');
+    if (!q.valid) throw new Error(`note04Rows: ${name} did not quote cleanly: ${q.errors.join('; ')}`);
+    return {
+      id: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+      name, sub,
+      cost: q.buildAttemptCostUsd,
+      value: `$${q.buildAttemptCostUsd.toFixed(2)}`,
+      basis: 'modelled' as const,
+      detail: `$${q.monthlyCostUsd.toFixed(2)} a month at 200 attempted builds`,
+    };
+  }).sort((a, b) => a.cost - b.cost);
+}
+
+function note04CardData(fm: ReportFrontmatter): RankedCardData {
+  const rows = note04Rows();
+  const spread = extractLastXNumber(fm.description);
+  return {
+    key: 'note-04',
+    eyebrow: `RESEARCH NOTE 04 · ${fm.title.toUpperCase()}`,
+    headlinePrefix: '',
+    headlineHighlight: spread,
+    headlineSuffix: ' apart on composition alone — same workload, three ways to staff it.',
+    rows,
+    sourceLine: 'Source: Solvency Build Composer engine, template assumptions',
+    noteLine: `NOTE: MODELLED, ROLE USAGE × VERIFIED PRICES · ${fm.date}`,
+    raw: { note: fm.note, planIds: rows.map((r) => r.id), spread },
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -256,7 +317,15 @@ function measuredCostRows() {
   }));
   const leader = rows[0], priciest = rows[rows.length - 1];
   const spread = fmtX(priciest.cost / leader.cost);
-  return { rows, src, leader, priciest, spread };
+  // The 630px card canvas fits at most 9 ranked rows (rankedLayout's 40px
+  // floor). With the 2026-08-26 AA re-read the measured set grew past that;
+  // the card excerpts the cheapest 9 and SAYS SO in its note line — never a
+  // silent cap. barMax keeps the printed bars scaled against the full set's
+  // priciest row so the excerpt cannot exaggerate.
+  const CARD_MAX_ROWS = 9;
+  const shown = rows.slice(0, CARD_MAX_ROWS);
+  const omitted = rows.length - shown.length;
+  return { rows: shown, allRows: rows, omitted, barMax: priciest.cost, src, leader, priciest, spread };
 }
 
 /**
@@ -265,7 +334,7 @@ function measuredCostRows() {
  * asserting every row shares one benchmark before building the card.
  */
 export function rankedCostCardData(): RankedCardData {
-  const { rows, src, leader, spread } = measuredCostRows();
+  const { rows, allRows, omitted, barMax, src, leader, spread } = measuredCostRows();
 
   return {
     key: 'ranked-cost-per-solved-task',
@@ -274,12 +343,13 @@ export function rankedCostCardData(): RankedCardData {
     headlineHighlight: leader.name,
     headlineSuffix: ' costs the least per solved task, measured.',
     rows,
+    barMax,
     // AA's Data Platform Terms s.5 require this exact attribution string,
     // unparaphrased — it already carries a "(domain)" citation, so it is
     // used verbatim rather than run through the generic SOURCE: template.
     sourceLine: src.attribution,
-    noteLine: `NOTE: MEASURED COST PER SOLVED TASK · VERIFIED ${src.last_verified}`,
-    raw: { modelIds: rows.map((r) => r.id), leaderId: leader.id, spread },
+    noteLine: `NOTE: CHEAPEST ${rows.length} OF ${allRows.length} MEASURED · VERIFIED ${src.last_verified}`,
+    raw: { modelIds: rows.map((r) => r.id), allModelIds: allRows.map((r) => r.id), omitted, leaderId: leader.id, spread },
   };
 }
 
@@ -438,16 +508,16 @@ export function modelCardData(model: any): RankedCardData {
   const inModelled = modelled.some((r) => r.m.model_id === model.model_id);
 
   if (inMeasured) {
-    const { rows, src } = measuredCostRows();
-    const barMax = Math.max(...rows.map((r) => r.cost));
-    const mine = rows.find((r) => r.id === model.model_id)!;
+    const { allRows, src } = measuredCostRows();
+    const barMax = Math.max(...allRows.map((r) => r.cost));
+    const mine = allRows.find((r) => r.id === model.model_id)!;
     return {
       key: `model-${model.model_id}`,
       eyebrow: 'COST PER SOLVED TASK · CURRENT MODELS',
       headlinePrefix: '',
       headlineHighlight: model.display_name,
       headlineSuffix: ` costs ${mine.value} per solved task, measured.`,
-      rows: excerptAroundId(rows, model.model_id),
+      rows: excerptAroundId(allRows, model.model_id),
       barMax,
       sourceLine: src.attribution,
       noteLine: `NOTE: MEASURED COST PER SOLVED TASK · VERIFIED ${src.last_verified}`,
@@ -554,17 +624,27 @@ function taskBucketMedians(): { bucket: string; label: string; n: number; median
 /** Research note 01 (Cost Per Solved Task): the same measured field as the
  * homepage card, reframed around the cheapest-vs-priciest spread the note leads with. */
 function note01CardData(fm: ReportFrontmatter): RankedCardData {
-  const { rows, src, leader, priciest } = measuredCostRows();
+  const { allRows, barMax, src, leader, priciest } = measuredCostRows();
   const gap = NOTE_CONFIG[1].deriveNumber(fm);
+  // Note 01's card tells the cheapest-to-priciest gap story, so its 9-row
+  // excerpt keeps BOTH ends of the range: the 5 cheapest and the 4 priciest,
+  // each row carrying its true rank, with the cut stated in the note line.
+  const ends = allRows.length <= 9
+    ? allRows.map((r, i) => ({ ...r, rank: i + 1 }))
+    : [...allRows.slice(0, 5).map((r, i) => ({ ...r, rank: i + 1 })),
+       ...allRows.slice(-4).map((r, i) => ({ ...r, rank: allRows.length - 3 + i }))];
   return {
     key: 'note-01',
     eyebrow: 'RESEARCH NOTE 01 · COST PER SOLVED TASK',
     headlinePrefix: '',
     headlineHighlight: gap,
     headlineSuffix: ` apart — ${leader.name} vs. ${priciest.name}, cheapest to priciest, measured.`,
-    rows,
+    rows: ends,
+    barMax,
     sourceLine: src.attribution,
-    noteLine: `NOTE: MEASURED COST PER SOLVED TASK · VERIFIED ${src.last_verified}`,
+    noteLine: allRows.length <= 9
+      ? `NOTE: MEASURED COST PER SOLVED TASK · VERIFIED ${src.last_verified}`
+      : `NOTE: BOTH ENDS OF ${allRows.length} MEASURED · VERIFIED ${src.last_verified}`,
     raw: { note: fm.note, leaderId: leader.id, priciestId: priciest.id, gap },
   };
 }

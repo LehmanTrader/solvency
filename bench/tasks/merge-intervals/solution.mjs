@@ -1,0 +1,1 @@
+export function mergeIntervals(iv){const s=iv.map(p=>[...p]).sort((a,b)=>a[0]-b[0]);const out=[];for(const [a,b] of s){const last=out[out.length-1];if(last&&a<=last[1])last[1]=Math.max(last[1],b);else out.push([a,b]);}return out;}

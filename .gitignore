@@ -23,3 +23,4 @@ purge-docs.sh
 # files, never repo history. Keep only the convention doc tracked.
 queue/**
 !queue/README.md
+bench/results/

@@ -59,7 +59,13 @@ const peerRows: ChartRow[] = pool.map((x) => ({
 const peerBasis = peerRows[0]?.basis ?? 'modelled';
 const peersWide = peerRows.length > 1 ? rankedBars(peerRows, { width: 1046, volume: PEER_VOLUME, basis: peerBasis, compact: false, highlight: model.model_id }) : '';
 const peersNarrow = peerRows.length > 1 ? rankedBars(peerRows, { width: 350, volume: PEER_VOLUME, basis: peerBasis, compact: true, highlight: model.model_id }) : '';
-const peers = models.filter((m) => m.model_id !== model.model_id && m.status === 'current').slice(0, 8);
+// Head-to-head buttons only where the compare page actually exists: since
+// the full-router catalog (2026-08-26), /compare/[pair] builds only pairs
+// where BOTH sides carry a benchmark result — so a dataless model page
+// offers no vs-buttons rather than 404 links.
+const peers = bestResultFor(model.model_id)
+  ? models.filter((m) => m.model_id !== model.model_id && m.status === 'current' && bestResultFor(m.model_id)).slice(0, 8)
+  : [];
 // Per-model stat card (scripts/og-cards.ts -> site/public/og/cards/model-<id>.png),
 // generated only for current models; retired/preview models without a card
 // fall back to the site's generic divergence chart card.

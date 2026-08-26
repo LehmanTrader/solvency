@@ -1,0 +1,7 @@
+{
+  "id": "parse-duration",
+  "func": "parseDuration",
+  "title": "Duration parser",
+  "timeoutMs": 8000,
+  "prompt": "Write `parseDuration(s)`: parse strings like '1h30m15s', '45m', '90s', '2h' (any subset of h/m/s, in that order, each at most once) into total seconds (number). Return null for anything malformed, including empty strings, unknown units, wrong order, or repeated units. Reply with exactly one JavaScript code block (```js ... ```) that uses `export function` for the required function. ES module syntax, no external imports, no I/O, no comments needed."
+}

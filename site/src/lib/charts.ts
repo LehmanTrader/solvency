@@ -320,7 +320,7 @@ export function rankedBars(rowsIn: ChartRow[], o: RankedOpts): string {
     const chip = r.provider ? `<g transform="translate(${chipX},${(rowH - chipSize) / 2})">${chipMarkup(r.provider, chipSize)}</g>` : '';
     const name = trunc(r.name, (compact ? w - 90 : labelW - 6) - nameX, fs);
     return compact
-      ? `<g class="${cls}" data-id="${esc(r.id)}" role="listitem" aria-label="${esc(label)}" style="transform:translateY(${y}px)">` +
+      ? `<g class="${cls}" data-id="${esc(r.id)}" role="listitem" aria-label="${esc(label)}" style="transform:translateY(${y}px);--i:${i}">` +
         `<title>${esc(detail)}</title>${mark}${rank}${chip}` +
         `<a href="${esc(r.href)}">${hitRow}<text class="name" x="${nameX}" y="16" font-size="${fs}">${esc(name)}</text></a>` +
         `<text class="v c-${basis}" data-f="solved" x="${xSolved}" y="16" text-anchor="end" font-size="${fs}" font-weight="700">${money(r.cost)}</text>` +
@@ -331,7 +331,7 @@ export function rankedBars(rowsIn: ChartRow[], o: RankedOpts): string {
         // $/mo figure is always $0 (uninteresting — it's the row's whole
         // point), so its cap label takes that slot instead of duplicating "$0".
         `<text class="t2" data-f="month" x="${xMonth}" y="${rowH - 13}" text-anchor="end" font-size="${FS_S}">${basis === 'free' && r.caps ? esc(r.caps) : `${month}/mo`}</text></g>`
-      : `<g class="${cls}" data-id="${esc(r.id)}" role="listitem" aria-label="${esc(label)}" style="transform:translateY(${y}px)">` +
+      : `<g class="${cls}" data-id="${esc(r.id)}" role="listitem" aria-label="${esc(label)}" style="transform:translateY(${y}px);--i:${i}">` +
         `<title>${esc(detail)}</title>${mark}${rank}${chip}` +
         `<a href="${esc(r.href)}">${hitRow}<text class="name" x="${nameX}" y="19" font-size="${fs}">${esc(name)}</text>` +
         (subline ? `<text class="t3 sub" x="${nameX}" y="34" font-size="${FS_S}">${esc(subline)}</text>` : '') + `</a>` +

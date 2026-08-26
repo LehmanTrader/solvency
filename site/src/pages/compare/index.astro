@@ -1,9 +1,9 @@
 ---
 /** Two pickers → the existing static /compare/[a]-vs-[b] page. */
 import Base from '../../layouts/Base.astro';
-import { models } from '../../lib/data.ts';
+import { models, bestResultFor } from '../../lib/data.ts';
 const order = { current: 0, legacy: 1, retired: 2 };
-const list = models.slice().sort((a, b) => order[a.status] - order[b.status] || a.display_name.localeCompare(b.display_name));
+const list = models.filter((m) => bestResultFor(m.model_id)).sort((a, b) => order[a.status] - order[b.status] || a.display_name.localeCompare(b.display_name));
 const label = (m) => `${m.display_name}${m.status !== 'current' ? ` (${m.status})` : ''}`;
 const ids = models.map((m) => m.model_id);
 ---

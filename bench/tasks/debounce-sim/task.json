@@ -1,0 +1,7 @@
+{
+  "id": "debounce-sim",
+  "func": "debounceFires",
+  "title": "Debounce simulation",
+  "timeoutMs": 8000,
+  "prompt": "Write `debounceFires(events, wait)`: pure simulation of trailing-edge debounce. `events` is an array of [timestamp, id] pairs sorted by timestamp. A fire happens at t+wait after an event unless another event arrives strictly before that moment (resetting the timer). Return the array of ids that fire, in order. Reply with exactly one JavaScript code block (```js ... ```) that uses `export function` for the required function. ES module syntax, no external imports, no I/O, no comments needed."
+}

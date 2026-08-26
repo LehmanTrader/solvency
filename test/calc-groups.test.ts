@@ -27,10 +27,18 @@ describe('group membership is invariant under every assumption control', () => {
     });
   }
 
-  test('a model with no cached-input price stays in its group, computed uncached and annotated', () => {
+  test('a model with no cached-input price stays in its group, computed uncached and annotated', (t) => {
     const { rows } = compute({ ...DEFAULTS, cache: 0.5 });
     const flagged = rows.filter((r) => r.uncached);
-    assert.ok(flagged.length >= 1, 'the dataset has at least one model without a cached price');
+    // With the stale (historical_at_run_date) rows retired from ranking
+    // (2026-08-26), the computable set may hold no null-cache model. The
+    // uncached path still exists for future rows; skip rather than fake one.
+    if (flagged.length === 0) {
+      for (const r of rows.filter((r) => r.basisKey !== 'measured_by_source'))
+        assert.notEqual(r.m.cached_input_per_mtok, null);
+      t.skip('no computable model currently lacks a cached-input price');
+      return;
+    }
     for (const r of flagged) {
       assert.equal(r.m.cached_input_per_mtok, null);
       const at0 = compute(DEFAULTS).rows.find((x) => x.m.model_id === r.m.model_id)!;
@@ -46,11 +54,11 @@ describe('group membership is invariant under every assumption control', () => {
     assert.deepEqual(a.map((r) => [r.m.model_id, r.cost]), b.map((r) => [r.m.model_id, r.cost]));
   });
 
-  test('GROUPS are the four bases, measured first, free before stale', () => {
-    // Free-model coverage (docs/free-models-scoping.md §4): the fourth
-    // group renders as its own always-visible section, positioned after
-    // Modelled and before the collapsed Stale disclosure.
-    assert.deepEqual(GROUPS.map((g) => g.basis), ['measured', 'modelled', 'free', 'stale']);
+  test('GROUPS are the three bases, measured first', () => {
+    // Operator directive 2026-08-26: the collapsed Stale disclosure is gone.
+    // historical_at_run_date results are retired from ranking entirely; the
+    // models they covered surface in the priced awaiting-measurement table.
+    assert.deepEqual(GROUPS.map((g) => g.basis), ['measured', 'modelled', 'free']);
   });
 
   test('a free_tier_capped row never moves group under any assumption, same as measured', () => {

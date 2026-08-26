@@ -1,0 +1,6 @@
+{
+  "id": "rate-limiter",
+  "goal": "Implement the sliding-window rate limiter described in README.md as src/limiter.js (currently a stub that throws). The visible test shows the API shape. Keep the API exactly as specified.",
+  "timeoutMs": 240000,
+  "maxTurns": 24
+}

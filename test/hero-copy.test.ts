@@ -56,7 +56,9 @@ describe('hero: bucket mode is the default sentence', () => {
   });
 
   test('"something else" reveals a task-count input, the only place a raw count appears in bucket mode', () => {
-    assert.match(src, /<p id="c-other-row" class="mode-bucket small mt-2 hidden">/);
+    // Founder note 2026-08-26: the row joined the hero's display grammar
+    // (sentence-sub) instead of the undersized .small caption style.
+    assert.match(src, /<p id="c-other-row" class="mode-bucket sentence sentence-sub mt-2 hidden">/);
     assert.match(src, /<input id="c-taskcount"[^>]*data-ctl="taskcount"/);
   });
 
