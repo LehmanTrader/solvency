@@ -12,7 +12,18 @@
  *
  * Type inside the charts uses two sizes only — 10.5 (captions, ticks, labels)
  * and 12.8 (values, names) — the two smallest steps of the site's type scale.
+ *
+ * Ranked-bars rows (Chart A) carry the Arena-grammar leaderboard treatment
+ * from docs/redesign-2026-08/direction.md §6: a rank digit, the provider's
+ * logo chip (site/src/lib/providers.ts), the model name in mono, a small
+ * "Provider" subline, and — since Solvency already groups rows into their
+ * own Measured/Modelled/Stale sections (unlike Arena's single interleaved
+ * table) — a repeated "· basis" on the subline would be redundant, so it is
+ * left off; the group header already carries that word once. The best row
+ * in each group (i === 0) gets a subtle basis-colored heat wash across the
+ * full row, in addition to its existing left rail.
  */
+import { chipMarkup, providerLabel } from './providers.ts';
 
 export type Basis = 'measured' | 'modelled' | 'stale';
 
@@ -32,6 +43,8 @@ export interface ChartRow {
   compare?: string;
   /** a caveat printed in the row's detail (e.g. computed uncached) */
   note?: string;
+  /** data/models.json provider id — drives the row's logo chip and subline */
+  provider?: string;
 }
 
 export const BASIS_OF: Record<string, Basis> = {
@@ -86,7 +99,11 @@ export function rankedBars(rowsIn: ChartRow[], o: RankedOpts): string {
   const rows = rowsIn.slice().sort((a, b) => a.cost - b.cost);
   const w = Math.max(300, Math.round(o.width));
   const compact = o.compact ?? w < 560;
-  const rowH = compact ? 48 : 30;
+  // Desktop rows grew from 30 to 44px to fit a logo chip and a "Provider"
+  // subline under the model name (direction doc §6); compact rows keep the
+  // existing 48px — there is no room there for a third stacked line, so the
+  // subline is desktop-only (see the module comment above).
+  const rowH = compact ? 48 : 44;
   const headH = compact ? 0 : 20;
   const h = headH + rows.length * rowH + 6;
   const max = Math.max(...rows.map((r) => r.cost), 0);
@@ -104,6 +121,12 @@ export function rankedBars(rowsIn: ChartRow[], o: RankedOpts): string {
   const xMonth = compact ? w : w - cmpW;
   const fs = FS_M;
 
+  // rank digit + logo chip + name/subline prefix, ahead of the bar
+  const rankW = compact ? 12 : 16;
+  const chipSize = compact ? 16 : 20;
+  const chipX = rankW + (compact ? 2 : 4);
+  const nameX = chipX + chipSize + (compact ? 6 : 8);
+
   // measured: solid, non-lead dimmed by CSS; modelled: hatched; stale: dashed outline, no hatch
   const fill = (i: number) => basis === 'measured'
     ? `fill="var(--color-measured)"${i === 0 ? '' : ' data-dim="1"'}`
@@ -111,39 +134,50 @@ export function rankedBars(rowsIn: ChartRow[], o: RankedOpts): string {
       ? `fill="url(#hatch-modelled)" stroke="var(--color-modelled)" stroke-width="1"`
       : `fill="transparent" stroke="var(--color-stale)" stroke-width="1.5" stroke-dasharray="3 2"`;
 
-  // one style for the axis caption and the column headers
+  // one style for the axis caption and the column headers; ⓘ carries a
+  // native SVG hover tooltip with the same explanation the "How it is
+  // computed" panel gives (site/src/pages/index.astro's `how` tiles).
   const header = compact ? '' :
     `<g class="t3 cap" font-size="${FS_S}" aria-hidden="true">` +
     `<text x="${barX}" y="12">$ / SOLVED TASK · LOWER IS BETTER</text>` +
-    `<text x="${xSolved}" y="12" text-anchor="end">$ / SOLVED</text>` +
-    `<text x="${xMonth}" y="12" text-anchor="end">$ / MONTH</text></g>`;
+    `<text x="${xSolved}" y="12" text-anchor="end">$ / SOLVED ⓘ<title>cost per solved task = cost per attempt ÷ pass rate. What it costs to get a task finished, not what a token costs.</title></text>` +
+    `<text x="${xMonth}" y="12" text-anchor="end">$ / MONTH ⓘ<title>$ / solved task × your monthly task volume.</title></text></g>`;
 
   const body = rows.map((r, i) => {
     const y = headH + i * rowH;
     const bw = max > 0 ? Math.max(3, Math.round((r.cost / max) * barMax)) : 3;
     const month = moneyMonth(r.cost * o.volume);
     const detail = [r.harness ? `harness ${r.harness}` : '', `pass rate ${pct(r.pass)}`, r.attempt != null ? `${money(r.attempt)} per attempt` : '', r.note ?? ''].filter(Boolean).join(' · ');
-    const label = `${i + 1}. ${r.name}, ${basis}, ${money(r.cost)} per solved task, ${month} a month at ${o.volume.toLocaleString()} tasks. ${detail}.`;
+    const provider = r.provider ? providerLabel(r.provider) : undefined;
+    const label = `${i + 1}. ${r.name}${provider ? `, ${provider}` : ''}, ${basis}, ${money(r.cost)} per solved task, ${month} a month at ${o.volume.toLocaleString()} tasks. ${detail}.`;
     const cls = `row${i === 0 ? ' lead' : ''}${o.highlight === r.id ? ' hl' : ''}`;
     // full-row-height hit rects so every link is a ≥ 44 px target on small screens
     const hitRow = `<rect class="hit" x="0" y="0" width="${compact ? w - 120 : barX}" height="${rowH}" fill="transparent"/>`;
     const cmp = r.compare ? (compact
       ? `<a class="cmp" href="${esc(r.compare)}" aria-label="Compare vs ${esc(r.name)} head to head"><rect class="hit" x="${w - 120}" y="0" width="120" height="${rowH}" fill="transparent"/><text x="${w - 118}" y="${rowH - 14}" font-size="${FS_S}" class="t3">vs ›</text></a>`
       : `<a class="cmp" href="${esc(r.compare)}" aria-label="Compare ${esc(r.name)} head to head"><rect class="hit" x="${w - cmpW}" y="0" width="${cmpW}" height="${rowH}" fill="transparent"/><text x="${w}" y="${rowH / 2 + 4}" text-anchor="end" font-size="${FS_S}" class="t3">compare ›</text></a>`) : '';
-    const rail = i === 0 ? `<rect x="0" y="0" width="2" height="${rowH}" fill="var(--color-${basis})"/>` : '';
-    const name = trunc(r.name, compact ? w - 90 : labelW - 10, fs);
+    // rail (lead's left-edge accent) and heat wash (lead's full-row basis-colored
+    // tint, "best in class" per direction §6) are one <g> immediately after
+    // <title> so patchRanked's title-adjacency lookup keeps finding it as a unit.
+    const mark = i === 0
+      ? `<g class="mark"><rect width="2" height="${rowH}" fill="var(--color-${basis})"/><rect class="heat" x="0" y="0" width="${w}" height="${rowH}" fill="var(--color-${basis})" opacity=".07"/></g>`
+      : '';
+    const rank = `<text class="t3 rank-n" data-f="rank" x="${rankW - 4}" y="${rowH / 2 + 4}" text-anchor="end" font-size="${FS_S}">${i + 1}</text>`;
+    const chip = r.provider ? `<g transform="translate(${chipX},${(rowH - chipSize) / 2})">${chipMarkup(r.provider, chipSize)}</g>` : '';
+    const name = trunc(r.name, (compact ? w - 90 : labelW - 6) - nameX, fs);
     return compact
       ? `<g class="${cls}" data-id="${esc(r.id)}" role="listitem" aria-label="${esc(label)}" style="transform:translateY(${y}px)">` +
-        `<title>${esc(detail)}</title>${rail}` +
-        `<a href="${esc(r.href)}">${hitRow}<text class="name" x="8" y="16" font-size="${fs}">${esc(name)}</text></a>` +
+        `<title>${esc(detail)}</title>${mark}${rank}${chip}` +
+        `<a href="${esc(r.href)}">${hitRow}<text class="name" x="${nameX}" y="16" font-size="${fs}">${esc(name)}</text></a>` +
         `<text class="v c-${basis}" data-f="solved" x="${xSolved}" y="16" text-anchor="end" font-size="${fs}" font-weight="700">${money(r.cost)}</text>` +
         `<rect class="track" x="8" y="${rowH - 22}" width="${barMax - 8}" height="10" rx="2"/>` +
         `<rect class="bar" x="8" y="${rowH - 22}" width="${bw}" height="10" rx="2" style="width:${bw}px" ${fill(i)}/>` +
         cmp +
         `<text class="t2" data-f="month" x="${xMonth}" y="${rowH - 13}" text-anchor="end" font-size="${FS_S}">${month}/mo</text></g>`
       : `<g class="${cls}" data-id="${esc(r.id)}" role="listitem" aria-label="${esc(label)}" style="transform:translateY(${y}px)">` +
-        `<title>${esc(detail)}</title>${rail}` +
-        `<a href="${esc(r.href)}">${hitRow}<text class="name" x="10" y="${rowH / 2 + 4.5}" font-size="${fs}">${esc(name)}</text></a>` +
+        `<title>${esc(detail)}</title>${mark}${rank}${chip}` +
+        `<a href="${esc(r.href)}">${hitRow}<text class="name" x="${nameX}" y="19" font-size="${fs}">${esc(name)}</text>` +
+        (provider ? `<text class="t3 sub" x="${nameX}" y="34" font-size="${FS_S}">${esc(provider)}</text>` : '') + `</a>` +
         `<rect class="track" x="${barX}" y="${rowH / 2 - 5}" width="${barMax}" height="10" rx="2"/>` +
         `<rect class="bar" x="${barX}" y="${rowH / 2 - 5}" width="${bw}" height="10" rx="2" style="width:${bw}px" ${fill(i)}/>` +
         `<text class="v c-${basis}" data-f="solved" x="${xSolved}" y="${rowH / 2 + 4.5}" text-anchor="end" font-size="${fs}" font-weight="700">${money(r.cost)}</text>` +
@@ -189,11 +223,11 @@ export function patchRanked(container: Element, html: string): void {
       cb.style.width = nb.style.width;
       if (nb.hasAttribute('data-dim')) cb.setAttribute('data-dim', '1'); else cb.removeAttribute('data-dim');
     }
-    // lead rail appears/disappears with rank
-    const nrail = nr.querySelector(':scope > title + rect:not(.track):not(.bar)');
-    const crail = cr.querySelector(':scope > title + rect:not(.track):not(.bar)');
-    if (nrail && !crail) cr.querySelector('title')!.insertAdjacentElement('afterend', nrail.cloneNode(true) as Element);
-    if (!nrail && crail) crail.remove();
+    // lead marker (rail + heat wash, one <g class="mark">) appears/disappears with rank
+    const nMark = nr.querySelector(':scope > title + g.mark');
+    const cMark = cr.querySelector(':scope > title + g.mark');
+    if (nMark && !cMark) cr.querySelector('title')!.insertAdjacentElement('afterend', nMark.cloneNode(true) as Element);
+    if (!nMark && cMark) cMark.remove();
     nr.querySelectorAll<SVGTextElement>('[data-f]').forEach((nt2) => {
       const ct2 = cr.querySelector<SVGTextElement>(`[data-f="${nt2.dataset.f}"]`);
       if (ct2) ct2.textContent = nt2.textContent;

@@ -1,0 +1,16 @@
+---
+/**
+ * A provider's logo chip: a small rounded square, license-clean vendored
+ * mark inset, or a neutral two-letter monogram where no clean asset exists
+ * yet (site/src/lib/providers.ts, site/public/brand/providers/LOGOS.md).
+ * Fixed near-white chip background by design (see providers.ts) so the same
+ * chip reads correctly on both the cream light theme and the dark theme —
+ * consistent size, consistent look, everywhere a model's provider is named.
+ */
+import { chipMarkup, providerLabel } from '../lib/providers.ts';
+interface Props { provider: string; size?: number; class?: string; }
+const { provider, size = 20, class: cls = '' } = Astro.props;
+const inner = chipMarkup(provider, size);
+---
+<svg class={`logo-chip ${cls}`} width={size} height={size} viewBox={`0 0 ${size} ${size}`}
+     role="img" aria-label={providerLabel(provider)} set:html={inner} />

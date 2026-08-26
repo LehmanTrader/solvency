@@ -37,6 +37,25 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
   <h1 id="q-h" class="h-display max-w-[30ch] text-balance">Which model is cheapest for what you actually ship?</h1>
   <p class="lede mt-4 max-w-[52ch] text-pretty">Cost per solved task — what it takes to get a task finished, not the token price.</p>
 
+  <!-- The metadata row (direction doc §5): three real, sourced counts, the
+       same figures the footer and /methodology cite — not decoration. -->
+  <p class="small mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5">
+    <span class="inline-flex items-center gap-1.5">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+      verified <span class={fresh ? 't-fresh' : 'text-[var(--color-ink)]'}>{verified}</span>
+    </span>
+    <span aria-hidden="true">·</span>
+    <span class="inline-flex items-center gap-1.5">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      <span class="text-[var(--color-ink)]">{models.length}</span> models
+    </span>
+    <span aria-hidden="true">·</span>
+    <span class="inline-flex items-center gap-1.5">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/><path d="M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/></svg>
+      <span class="text-[var(--color-ink)]">{sources.length}</span> sources
+    </span>
+  </p>
+
   <div id="hero-modes">
     <p class="sentence mode-bucket mt-6">
       I want to ship{' '}<select id="c-bucket" class="ctl ctl-inline" aria-label="What are you shipping?" data-ctl="bucket">

@@ -89,7 +89,7 @@ export function chartRows(rows: Row[], key: string, s: Settings): ChartRow[] {
   return g.map((x) => ({
     id: x.m.model_id, name: x.m.display_name, href: `/models/${x.m.model_id}`,
     cost: x.cost, pass: x.r.pass_rate, basis: BASIS_OF[key] ?? 'modelled',
-    harness: harnessOf(x.r), attempt: x.attempt,
+    harness: harnessOf(x.r), attempt: x.attempt, provider: x.m.provider,
     note: x.uncached && x.basisKey !== 'measured_by_source' ? 'no cached-input price published — computed uncached' : undefined,
     compare: g.length > 1 ? pairHref(x === lead ? second.m.model_id : lead.m.model_id, x.m.model_id, s) : undefined,
   }));
