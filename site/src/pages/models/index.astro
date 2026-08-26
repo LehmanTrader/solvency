@@ -11,7 +11,7 @@ const price = (n) => n === null || n === undefined ? null : `$${n.toFixed(3).rep
 const nCurrent = models.filter((m) => m.status === 'current').length;
 const nPass = models.filter((m) => bestResultFor(m.model_id)).length;
 ---
-<Base title="Models — verified pricing and cost per solved task — Solvency" description={`Verified API pricing for ${models.length} AI coding models, with cost per solved task where a pass rate exists. Every row carries the provider pricing page and the date it was checked.`}>
+<Base title="Models — verified pricing and cost per solved task — Solvency" description={`Verified API pricing for ${models.length} AI coding models, with cost per solved task where a pass rate exists.`}>
   <div class="wrap pt-10">
     <p class="eyebrow">Models</p>
     <h1 class="h-page mt-3">Every model Solvency tracks</h1>

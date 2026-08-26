@@ -4,7 +4,7 @@ import { models, sources } from '../lib/data.ts';
 const schema = {
   '@context': 'https://schema.org', '@type': 'Dataset',
   name: 'Solvency model pricing dataset',
-  description: 'Verified API list pricing for AI coding models. Every row carries the provider pricing page it was verified against and the date of verification.',
+  description: 'Verified API list pricing for AI coding models, free under CC-BY.',
   url: 'https://solvency.dev/data', license: 'https://creativecommons.org/licenses/by/4.0/',
   creator: { '@type': 'Organization', name: 'Solvency', url: 'https://solvency.dev' },
   dateModified: '2026-08-21',
@@ -14,12 +14,12 @@ const schema = {
   ],
 };
 ---
-<Base title="Data — Solvency" description="Verified AI model pricing, free under CC-BY. Every row carries a source URL and a verification date.">
+<Base title="Data — Solvency" description="Verified AI model pricing, free under CC-BY.">
   <script type="application/ld+json" set:html={JSON.stringify(schema)} />
   <div class="wrap pt-10">
   <p class="eyebrow">Open data</p>
   <h1 class="h-page mt-3">Data</h1>
-  <p class="lede mt-4 max-w-2xl">Verified API list pricing for {models.length} models. Every row carries the provider pricing page it was checked against and the date it was checked.</p>
+  <p class="lede mt-4 max-w-2xl">Verified API list pricing for {models.length} models, checked against each provider's own pricing page.</p>
 
   <div class="mt-8 flex flex-wrap gap-3">
     <a href="/data/models.json" class="font-mono text-[13px] border border-[var(--color-accent)]/50 text-[var(--color-accent)] rounded px-4 py-2 hover:bg-[var(--color-accent)]/10">models.json ↓</a>
