@@ -242,11 +242,17 @@ const harnessExamples = [
   const GATE_EXPORT_PNG = 'Export this quote as a PNG.';
   const GATE_SAVE_BASELINE = 'Save a version to compare architectures.';
 
-  const KIND_META: Record<ComposerRole['kind'], { emoji: string; label: string }> = {
-    orchestrator: { emoji: '🧭', label: 'Orchestrator' },
-    worker: { emoji: '🛠️', label: 'Worker' },
-    other: { emoji: '🛟', label: 'Fallback' },
+  // Custom text-message-style role glyphs (operator's picks, 2026-08-26):
+  // conductor / builder / lifebuoy, generated for Solvency — see
+  // site/public/brand/emoji/EMOJI.md for provenance. The `emoji` character
+  // stays as the plain-text fallback (clipboard, aria, no-image contexts).
+  const KIND_META: Record<ComposerRole['kind'], { emoji: string; img: string; label: string }> = {
+    orchestrator: { emoji: '🧭', img: '/brand/emoji/conductor.png', label: 'Orchestrator' },
+    worker: { emoji: '🛠️', img: '/brand/emoji/worker.png', label: 'Worker' },
+    other: { emoji: '🛟', img: '/brand/emoji/fallback.png', label: 'Fallback' },
   };
+  const badgeHtml = (kind: ComposerRole['kind']) =>
+    `<img class="cp-badge-glyph" src="${KIND_META[kind].img}" alt="" width="24" height="24" loading="lazy">`;
 
   const ROLE_DEFAULTS: Record<ComposerRole['kind'], { label: string; modelId: string; calls: number; fresh: number; output: number }> = {
     orchestrator: { label: 'Lead orchestrator', modelId: 'claude-opus-5', calls: 1, fresh: 6000, output: 600 },
@@ -464,7 +470,7 @@ const harnessExamples = [
 
   function trunkStubHtml(): string {
     return `<div class="cp-trunk-stub" role="img" aria-label="No orchestrator added yet">
-      <span class="cp-badge" style="opacity:.4" aria-hidden="true">🧭</span>
+      <span class="cp-badge" style="opacity:.4" aria-hidden="true"><img class="cp-badge-glyph" src="/brand/emoji/conductor.png" alt="" width="24" height="24" loading="lazy"></span>
       <p class="small mt-2">Add your orchestrator</p>
     </div>`;
   }
@@ -493,7 +499,7 @@ const harnessExamples = [
     const modelOptions = eligibleModels.map((m) => `<button type="button" class="cp-model-option" role="menuitem" data-action="model-pick" data-role-id="${role.roleId}" data-model-id="${m.model_id}">${providerChipSvg(m.provider, 18)}<span class="cp-model-option-name">${esc(m.display_name)}</span><span class="cp-model-option-rate num">$${m.input_per_mtok.toFixed(2)}/M in</span></button>`).join('');
     return `<article class="cp-node" data-role-id="${role.roleId}" data-kind="${role.kind}" role="group" aria-label="${ariaLabel}">
       <div class="cp-node-head">
-        <span class="cp-badge" aria-hidden="true">${meta.emoji}</span>
+        <span class="cp-badge" aria-hidden="true">${badgeHtml(role.kind)}</span>
         <span class="cp-kind-label">${meta.label}</span>
         <div class="cp-node-menu-wrap">
           <button type="button" class="cp-kebab" data-popover-toggle="menu-${role.roleId}" aria-haspopup="true" aria-expanded="false" aria-label="${esc(role.label)} options">⋯</button>
@@ -1145,6 +1151,7 @@ const harnessExamples = [
 
   .cp-node-head { display: flex; align-items: center; gap: .5rem; }
   .cp-badge { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; font-size: 20px; line-height: 1; border: 1px solid var(--color-rule-strong); border-radius: 8px; background: var(--color-panel-2); flex: none; }
+  .cp-badge-glyph { width: 24px; height: 24px; object-fit: contain; display: block; }
   .cp-kind-label { font-family: var(--font-mono); font-size: .66rem; letter-spacing: .08em; text-transform: uppercase; color: var(--color-muted); }
   .cp-node-menu-wrap { margin-left: auto; position: relative; }
   .cp-kebab { border: 0; background: none; color: var(--color-muted); cursor: pointer; padding: .25rem .4rem; border-radius: 4px; font-size: 1rem; line-height: 1; min-height: auto; }
