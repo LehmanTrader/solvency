@@ -184,6 +184,8 @@ export interface RankedRow {
   sub?: string;
   /** Two-letter monogram chip, derived from `provider` — never a scraped logo. */
   chip?: string;
+  /** data/models.json provider id, e.g. 'anthropic' — drives the chip's color/mark (scripts/og-cards.ts). */
+  provider?: string;
   /** $ per solved task. */
   cost: number;
   /** money()-formatted, mono. */
@@ -234,6 +236,7 @@ export function rankedCostCardData(): RankedCardData {
     id: r.m.model_id,
     name: r.m.display_name,
     chip: monogram(r.m.provider),
+    provider: r.m.provider,
     cost: r.cost,
     value: money(r.cost),
     basis: 'measured',
@@ -332,6 +335,7 @@ export function rankedModelledCardData(): RankedCardData | null {
     id: r.m.model_id,
     name: r.m.display_name,
     chip: monogram(r.m.provider),
+    provider: r.m.provider,
     cost: r.cost,
     value: money(r.cost),
     basis: 'modelled',
@@ -343,9 +347,13 @@ export function rankedModelledCardData(): RankedCardData | null {
   return {
     key: 'ranked-modelled-cost-per-solved-task',
     eyebrow: 'COST PER SOLVED TASK, MODELLED · LEGACY & PREVIEW MODELS',
-    headlinePrefix: '',
+    // Rewritten from the founder-flagged "<Model> is cheapest among modelled
+    // models." (clunky, doubled "modelled") to natural measured voice: say
+    // what Solvency's loop model actually did (priced it), and lead with the
+    // number, same as the measured card's headline pattern.
+    headlinePrefix: 'Our loop model prices ',
     headlineHighlight: leader.name,
-    headlineSuffix: ' is cheapest among modelled models.',
+    headlineSuffix: ` lowest — ${leader.value} per solved task.`,
     rows,
     sourceLine: `Source: Scale SEAL, SWE-bench Pro (${domainOf(src.source_url)})`,
     noteLine: `NOTE: MODELLED COST, TASK-TIER MODEL · VERIFIED ${src.last_verified}`,

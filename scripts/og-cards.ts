@@ -32,6 +32,7 @@ import {
 const OUT = join(ROOT, 'reports', 'og-cards');
 const TMP = join(ROOT, 'reports', 'build', '_og-cards');
 const FONTS = join(ROOT, 'site', 'public', 'fonts');
+const BRAND_DIR = join(ROOT, 'site', 'public', 'brand', 'providers');
 const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 
 const BG = '#0A0C0D', INK = '#E6EAED', MUTED = '#78838A', ACCENT = '#E0A02E', RULE = '#1C2226';
@@ -52,6 +53,7 @@ function shot(html: string, w: number, h: number, out: string, scale = 2) {
 }
 
 const fontUrl = (file: string) => pathToFileURL(join(FONTS, file)).href;
+const providerMarkUrl = (file: string) => pathToFileURL(join(BRAND_DIR, file)).href;
 const FONT_FACE_CSS = `
   @font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 400 800; src: url('${fontUrl('jetbrains-mono-latin.woff2')}') format('woff2'); }
   @font-face { font-family: 'Source Serif 4'; font-style: normal; font-weight: 200 900; src: url('${fontUrl('source-serif-4-latin.woff2')}') format('woff2'); }
@@ -119,11 +121,42 @@ function render(card: CardData) {
 // feed of other dark cards) and it matches the founder's Arena.ai reference.
 // Brand-consistent regardless: the mark, wordmark and headline highlight are
 // the same brand amber (#E0A02E) the dark cards use; site/public/brand/mark.svg
-// and lockup.svg already ship this exact ink-on-light variant.
+// and lockup.svg already ship this exact ink-on-light variant. Bars use the
+// purple data accent (RC_PURPLE below), not amber — see basisBarCss.
 // ---------------------------------------------------------------------------
-const RC_BG = '#F5F0E3', RC_INK = '#17150F', RC_MUTED = '#8A7F6C', RC_RULE = '#E2DAC8';
-const RC_MODELLED = '#8FA0D8', RC_STALE = '#E8895A';
+const RC_BG = '#F8F6EE', RC_INK = '#17150F', RC_MUTED = '#8A7F6C', RC_RULE = '#E2DAC8';
+// Data accent (docs/redesign-2026-08/direction.md §1/§3, stage 1.1 color
+// note): a vivid violet, the same hue for both measured (solid) and
+// modelled (hatched) bars — the hatch alone carries the basis distinction.
+// Brand amber is reserved for highlight/brand duty only (headline
+// highlighter, #1-row outline + circle below) and never doubles as a bar
+// color, so the two jobs stay visually separate.
+const RC_PURPLE = '#6C3BF4', RC_STALE = '#E8895A';
 const RC_LEAD_TINT = 'rgba(224,160,46,0.10)';
+
+/**
+ * Colored provider chips (direction doc §4), mirroring site/src/lib/providers.ts
+ * on redesign-arena so cards and site agree once merged: vendored marks (their
+ * own official brand hex, see site/public/brand/providers/LOGOS.md, copied into
+ * this branch) for providers with a license-clean asset; a Solvency-assigned
+ * monogram color — never presented as an official brand color — for the two
+ * that don't (openai, xai).
+ */
+const PROVIDER_MARK_FILES: Record<string, string> = {
+  anthropic: 'anthropic.svg', google: 'google.svg', mistral: 'mistral.svg', deepseek: 'deepseek.svg',
+};
+const CHIP_BG = '#F4F3F1', CHIP_BORDER = '#CFCCC6';
+const MONOGRAM_COLORS: Record<string, string> = { openai: '#0F7A63', xai: '#9C4A75' };
+
+function chipHtml(provider: string | undefined, text: string): string {
+  const markFile = provider ? PROVIDER_MARK_FILES[provider] : undefined;
+  if (markFile) {
+    return `<span class="chip chip-mark"><img src="${providerMarkUrl(markFile)}" width="14" height="14" alt=""/></span>`;
+  }
+  const mono = provider ? MONOGRAM_COLORS[provider] : undefined;
+  const bg = mono ?? CHIP_BG, fg = mono ? '#FFFFFF' : RC_INK, border = mono ?? CHIP_BORDER;
+  return `<span class="chip" style="background:${bg};color:${fg};border-color:${border}">${esc(text)}</span>`;
+}
 
 const RANKED_FONT_FACE_CSS = FONT_FACE_CSS + `
   @font-face { font-family: 'IBM Plex Sans'; font-style: normal; font-weight: 300 700; src: url('${fontUrl('ibm-plex-sans-latin.woff2')}') format('woff2'); }
@@ -135,24 +168,27 @@ const rankedMarkSvg = (px: number) =>
   `<rect x="10" y="44" width="80" height="7" fill="${RC_INK}"/>` +
   `<rect x="42" y="66" width="16" height="18" fill="${BRAND_AMBER}"/></svg>`;
 
-/** Measured/harness bars are solid amber (both are observed-cost bases, no
- * loop assumption); modelled bars are hatched periwinkle; stale bars are a
- * dashed hollow outline — same basis semantics as site/src/lib/charts.ts,
- * just CSS instead of an SVG pattern. */
+/** Measured/harness bars are solid purple (both are observed-cost bases, no
+ * loop assumption — harness rows are source_usage_repriced, same solid
+ * treatment as measured); modelled bars are the same purple hatched; stale
+ * bars are a dashed hollow outline — same basis semantics as
+ * site/src/lib/charts.ts, just CSS instead of an SVG pattern. Brand amber
+ * never appears here; it is reserved for the headline highlight and the
+ * #1-row outline/circle. */
 function basisBarCss(basis: RankedBasis): string {
   if (basis === 'modelled') {
-    return `background:repeating-linear-gradient(135deg, ${RC_MODELLED}, ${RC_MODELLED} 3px, transparent 3px, transparent 7px);border:1px solid ${RC_MODELLED}`;
+    return `background:repeating-linear-gradient(135deg, ${RC_PURPLE}, ${RC_PURPLE} 3px, transparent 3px, transparent 7px);border:1px solid ${RC_PURPLE}`;
   }
   if (basis === 'stale') {
     return `background:transparent;border:1.5px dashed ${RC_STALE}`;
   }
-  return `background:${BRAND_AMBER};border:1px solid ${BRAND_AMBER}`; // measured, harness
+  return `background:${RC_PURPLE};border:1px solid ${RC_PURPLE}`; // measured, harness
 }
 
 function rankedRowHtml(r: RankedRow, rank: number, maxCost: number, rowH: number): string {
   const pct = maxCost > 0 ? Math.max(4, Math.round((r.cost / maxCost) * 100)) : 4;
   const secondary = r.sub ? `<span class="sub">${esc(r.sub)}</span>`
-    : r.chip ? `<span class="chip">${esc(r.chip)}</span>` : '';
+    : r.chip ? chipHtml(r.provider, r.chip) : '';
   return `<div class="row${rank === 1 ? ' lead' : ''}" style="height:${rowH}px">
       <div class="rank">${rank}</div>
       <div class="who"><span class="name">${esc(r.name)}</span>${secondary}</div>
@@ -213,8 +249,11 @@ function rankedCardHtml(card: RankedCardData): string {
     .who{display:flex;flex-direction:column;gap:2px;min-width:0}
     .name{font-weight:600;font-size:19px;color:${RC_INK};white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .sub{font-size:12px;color:${RC_MUTED}}
-    .chip{width:fit-content;padding:1px 6px;border-radius:4px;background:${RC_RULE};
-      font-size:11px;font-weight:700;letter-spacing:.04em;color:${RC_INK}}
+    .chip{width:fit-content;padding:1px 6px;border-radius:4px;border:1px solid transparent;
+      font-size:11px;font-weight:700;letter-spacing:.04em}
+    .chip-mark{padding:3px;display:flex;align-items:center;justify-content:center;
+      background:${CHIP_BG};border-color:${CHIP_BORDER}}
+    .chip-mark img{display:block}
     .track{position:relative;height:12px;border-radius:4px;background:${RC_RULE}}
     .bar{position:absolute;left:0;top:0;height:100%;border-radius:4px}
     .val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:18px;color:${RC_INK};text-align:right}
