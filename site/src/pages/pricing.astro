@@ -90,12 +90,18 @@ const launchDecisions = [
   },
 ];
 ---
-<Base title="Pricing — Free now, Pro planned — Solvency"
-      description="Solvency public research and calculators stay free. Compare the open Build Composer preview with a planned Pro workspace; billing is not live.">
+<Base title={CHECKOUT_UI_ENABLED
+        ? 'Pricing — Solvency Pro, $19/month — Solvency'
+        : 'Pricing — Free now, Pro planned — Solvency'}
+      description={CHECKOUT_UI_ENABLED
+        ? 'Solvency public research and calculators stay free. Pro — $19/month or $190/year — unlocks the full Build Composer and funds independent benchmark runs.'
+        : 'Solvency public research and calculators stay free. Compare the open Build Composer preview with a planned Pro workspace; billing is not live.'}>
   <div class="wrap pt-8 md:pt-12">
     <p class="eyebrow">Pricing</p>
     <h1 class="h-display mt-3 max-w-3xl">Public evidence stays free.</h1>
-    <p class="lede mt-4 max-w-3xl">Research, methodology, verified model prices and the calculator are free to read and use. Pro is being designed for teams that repeatedly re-plan, review and monitor a multi-model build budget.</p>
+    <p class="lede mt-4 max-w-3xl">Research, methodology, verified model prices and the calculator are free to read and use. {CHECKOUT_UI_ENABLED
+      ? 'Pro is for teams that repeatedly re-plan, review and monitor a multi-model build budget.'
+      : 'Pro is being designed for teams that repeatedly re-plan, review and monitor a multi-model build budget.'}</p>
     <p class="lede mt-2 max-w-3xl">Solvency prices everything — the calculator, the frontier chart and Build Composer — the same way: cost per completed task, verified against a source. Pro is that same math applied to the plans you save.</p>
     <p class="lede mt-2 max-w-3xl">Solvency takes no money from model vendors; the paid tier is what funds its independent benchmark runs.</p>
 
@@ -118,8 +124,10 @@ const launchDecisions = [
 
     {STRIPE_SANDBOX_UI_ENABLED && <StripeSandbox />}
 
-    <Section id="plans" eyebrow="Packaging" title="Free now; Pro is a validation hypothesis" class="mt-20"
-      caption="The proposed price and feature boundary may change after recurring-value evidence is reviewed.">
+    <Section id="plans" eyebrow="Packaging" title={CHECKOUT_UI_ENABLED ? 'Free and Pro' : 'Free now; Pro is a validation hypothesis'} class="mt-20"
+      caption={CHECKOUT_UI_ENABLED
+        ? 'Public evidence stays free. Pro unlocks the full Build Composer and funds independent benchmark runs.'
+        : 'The proposed price and feature boundary may change after recurring-value evidence is reviewed.'}>
       <div class="grid gap-4 md:grid-cols-2">
         <article class="card card-pad">
           <p class="label">Free · available now</p>
@@ -163,14 +171,14 @@ const launchDecisions = [
       </div>
     </Section>
 
-    <Section id="compare-tiers" eyebrow="Comparison" title="What is open now and what is planned"
+    <Section id="compare-tiers" eyebrow="Comparison" title={CHECKOUT_UI_ENABLED ? 'What Free includes and what Pro adds' : 'What is open now and what is planned'}
       caption={CHECKOUT_UI_ENABLED
         ? 'Pro items below are active once you subscribe; roadmap items are still a product direction, not an available entitlement.'
         : 'Every Pro item below is a product direction, not an available entitlement.'}>
       <div class="hidden md:block tbl-wrap card">
         <table class="tbl pricing-table">
-          <caption>Comparison of current free access and planned Solvency Pro features</caption>
-          <thead><tr><th scope="col">Capability</th><th scope="col">Free now</th><th scope="col">Pro planned</th></tr></thead>
+          <caption>{CHECKOUT_UI_ENABLED ? 'Comparison of Free and Solvency Pro features' : 'Comparison of current free access and planned Solvency Pro features'}</caption>
+          <thead><tr><th scope="col">Capability</th><th scope="col">{CHECKOUT_UI_ENABLED ? 'Free' : 'Free now'}</th><th scope="col">{CHECKOUT_UI_ENABLED ? 'Pro' : 'Pro planned'}</th></tr></thead>
           <tbody>
             {comparison.map((row) => (
               <tr><th scope="row">{row.feature}</th><td>{row.free}</td><td>{row.pro}</td></tr>
@@ -178,24 +186,26 @@ const launchDecisions = [
           </tbody>
         </table>
       </div>
-      <div class="grid gap-3 md:hidden" aria-label="Comparison of current free access and planned Solvency Pro features">
+      <div class="grid gap-3 md:hidden" aria-label={CHECKOUT_UI_ENABLED ? 'Comparison of Free and Solvency Pro features' : 'Comparison of current free access and planned Solvency Pro features'}>
         {comparison.map((row) => (
           <article class="card card-pad">
             <h3 class="h-card">{row.feature}</h3>
             <dl class="mt-4 grid gap-4">
-              <div><dt class="label">Free now</dt><dd class="mt-1 text-sm leading-relaxed">{row.free}</dd></div>
-              <div><dt class="label">Pro planned</dt><dd class="mt-1 text-sm leading-relaxed">{row.pro}</dd></div>
+              <div><dt class="label">{CHECKOUT_UI_ENABLED ? 'Free' : 'Free now'}</dt><dd class="mt-1 text-sm leading-relaxed">{row.free}</dd></div>
+              <div><dt class="label">{CHECKOUT_UI_ENABLED ? 'Pro' : 'Pro planned'}</dt><dd class="mt-1 text-sm leading-relaxed">{row.pro}</dd></div>
             </dl>
           </article>
         ))}
       </div>
-      <p class="small mt-3">“Planned” does not guarantee inclusion, timing or a final limit. {CHECKOUT_UI_ENABLED
+      <p class="small mt-3">{CHECKOUT_UI_ENABLED ? '“Roadmap” does not guarantee inclusion, timing or a final limit. ' : '“Planned” does not guarantee inclusion, timing or a final limit. '}{CHECKOUT_UI_ENABLED
         ? 'Account saves, versions and share links are enforced by the server; Composer demo limits are enforced in the page and backed by the same server checks for anything saved or shared.'
         : 'Final entitlements will be enforced by the server before billing is enabled. The Free demo cap above is the approved packaging, not yet enforced: Build Composer remains an open preview at the 24-role safety cap for everyone until launch.'}</p>
     </Section>
 
-    <Section id="launch-decisions" eyebrow="Before public checkout" title="Terms that still need a launch decision"
-      caption="These items will be decided and published before any public or live payment action is shown.">
+    <Section id="launch-decisions" eyebrow={CHECKOUT_UI_ENABLED ? 'Launch terms' : 'Before public checkout'} title={CHECKOUT_UI_ENABLED ? 'The terms, decided' : 'Terms that still need a launch decision'}
+      caption={CHECKOUT_UI_ENABLED
+        ? 'Each of these was decided and published at launch. The checkout screen shows them again before any payment is submitted.'
+        : 'These items will be decided and published before any public or live payment action is shown.'}>
       <div class="tile-grid sm:grid-cols-2">
         {launchDecisions.map((item) => (
           <article class="tile">
@@ -206,7 +216,9 @@ const launchDecisions = [
       </div>
       <div class="card card-pad mt-4">
         <h3 class="h-card">Required pre-checkout disclosure</h3>
-        <p class="mt-2 text-sm leading-relaxed max-w-3xl">A future purchase screen must show the final USD amount and billing cadence, automatic-renewal terms, trial treatment, cancellation timing, refund policy and tax treatment before payment is submitted. It must also link the then-current <a class="link" href="/terms">Terms</a> and <a class="link" href="/privacy">Privacy policy</a>.</p>
+        <p class="mt-2 text-sm leading-relaxed max-w-3xl">{CHECKOUT_UI_ENABLED
+          ? 'The purchase screen shows the final USD amount and billing cadence, automatic-renewal terms, trial treatment, cancellation timing, refund policy and tax treatment before payment is submitted, and links the current '
+          : 'A future purchase screen must show the final USD amount and billing cadence, automatic-renewal terms, trial treatment, cancellation timing, refund policy and tax treatment before payment is submitted. It must also link the then-current '}<a class="link" href="/terms">Terms</a> and <a class="link" href="/privacy">Privacy policy</a>.</p>
       </div>
     </Section>
   </div>

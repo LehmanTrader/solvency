@@ -22,8 +22,15 @@ test('pricing page separates what is free now from planned Pro', () => {
   assert.match(page, /Pro planned/);
   assert.match(page, /hidden md:block tbl-wrap card/);
   assert.match(page, /grid gap-3 md:hidden/);
-  assert.match(page, /<dt class="label">Free now<\/dt>/);
-  assert.match(page, /<dt class="label">Pro planned<\/dt>/);
+  // The column labels are launch-aware: live builds drop the "now/planned"
+  // hedges, dark builds keep them. Pin the exact conditional so neither
+  // branch can silently lose its copy.
+  assert.match(page, /<dt class="label">\{CHECKOUT_UI_ENABLED \? 'Free' : 'Free now'\}<\/dt>/);
+  assert.match(page, /<dt class="label">\{CHECKOUT_UI_ENABLED \? 'Pro' : 'Pro planned'\}<\/dt>/);
+  // The page title and meta description are launch-aware too: the live build
+  // must never describe billing as not live.
+  assert.match(page, /'Pricing — Solvency Pro, \$19\/month — Solvency'/);
+  assert.match(page, /billing is not live\.'/);
   assert.match(page, /24-role safety cap/);
   assert.match(page, /2-role demo/);
   assert.match(page, /verified catalog list prices only, with the live quote|verified catalog list prices only, with the same live quote/);
