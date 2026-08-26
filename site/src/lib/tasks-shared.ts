@@ -12,7 +12,12 @@
 export interface TaskBucket {
   /** Used in the hero <select> value, the URL param and provenance sentence. */
   id: string;
-  /** "a mobile app" — sits after "I want to ship" in the hero sentence. */
+  /**
+   * "mobile app" — the option text, WITHOUT a leading article (stage 1.2,
+   * Roy's note 2: "the drop down should just be the type of project without
+   * a in front a should be part of the sentence"). The sentence supplies its
+   * own article via bucketArticle() below, so it can switch a/an per option.
+   */
   label: string;
   /** "mobile apps" — plural, for the provenance sentence. */
   plural: string;
@@ -26,6 +31,33 @@ export interface TaskBucket {
 
 export const bucketById = (buckets: TaskBucket[], id: string): TaskBucket | undefined =>
   buckets.find((b) => b.id === id);
+
+/**
+ * True if `word` most likely takes "an" rather than "a" — the first
+ * alphanumeric character is a vowel letter (A E I O U). This also correctly
+ * handles an acronym pronounced with a vowel-sound letter name ("an API",
+ * first letter A), while a consonant-sound acronym ("a CLI tool", "C" is
+ * pronounced /siː/) and a digit spoken with a consonant ("a 2D game", "2" is
+ * "two") both fall through to "a" — every current bucket label, plus the
+ * acronym case direction.md's stage-1.2 note calls out by name. Not a full
+ * English-grammar solution (e.g. "a European" would be wrong), but it is
+ * automatic, so a new bucket never needs its article hand-picked.
+ */
+export const startsWithVowelSound = (word: string): boolean => /^[aeiou]/i.test(word);
+export const articleFor = (word: string): 'a' | 'an' => (startsWithVowelSound(word) ? 'an' : 'a');
+
+/**
+ * The hero sentence's live article, WITH its trailing space baked in so the
+ * markup never has to reason about double/missing spaces: "a " / "an " for
+ * a real bucket, "" for the "something else" escape hatch (id 'other',
+ * which isn't in `buckets` — "I want to ship something else." takes no
+ * article at all).
+ */
+export const bucketArticle = (buckets: TaskBucket[], id: string): string => {
+  if (id === 'other') return '';
+  const b = bucketById(buckets, id);
+  return b ? `${articleFor(b.label)} ` : '';
+};
 
 /** "240.5" or "1,609" — matches reports/2026-08-what-is-a-task.md's own formatting. */
 export const fmtTasks = (n: number): string => (Number.isInteger(n) ? n.toLocaleString('en-US') : n.toFixed(1));

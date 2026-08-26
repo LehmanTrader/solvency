@@ -141,14 +141,24 @@ export function rankedBars(rowsIn: ChartRow[], o: RankedOpts): string {
       ? `fill="url(#hatch-modelled)" stroke="var(--color-modelled)" stroke-width="1"`
       : `fill="transparent" stroke="var(--color-stale)" stroke-width="1.5" stroke-dasharray="3 2"`;
 
-  // one style for the axis caption and the column headers; ⓘ carries a
-  // native SVG hover tooltip with the same explanation the "How it is
-  // computed" panel gives (site/src/pages/index.astro's `how` tiles).
+  // One style for the axis caption and the column headers. Founder note
+  // (screenshot review, 2026-08-26): the old "$ / SOLVED ⓘ" / "$ / MONTH ⓘ"
+  // pair ran together with no gap, and didn't line up over their own value
+  // columns. Root cause: the trailing "ⓘ" glyph was part of the same
+  // text-anchor="end" run as the label, so it padded the label's measured
+  // width — the label text (not the icon) then ended short of the column's
+  // x, misaligned against the plain numeral in the row below it, and at
+  // narrower widths the padded label could run into its neighbor's slot.
+  // Fix: drop the visible glyph — each label keeps its <title> child, so the
+  // WHOLE label is still a native-tooltip hover target — and anchor the bare
+  // label text at the exact same x as its value cell below, so header and
+  // value are pixel-exact aligned at any width, with no extra glyph to
+  // collide with the next column.
   const header = compact ? '' :
     `<g class="t3 cap" font-size="${FS_S}" aria-hidden="true">` +
     `<text x="${barX}" y="12">$ / SOLVED TASK · LOWER IS BETTER</text>` +
-    `<text x="${xSolved}" y="12" text-anchor="end">$ / SOLVED ⓘ<title>cost per solved task = cost per attempt ÷ pass rate. What it costs to get a task finished, not what a token costs.</title></text>` +
-    `<text x="${xMonth}" y="12" text-anchor="end">$ / MONTH ⓘ<title>$ / solved task × your monthly task volume.</title></text></g>`;
+    `<text x="${xSolved}" y="12" text-anchor="end">$ / SOLVED<title>cost per solved task = cost per attempt ÷ pass rate. What it costs to get a task finished, not what a token costs.</title></text>` +
+    `<text x="${xMonth}" y="12" text-anchor="end">$ / MONTH<title>$ / solved task × your monthly task volume.</title></text></g>`;
 
   const body = rows.map((r, i) => {
     const y = headH + i * rowH;
@@ -257,6 +267,10 @@ export interface ScatterOpts {
   /** model id to label directly (the visitor's lead row) */
   lead?: string;
   showStale?: boolean;
+  /** Include the "Frontier models" ranked list beside the chart. Wide
+   * layouts only — the caller decides whether there's room (stage 1.2,
+   * Roy's note 6: skip it at narrow widths rather than cram it in). */
+  rail?: boolean;
 }
 
 /** Measured points nobody beats on both axes, sorted by pass rate ascending. */
@@ -268,39 +282,83 @@ export function paretoFrontier(rows: ChartRow[]): ChartRow[] {
   return out.sort((a, b) => a.pass - b.pass);
 }
 
+/**
+ * "Nice" 1-2-5 log-scale steps within [lo, hi] — tight to the plotted data
+ * (stage 1.2, Roy's note 6: "no dead space"). A plain floor/ceil-to-power-
+ * of-ten domain snaps outward to a whole decade even when the data spans a
+ * fraction of one (e.g. $0.08–$0.92 would become the $0.1–$1 frame with a
+ * decade of headroom on each side); this instead only ever proposes ticks
+ * that actually fall inside the padded domain.
+ */
+function niceLogTicks(lo: number, hi: number): number[] {
+  const out: number[] = [];
+  const e0 = Math.floor(Math.log10(lo)), e1 = Math.ceil(Math.log10(hi));
+  for (let e = e0; e <= e1; e++) {
+    for (const m of [1, 2, 5]) {
+      const v = m * Math.pow(10, e);
+      if (v >= lo * 0.999 && v <= hi * 1.001) out.push(v);
+    }
+  }
+  return out;
+}
+
+/**
+ * The "Frontier models" ranked list — logo, name, $/solved — that sits
+ * beside the chart on wide layouts (ScatterOpts.rail). Same house grammar
+ * as the ranked table: cheapest first, mono values, the same provider logo
+ * chips (site/src/lib/providers.ts) used everywhere else a model is named.
+ */
+function frontierRailHtml(front: ChartRow[]): string {
+  if (!front.length) return '';
+  const rows = front.slice().sort((a, b) => a.cost - b.cost).map((p) => {
+    const chip = `<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">${chipMarkup(p.provider ?? '', 18)}</svg>`;
+    return `<li class="frail-row"><span class="frail-chip">${chip}</span>` +
+      `<a class="frail-name" href="${esc(p.href)}">${esc(p.name)}</a>` +
+      `<span class="frail-cost">${money(p.cost)}</span></li>`;
+  }).join('');
+  return `<aside class="frontier-rail" aria-label="Frontier models, cheapest first">` +
+    `<p class="frail-h t3 cap">FRONTIER MODELS</p><ol class="frail-list">${rows}</ol></aside>`;
+}
+
 export function scatterPareto(rows: ChartRow[], o: ScatterOpts): string {
   const compact = o.compact ?? o.width < 560;
   const w = Math.max(300, Math.round(o.width));
   const h = o.height ?? (compact ? w : Math.round(w * 0.58));
   const pts = rows.filter((r) => r.basis !== 'stale' || o.showStale);
-  // legend and the y caption live above the frame, never over a gridline;
-  // no rotated axis title, so the ticks sit tight against the plot
-  // compact keeps a taller bottom band so the tick row and the axis title
-  // never share space at the right-hand corner
-  const ml = 44, mr = compact ? 20 : 24, mt = 34, mb = compact ? 38 : 30;
+  // Stage 1.2 (Roy's note 6, 2026-08-26): axes swapped from stage 1 — score
+  // (pass rate) on y, cost per solved task on log-x, matching Arena's own
+  // Pareto-view grammar (direction.md's "What was actually observed on
+  // arena.ai" §). Bounds fit tight to the plotted points on both axes (no
+  // dead space): x uses a proportional log pad plus niceLogTicks() above
+  // instead of snapping out to the next whole decade; y pads a couple of
+  // points and rounds to the nearest 5%. MISSING rows never reach `pts` —
+  // they were dropped upstream in calc.ts's allChartRows() — so there is
+  // nothing here to impute.
+  const ml = 48, mr = compact ? 16 : 20, mt = 36, mb = compact ? 40 : 34;
   const pw = w - ml - mr, ph = h - mt - mb;
-  const passes = pts.map((p) => p.pass), costs = pts.map((p) => p.cost);
-  const xmin = Math.max(0, Math.floor((Math.min(...passes) - 0.04) * 10) / 10);
-  const xmax = Math.min(1, Math.ceil((Math.max(...passes) + 0.04) * 10) / 10);
-  const ymin = Math.pow(10, Math.floor(Math.log10(Math.min(...costs))));
-  const ymax = Math.pow(10, Math.ceil(Math.log10(Math.max(...costs))));
-  const X = (p: number) => ml + ((p - xmin) / (xmax - xmin)) * pw;
-  const Y = (c: number) => mt + ph - ((Math.log10(c) - Math.log10(ymin)) / (Math.log10(ymax) - Math.log10(ymin))) * ph;
+  const costs = pts.map((p) => p.cost), passes = pts.map((p) => p.pass);
+  const xmin = Math.min(...costs) / 1.15, xmax = Math.max(...costs) * 1.15;
+  let ymin = Math.max(0, Math.floor((Math.min(...passes) - 0.02) * 20) / 20);
+  let ymax = Math.min(1, Math.ceil((Math.max(...passes) + 0.02) * 20) / 20);
+  if (ymax - ymin < 0.05) { ymax = Math.min(1, ymin + 0.05); if (ymax - ymin < 0.05) ymin = Math.max(0, ymax - 0.05); }
+  const X = (c: number) => ml + ((Math.log10(c) - Math.log10(xmin)) / (Math.log10(xmax) - Math.log10(xmin))) * pw;
+  const Y = (p: number) => mt + ph - ((p - ymin) / (ymax - ymin)) * ph;
 
-  const xt: string[] = [], gx: string[] = [];
-  const xs: number[] = [];
-  for (let p = xmin; p <= xmax + 1e-9; p = r1(p + 0.1)) xs.push(p);
-  xs.forEach((p, i) => {
+  const gx: string[] = [], xt: string[] = [];
+  const xTicks = niceLogTicks(xmin, xmax);
+  xTicks.forEach((c, i) => {
     // extreme ticks anchor inward so nothing hangs outside the frame
-    const anchor = i === 0 ? 'start' : i === xs.length - 1 ? 'end' : 'middle';
-    const dx = i === 0 ? -2 : i === xs.length - 1 ? 2 : 0;
-    gx.push(`<line class="grid" x1="${r1(X(p))}" y1="${mt}" x2="${r1(X(p))}" y2="${mt + ph}"/>`);
-    xt.push(`<text class="t3" x="${r1(X(p) + dx)}" y="${h - mb + 16}" text-anchor="${anchor}" font-size="${FS_S}">${Math.round(p * 100)}%</text>`);
+    const anchor = i === 0 ? 'start' : i === xTicks.length - 1 ? 'end' : 'middle';
+    const dx = i === 0 ? -2 : i === xTicks.length - 1 ? 2 : 0;
+    gx.push(`<line class="grid" x1="${r1(X(c))}" y1="${mt}" x2="${r1(X(c))}" y2="${mt + ph}"/>`);
+    xt.push(`<text class="t3" x="${r1(X(c) + dx)}" y="${h - mb + 16}" text-anchor="${anchor}" font-size="${FS_S}">${money(c)}</text>`);
   });
+  const yStepPct = ymax - ymin <= 0.2 ? 5 : ymax - ymin <= 0.4 ? 10 : ymax - ymin <= 0.6 ? 15 : 20;
   const yt: string[] = [];
-  for (let c = ymin; c <= ymax * 1.0001; c *= 10) {
-    yt.push(`<line class="grid" x1="${ml}" y1="${r1(Y(c))}" x2="${ml + pw}" y2="${r1(Y(c))}"/>` +
-      `<text class="t3" x="${ml - 8}" y="${r1(Y(c)) + 3.5}" text-anchor="end" font-size="${FS_S}">$${c < 1 ? c.toFixed(1) : c}</text>`);
+  for (let pPct = Math.round(ymin * 100); pPct <= Math.round(ymax * 100); pPct += yStepPct) {
+    const p = pPct / 100;
+    yt.push(`<line class="grid" x1="${ml}" y1="${r1(Y(p))}" x2="${ml + pw}" y2="${r1(Y(p))}"/>` +
+      `<text class="t3" x="${ml - 8}" y="${r1(Y(p)) + 3.5}" text-anchor="end" font-size="${FS_S}">${pPct}%</text>`);
   }
 
   const front = paretoFrontier(pts);
@@ -308,10 +366,10 @@ export function scatterPareto(rows: ChartRow[], o: ScatterOpts): string {
   // the frontier's axis-aligned segments are obstacles for label placement
   const segs: { x0: number; y0: number; x1: number; y1: number }[] = [];
   front.forEach((p, i) => {
-    const x = r1(X(p.pass)), y = r1(Y(p.cost));
+    const x = r1(X(p.cost)), y = r1(Y(p.pass));
     if (i === 0) path += `M${x} ${y}`;
     else {
-      const prev = front[i - 1], px = r1(X(prev.pass)), py = r1(Y(prev.cost));
+      const prev = front[i - 1], px = r1(X(prev.cost)), py = r1(Y(prev.pass));
       path += ` L${x} ${py} L${x} ${y}`;
       segs.push({ x0: Math.min(px, x), y0: py, x1: Math.max(px, x), y1: py }, { x0: x, y0: Math.min(py, y), x1: x, y1: Math.max(py, y) });
     }
@@ -322,17 +380,29 @@ export function scatterPareto(rows: ChartRow[], o: ScatterOpts): string {
   const cheapest = pts.slice().sort((a, b) => a.cost - b.cost)[0]?.id;
   const dearest = pts.slice().sort((a, b) => b.cost - a.cost)[0]?.id;
 
+  // Square logo-chip markers (site/src/lib/providers.ts's chipMarkup — the
+  // same colored chips as the ranked table and everywhere else a model is
+  // named, stage 1.2 note 1). Frontier models draw full-size and full
+  // opacity; dominated models draw smaller and muted (note 6: "dominated
+  // models as smaller, muted markers"). A basis ring around the chip —
+  // solid for measured, dashed for modelled, dashed+muted for stale — is
+  // the outline that keeps bases from ever blending silently; the legend
+  // repeats the same distinction in words, never color alone.
+  const FRONT_SIZE = compact ? 20 : 26, DOM_SIZE = compact ? 13 : 16;
+  const rad = (p: ChartRow) => (onFront.has(p.id) ? FRONT_SIZE : DOM_SIZE) / 2;
+
   // Direct labels, placed greedily so none overlap: frontier and lead first,
   // then the rest. Right-hand slots are tried before left-hand ones so labels
   // sit on one side unless there is no room. Every mark is an obstacle.
-  const FS = FS_S, LH = 12, R = 6;
+  const FS = FS_S, LH = 12;
   const order = pts.slice().sort((a, b) => (Number(onFront.has(b.id) || b.id === o.lead) - Number(onFront.has(a.id) || a.id === o.lead)) || a.cost - b.cost);
-  const placed: { x0: number; y0: number; x1: number; y1: number }[] = pts.map((p) => ({ x0: X(p.pass) - R - 1, y0: Y(p.cost) - R - 1, x1: X(p.pass) + R + 1, y1: Y(p.cost) + R + 1 }));
+  const placed: { x0: number; y0: number; x1: number; y1: number }[] = pts.map((p) => { const r = rad(p); return { x0: X(p.cost) - r - 1, y0: Y(p.pass) - r - 1, x1: X(p.cost) + r + 1, y1: Y(p.pass) + r + 1 }; });
   const label = new Map<string, { x: number; y: number; anchor: string } | null>();
   for (const p of order) {
     const wanted = onFront.has(p.id) || p.id === o.lead || !compact || p.id === cheapest || p.id === dearest;
     if (!wanted) { label.set(p.id, null); continue; }
-    const x = r1(X(p.pass)), y = r1(Y(p.cost));
+    const x = r1(X(p.cost)), y = r1(Y(p.pass));
+    const R = rad(p);
     const lw = textW(p.name, FS) + 2;
     const d = R + 4;
     const tries = [
@@ -370,36 +440,41 @@ export function scatterPareto(rows: ChartRow[], o: ScatterOpts): string {
     label.set(p.id, pick);
   }
   const marks = pts.slice().sort((a, b) => (a.basis === 'measured' ? 1 : 0) - (b.basis === 'measured' ? 1 : 0)).map((p) => {
-    const x = r1(X(p.pass)), y = r1(Y(p.cost));
+    const x = r1(X(p.cost)), y = r1(Y(p.pass));
+    const size = onFront.has(p.id) ? FRONT_SIZE : DOM_SIZE;
+    const half = size / 2;
+    const ringR = Math.max(2, Math.round(size * 0.22)) + 1;
     const tip = `${p.name} · ${BASIS_WORD[p.basis]} · ${money(p.cost)} per solved task · pass ${pct(p.pass)}${p.harness ? ' · ' + p.harness : ''}`;
-    const mark = p.basis === 'measured'
-      ? `<circle class="pt-measured" cx="${x}" cy="${y}" r="${R}"/>`
-      : p.basis === 'modelled'
-        ? `<circle class="pt-modelled" cx="${x}" cy="${y}" r="${R}"/>`
-        : `<circle class="pt-stale" cx="${x}" cy="${y}" r="${R}"/>`;
+    const ringCls = p.basis === 'measured' ? 'pt-measured' : p.basis === 'modelled' ? 'pt-modelled' : 'pt-stale';
+    const domCls = onFront.has(p.id) ? ' frontier-pt' : ' dominated';
+    const mark = `<rect class="chip-ring" x="-2" y="-2" width="${size + 4}" height="${size + 4}" rx="${ringR}"/>` +
+      `<g>${chipMarkup(p.provider ?? '', size)}</g>`;
     const l = label.get(p.id);
-    const text = l ? `<text class="lbl${p.basis === 'measured' ? '' : ' t2'}" x="${r1(l.x)}" y="${r1(l.y)}" text-anchor="${l.anchor}" font-size="${FS}"${p.id === o.lead ? ' font-weight="700"' : ''}>${esc(p.name)}</text>` : '';
-    // the designed tooltip (index.astro) reads these; aria-label carries the same sentence
+    const text = l ? `<text class="lbl${onFront.has(p.id) ? ' front' : ' t2'}" x="${r1(l.x)}" y="${r1(l.y)}" text-anchor="${l.anchor}" font-size="${FS}"${p.id === o.lead ? ' font-weight="700"' : ''}>${esc(p.name)}</text>` : '';
+    // the designed tooltip (Calculator.astro reads these); aria-label carries the same sentence
     const data = `data-name="${esc(p.name)}" data-basis="${BASIS_WORD[p.basis]}" data-cost="${money(p.cost)}" data-pass="${pct(p.pass)}"${p.harness ? ` data-harness="${esc(p.harness)}"` : ''}`;
-    return `<a class="pt" href="${esc(p.href)}" aria-label="${esc(tip)}" ${data}><circle class="hit" cx="${x}" cy="${y}" r="${compact ? 22 : 14}" fill="transparent"/>${mark}${text}</a>`;
+    return `<a class="pt ${ringCls}${domCls}" href="${esc(p.href)}" aria-label="${esc(tip)}" ${data}>` +
+      `<circle class="hit" cx="${x}" cy="${y}" r="${Math.max(half + 6, compact ? 20 : 16)}" fill="transparent"/>` +
+      `<g transform="translate(${r1(x - half)},${r1(y - half)})">${mark}</g>${text}</a>`;
   }).join('');
 
   const legendY = 12;
   const legend = compact
-    ? `<g font-size="${FS_S}" class="t3"><text x="${ml}" y="${legendY}">$ / SOLVED TASK (log) ↑</text></g>`
-    : `<g font-size="${FS_S}" class="t3"><text x="${ml}" y="${legendY}">$ / SOLVED TASK (log) ↑</text>` +
-      `<circle class="pt-measured" cx="${ml + pw - 290}" cy="${legendY - 3.5}" r="4"/><text x="${ml + pw - 280}" y="${legendY}">MEASURED</text>` +
-      `<circle class="pt-modelled" cx="${ml + pw - 200}" cy="${legendY - 3.5}" r="4"/><text x="${ml + pw - 190}" y="${legendY}">MODELLED · never on the frontier</text></g>`;
+    ? `<g font-size="${FS_S}" class="t3"><text x="${ml}" y="${legendY}">PASS RATE ↑</text></g>`
+    : `<g font-size="${FS_S}" class="t3"><text x="${ml}" y="${legendY}">PASS RATE ↑</text>` +
+      `<rect class="chip-ring pt-measured" x="${ml + pw - 300}" y="${legendY - 8}" width="10" height="10" rx="2"/><text x="${ml + pw - 285}" y="${legendY}">MEASURED</text>` +
+      `<rect class="chip-ring pt-modelled" x="${ml + pw - 205}" y="${legendY - 8}" width="10" height="10" rx="2"/><text x="${ml + pw - 190}" y="${legendY}">MODELLED · never on the frontier</text></g>`;
 
   const title = 'Cost per solved task against pass rate, with the measured Pareto frontier';
-  const desc = `Scatter of ${pts.length} models: x is pass rate ${Math.round(xmin * 100)}–${Math.round(xmax * 100)}%, y is dollars per solved task on a log scale from $${ymin} to $${ymax}. The frontier joins the measured models nobody beats on both axes: ${front.map((p) => `${p.name} (${pct(p.pass)}, ${money(p.cost)})`).join(', ')}.`;
-  return `<svg class="chart scatter" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" role="img" aria-label="${esc(title)}">` +
+  const desc = `Scatter of ${pts.length} models: x is dollars per solved task on a log scale from $${money(xmin)} to $${money(xmax)}, y is pass rate ${Math.round(ymin * 100)}–${Math.round(ymax * 100)}%. The frontier joins the measured models nobody beats on both axes: ${front.map((p) => `${p.name} (${pct(p.pass)}, ${money(p.cost)})`).join(', ')}.`;
+  const svg = `<svg class="chart scatter" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" role="img" aria-label="${esc(title)}">` +
     `<title>${esc(title)}</title><desc>${esc(desc)}</desc>` +
     gx.join('') + yt.join('') +
     `<line class="axis" x1="${ml}" y1="${mt + ph}" x2="${ml + pw}" y2="${mt + ph}"/><line class="axis" x1="${ml}" y1="${mt}" x2="${ml}" y2="${mt + ph}"/>` +
     xt.join('') +
-    `<text class="t3" x="${ml + pw}" y="${h - 2}" text-anchor="end" font-size="${FS_S}">PASS RATE →</text>` +
+    `<text class="t3" x="${ml + pw}" y="${h - 2}" text-anchor="end" font-size="${FS_S}">$ / SOLVED TASK (log) →</text>` +
     (path ? `<path class="frontier" d="${path}"/>` : '') + legend + marks + `</svg>`;
+  return o.rail ? `<div class="frontier-view">${svg}${frontierRailHtml(front)}</div>` : svg;
 }
 
 // ---------------------------------------------------------------------------

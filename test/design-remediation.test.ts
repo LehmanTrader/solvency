@@ -70,13 +70,21 @@ test('compare-page copy separates its unavailable table export from current free
   assert.doesNotMatch(page, />Download table /);
 });
 
-test('calculator copy keeps current custom prices and exports free while planned Pro remains unavailable', () => {
+// Stage 1.2 (Roy's note 5, 2026-08-26): "what is this line that says build
+// composer alread includes per-plan custom prices? remove that whole
+// section." The cross-sell paragraph this test used to pin (the "Build
+// Composer already includes..." line, its "Planned Pro value" pitch and the
+// "Share interest" pro-notify button) is gone from the calculator card
+// entirely — moved pin: this test now guards that it stays gone, and that
+// no successor pitch reappears in its place.
+test('calculator card carries no Build-Composer-vs-Pro cross-sell pitch', () => {
   const page = read('site/src/components/Calculator.astro');
-  assert.match(page, /Build Composer already includes per-plan custom prices and local exports/);
-  assert.match(page, /Planned Pro value:<\/span> reusable cross-plan profiles and active price\/budget monitoring—neither is available yet/);
-  assert.match(page, />Share interest<\/button>/);
-  assert.match(page, /Both are planned and unavailable today; nothing will be purchased or reserved/);
+  assert.doesNotMatch(page, /Build Composer already includes per-plan custom prices/);
+  assert.doesNotMatch(page, /Planned Pro value/);
+  assert.doesNotMatch(page, /id="c-notify"/);
+  assert.doesNotMatch(page, />Share interest<\/button>/);
   assert.doesNotMatch(page, /Pro \(soon\):[^\n]*export|Notify me|Get notified when Pro ships/);
+  assert.doesNotMatch(page, /'pro-notify'/);
 });
 
 test('compact chart compare links include their visible “vs” label in the accessible name', () => {

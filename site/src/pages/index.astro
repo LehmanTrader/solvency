@@ -3,23 +3,9 @@ import { getCollection } from 'astro:content';
 import Base from '../layouts/Base.astro';
 import Calculator from '../components/Calculator.astro';
 import Section from '../components/Section.astro';
-import Provenance from '../components/Provenance.astro';
-import { headline, fmtX } from '../lib/headline.ts';
-import { DEFAULTS, compute, allChartRows } from '../lib/calc.ts';
-import { scatterPareto } from '../lib/charts.ts';
-import { sources } from '../lib/data.ts';
 
 const latest = (await getCollection('reports')).sort((a, b) => b.data.date - a.data.date)[0];
 const latestHref = latest ? `/research/${latest.id.replace(/^\d{4}-\d{2}-/, '')}` : '/research';
-const h = headline();
-const aa = sources.find((s) => s.benchmark === 'aa-coding-agent-index');
-
-// Chart B at the defaults; the island re-renders it with the visitor's settings.
-const { rows } = compute(DEFAULTS);
-const all = allChartRows(rows, DEFAULTS);
-const lead = all.find((r) => r.basis === 'measured')?.id;
-const scatterWide = scatterPareto(all, { width: 1000, compact: false, lead });
-const scatterNarrow = scatterPareto(all, { width: 350, height: 350, compact: true, lead });
 
 const how = [
   { k: 'The number', v: 'cost per solved task = cost per attempt ÷ pass rate', n: 'What it costs to get a task finished, not what a token costs.' },
@@ -33,39 +19,17 @@ const how = [
   <div class="wrap pt-8 md:pt-10">
     <Calculator />
     <!-- Radical subtraction (direction doc §5): the hero, its input and the
-         ranked table above are the whole homepage by default. The frontier
-         chart and the method summary — real content, not chrome — sit one
-         click away rather than always occupying the fold. -->
+         ranked table above are the whole homepage by default. The method
+         summary — real content, not chrome — sits one click away rather
+         than always occupying the fold. Stage 1.2 (Roy's note 6): the
+         frontier chart that used to live in this disclosure is gone from
+         here — pulled forward from stage 2 and promoted into the
+         Calculator's own Ranking | Frontier toggle (site/src/components/
+         Calculator.astro's #c-frontier), not hidden behind a click anymore. -->
     <details class="disc mt-16" id="more">
-      <summary class="h-section" style="display:inline-block">Show the frontier chart and how this is computed</summary>
+      <summary class="h-section" style="display:inline-block">Show how this is computed</summary>
       <div class="mt-6">
-        <Section id="frontier" eyebrow="The frontier" title="Why not just pick the top score?"
-          caption="Lower and to the right is better. The line joins the measured models nobody beats on both axes.">
-          <div class="card relative" id="scatter">
-            <div class="card-head">
-              <p class="text-[var(--color-body)] leading-relaxed max-w-[64ch] text-[0.875rem]">
-                Token price predicts almost nothing: {h.cheap.m.display_name} is {fmtX(h.outX)} cheaper per output token than{' '}
-                {h.dear.m.display_name} — and <strong class="text-[var(--color-ink)]">{fmtX(h.solvedX)} cheaper per solved task</strong>.
-              </p>
-              <a class="link small" href={latestHref}>Read the note →</a>
-            </div>
-            <div class="card-pad">
-              <div class="hidden sm:block" data-chart data-layout="wide" data-w="1000" set:html={scatterWide}></div>
-              <div class="sm:hidden" data-chart data-layout="narrow" data-w="350" set:html={scatterNarrow}></div>
-              <div class="tip" id="scatter-tip" role="presentation" aria-hidden="true"></div>
-              <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
-                <label class="small inline-flex items-center gap-2 min-h-11 cursor-pointer"><input id="scatter-stale" type="checkbox" class="chk" /> Show stale pass rates</label>
-                <Provenance class="mt-0" source={aa?.attribution} href={aa?.attribution_url} verified={aa?.last_verified} />
-              </div>
-            </div>
-          </div>
-          <p class="mt-3 text-[0.875rem] leading-relaxed text-[var(--color-body)]">
-            Modelled points move with your tier and assumptions; measured points never do. Hover or focus a point for its pass rate, cost and harness; click it for the model page.{' '}
-            <a class="link" href="/methodology#frontier">See how the frontier is computed →</a>
-          </p>
-        </Section>
-
-        <Section id="how" eyebrow="Method" title="How it is computed" class="mt-16">
+        <Section id="how" eyebrow="Method" title="How it is computed">
           <div class="tile-grid sm:grid-cols-3">
             {how.map((t) => (
               <div class="tile">
@@ -81,34 +45,3 @@ const how = [
     </details>
   </div>
 </Base>
-
-<script>
-  // The designed tooltip for scatter points: name / $ / pass / harness, 8px
-  // off the pointer, fading in over 120ms. The aria-label on each point
-  // carries the same sentence for assistive tech; this is the sighted copy.
-  const card = document.getElementById('scatter'), tip = document.getElementById('scatter-tip');
-  if (card && tip) {
-    const show = (a: Element, x: number, y: number) => {
-      const d = (a as HTMLElement).dataset;
-      const name = document.createElement('b'); name.textContent = d.name ?? '';
-      const detail = document.createTextNode(`${d.basis} · ${d.cost} per solved task`);
-      const br = document.createElement('br');
-      const pass = document.createTextNode(`pass ${d.pass}${d.harness ? ` · ${d.harness}` : ''}`);
-      tip.replaceChildren(name, detail, br, pass);
-      const r = card.getBoundingClientRect();
-      let left = x - r.left + 8, top = y - r.top + 8;
-      tip.style.left = '0'; tip.style.top = '0';
-      const tw = tip.offsetWidth, th = tip.offsetHeight;
-      if (left + tw > r.width - 8) left = x - r.left - tw - 8;
-      if (top + th > r.height - 8) top = y - r.top - th - 8;
-      tip.style.left = `${Math.max(0, left)}px`; tip.style.top = `${Math.max(0, top)}px`;
-      tip.setAttribute('data-show', '1');
-    };
-    const hide = () => tip.removeAttribute('data-show');
-    card.addEventListener('pointerover', (e) => { const a = (e.target as Element).closest('a.pt'); if (a) show(a, e.clientX, e.clientY); });
-    card.addEventListener('pointermove', (e) => { const a = (e.target as Element).closest('a.pt'); if (a && tip.hasAttribute('data-show')) show(a, e.clientX, e.clientY); });
-    card.addEventListener('pointerout', (e) => { if ((e.target as Element).closest('a.pt')) hide(); });
-    card.addEventListener('focusin', (e) => { const a = (e.target as Element).closest('a.pt'); if (a) { const b = a.getBoundingClientRect(); show(a, b.right, b.top); } });
-    card.addEventListener('focusout', hide);
-  }
-</script>

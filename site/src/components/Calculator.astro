@@ -6,15 +6,31 @@
  * island takes over. The island re-renders from compute() on every input.
  */
 import { TIER_NAMES, sources, models } from '../lib/data.ts';
-import { DEFAULTS, compute, groupsHtml, calloutHtml, projectTotalHtml, missingHtml, TIER_HELP } from '../lib/calc.ts';
-import { TASK_BUCKETS, bucketById, provenanceHtml } from '../lib/tasks.ts';
+import { DEFAULTS, compute, groupsHtml, calloutHtml, projectTotalHtml, missingHtml, TIER_HELP, allChartRows } from '../lib/calc.ts';
+import { scatterPareto } from '../lib/charts.ts';
+import { TASK_BUCKETS, bucketById, provenanceHtml, bucketArticle } from '../lib/tasks.ts';
 import { CLERK_ENABLED } from '../lib/clerk.ts';
 import { GATE_MODE } from '../lib/gate.ts';
+// The "token price predicts almost nothing" finding — moved here from the
+// old index.astro collapsed frontier section (stage 1.2, Roy's note 6) when
+// the Frontier view was promoted into this card's Ranking | Frontier toggle.
+import { headline, fmtX } from '../lib/headline.ts';
+const h = headline();
 const { rows, missing } = compute(DEFAULTS);
 // the result card's inner width at the site's one container width (72rem − padding − card padding)
 const WIDE = 1046, NARROW = 350;
 const wide = groupsHtml(rows, DEFAULTS, { width: WIDE, compact: false });
 const narrow = groupsHtml(rows, DEFAULTS, { width: NARROW, compact: true });
+// Stage 1.2 (Roy's note 6): the Frontier view of the same leaderboard —
+// pulled forward from stage 2's plan, replacing the old collapsed scatter
+// section on the homepage. Same allChartRows(rows, settings) the old
+// index.astro card used; the rail (site/src/lib/charts.ts's
+// frontierRailHtml) only renders on the wide layout, per the founder's
+// "skip it at narrow widths" note.
+const frontierAll = allChartRows(rows, DEFAULTS);
+const frontierLead = frontierAll.find((r) => r.basis === 'measured')?.id;
+const frontierWide = scatterPareto(frontierAll, { width: WIDE, compact: false, lead: frontierLead, rail: true });
+const frontierNarrow = scatterPareto(frontierAll, { width: NARROW, height: NARROW, compact: true, lead: frontierLead });
 // The hero defaults to bucket mode (owner's approved design): "I want to ship
 // a [bucket]" with the working task count set to that bucket's published
 // median, re-derived from data/task-study/final_table.csv by ../lib/tasks.ts.
@@ -22,6 +38,11 @@ const narrow = groupsHtml(rows, DEFAULTS, { width: NARROW, compact: true });
 // sentence) is a quiet secondary affordance for existing users and links —
 // see the #c-mode-toggle wiring below and the URL-compat note there.
 const defaultBucket = bucketById('mobile')!;
+// Stage 1.2 (Roy's note 2): "the drop down should just be the type of
+// project without a in front a should be part of the sentence" — the
+// visible article sits in the sentence text (#c-bucket-article), not baked
+// into each option's label, and switches a/an per selection automatically.
+const defaultArticle = bucketArticle(TASK_BUCKETS, defaultBucket.id);
 // calloutHtml(rows, DEFAULTS.volume) is what #c-callout falls back to in
 // monthly mode; the client script recomputes it there, so it isn't needed
 // at build time — the SSR default is bucket mode's project total below.
@@ -50,7 +71,7 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
 
   <div id="hero-modes">
     <p class="sentence mode-bucket mt-6">
-      I want to ship{' '}<select id="c-bucket" class="ctl ctl-inline" aria-label="What are you shipping?" data-ctl="bucket">
+      I want to ship{' '}<span id="c-bucket-article">{defaultArticle}</span><select id="c-bucket" class="ctl ctl-inline" aria-label="What are you shipping?" data-ctl="bucket">
         {TASK_BUCKETS.map((b) => <option value={b.id} selected={b.id === defaultBucket.id}>{b.label}</option>)}
         <option value="other">something else</option>
       </select>.
@@ -104,6 +125,20 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
          already-computed data from here and formats it with the pure helpers
          in ../lib/tasks-shared.ts — one computation, no client-side drift. -->
     <script type="application/json" id="task-buckets-data" is:inline set:html={JSON.stringify(TASK_BUCKETS)}></script>
+    <!-- Stage 1.2 (Roy's note 6): the frontier chart pulled forward from
+         stage 2 and promoted to a view of the leaderboard itself, Arena-
+         grammar "View as: Ranking | Pareto" (direction.md's recon notes).
+         Instant swap — a plain aria-pressed toggle, no anchor/scroll — see
+         the #c-view-ranking / #c-view-frontier wiring below. Ranking stays
+         the default; the old collapsed "Show the frontier chart" disclosure
+         on the homepage (site/src/pages/index.astro) is gone, replaced by
+         this. -->
+    <div class="px-5 pt-4 pb-1">
+      <div class="view-toggle" role="group" aria-label="Leaderboard view">
+        <button type="button" id="c-view-ranking" aria-pressed="true">Ranking</button>
+        <button type="button" id="c-view-frontier" aria-pressed="false">Frontier</button>
+      </div>
+    </div>
     <div id="c-groups" class="relative" data-wide={WIDE} data-narrow={NARROW}>
       <form id="c-find" class="find" role="search" autocomplete="off">
         <label for="c-find-q" class="sr-only">Find a model</label>
@@ -113,6 +148,20 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
       </form>
       <div class="hidden sm:block" data-layout="wide" set:html={wide}></div>
       <div class="sm:hidden" data-layout="narrow" set:html={narrow}></div>
+    </div>
+    <div id="c-frontier" class="relative px-5 pb-4 hidden" data-wide={WIDE} data-narrow={NARROW}>
+      <p class="text-[var(--color-body)] leading-relaxed max-w-[64ch] text-[0.875rem] mb-3">
+        Token price predicts almost nothing: {h.cheap.m.display_name} is {fmtX(h.outX)} cheaper per output token than{' '}
+        {h.dear.m.display_name} — and <strong class="text-[var(--color-ink)]">{fmtX(h.solvedX)} cheaper per solved task</strong>.
+        Lower cost and higher pass rate is better; the purple line joins the measured models nobody beats on both.
+      </p>
+      <div class="hidden sm:block" data-chart data-layout="wide" data-w={WIDE} set:html={frontierWide}></div>
+      <div class="sm:hidden" data-chart data-layout="narrow" data-w={NARROW} set:html={frontierNarrow}></div>
+      <div class="tip" id="c-frontier-tip" role="presentation" aria-hidden="true"></div>
+      <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+        <label class="small inline-flex items-center gap-2 min-h-11 cursor-pointer"><input id="c-frontier-stale" type="checkbox" class="chk" /> Show stale pass rates</label>
+        <a class="link small" href="/methodology#frontier">See how the frontier is computed →</a>
+      </div>
     </div>
 
     <div id="c-gate" class="gate px-5 py-4 border-t border-[var(--color-rule)] hidden" role="region" aria-labelledby="c-gate-h" aria-live="polite" tabindex="-1">
@@ -150,11 +199,14 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
           {CLERK_ENABLED && <p id="c-save-why" class="small">Keeps this scenario URL in your free account.</p>}
         </div>
       </div>
-      <p class="small mt-3 pt-3 border-t border-[var(--color-rule)]">
-        Build Composer already includes per-plan custom prices and local exports.
-        <span class="text-[var(--color-ink)]"> Planned Pro value:</span> reusable cross-plan profiles and active price/budget monitoring—neither is available yet.
-        {CLERK_ENABLED && <>{' '}→ <button id="c-notify" type="button" class="link-btn" data-analytics="pro-notify">Share interest</button></>}
-      </p>
+      <!-- Stage 1.2 (Roy's note 5): the Composer-vs-Pro cross-sell paragraph
+           that used to sit here — the custom-prices claim plus its planned-
+           Pro pitch and "Share interest" pro-notify button — removed
+           entirely per the founder's note: "what is this line ... remove
+           that whole section." No replacement copy: the calculator's job is
+           the ranked answer above; a Pro pitch doesn't belong in this card.
+           (See test/design-remediation.test.ts for the moved pin that now
+           guards this section staying gone.) -->
     </div>
 
     <details class="disc px-5 py-3 border-t border-[var(--color-rule)]" id="c-assume">
@@ -204,7 +256,7 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
   // computed TASK_BUCKETS from it and embedded the result as #task-buckets-data
   // (see Calculator.astro's markup); only the pure formatting helpers are
   // imported here, from the node:fs-free ../lib/tasks-shared.ts.
-  import { type TaskBucket, bucketById as bucketByIdIn, provenanceHtml, otherProvenanceHtml } from '../lib/tasks-shared.ts';
+  import { type TaskBucket, bucketById as bucketByIdIn, provenanceHtml, otherProvenanceHtml, bucketArticle } from '../lib/tasks-shared.ts';
   const TASK_BUCKETS: TaskBucket[] = JSON.parse(document.getElementById('task-buckets-data')!.textContent!);
   const bucketById = (id: string) => bucketByIdIn(TASK_BUCKETS, id);
   import { patchRanked, scatterPareto, VOL_MIN, VOL_MAX } from '../lib/charts.ts';
@@ -230,6 +282,8 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
   };
   const groupsEl = $('c-groups')!;
   const otherRow = $('c-other-row')!;
+  const bucketArticleEl = $('c-bucket-article')!;
+  const syncBucketArticle = () => { bucketArticleEl.textContent = bucketArticle(TASK_BUCKETS, CTRL.bucket.value); };
   const modeToggle = $<HTMLButtonElement>('c-mode-toggle')!;
   const BUCKET_IDS = TASK_BUCKETS.map((b) => b.id).concat('other');
   const TIERS = ['light', 'moderate', 'heavy'], VARIANTS = ['naive', 'capped', 'truncatedGeometric'];
@@ -283,6 +337,7 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
   if (CTRL.bucket.value === 'other' && taskcountParam !== null) CTRL.taskcount.value = String(taskcountParam);
   else { const b0 = bucketById(CTRL.bucket.value); if (b0) CTRL.taskcount.value = String(b0.median); }
   otherRow.classList.toggle('hidden', CTRL.bucket.value !== 'other');
+  syncBucketArticle();
 
   function applyMode(next: 'bucket' | 'monthly') {
     mode = next;
@@ -367,20 +422,66 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
     }
   }
 
-  // the below-fold scatter (index.astro) follows the same settings
-  const scatter = document.querySelector<HTMLElement>('#scatter');
+  // The Frontier view of the leaderboard (stage 1.2, Roy's note 6) follows
+  // the same settings as the Ranking view; it only needs to actually
+  // re-render while visible (view === 'frontier'), same instant-swap
+  // discipline as the toggle itself.
+  const frontier = document.querySelector<HTMLElement>('#c-frontier');
   function renderScatter(rows: Row[], s: Settings) {
-    if (!scatter) return;
-    const showStale = (scatter.querySelector<HTMLInputElement>('#scatter-stale')?.checked) ?? false;
+    if (!frontier || frontier.classList.contains('hidden')) return;
+    const showStale = (frontier.querySelector<HTMLInputElement>('#c-frontier-stale')?.checked) ?? false;
     const all = allChartRows(rows, s);
     const lead = all.find((r) => r.basis === 'measured')?.id;
-    scatter.querySelectorAll<HTMLElement>('[data-chart]').forEach((slot) => {
+    frontier.querySelectorAll<HTMLElement>('[data-chart]').forEach((slot) => {
       const compact = slot.dataset.layout === 'narrow';
       const w = slot.offsetParent ? widthOf(slot) : Number(slot.dataset.w);
-      slot.innerHTML = scatterPareto(all, { width: w, height: compact ? w : undefined, compact, lead, showStale });
+      slot.innerHTML = scatterPareto(all, { width: w, height: compact ? w : undefined, compact, lead, showStale, rail: !compact });
     });
   }
-  scatter?.querySelector('#scatter-stale')?.addEventListener('change', () => render(false));
+  frontier?.querySelector('#c-frontier-stale')?.addEventListener('change', () => render(false));
+
+  // ---- Ranking | Frontier toggle: instant swap, no scrolling --------------
+  const viewRankingBtn = $<HTMLButtonElement>('c-view-ranking')!, viewFrontierBtn = $<HTMLButtonElement>('c-view-frontier')!;
+  function setView(next: 'ranking' | 'frontier') {
+    const isFrontier = next === 'frontier';
+    groupsEl.classList.toggle('hidden', isFrontier);
+    frontier?.classList.toggle('hidden', !isFrontier);
+    viewRankingBtn.setAttribute('aria-pressed', String(!isFrontier));
+    viewFrontierBtn.setAttribute('aria-pressed', String(isFrontier));
+    if (isFrontier) renderScatter(lastRows, last ?? settings());
+  }
+  viewRankingBtn.addEventListener('click', () => setView('ranking'));
+  viewFrontierBtn.addEventListener('click', () => setView('frontier'));
+
+  // The designed hover tooltip for frontier points (moved from the old
+  // index.astro scatter section, stage 1.2): name / $ / pass / harness, 8px
+  // off the pointer. The aria-label on each point carries the same sentence
+  // for assistive tech; this is the sighted copy.
+  const frontierTip = document.getElementById('c-frontier-tip');
+  if (frontier && frontierTip) {
+    const showTip = (a: Element, x: number, y: number) => {
+      const d = (a as HTMLElement).dataset;
+      const name = document.createElement('b'); name.textContent = d.name ?? '';
+      const detail = document.createTextNode(`${d.basis} · ${d.cost} per solved task`);
+      const br = document.createElement('br');
+      const pass = document.createTextNode(`pass ${d.pass}${d.harness ? ` · ${d.harness}` : ''}`);
+      frontierTip.replaceChildren(name, detail, br, pass);
+      const r = frontier.getBoundingClientRect();
+      let left = x - r.left + 8, top = y - r.top + 8;
+      frontierTip.style.left = '0'; frontierTip.style.top = '0';
+      const tw = (frontierTip as HTMLElement).offsetWidth, th = (frontierTip as HTMLElement).offsetHeight;
+      if (left + tw > r.width - 8) left = x - r.left - tw - 8;
+      if (top + th > r.height - 8) top = y - r.top - th - 8;
+      (frontierTip as HTMLElement).style.left = `${Math.max(0, left)}px`; (frontierTip as HTMLElement).style.top = `${Math.max(0, top)}px`;
+      frontierTip.setAttribute('data-show', '1');
+    };
+    const hideTip = () => frontierTip.removeAttribute('data-show');
+    frontier.addEventListener('pointerover', (e) => { const a = (e.target as Element).closest('a.pt'); if (a) showTip(a, e.clientX, e.clientY); });
+    frontier.addEventListener('pointermove', (e) => { const a = (e.target as Element).closest('a.pt'); if (a && frontierTip.hasAttribute('data-show')) showTip(a, e.clientX, e.clientY); });
+    frontier.addEventListener('pointerout', (e) => { if ((e.target as Element).closest('a.pt')) hideTip(); });
+    frontier.addEventListener('focusin', (e) => { const a = (e.target as Element).closest('a.pt'); if (a) { const b = a.getBoundingClientRect(); showTip(a, b.right, b.top); } });
+    frontier.addEventListener('focusout', hideTip);
+  }
 
   // ---- find a model: expands the right group and pins the row -------------
   const findQ = $<HTMLInputElement>('c-find-q')!, findMsg = $('c-find-msg')!;
@@ -500,7 +601,6 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
   $('c-gate-signin')?.addEventListener('click', gateSignUp);
   $('c-gate-skip')?.addEventListener('click', () => closeGate(true));
   gateCard.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); closeGate(true); } });
-  $('c-notify')?.addEventListener('click', () => openSignUp('pro-notify', 'Create a free account to share interest in reusable profiles and active price/budget monitoring. Both are planned and unavailable today; nothing will be purchased or reserved.'));
   wireSave($<HTMLButtonElement>('c-save'), 'Save scenario', scenarioName);
   onClerk(() => { if (signedIn()) { demo = null; gateCard.classList.add('hidden'); document.body.removeAttribute('data-gate-open'); } });
 
@@ -532,6 +632,7 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
   CTRL.bucket.addEventListener('input', () => {
     const isOther = CTRL.bucket.value === 'other';
     otherRow.classList.toggle('hidden', !isOther);
+    syncBucketArticle();
     if (!isOther) {
       const b = bucketById(CTRL.bucket.value);
       if (b) CTRL.taskcount.value = String(b.median);
@@ -552,6 +653,18 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
     if (w === lastW) return; lastW = w;
     cancelAnimationFrame(raf); raf = requestAnimationFrame(() => render(false));
   }).observe(groupsEl);
+  // The Frontier view isn't part of groupsEl's box (it's hidden while
+  // Ranking is active, so it never drives the observer above) — its own
+  // observer keeps it in step whenever it's the visible tab; renderScatter
+  // already no-ops while #c-frontier is hidden.
+  if (frontier) {
+    let frontierRaf = 0, frontierLastW = 0;
+    new ResizeObserver(() => {
+      const w = widthOf(frontier);
+      if (w === frontierLastW) return; frontierLastW = w;
+      cancelAnimationFrame(frontierRaf); frontierRaf = requestAnimationFrame(() => renderScatter(lastRows, last ?? settings()));
+    }).observe(frontier);
+  }
   render(false);
   if (highlight) {
     const row = document.querySelector('.row.hl');

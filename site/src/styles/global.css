@@ -63,12 +63,21 @@
   --color-modelled: var(--color-purple); /* same hue as measured on purpose: the hatch pattern is what reads as "modelled" */
   --color-stale: #A8451B;        /* 5.49:1 on cream — unchanged; stale isn't part of this pivot */
   --color-missing: #5F6B73;      /* 5.06:1 on cream */
-  --color-better: #1B7F4F;       /* 4.63:1 on cream */
-  --color-worse: #A8331B;        /* 6.15:1 on cream */
+  --color-better: #1B7F4F;       /* 4.63:1 on cream — unchanged: checked against the new red below (stage 1.2), HSL L30/S65 vs the red's L30/S61 is a close lightness/saturation match, a more balanced pair than the old brighter red made — no retune needed */
+  /* Stage 1.2 (Roy's note 4, 2026-08-26): "i like the color red used for the
+     more expensive price lets come up with a better color red" — the old
+     #A8331B read as alarm/warning-red (HSL L38 S72, brighter and more
+     saturated than --color-better's L30 S65, an unbalanced pair on the
+     verdict line). Replaced with a deep wine/crimson (HSL L30 S61 — a much
+     closer lightness/saturation match to the green), eye-tuned on cream:
+     9.26:1 (AAA even for normal text; the old red cleared AA at 6.15:1). */
+  --color-worse: #7B1E3D;        /* 9.26:1 on cream, 10.02:1 on white cards */
   --color-fresh: #1B7F4F;
-  /* Categorical ramp, brand review §4.3. Six is the ceiling; dash carries basis. */
+  /* Categorical ramp, brand review §4.3. Six is the ceiling; dash carries basis.
+     s1/s3/s4/s6 alias the accent/better/worse/missing tokens above; s4 tracks
+     --color-worse's stage-1.2 change so the ramp never carries two reds. */
   --color-s1: #9A6410; --color-s2: #0E6E9E; --color-s3: #1B7F4F;
-  --color-s4: #A8331B; --color-s5: #7A3FC0; --color-s6: #5F6B73;
+  --color-s4: #7B1E3D; --color-s5: #7A3FC0; --color-s6: #5F6B73;
   --font-mono: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
   --font-sans: "IBM Plex Sans", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-display: "Source Serif 4", ui-serif, "New York", "Iowan Old Style", Charter, Georgia, serif;
@@ -106,8 +115,11 @@
        light value to stay vivid on a near-black ground — 7.20:1 on #0A0C0D. */
     --color-purple: #A78BFA;
     --color-measured: var(--color-purple); --color-modelled: var(--color-purple); --color-stale: #E8895A; --color-missing: #7B858C;
-    --color-better: #45C08A; --color-worse: #FF6B4A; --color-fresh: #45C08A;
-    --color-s1: #E0A02E; --color-s2: #4CC9F0; --color-s3: #45C08A; --color-s4: #FF6B4A; --color-s5: #B98CFF; --color-s6: #A9B4BC;
+    /* Stage 1.2: dark-theme derivation of the wine/crimson red above — a
+       lighter rose/raspberry (not the old alarm-orange #FF6B4A) so it stays
+       recognizably the same wine family, lit for a near-black ground. */
+    --color-better: #45C08A; --color-worse: #E1618C; /* 5.87:1 on #0A0C0D, 5.50:1 on #10151A panels */ --color-fresh: #45C08A;
+    --color-s1: #E0A02E; --color-s2: #4CC9F0; --color-s3: #45C08A; --color-s4: #E1618C; --color-s5: #B98CFF; --color-s6: #A9B4BC;
     color-scheme: dark;
   }
   /* Instant anchor jumps. Smooth scrolling was observed never starting in
@@ -437,15 +449,32 @@
   .chart .row.hl .track { fill: color-mix(in srgb, var(--color-ink) 10%, var(--color-panel-3)); }
   /* Find a model emphasises the matched row at the destination: bold, ink, underlined */
   .chart .row.hl .name { font-weight: 700; fill: var(--color-ink); text-decoration: underline; text-underline-offset: 3px; }
-  .chart .frontier { stroke: var(--color-accent-dim); fill: none; stroke-width: 1.5; }
+  /* Stage 1.2 (Roy's note 6): the frontier line is purple — the site's data/
+     interaction accent — not amber; amber stays brand/highlight-only
+     (stage 1.1's color rule). Slightly heavier than the old 1.5px so it
+     reads as the chart's one deliberate line against the muted dominated
+     markers around it. */
+  .chart .frontier { stroke: var(--color-purple); fill: none; stroke-width: 2; }
   .chart.scatter text.lbl { paint-order: stroke; stroke: var(--color-panel); stroke-width: 3px; stroke-linejoin: round; }
+  /* frontier callouts read slightly heavier than a plain dominated-point label */
+  .chart.scatter text.lbl.front { font-weight: 600; }
   /* the volume marker's figures sit over the lines: same halo as the scatter labels */
   .chart.lines text[data-f] { paint-order: stroke; stroke: var(--color-panel); stroke-width: 3.5px; stroke-linejoin: round; }
   .chart .marker { stroke: var(--color-ink); stroke-dasharray: 3 3; }
-  .chart .pt-measured { fill: var(--color-measured); transition: stroke-width .12s; }
-  .chart .pt-modelled { fill: transparent; stroke: var(--color-modelled); stroke-width: 2; transition: stroke-width .12s; }
-  .chart .pt-stale { fill: transparent; stroke: var(--color-stale); stroke-width: 2; stroke-dasharray: 2 2; }
-  .chart a.pt:hover circle:not(.hit), .chart a.pt:focus-visible circle:not(.hit) { stroke: var(--color-ink); stroke-width: 2.5; }
+  /* Stage 1.2 (Roy's notes 1 + 6): scatter markers are square logo chips
+     (site/src/lib/providers.ts chipMarkup — colored, note 1) instead of
+     plain circles. A ring drawn behind the chip carries the basis
+     distinction that used to be the circle's own fill/stroke: solid for
+     measured, dashed for modelled, dashed + the stale hue for stale — the
+     outline the direction doc calls for so bases never blend silently.
+     Dominated (non-frontier) points draw smaller (charts.ts's DOM_SIZE) and
+     muted here; frontier points are full-size, full-opacity. */
+  .chart .pt-measured .chip-ring { fill: none; stroke: var(--color-measured); stroke-width: 1.5; }
+  .chart .pt-modelled .chip-ring { fill: none; stroke: var(--color-modelled); stroke-width: 1.5; stroke-dasharray: 3 2; }
+  .chart .pt-stale .chip-ring { fill: none; stroke: var(--color-stale); stroke-width: 1.5; stroke-dasharray: 2 2; }
+  .chart a.pt.dominated { opacity: .6; transition: opacity .12s; }
+  .chart a.pt.dominated:hover, .chart a.pt.dominated:focus-visible { opacity: 1; }
+  .chart a.pt:hover .chip-ring, .chart a.pt:focus-visible .chip-ring { stroke-width: 2.5; }
   .chart a.pt:hover text, .chart a.pt:focus-visible text { fill: var(--color-ink); font-weight: 700; }
   .chart .line { fill: none; stroke-width: 2; }
   .chart .line.modelled { stroke-dasharray: 6 4; }
@@ -466,6 +495,34 @@
          white-space: nowrap; max-width: 20rem; }
   .tip[data-show] { opacity: 1; }
   .tip b { color: var(--color-ink); font-weight: 700; display: block; }
+
+  /* ---- Frontier view (stage 1.2, Roy's note 6): chart + ranked rail ------ */
+  /* charts.ts's scatterPareto wraps the <svg> and frontierRailHtml() output
+     in this flex row when ScatterOpts.rail is set; the rail is desktop-only
+     (Calculator.astro only asks for it in the wide layout), and this media
+     query is the backstop in case the flex column runs out of room before
+     the sm breakpoint that switches layouts entirely. */
+  .frontier-view { display: flex; gap: 1.25rem; align-items: flex-start; }
+  .frontier-view .chart { flex: 1 1 auto; min-width: 0; }
+  .frontier-rail { flex: 0 0 13rem; width: 13rem; border-left: 1px solid var(--color-rule); padding-left: 1rem; }
+  .frail-h { letter-spacing: .08em; margin-bottom: .5rem; }
+  .frail-list { list-style: none; display: flex; flex-direction: column; gap: .5rem; }
+  .frail-row { display: flex; align-items: center; gap: .5rem; font-size: .8rem; }
+  .frail-chip { flex: 0 0 auto; display: block; line-height: 0; }
+  .frail-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--color-ink); }
+  .frail-name:hover { text-decoration: underline; }
+  .frail-cost { flex: 0 0 auto; font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight: 700; color: var(--color-ink); }
+  @media (max-width: 899px) { .frontier-view { flex-direction: column; } .frontier-rail { display: none; } }
+
+  /* ---- Ranking | Frontier leaderboard toggle (stage 1.2, Roy's note 6) --- */
+  /* Instant swap, no scrolling: a plain aria-pressed pair of buttons that
+     toggles which of #c-groups / #c-frontier is hidden — see Calculator.astro. */
+  .view-toggle { display: inline-flex; border: 1px solid var(--color-control-border); border-radius: 8px; overflow: hidden; }
+  .view-toggle button { border: 0; background: var(--color-panel); color: var(--color-body); font-size: .8rem;
+    font-weight: 600; padding: .4rem .9rem; cursor: pointer; min-height: 2.25rem; transition: background .12s, color .12s; }
+  .view-toggle button + button { border-left: 1px solid var(--color-control-border); }
+  .view-toggle button[aria-pressed="true"] { background: var(--color-ink); color: var(--color-bg); }
+  .view-toggle button:not([aria-pressed="true"]):hover { background: var(--color-panel-2); color: var(--color-ink); }
 
   /* ---- theme-paired chart images (research notes only) ------------------- */
   /* Light is the default theme now, so the light-paired image shows by

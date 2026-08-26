@@ -16,10 +16,10 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { type TaskBucket, bucketById as bucketByIdIn, fmtTasks, provenanceHtml, otherProvenanceHtml } from './tasks-shared.ts';
+import { type TaskBucket, bucketById as bucketByIdIn, fmtTasks, provenanceHtml, otherProvenanceHtml, bucketArticle } from './tasks-shared.ts';
 
 export type { TaskBucket };
-export { fmtTasks, provenanceHtml, otherProvenanceHtml };
+export { fmtTasks, provenanceHtml, otherProvenanceHtml, bucketArticle };
 
 // This module runs unbundled under the repo-root test suite (import.meta.url
 // is the true source path, three levels below the repo root) and bundled
@@ -92,13 +92,16 @@ function tukeyHinges(vals: number[]): { median: number; q1: number; q3: number; 
 const csvRows = parseCsv(readFileSync(CSV_PATH, 'utf8'));
 const countsFor = (bucket: string): number[] => csvRows.filter((r) => r.bucket === bucket).map((r) => Number(r.count_used));
 
+// Stage 1.2 (Roy's note 2): labels carry no leading article — the hero
+// sentence supplies it (bucketArticle(), tasks-shared.ts), switching a/an
+// automatically per option.
 const BUCKET_DEFS: { id: string; label: string; plural: string; csvBucket: string }[] = [
-  { id: 'web', label: 'a web app', plural: 'web apps', csvBucket: 'b' },
-  { id: 'mobile', label: 'a mobile app', plural: 'mobile apps', csvBucket: 'f' },
-  { id: 'marketing', label: 'a marketing site', plural: 'marketing sites', csvBucket: 'a' },
-  { id: 'game', label: 'a 2D game', plural: '2D games', csvBucket: 'c' },
-  { id: 'cli', label: 'a CLI tool', plural: 'CLI tools', csvBucket: 'd' },
-  { id: 'data', label: 'a data/ML pipeline', plural: 'data/ML pipelines', csvBucket: 'e' },
+  { id: 'web', label: 'web app', plural: 'web apps', csvBucket: 'b' },
+  { id: 'mobile', label: 'mobile app', plural: 'mobile apps', csvBucket: 'f' },
+  { id: 'marketing', label: 'marketing site', plural: 'marketing sites', csvBucket: 'a' },
+  { id: 'game', label: '2D game', plural: '2D games', csvBucket: 'c' },
+  { id: 'cli', label: 'CLI tool', plural: 'CLI tools', csvBucket: 'd' },
+  { id: 'data', label: 'data/ML pipeline', plural: 'data/ML pipelines', csvBucket: 'e' },
 ];
 
 /** The six measured buckets, medians re-derived from the CSV, in dropdown order. */

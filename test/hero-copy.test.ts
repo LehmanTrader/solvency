@@ -22,13 +22,33 @@ const clientScript = src.match(/<script>[\s\S]*<\/script>/)?.[0] ?? '';
 
 describe('hero: bucket mode is the default sentence', () => {
   test('the hero sentence is "I want to ship a [bucket]", not the old "I build [tier] tasks..."', () => {
-    assert.match(src, /I want to ship\{' '\}<select id="c-bucket"/);
+    assert.match(src, /I want to ship\{' '\}<span id="c-bucket-article">\{defaultArticle\}<\/span><select id="c-bucket"/);
     assert.match(src, /class="sentence mode-bucket mt-6"/);
   });
 
-  test('the bucket options are exactly the six measured buckets plus the escape hatch', () => {
+  // Stage 1.2 (Roy's note 2): "the drop down should just be the type of
+  // project without a in front a should be part of the sentence" — the
+  // article moved out of each option's label and into the sentence itself
+  // (#c-bucket-article), switching a/an automatically per selection.
+  test('the article lives in the sentence, not in the dropdown options — and switches a/an automatically', () => {
+    assert.match(src, /const defaultArticle = bucketArticle\(TASK_BUCKETS, defaultBucket\.id\);/);
+    assert.match(src, /import \{ TASK_BUCKETS, bucketById, provenanceHtml, bucketArticle \} from '\.\.\/lib\/tasks\.ts';/);
+    const tasksShared = readFileSync(join(ROOT, 'site', 'src', 'lib', 'tasks-shared.ts'), 'utf8');
+    assert.match(tasksShared, /export const articleFor = \(word: string\): 'a' \| 'an' =>/);
+    assert.match(tasksShared, /export const bucketArticle = \(buckets: TaskBucket\[\], id: string\): string =>/);
+    // client island keeps the visible article in sync with the selected bucket
+    assert.match(clientScript, /const syncBucketArticle = \(\) => \{ bucketArticleEl\.textContent = bucketArticle\(TASK_BUCKETS, CTRL\.bucket\.value\); \};/);
+    assert.match(clientScript, /from '\.\.\/lib\/tasks-shared\.ts'/);
+  });
+
+  test('the bucket options are exactly the six measured buckets plus the escape hatch, with no leading article on any label', () => {
     assert.match(src, /\{TASK_BUCKETS\.map\(\(b\) => <option value=\{b\.id\} selected=\{b\.id === defaultBucket\.id\}>\{b\.label\}<\/option>\)\}/);
     assert.match(src, /<option value="other">something else<\/option>/);
+    const tasksLib2 = readFileSync(join(ROOT, 'site', 'src', 'lib', 'tasks.ts'), 'utf8');
+    for (const label of ['web app', 'mobile app', 'marketing site', '2D game', 'CLI tool', 'data/ML pipeline']) {
+      assert.match(tasksLib2, new RegExp(`label: '${label.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')}'`), label);
+    }
+    assert.doesNotMatch(tasksLib2, /label: 'a /, 'a bucket label still carries its old leading article');
   });
 
   test('the default bucket is mobile (median 48), matching the design\'s worked example', () => {
@@ -54,7 +74,7 @@ describe('hero: bucket mode is the default sentence', () => {
     assert.match(tasksShared, /href="\/research\/what-is-a-task"/);
     assert.match(tasksShared, /export const provenanceHtml/);
     assert.match(tasksShared, /export const otherProvenanceHtml/);
-    assert.match(tasksLib, /export \{ fmtTasks, provenanceHtml, otherProvenanceHtml \};/);
+    assert.match(tasksLib, /export \{ fmtTasks, provenanceHtml, otherProvenanceHtml, bucketArticle \};/);
   });
 
   test('the client island never imports ../lib/tasks.ts (node:fs; would break the browser bundle) — only the pure ../lib/tasks-shared.ts, with the server-computed buckets passed as embedded JSON', () => {
@@ -65,7 +85,7 @@ describe('hero: bucket mode is the default sentence', () => {
   });
 
   test('the task tier control is a secondary row, not inside the hero sentence', () => {
-    const heroSentence = src.match(/I want to ship\{' '\}<select id="c-bucket"[\s\S]*?<\/select>\.\s*<\/p>/)?.[0] ?? '';
+    const heroSentence = src.match(/I want to ship\{' '\}<span id="c-bucket-article">[\s\S]*?<\/select>\.\s*<\/p>/)?.[0] ?? '';
     assert.doesNotMatch(heroSentence, /c-tier-bucket|Task tier/, 'tier control leaked into the hero sentence');
     assert.match(src, /Task tier:\{' '\}<select id="c-tier-bucket"/);
   });

@@ -1,6 +1,12 @@
+<!-- Stage 1.2 (Roy's note 3, 2026-08-26): "The picture that appears on the
+     browser tab next to the name should be the logo on the cream
+     background." Ground is now the site's cream (#F8F6EE), replacing the
+     old dark #17150F favicon ground; the mark itself is unchanged from
+     mark.svg (ink beam/base bars, amber #E0A02E accent) — same icon in both
+     the light and dark app themes (favicons never re-theme with the page). -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
-  <rect width="100" height="100" fill="#17150F"></rect>
-  <rect x="18" y="10" width="64" height="18" fill="#FBFAF8"></rect>
-  <rect x="10" y="44" width="80" height="7" fill="#FBFAF8"></rect>
+  <rect width="100" height="100" fill="#F8F6EE"></rect>
+  <rect x="18" y="10" width="64" height="18" fill="#17150F"></rect>
+  <rect x="10" y="44" width="80" height="7" fill="#17150F"></rect>
   <rect x="42" y="66" width="16" height="18" fill="#E0A02E"></rect>
 </svg>
