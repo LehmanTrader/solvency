@@ -222,6 +222,21 @@ export function extractChecklistSteps(content: string): string[] {
 // used for the delete round-trip (that only ever touches `raw`).
 // ---------------------------------------------------------------------------
 
+/** A single dated price point, sourced from a data/changelog.json entry or the live data/models.json record. */
+export interface PricePoint {
+  date: string;
+  input: number | null;
+  output: number | null;
+}
+
+/** The live data/models.json record for a flagged model -- what Solvency currently has on file. */
+export interface CurrentPriceInfo {
+  input: number | null;
+  output: number | null;
+  lastVerified: string | null;
+  sourceUrl: string | null;
+}
+
 export interface DisplayItem {
   n: number;
   style: ItemStyle;
@@ -231,6 +246,17 @@ export interface DisplayItem {
   sourceLine: string | null;
   statusBadge: 'ok' | 'REVIEW' | 'FETCH!' | null;
   fetchFailed: boolean;
+  // content-miner draft image cards -- parsed from a `card: <path>` / `card: MISSING ...` line.
+  cardFilename: string | null; // basename only, e.g. "model-two.png" -- resolved against reports/og-cards/ by the client
+  cardMissing: boolean;
+  // price-watch model checks -- parsed from the `- recorded:` / `- source_url:` / `- fetched snippet:` lines.
+  // `heading` doubles as the model_id for these items (price-watch-draft.ts writes `## N. <model_id>`).
+  recordedLine: string | null;
+  fetchedSnippet: string | null;
+  // Filled in later by enrichPriceWatchItem (needs fs access to data/) -- null until then, and null forever
+  // for every item that isn't a price-watch model check.
+  priceHistory: PricePoint[] | null;
+  currentPrice: CurrentPriceInfo | null;
 }
 
 function toDisplayItem(chunk: ItemChunk, style: ItemStyle): DisplayItem {
@@ -246,6 +272,24 @@ function toDisplayItem(chunk: ItemChunk, style: ItemStyle): DisplayItem {
   const sourceMatch = chunk.raw.match(/^[ \t]*source:[ \t]*(.+)$/mi);
   const statusMatch = chunk.raw.match(/watch-prices\.ts:\s*(ok|REVIEW|FETCH!)/);
   const fetchFailed = /FETCH FAILED, check manually/.test(chunk.raw) || statusMatch?.[1] === 'FETCH!';
+
+  // content-miner.ts writes exactly `card: reports/og-cards/<file>.png` or `card: MISSING -- run \`npm run og:cards\``.
+  const cardMatch = chunk.raw.match(/^[ \t]*card:[ \t]*(.+)$/mi);
+  let cardFilename: string | null = null;
+  let cardMissing = false;
+  if (cardMatch) {
+    const val = cardMatch[1].trim();
+    if (/^MISSING\b/i.test(val)) cardMissing = true;
+    else {
+      const fileMatch = val.match(/reports\/og-cards\/([A-Za-z0-9._-]+\.png)/);
+      if (fileMatch) cardFilename = fileMatch[1];
+    }
+  }
+
+  const recordedMatch = chunk.raw.match(/^[ \t]*-?[ \t]*recorded:[ \t]*(.+)$/mi);
+  const sourceUrlMatch = chunk.raw.match(/^[ \t]*-?[ \t]*source_url:[ \t]*(.+)$/mi);
+  const snippetMatch = chunk.raw.match(/^[ \t]*-?[ \t]*fetched snippet:[ \t]*"?(.*?)"?[ \t]*$/mi);
+
   return {
     n: chunk.n,
     style,
@@ -255,7 +299,55 @@ function toDisplayItem(chunk: ItemChunk, style: ItemStyle): DisplayItem {
     sourceLine: sourceMatch ? sourceMatch[1].trim() : null,
     statusBadge: (statusMatch?.[1] as DisplayItem['statusBadge']) ?? null,
     fetchFailed,
+    cardFilename,
+    cardMissing,
+    recordedLine: recordedMatch ? recordedMatch[1].trim() : null,
+    fetchedSnippet: snippetMatch ? snippetMatch[1].trim() : null,
+    priceHistory: null,
+    currentPrice: null,
   };
+}
+
+/**
+ * Pulls a model's dated price history out of data/changelog.json. The schema allows (but does not
+ * require) a changelog entry to carry `model_id` + `input_per_mtok`/`output_per_mtok` recording what the
+ * price became on that date -- entries without those fields (every entry in the real dataset today: just
+ * "initial" and "correction" kind entries) are skipped, not guessed at. Pure and fixture-testable; the
+ * real data/changelog.json has no price-change entries yet, so this returns [] against production data
+ * and the UI falls back to "no history -- show the current price large" per the dashboard spec.
+ */
+export function extractModelPriceHistory(entries: unknown, modelId: string): PricePoint[] {
+  if (!Array.isArray(entries)) return [];
+  return entries
+    .filter((e): e is Record<string, unknown> => !!e && typeof e === 'object' && (e as any).model_id === modelId)
+    .filter((e) => typeof e.input_per_mtok === 'number' || typeof e.output_per_mtok === 'number')
+    .filter((e) => typeof e.date === 'string')
+    .map((e) => ({
+      date: e.date as string,
+      input: typeof e.input_per_mtok === 'number' ? (e.input_per_mtok as number) : null,
+      output: typeof e.output_per_mtok === 'number' ? (e.output_per_mtok as number) : null,
+    }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+interface PricingModel {
+  model_id: string;
+  input_per_mtok: number;
+  output_per_mtok: number;
+  last_verified: string;
+  source_url: string;
+}
+
+/** Fills priceHistory/currentPrice on a price-watch model-check item (statusBadge non-null). A no-op for every other item. */
+export function enrichPriceWatchItem(item: DisplayItem, models: PricingModel[], changelogEntries: unknown): DisplayItem {
+  if (item.statusBadge === null || !item.heading) return item;
+  const modelId = item.heading;
+  const model = models.find((m) => m.model_id === modelId) ?? null;
+  const priceHistory = extractModelPriceHistory(changelogEntries, modelId);
+  const currentPrice: CurrentPriceInfo | null = model
+    ? { input: model.input_per_mtok, output: model.output_per_mtok, lastVerified: model.last_verified, sourceUrl: model.source_url }
+    : null;
+  return { ...item, priceHistory, currentPrice };
 }
 
 export interface DashboardFile {
@@ -404,9 +496,92 @@ export function archiveDate(queueRoot: string, date: string): void {
   renameSync(src, dst);
 }
 
+/** Read-only listing of queue/_archive/<date> dirs -- the streak counter's raw material (client combines it with today's local ring state). */
+export function listArchivedDates(queueRoot: string): string[] {
+  const dir = resolve(queueRoot, '_archive');
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { withFileTypes: true })
+    .filter((d) => d.isDirectory() && DATE_RE.test(d.name))
+    .map((d) => d.name)
+    .sort();
+}
+
+// ---------------------------------------------------------------------------
+// og-card images (v2). Read-only, same guard discipline as queue/ above:
+// regex filename validation + a resolved-path prefix assertion. This never
+// serves anything outside reports/og-cards/, and never serves a non-.png.
+// ---------------------------------------------------------------------------
+
+export const OG_CARDS_ROOT = join(ROOT, 'reports', 'og-cards');
+const OG_CARD_FILENAME_RE = /^[A-Za-z0-9._-]+\.png$/;
+
+export function resolveOgCardFile(ogCardsRoot: string, filename: string): string {
+  if (!OG_CARD_FILENAME_RE.test(filename)) throw new PathGuardError(`invalid og-card filename: ${JSON.stringify(filename)}`);
+  const dir = resolve(ogCardsRoot);
+  const abs = resolve(dir, filename);
+  if (dirname(abs) !== dir) throw new PathGuardError('og-card path escapes reports/og-cards');
+  return abs;
+}
+
+// ---------------------------------------------------------------------------
+// data/ (v2). Read-only, always the real repo's data/ regardless of QUEUE_DIR
+// -- SOLVENCY_DATA_DIR overrides it only for tests/fixtures, matching the
+// convention scripts/load.ts already uses. Nothing under this file ever
+// writes here; see the price-watch README note above.
+// ---------------------------------------------------------------------------
+
+const DATA_ROOT = process.env.SOLVENCY_DATA_DIR ?? join(ROOT, 'data');
+
+function readJsonSafe(path: string): any {
+  if (!existsSync(path)) return null;
+  try { return JSON.parse(readFileSync(path, 'utf8')); } catch { return null; }
+}
+
+/** Loads data/models.json + data/changelog.json for price-watch enrichment. Tolerant of a missing/malformed file -- returns empty arrays rather than throwing, since this only ever feeds a display enhancement. */
+export function loadPricingContext(dataRoot: string): { models: PricingModel[]; changelogEntries: unknown[] } {
+  const modelsJson = readJsonSafe(join(dataRoot, 'models.json'));
+  const changelogJson = readJsonSafe(join(dataRoot, 'changelog.json'));
+  return {
+    models: Array.isArray(modelsJson?.models) ? modelsJson.models : [],
+    changelogEntries: Array.isArray(changelogJson?.entries) ? changelogJson.entries : [],
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Whole-dashboard state assembly + the honest one-line summary.
 // ---------------------------------------------------------------------------
+
+/** "Overnight in numbers" strip -- every figure here is read straight off real state, nothing invented. */
+export interface OvernightNumbers {
+  draftsWaiting: number; // content-miner.md's item count, latest date
+  modelsRechecked: number | null; // the "N of M models flagged" M, parsed from price-watch.md's intro line
+  daysSinceLaunch: number | null; // today minus the earliest data/changelog.json entry date
+}
+
+/** Whole-day difference between two ISO yyyy-mm-dd dates (positive when b is later than a). */
+export function daysBetweenIso(aIso: string, bIso: string): number {
+  const a = Date.parse(`${aIso}T00:00:00Z`);
+  const b = Date.parse(`${bIso}T00:00:00Z`);
+  return Math.round((b - a) / 86_400_000);
+}
+
+function computeOvernightNumbers(dates: { date: string; files: DashboardFile[] }[], today: string, changelogEntries: unknown[]): OvernightNumbers {
+  const latest = dates[0];
+  const contentMinerFile = latest?.files.find((f) => f.filename === 'content-miner.md');
+  const priceWatchFile = latest?.files.find((f) => f.filename === 'price-watch.md');
+
+  const draftsWaiting = contentMinerFile?.items.length ?? 0;
+  const recheckMatch = priceWatchFile?.introText.match(/^\d+ of (\d+) models flagged/);
+  const modelsRechecked = recheckMatch ? Number(recheckMatch[1]) : null;
+
+  const dates2 = Array.isArray(changelogEntries)
+    ? (changelogEntries as any[]).map((e) => (e && typeof e.date === 'string' ? e.date : null)).filter((d): d is string => !!d).sort()
+    : [];
+  const earliest = dates2[0] ?? null;
+  const daysSinceLaunch = earliest ? daysBetweenIso(earliest, today) : null;
+
+  return { draftsWaiting, modelsRechecked, daysSinceLaunch };
+}
 
 export interface DashboardState {
   generatedAt: string;
@@ -416,6 +591,8 @@ export interface DashboardState {
   runHealth: ProducerHealth[];
   summary: string;
   isAllClear: boolean;
+  archivedDates: string[]; // queue/_archive/<date> dirs, oldest first -- streak raw material
+  overnightNumbers: OvernightNumbers;
 }
 
 function localIsoDate(d: Date): string {
@@ -462,24 +639,34 @@ function summarize(dates: DashboardState['dates'], runHealth: ProducerHealth[]):
   return { summary: `${full.join(', ')}.`, isAllClear: false };
 }
 
-export function buildState(queueRoot: string): DashboardState {
+export function buildState(queueRoot: string, dataRoot: string = DATA_ROOT): DashboardState {
   const dateNames = listUnarchivedDates(queueRoot);
-  const dates = dateNames.map((date) => ({ date, files: readDateFiles(queueRoot, date) }));
+  const { models, changelogEntries } = loadPricingContext(dataRoot);
+  const dates = dateNames.map((date) => ({
+    date,
+    files: readDateFiles(queueRoot, date).map((f) => ({
+      ...f,
+      items: f.items.map((it) => enrichPriceWatchItem(it, models, changelogEntries)),
+    })),
+  }));
   const runHealth = buildRunHealth(queueRoot, dates[0]?.date ?? null, dates[0]?.files ?? []);
   const { summary, isAllClear } = summarize(dates, runHealth);
+  const today = localIsoDate(new Date());
   return {
     generatedAt: new Date().toISOString(),
-    today: localIsoDate(new Date()),
+    today,
     latestDate: dates[0]?.date ?? null,
     dates,
     runHealth,
     summary,
     isAllClear,
+    archivedDates: listArchivedDates(queueRoot),
+    overnightNumbers: computeOvernightNumbers(dates, today, changelogEntries),
   };
 }
 
-/** Cheap mtime fingerprint so the server can skip a full reparse when nothing under queue/ changed. */
-export function stateFingerprint(queueRoot: string): string {
+/** Cheap mtime fingerprint so the server can skip a full reparse when nothing under queue/ (or the read-only data/ inputs) changed. */
+export function stateFingerprint(queueRoot: string, dataRoot: string = DATA_ROOT): string {
   const dates = listUnarchivedDates(queueRoot);
   const parts: string[] = [];
   for (const date of dates) {
@@ -494,6 +681,10 @@ export function stateFingerprint(queueRoot: string): string {
     for (const f of readdirSync(logsDir).sort()) {
       parts.push(`log:${f}:${statSync(join(logsDir, f)).mtimeMs}`);
     }
+  }
+  for (const f of ['models.json', 'changelog.json']) {
+    const abs = join(dataRoot, f);
+    if (existsSync(abs)) parts.push(`data:${f}:${statSync(abs).mtimeMs}`);
   }
   return parts.join('|');
 }
@@ -580,6 +771,23 @@ export function startServer(queueRoot: string, port: number) {
         return;
       }
 
+      // Read-only PNG serving for content-miner's draft image cards, confined to
+      // reports/og-cards/ by resolveOgCardFile's regex + resolved-path guard --
+      // identical discipline to resolveQueueFile above, just a different root.
+      if (req.method === 'GET' && path === '/api/og-card') {
+        const filename = url.searchParams.get('file') ?? '';
+        const abs = resolveOgCardFile(OG_CARDS_ROOT, filename);
+        if (!existsSync(abs)) { sendJson(res, 404, { error: 'no such card' }); return; }
+        const data = readFileSync(abs);
+        res.writeHead(200, {
+          'content-type': 'image/png',
+          'content-length': data.length,
+          'cache-control': 'no-store',
+        });
+        res.end(data);
+        return;
+      }
+
       if (req.method === 'POST' && path === '/api/open-file') {
         const body = await readJsonBody(req);
         const { date, filename } = body ?? {};
@@ -662,11 +870,16 @@ body {
   margin: 0; color: var(--ink); font-family: "IBM Plex Sans", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased; padding-bottom: 3.5rem;
 }
-#dawn { height: 9px; width: 100%; background: var(--dawn-gradient, linear-gradient(90deg, var(--purple), var(--amber-fill))); }
+#dawn { height: 9px; width: 100%; background: var(--dawn-gradient, linear-gradient(90deg, var(--purple), var(--amber-fill))); background-size: 200% 100%; }
+@media (prefers-reduced-motion: no-preference) {
+  #dawn { animation: dawn-drift 50s linear infinite; }
+  @keyframes dawn-drift { from { background-position: 0% 0; } to { background-position: 100% 0; } }
+}
 a { color: inherit; }
 code { font-family: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; background: var(--panel-2); padding: .1em .35em; border-radius: 4px; font-size: .92em; }
 blockquote { margin: .5rem 0; padding: .1rem 0 .1rem .85rem; border-left: 3px solid var(--rule-strong); color: var(--body); }
 .wrap { max-width: 62rem; margin: 0 auto; padding: 0 1.5rem; }
+.mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
 
 .masthead { padding: 2.1rem 0 1.4rem; }
 .kicker { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: .72rem; letter-spacing: .22em; color: var(--muted); text-transform: uppercase; }
@@ -682,9 +895,56 @@ blockquote { margin: .5rem 0; padding: .1rem 0 .1rem .85rem; border-left: 3px so
 .rule { border: 0; border-top: 1px solid var(--rule-strong); margin: 0; }
 .rule-thin { border-top: 1px solid var(--rule); margin-top: 3px; }
 
+/* --- hero: progress ring + streak ------------------------------------- */
+.hero-row { display: flex; align-items: center; gap: 2rem; flex-wrap: wrap; padding: .4rem 0 1.6rem; }
+.ring-block { display: flex; flex-direction: column; align-items: center; gap: .5rem; }
+.ring-wrap { position: relative; width: 132px; height: 132px; }
+.ring { transform: rotate(-90deg); }
+.ring-track { fill: none; stroke: var(--panel-3); stroke-width: 10; }
+.ring-fill { fill: none; stroke: var(--purple); stroke-width: 10; stroke-linecap: round; }
+@media (prefers-reduced-motion: no-preference) {
+  .ring-fill { transition: stroke-dashoffset .7s cubic-bezier(.22,.8,.32,1), stroke .4s ease; }
+}
+.ring-wrap.complete .ring-fill { stroke: var(--good); }
+.ring-center { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+.ring-big { font-family: "Source Serif 4", ui-serif, Georgia, serif; font-weight: 600; font-size: 2.1rem; line-height: 1; color: var(--ink); }
+.ring-wrap.complete .ring-big { color: var(--good); }
+.ring-slash { font-family: "JetBrains Mono", monospace; font-size: 1.1rem; color: var(--muted); font-weight: 400; }
+.ring-caption { font-size: .82rem; color: var(--muted); text-align: center; }
+.ring-caption.complete { color: var(--good); font-weight: 600; }
+
+.streak-tile { display: flex; align-items: center; gap: .75rem; background: var(--panel); border: 1px solid var(--rule);
+  border-radius: var(--radius); padding: .9rem 1.25rem; box-shadow: var(--shadow); }
+.streak-flame { font-size: 1.7rem; line-height: 1; }
+.streak-num { font-family: "Source Serif 4", serif; font-weight: 600; font-size: 1.9rem; line-height: 1; }
+.streak-label { font-size: .78rem; color: var(--muted); align-self: flex-end; padding-bottom: .2rem; }
+
+/* --- overnight in numbers strip ---------------------------------------- */
+.numbers-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: .75rem; width: 100%; margin-top: .3rem; }
+.num-tile { background: var(--panel-2); border: 1px solid var(--rule); border-radius: var(--radius); padding: .8rem 1rem; }
+.num-value { font-family: "Source Serif 4", serif; font-weight: 600; font-size: 1.6rem; line-height: 1.1; }
+.num-label { font-family: "JetBrains Mono", monospace; font-size: .68rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-top: .25rem; }
+
 .backlog { margin: 1rem 0 0; padding: .6rem .9rem; border: 1px solid var(--amber-fill); border-radius: var(--radius);
   background: color-mix(in srgb, var(--amber-fill) 10%, var(--panel)); font-size: .85rem; }
 .backlog a { color: var(--amber); font-weight: 600; text-decoration: none; border-bottom: 1px solid currentColor; }
+
+/* --- night crew row ----------------------------------------------------- */
+.crew-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); gap: .85rem; margin: 1.4rem 0; }
+.crew-card { display: flex; align-items: center; gap: .8rem; background: var(--panel); border: 1px solid var(--rule);
+  border-left: 3px solid var(--rule-strong); border-radius: var(--radius); padding: .8rem 1rem; box-shadow: var(--shadow); }
+.crew-card.fail { border-left-color: var(--wine); background: color-mix(in srgb, var(--wine) 6%, var(--panel)); }
+.crew-avatar { font-size: 1.6rem; line-height: 1; flex: 0 0 auto; }
+.crew-body { flex: 1; min-width: 0; }
+.crew-name { font-family: "Source Serif 4", serif; font-weight: 600; font-size: 1.02rem; }
+.crew-meta { font-family: "JetBrains Mono", monospace; font-size: .7rem; color: var(--muted); margin-top: .1rem; }
+.crew-note { font-size: .78rem; color: var(--muted); margin-top: .2rem; }
+.crew-right { display: flex; flex-direction: column; align-items: flex-end; gap: .3rem; flex: 0 0 auto; }
+.crew-count { font-family: "JetBrains Mono", monospace; font-size: .7rem; color: var(--muted); }
+.status-chip { font-family: "JetBrains Mono", monospace; font-size: .64rem; letter-spacing: .06em; text-transform: uppercase;
+  border-radius: 999px; padding: .18rem .55rem; font-weight: 700; border: 1px solid transparent; white-space: nowrap; }
+.status-chip.clean { color: var(--good); border-color: var(--good); background: color-mix(in srgb, var(--good) 10%, transparent); }
+.status-chip.fail { color: #fff; background: var(--wine); border-color: var(--wine); }
 
 section.producer { margin: 2.1rem 0; }
 .producer-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: .6rem; }
@@ -701,6 +961,10 @@ section.producer { margin: 2.1rem 0; }
 .card { position: relative; background: var(--panel); border: 1px solid var(--rule); border-radius: var(--radius);
   padding: .95rem 1rem .8rem; box-shadow: var(--shadow); border-left: 3px solid var(--rule-strong);
   display: flex; flex-direction: column; gap: .5rem; }
+@media (prefers-reduced-motion: no-preference) {
+  .card { transition: opacity .2s ease, transform .2s ease; }
+}
+.card.removing { opacity: 0; transform: translateY(-6px) scale(.98); pointer-events: none; }
 .card.needs-review { border-left-color: var(--amber-fill); }
 .card.fetch-failed { border-left-color: var(--wine); }
 .card.selected { outline: 2px solid var(--purple); outline-offset: 2px; }
@@ -714,8 +978,13 @@ section.producer { margin: 2.1rem 0; }
 .keep-btn { border: 1px solid var(--rule-strong); background: none; color: var(--muted); border-radius: 999px;
   width: 1.5rem; height: 1.5rem; cursor: pointer; font-size: .78rem; line-height: 1; }
 .keep-btn.on { border-color: var(--purple); color: var(--purple); background: color-mix(in srgb, var(--purple) 12%, transparent); }
+@media (prefers-reduced-motion: no-preference) {
+  .keep-btn.pulse { animation: keep-pulse .32s ease; }
+  @keyframes keep-pulse { 0% { transform: scale(1); } 50% { transform: scale(1.3); } 100% { transform: scale(1); } }
+}
 
 .card-heading { font-weight: 600; font-size: .96rem; }
+.card-heading.mono { font-family: "JetBrains Mono", monospace; font-weight: 600; font-size: .82rem; color: var(--body); }
 .card-body { font-size: .89rem; line-height: 1.5; color: var(--ink); }
 .card-body p { margin: 0 0 .5rem; }
 .card-body p:last-child { margin-bottom: 0; }
@@ -727,6 +996,45 @@ section.producer { margin: 2.1rem 0; }
   background: none; border: 1px solid var(--rule-strong); color: var(--body); border-radius: 6px; padding: .3rem .55rem; cursor: pointer; }
 .actions button:hover { border-color: var(--purple); color: var(--purple); }
 .actions button.danger:hover { border-color: var(--wine); color: var(--wine); }
+
+/* --- content-miner draft image cards ------------------------------------ */
+.img-card-list { display: flex; flex-direction: column; gap: .9rem; margin-top: .8rem; }
+.img-card { flex-direction: row; align-items: flex-start; gap: 1.1rem; }
+.img-card-media { flex: 0 0 15rem; }
+.card-thumb { display: block; width: 100%; aspect-ratio: 1200 / 630; object-fit: cover; border-radius: 8px; border: 1px solid var(--rule); background: var(--panel-2); }
+.card-thumb.missing { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .2rem;
+  border: 1px dashed var(--rule-strong); color: var(--muted); text-align: center; padding: .5rem; }
+.card-thumb.missing .thumb-glyph { font-size: 1.4rem; opacity: .7; }
+.card-thumb.missing .thumb-note { font-size: .74rem; }
+.card-thumb.missing .thumb-hint { font-family: "JetBrains Mono", monospace; font-size: .68rem; }
+.img-card-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .5rem; }
+
+/* --- price-watch sparkline / stat cards ---------------------------------- */
+.spark-wrap { position: relative; margin: .2rem 0 .1rem; }
+.sparkline { display: block; }
+.spark-line { stroke: var(--purple); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.spark-dot { fill: var(--amber-fill); stroke: var(--panel); stroke-width: 1.5; }
+.spark-caption { display: flex; justify-content: space-between; font-family: "JetBrains Mono", monospace; font-size: .7rem; color: var(--muted); margin-top: .2rem; }
+.spark-current { color: var(--ink); font-weight: 600; }
+.spark-tip { position: absolute; top: -1.7rem; transform: translateX(-50%); background: var(--ink); color: var(--bg);
+  font-family: "JetBrains Mono", monospace; font-size: .66rem; padding: .16rem .45rem; border-radius: 4px; white-space: nowrap; pointer-events: none; z-index: 2; }
+.price-noHistory { padding: .4rem 0 .2rem; }
+.price-big { font-family: "Source Serif 4", serif; font-weight: 600; font-size: 1.7rem; }
+.price-unit { font-family: "JetBrains Mono", monospace; font-size: .85rem; color: var(--muted); font-weight: 400; margin-left: .2rem; }
+.price-sub { font-family: "JetBrains Mono", monospace; font-size: .72rem; color: var(--muted); margin-top: .15rem; }
+
+/* --- compact stepper (price-watch checklist) ---------------------------- */
+.stepper { background: var(--panel-2); border: 1px solid var(--rule); border-radius: var(--radius); padding: .9rem 1.1rem; margin-bottom: .9rem; }
+.stepper-head { font-family: "JetBrains Mono", monospace; font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: .7rem; }
+.stepper-row { display: flex; align-items: flex-start; }
+.step { display: flex; flex-direction: column; align-items: center; gap: .35rem; cursor: pointer; max-width: 8rem; }
+.step-dot { width: 1.6rem; height: 1.6rem; border-radius: 999px; border: 1px solid var(--rule-strong); background: var(--panel);
+  display: flex; align-items: center; justify-content: center; font-family: "JetBrains Mono", monospace; font-size: .7rem; color: var(--muted); flex: 0 0 auto; }
+.step.done .step-dot { background: var(--purple); border-color: var(--purple); color: #fff; }
+.step-label { font-size: .72rem; color: var(--muted); text-align: center; line-height: 1.3; }
+.step.done .step-label { color: var(--ink); text-decoration: line-through; }
+.step-line { flex: 1; height: 1px; background: var(--rule-strong); margin-top: .8rem; min-width: .6rem; }
+.step.done + .step-line { background: var(--purple); }
 
 .checklist { background: var(--panel-2); border: 1px solid var(--rule); border-radius: var(--radius); padding: .8rem 1rem; margin-bottom: .9rem; }
 .checklist .cl-title { font-family: "JetBrains Mono", monospace; font-size: .68rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: .5rem; }
@@ -753,12 +1061,21 @@ section.producer { margin: 2.1rem 0; }
   .wrap { padding: 0 1rem; }
   .grid { grid-template-columns: 1fr; }
   .theme-toggle { position: static; margin-bottom: .6rem; }
+  .hero-row { gap: 1.1rem; }
+  .img-card { flex-direction: column; }
+  .img-card-media { flex-basis: auto; width: 100%; }
+  .crew-row { grid-template-columns: 1fr; }
+  .stepper-row { flex-wrap: wrap; row-gap: .8rem; }
 }
 `;
 
 const CLIENT_JS = String.raw`
 (function () {
   'use strict';
+
+  function reducedMotion() {
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
 
   // --- theme -----------------------------------------------------------
   var THEME_KEY = 'solvency-dash-theme';
@@ -804,8 +1121,9 @@ const CLIENT_JS = String.raw`
 
   // --- markdown-lite -----------------------------------------------------
   function esc(s) {
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
+  function escAttr(s) { return esc(s).replace(/"/g, '&quot;'); }
   function inline(s) {
     s = esc(s);
     s = s.replace(/\`([^\`]+)\`/g, '<code>$1<\/code>');
@@ -824,6 +1142,7 @@ const CLIENT_JS = String.raw`
       var t = line.trim();
       if (!t) { flush(); return; }
       if (/^source:/i.test(t)) { flush(); html += '<div class="src">' + inline(t) + '<\/div>'; return; }
+      if (/^card:/i.test(t)) { flush(); return; } // rendered as the image card itself, not as text
       if (/^>\s?/.test(t)) { flush(); html += '<blockquote>' + inline(t.replace(/^>\s?/, '')) + '<\/blockquote>'; return; }
       var headingMatch = t.match(/^#{1,6}\s+(.+)$/);
       if (headingMatch) { flush(); html += '<div class="sub-head">' + inline(headingMatch[1]) + '<\/div>'; return; }
@@ -837,7 +1156,7 @@ const CLIENT_JS = String.raw`
   var KEPT_KEY = 'solvency-dash-kept';
   var CL_KEY = 'solvency-dash-checklist';
   function loadSet(key) { try { return new Set(JSON.parse(localStorage.getItem(key) || '[]')); } catch (e) { return new Set(); } }
-  function saveSet(key, set) { try { localStorage.setItem(key, JSON.stringify([...set])); } catch (e) {} }
+  function saveSet(key, set) { try { localStorage.setItem(key, JSON.stringify(Array.prototype.slice.call(set))); } catch (e) {} }
   var kept = loadSet(KEPT_KEY);
   var checked = loadSet(CL_KEY);
 
@@ -848,6 +1167,28 @@ const CLIENT_JS = String.raw`
 
   function itemKey(date, filename, n) { return date + '::' + filename + '::' + n; }
 
+  // A bare "2026-08-26" (no time component) is common in the one-off drafting
+  // agents' frontmatter -- parsing it as a Date and formatting through the
+  // viewer's timezone can shift it to the previous evening. Show those as-is.
+  function formatRunAt(v) {
+    if (!v) return '';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+    var d = new Date(v);
+    return isNaN(d.getTime()) ? v : d.toLocaleString();
+  }
+
+  function actionsHtml() {
+    return '<div class="actions">'
+      + '<button data-action="copy">Copy<\/button>'
+      + '<button data-action="open">Open file<\/button>'
+      + '<button class="danger" data-action="delete">Delete<\/button>'
+      + '<\/div>';
+  }
+  function keepBtnHtml(key) {
+    return '<button class="keep-btn' + (kept.has(key) ? ' on' : '') + '" data-action="keep" title="Keep (local only)">&#10003;<\/button>';
+  }
+
+  // --- generic card (every producer other than content-miner / price-watch) ---
   function cardHtml(file, item) {
     var key = itemKey(file.date, file.filename, item.n);
     var cls = ['card'];
@@ -860,35 +1201,132 @@ const CLIENT_JS = String.raw`
     var heading = item.heading ? '<div class="card-heading">' + inline(item.heading) + '<\/div>' : '';
     return '<div class="' + cls.join(' ') + '" data-key="' + key + '" data-date="' + file.date + '" data-filename="' + file.filename + '" data-n="' + item.n + '" tabindex="-1">'
       + '<div class="card-top"><span class="idx">' + String(item.n).padStart(2, '0') + '<\/span>'
-      + '<span style="display:flex;align-items:center;gap:.4rem;">' + badge
-      + '<button class="keep-btn' + (kept.has(key) ? ' on' : '') + '" data-action="keep" title="Keep (local only)">&#10003;<\/button><\/span><\/div>'
+      + '<span style="display:flex;align-items:center;gap:.4rem;">' + badge + keepBtnHtml(key) + '<\/span><\/div>'
       + heading
       + '<div class="card-body">' + renderMarkdownLite(item.bodyMd) + '<\/div>'
-      + '<div class="actions">'
-      + '<button data-action="copy">Copy<\/button>'
-      + '<button data-action="open">Open file<\/button>'
-      + '<button class="danger" data-action="delete">Delete<\/button>'
+      + actionsHtml()
+      + '<\/div>';
+  }
+
+  // --- content-miner draft: the actual og-card PNG beside the tweet text -----
+  function imageCardHtml(file, item) {
+    var key = itemKey(file.date, file.filename, item.n);
+    var cls = ['card', 'img-card'];
+    if (kept.has(key)) cls.push('kept');
+    var thumb;
+    if (item.cardFilename) {
+      thumb = '<img class="card-thumb" src="/api/og-card?file=' + encodeURIComponent(item.cardFilename) + '" alt="" loading="lazy">';
+    } else {
+      thumb = '<div class="card-thumb missing"><div class="thumb-glyph">&#128444;<\/div><div class="thumb-note">card missing<\/div><div class="thumb-hint mono">npm run og:cards<\/div><\/div>';
+    }
+    return '<div class="' + cls.join(' ') + '" data-key="' + key + '" data-date="' + file.date + '" data-filename="' + file.filename + '" data-n="' + item.n + '" tabindex="-1">'
+      + '<div class="img-card-media">' + thumb + '<\/div>'
+      + '<div class="img-card-body">'
+      + '<div class="card-top"><span class="idx">' + String(item.n).padStart(2, '0') + '<\/span>' + keepBtnHtml(key) + '<\/div>'
+      + '<div class="card-body">' + renderMarkdownLite(item.bodyMd) + '<\/div>'
+      + actionsHtml()
       + '<\/div><\/div>';
   }
 
-  function checklistHtml(file) {
-    if (!file.checklist.length) return '';
-    var rows = file.checklist.map(function (step, i) {
-      var key = file.date + '::checklist::' + i;
-      var isDone = checked.has(key);
-      return '<div class="cl-item' + (isDone ? ' done' : '') + '"><input type="checkbox" data-cl-key="' + key + '" id="' + key + '"' + (isDone ? ' checked' : '') + '><label for="' + key + '">' + inline(step) + '<\/label><\/div>';
-    }).join('');
-    return '<div class="checklist"><div class="cl-title">Checklist<\/div>' + rows + '<\/div>';
+  // --- price-watch model check: sparkline (or a current-price stat tile) -----
+  function sparklineHtml(history, current) {
+    var points = history.slice();
+    var lastH = points[points.length - 1];
+    if (current && typeof current.input === 'number' && (!lastH || lastH.date !== current.lastVerified)) {
+      points.push({ date: current.lastVerified || 'now', input: current.input, output: current.output });
+    }
+    var vals = points.map(function (p) { return p.input; }).filter(function (v) { return typeof v === 'number'; });
+    if (vals.length < 2) return currentPriceHtml(current, null);
+    var min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
+    if (min === max) { min -= 1; max += 1; }
+    var w = 220, h = 56, pad = 6, n = points.length;
+    var coords = points.map(function (p, i) {
+      var x = pad + (n === 1 ? (w - 2 * pad) / 2 : (i / (n - 1)) * (w - 2 * pad));
+      var y = pad + (1 - (p.input - min) / (max - min)) * (h - 2 * pad);
+      return [x, y];
+    });
+    var pathD = coords.map(function (c, i) { return (i === 0 ? 'M' : 'L') + c[0].toFixed(1) + ' ' + c[1].toFixed(1); }).join(' ');
+    var lastC = coords[coords.length - 1];
+    var lastP = points[points.length - 1];
+    var meta = { points: points.map(function (p) { return { date: p.date, input: p.input }; }), min: min, max: max, w: w, h: h, pad: pad };
+    var svg = '<svg class="sparkline" viewBox="0 0 ' + w + ' ' + h + '" width="100%" height="' + h + '" preserveAspectRatio="none" role="img" aria-label="price history">'
+      + '<path class="spark-line" d="' + pathD + '" fill="none"><\/path>'
+      + '<circle class="spark-dot" cx="' + lastC[0].toFixed(1) + '" cy="' + lastC[1].toFixed(1) + '" r="4"><\/circle>'
+      + '<\/svg>';
+    var caption = '<div class="spark-caption"><span class="spark-current">$' + lastP.input + '/M in<\/span><span>range $' + min + '&ndash;$' + max + '<\/span><\/div>';
+    return '<div class="spark-wrap" data-spark="' + escAttr(JSON.stringify(meta)) + '">' + svg + '<div class="spark-tip" hidden></div>' + caption + '<\/div>';
   }
 
-  // A bare "2026-08-26" (no time component) is common in the one-off drafting
-  // agents' frontmatter -- parsing it as a Date and formatting through the
-  // viewer's timezone can shift it to the previous evening. Show those as-is.
-  function formatRunAt(v) {
-    if (!v) return '';
-    if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
-    var d = new Date(v);
-    return isNaN(d.getTime()) ? v : d.toLocaleString();
+  function currentPriceHtml(current, recordedLine) {
+    if (!current) {
+      return recordedLine ? '<div class="price-noHistory"><div class="price-sub">no price history on file &mdash; recorded: ' + esc(recordedLine) + '<\/div><\/div>' : '';
+    }
+    return '<div class="price-noHistory">'
+      + '<div class="price-big">$' + current.input + '<span class="price-unit">/M in<\/span><\/div>'
+      + '<div class="price-sub">no price history on file &middot; recorded, verified ' + esc(current.lastVerified || 'unknown') + '<\/div>'
+      + '<\/div>';
+  }
+
+  function priceCardHtml(file, item) {
+    var key = itemKey(file.date, file.filename, item.n);
+    var cls = ['card', 'price-card'];
+    if (item.fetchFailed) cls.push('fetch-failed');
+    else if (item.statusBadge === 'REVIEW') cls.push('needs-review');
+    if (kept.has(key)) cls.push('kept');
+    var badge = '';
+    if (item.fetchFailed) badge = '<span class="badge fetch">fetch failed<\/span>';
+    else if (item.statusBadge === 'REVIEW') badge = '<span class="badge review">review<\/span>';
+    var heading = item.heading ? '<div class="card-heading mono">' + inline(item.heading) + '<\/div>' : '';
+    var chart = (item.priceHistory && item.priceHistory.length >= 2)
+      ? sparklineHtml(item.priceHistory, item.currentPrice)
+      : currentPriceHtml(item.currentPrice, item.recordedLine);
+    return '<div class="' + cls.join(' ') + '" data-key="' + key + '" data-date="' + file.date + '" data-filename="' + file.filename + '" data-n="' + item.n + '" tabindex="-1">'
+      + '<div class="card-top"><span class="idx">' + String(item.n).padStart(2, '0') + '<\/span>'
+      + '<span style="display:flex;align-items:center;gap:.4rem;">' + badge + keepBtnHtml(key) + '<\/span><\/div>'
+      + heading
+      + chart
+      + '<div class="card-body">' + renderMarkdownLite(item.bodyMd) + '<\/div>'
+      + actionsHtml()
+      + '<\/div>';
+  }
+
+  function bindSparklines(root) {
+    root.querySelectorAll('.spark-wrap[data-spark]').forEach(function (wrap) {
+      var meta;
+      try { meta = JSON.parse(wrap.getAttribute('data-spark')); } catch (e) { return; }
+      var svg = wrap.querySelector('svg.sparkline');
+      var tip = wrap.querySelector('.spark-tip');
+      if (!svg || !tip) return;
+      wrap.addEventListener('mousemove', function (e) {
+        var rect = svg.getBoundingClientRect();
+        var relX = (e.clientX - rect.left) / rect.width * meta.w;
+        var n = meta.points.length;
+        var idx = n === 1 ? 0 : Math.round(((relX - meta.pad) / (meta.w - 2 * meta.pad)) * (n - 1));
+        idx = Math.max(0, Math.min(n - 1, idx));
+        var p = meta.points[idx];
+        tip.textContent = '$' + p.input + '/M in · ' + p.date;
+        tip.hidden = false;
+        tip.style.left = relX + 'px';
+      });
+      wrap.addEventListener('mouseleave', function () { tip.hidden = true; });
+    });
+  }
+
+  // --- compact stepper: price-watch's shared human checklist -----------------
+  function stepperHtml(file) {
+    if (!file.checklist.length) return '';
+    var doneCount = 0;
+    var stepDivs = file.checklist.map(function (step, i) {
+      var key = file.date + '::checklist::' + i;
+      var isDone = checked.has(key);
+      if (isDone) doneCount++;
+      return '<div class="step' + (isDone ? ' done' : '') + '" data-cl-key="' + key + '" tabindex="0" role="checkbox" aria-checked="' + isDone + '">'
+        + '<div class="step-dot" data-idx="' + (i + 1) + '">' + (isDone ? '&#10003;' : (i + 1)) + '<\/div>'
+        + '<div class="step-label">' + inline(step) + '<\/div>'
+        + '<\/div>';
+    });
+    var row = stepDivs.join('<div class="step-line"></div>');
+    return '<div class="stepper"><div class="stepper-head">Checklist &middot; ' + doneCount + ' of ' + file.checklist.length + '<\/div><div class="stepper-row">' + row + '<\/div><\/div>';
   }
 
   function producerMetaHtml(file, health) {
@@ -901,11 +1339,19 @@ const CLIENT_JS = String.raw`
   }
 
   function sectionHtml(file, health) {
+    var isMiner = file.filename === 'content-miner.md';
+    var isPriceWatch = file.filename === 'price-watch.md';
     var wide = file.itemStyle === 'header';
     var body = '';
-    if (file.checklist.length) body += checklistHtml(file);
+    if (isPriceWatch && file.checklist.length) body += stepperHtml(file);
     if (file.items.length) {
-      body += '<div class="grid' + (wide ? ' wide' : '') + '">' + file.items.map(function (it) { return cardHtml(file, it); }).join('') + '<\/div>';
+      if (isMiner) {
+        body += '<div class="img-card-list">' + file.items.map(function (it) { return imageCardHtml(file, it); }).join('') + '<\/div>';
+      } else if (isPriceWatch) {
+        body += '<div class="grid wide">' + file.items.map(function (it) { return priceCardHtml(file, it); }).join('') + '<\/div>';
+      } else {
+        body += '<div class="grid' + (wide ? ' wide' : '') + '">' + file.items.map(function (it) { return cardHtml(file, it); }).join('') + '<\/div>';
+      }
     } else if (file.introText) {
       body += '<div class="intro">' + inline(file.introText) + '<\/div>';
     }
@@ -928,6 +1374,137 @@ const CLIENT_JS = String.raw`
     return d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   }
 
+  // --- hero: the morning pass as a game loop --------------------------------
+  // "Handled" = kept locally (still present) + deleted server-side (gone from
+  // the file). The denominator is snapshotted per-date on first load so a
+  // delete moves the ring forward instead of quietly shrinking the goalposts.
+  function ringState(state) {
+    var latest = state.dates[0];
+    var date = latest ? latest.date : state.today;
+    var currentTotal = 0;
+    var keptForDate = 0;
+    if (latest) {
+      latest.files.forEach(function (f) {
+        currentTotal += f.items.length;
+        f.items.forEach(function (it) {
+          if (kept.has(itemKey(f.date, f.filename, it.n))) keptForDate++;
+        });
+      });
+    }
+    var totalKey = 'solvency-dash-total::' + date;
+    var storedTotal = 0;
+    try { storedTotal = Number(localStorage.getItem(totalKey) || 0) || 0; } catch (e) {}
+    var effectiveTotal = Math.max(storedTotal, currentTotal);
+    try { localStorage.setItem(totalKey, String(effectiveTotal)); } catch (e) {}
+    var deletedCount = Math.max(0, effectiveTotal - currentTotal);
+    var handled = Math.min(effectiveTotal, keptForDate + deletedCount);
+    return { date: date, total: effectiveTotal, handled: handled, complete: effectiveTotal === 0 || handled >= effectiveTotal };
+  }
+
+  function ringHtml(rs) {
+    var pct = rs.total === 0 ? 100 : Math.min(100, Math.round((rs.handled / rs.total) * 100));
+    var r = 54, c = 2 * Math.PI * r;
+    var offset = c - (pct / 100) * c;
+    var big = rs.complete ? '&#10003;' : String(rs.handled);
+    var caption = rs.total === 0 ? 'Nothing to work through this morning' : (rs.complete ? 'Morning pass complete' : (rs.handled + ' of ' + rs.total + ' handled'));
+    return '<div class="ring-block">'
+      + '<div class="ring-wrap' + (rs.complete ? ' complete' : '') + '">'
+      + '<svg class="ring" viewBox="0 0 120 120" width="132" height="132" aria-hidden="true">'
+      + '<circle class="ring-track" cx="60" cy="60" r="' + r + '"><\/circle>'
+      + '<circle class="ring-fill" cx="60" cy="60" r="' + r + '" style="stroke-dasharray:' + c.toFixed(2) + ';stroke-dashoffset:' + offset.toFixed(2) + ';"><\/circle>'
+      + '<\/svg>'
+      + '<div class="ring-center"><div class="ring-big">' + big + (rs.complete || rs.total === 0 ? '' : '<span class="ring-slash">/' + rs.total + '<\/span>') + '<\/div><\/div>'
+      + '<\/div>'
+      + '<div class="ring-caption' + (rs.complete ? ' complete' : '') + '">' + esc(caption) + '<\/div>'
+      + '<\/div>';
+  }
+
+  function isoMinusDays(iso, n) {
+    var d = new Date(iso + 'T12:00:00');
+    d.setDate(d.getDate() - n);
+    return d.toISOString().slice(0, 10);
+  }
+
+  // Consecutive days with a completed pass: every archived date server-truth
+  // knows about, walked back from yesterday, plus today itself if its ring
+  // (local kept-state + server deletions) is already settled.
+  function computeStreak(archivedDates, today, todayComplete) {
+    var set = {};
+    (archivedDates || []).forEach(function (d) { set[d] = true; });
+    var streak = todayComplete ? 1 : 0;
+    var cursor = isoMinusDays(today, 1);
+    while (set[cursor]) { streak++; cursor = isoMinusDays(cursor, 1); }
+    return streak;
+  }
+
+  function streakHtml(streakDays) {
+    return '<div class="streak-tile"><div class="streak-flame" aria-hidden="true">&#128293;<\/div>'
+      + '<div><div class="streak-num">' + streakDays + '<\/div><div class="streak-label">day streak<\/div><\/div><\/div>';
+  }
+
+  function numbersStripHtml(nums, streakDays) {
+    var tiles = [
+      { label: 'Drafts waiting', value: nums.draftsWaiting },
+      { label: 'Models re-checked', value: nums.modelsRechecked },
+      { label: 'Streak', value: streakDays },
+      { label: 'Days since launch', value: nums.daysSinceLaunch }
+    ];
+    return '<div class="numbers-strip">' + tiles.map(function (t) {
+      var isNum = typeof t.value === 'number';
+      return '<div class="num-tile"><div class="num-value"' + (isNum ? ' data-countup="' + t.value + '"' : '') + '>' + (isNum ? '0' : '&mdash;') + '<\/div>'
+        + '<div class="num-label">' + esc(t.label) + '<\/div><\/div>';
+    }).join('') + '<\/div>';
+  }
+
+  function animateCountUps(root) {
+    var reduced = reducedMotion();
+    root.querySelectorAll('[data-countup]').forEach(function (el) {
+      var target = Number(el.getAttribute('data-countup'));
+      if (reduced || !isFinite(target)) { el.textContent = String(target); return; }
+      var start = null, dur = 650;
+      function tick(now) {
+        if (start === null) start = now;
+        var p = Math.min(1, (now - start) / dur);
+        var eased = 1 - Math.pow(1 - p, 3);
+        el.textContent = String(Math.round(target * eased));
+        if (p < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    });
+  }
+
+  // --- night crew row --------------------------------------------------------
+  var CREW = [
+    { id: 'content-miner', filename: 'content-miner.md', emoji: '⛏️', label: 'Content miner' },
+    { id: 'price-watch', filename: 'price-watch.md', emoji: '👁️', label: 'Price watch' }
+  ];
+
+  function crewRowHtml(state) {
+    var latest = state.dates[0];
+    var healthById = {};
+    state.runHealth.forEach(function (h) { healthById[h.id] = h; });
+    var fileByName = {};
+    if (latest) latest.files.forEach(function (f) { fileByName[f.filename] = f; });
+
+    var cards = CREW.map(function (row) {
+      var h = healthById[row.id];
+      var f = fileByName[row.filename];
+      var count = f ? f.items.length : 0;
+      var failed = !!(h && h.fetchFailed);
+      var when = h && h.lastRunAt ? formatRunAt(h.lastRunAt) : 'no run recorded';
+      var note = (!failed && count === 0 && f && f.introText) ? '<div class="crew-note">' + esc(f.introText) + '<\/div>' : '';
+      return '<div class="crew-card' + (failed ? ' fail' : '') + '">'
+        + '<div class="crew-avatar" aria-hidden="true">' + row.emoji + '<\/div>'
+        + '<div class="crew-body"><div class="crew-name">' + esc(row.label) + '<\/div>'
+        + '<div class="crew-meta">last run ' + esc(when) + '<\/div>' + note + '<\/div>'
+        + '<div class="crew-right">'
+        + '<span class="status-chip ' + (failed ? 'fail' : 'clean') + '">' + (failed ? 'FETCH FAILED' : 'clean') + '<\/span>'
+        + '<span class="crew-count">' + count + (count === 1 ? ' item' : ' items') + '<\/span>'
+        + '<\/div><\/div>';
+    }).join('');
+    return '<div class="crew-row">' + cards + '<\/div>';
+  }
+
   var state = null;
 
   function render() {
@@ -935,6 +1512,9 @@ const CLIENT_JS = String.raw`
     var latest = state.dates[0];
     var healthById = {};
     state.runHealth.forEach(function (h) { healthById[h.id] = h; });
+
+    var rs = ringState(state);
+    var streakDays = computeStreak(state.archivedDates, state.today, rs.complete);
 
     var html = '<div class="wrap masthead-row">'
       + '<button class="theme-toggle" id="theme-toggle" title="Toggle theme">&#9789;<\/button>'
@@ -945,11 +1525,17 @@ const CLIENT_JS = String.raw`
     if (latest) {
       html += '<div style="margin-top:.9rem;"><button class="archive-btn" id="archive-btn" data-date="' + latest.date + '">Archive ' + esc(latest.date) + '<\/button><\/div>';
     }
-    html += '<\/div><\/div><hr class="rule">';
+    html += '<\/div><\/div>';
+
+    html += '<div class="wrap"><div class="hero-row">' + ringHtml(rs) + streakHtml(streakDays) + numbersStripHtml(state.overnightNumbers || {}, streakDays) + '<\/div><\/div>';
+
+    html += '<hr class="rule">';
 
     if (state.dates.length > 1) {
       html += '<div class="wrap"><div class="backlog">' + (state.dates.length - 1) + ' earlier date(s) still open &mdash; scroll down or archive them from queue/.<\/div><\/div>';
     }
+
+    html += '<div class="wrap">' + crewRowHtml(state) + '<\/div>';
 
     html += '<div class="wrap">';
     if (!latest || (state.isAllClear && latest.files.every(function (f) { return f.items.length === 0; }))) {
@@ -998,6 +1584,23 @@ const CLIENT_JS = String.raw`
       });
     });
 
+    document.querySelectorAll('.step').forEach(function (stepEl) {
+      function toggle() {
+        var key = stepEl.getAttribute('data-cl-key');
+        var nowDone = !stepEl.classList.contains('done');
+        if (nowDone) checked.add(key); else checked.delete(key);
+        saveSet(CL_KEY, checked);
+        stepEl.classList.toggle('done', nowDone);
+        stepEl.setAttribute('aria-checked', String(nowDone));
+        var dot = stepEl.querySelector('.step-dot');
+        dot.innerHTML = nowDone ? '&#10003;' : dot.getAttribute('data-idx');
+      }
+      stepEl.addEventListener('click', toggle);
+      stepEl.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+      });
+    });
+
     cardEls.forEach(function (card) {
       card.addEventListener('click', function (e) {
         if (e.target.closest('button')) return;
@@ -1008,6 +1611,9 @@ const CLIENT_JS = String.raw`
       card.querySelector('[data-action="open"]').addEventListener('click', function () { openCard(card); });
       card.querySelector('[data-action="keep"]').addEventListener('click', function () { toggleKeep(card); });
     });
+
+    animateCountUps(app);
+    bindSparklines(app);
   }
 
   function selectCard(i) {
@@ -1035,7 +1641,13 @@ const CLIENT_JS = String.raw`
     if (kept.has(key)) kept.delete(key); else kept.add(key);
     saveSet(KEPT_KEY, kept);
     card.classList.toggle('kept');
-    card.querySelector('[data-action="keep"]').classList.toggle('on');
+    var btn = card.querySelector('[data-action="keep"]');
+    btn.classList.toggle('on');
+    if (!reducedMotion()) {
+      btn.classList.remove('pulse');
+      void btn.offsetWidth; // restart the animation on repeated toggles
+      btn.classList.add('pulse');
+    }
   }
 
   function openCard(card) {
@@ -1050,12 +1662,17 @@ const CLIENT_JS = String.raw`
   function deleteCard(card) {
     var date = card.getAttribute('data-date'), filename = card.getAttribute('data-filename'), n = Number(card.getAttribute('data-n'));
     if (!confirm('Delete item ' + n + ' from ' + filename + '? This rewrites the file.')) return;
-    fetch('/api/item', {
-      method: 'DELETE', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ date: date, filename: filename, n: n })
-    }).then(function (r) {
-      if (r.ok) refresh(); else r.json().then(function (e) { alert(e.error || 'delete failed'); });
-    });
+    function doDelete() {
+      fetch('/api/item', {
+        method: 'DELETE', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ date: date, filename: filename, n: n })
+      }).then(function (r) {
+        if (r.ok) refresh(); else r.json().then(function (e) { alert(e.error || 'delete failed'); card.classList.remove('removing'); });
+      });
+    }
+    if (reducedMotion()) { doDelete(); return; }
+    card.classList.add('removing');
+    setTimeout(doDelete, 200);
   }
 
   document.addEventListener('keydown', function (e) {

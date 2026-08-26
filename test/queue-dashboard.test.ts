@@ -15,6 +15,8 @@ import {
   deleteItemFromMarkdown, extractChecklistSteps, parseQueueFile,
   resolveQueueDateDir, resolveQueueFile, PathGuardError,
   listUnarchivedDates, readDateFiles, archiveDate, buildState, buildRunHealth,
+  resolveOgCardFile, extractModelPriceHistory, enrichPriceWatchItem,
+  listArchivedDates, daysBetweenIso, loadPricingContext,
 } from '../scripts/queue-dashboard.ts';
 
 const FLAT_FILE = `---
@@ -401,6 +403,220 @@ describe('buildRunHealth', () => {
       assert.equal(pw.source, 'log');
       assert.equal(pw.hasErrorLog, true);
       assert.equal(pw.fetchFailed, true);
+    } finally {
+      rmSync(queueRoot, { recursive: true, force: true });
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// v2: og-card image guard, changelog->sparkline extraction, streak raw
+// material. Every fixture below lives under a throwaway temp dir -- none of
+// this ever touches the real reports/og-cards/ or data/.
+// ---------------------------------------------------------------------------
+
+describe('resolveOgCardFile: read-only og-card path guard', () => {
+  test('a legitimate .png filename resolves inside the og-cards root', () => {
+    const ogRoot = tmpQueue();
+    try {
+      const abs = resolveOgCardFile(ogRoot, 'model-two.png');
+      assert.equal(abs, join(ogRoot, 'model-two.png'));
+    } finally {
+      rmSync(ogRoot, { recursive: true, force: true });
+    }
+  });
+
+  test('rejects a filename with a path separator (no escaping the og-cards root)', () => {
+    const ogRoot = tmpQueue();
+    try {
+      assert.throws(() => resolveOgCardFile(ogRoot, '../../etc/passwd'), PathGuardError);
+      assert.throws(() => resolveOgCardFile(ogRoot, 'sub/dir.png'), PathGuardError);
+      assert.throws(() => resolveOgCardFile(ogRoot, '..%2fsecret.png'), PathGuardError);
+    } finally {
+      rmSync(ogRoot, { recursive: true, force: true });
+    }
+  });
+
+  test('rejects a non-.png filename -- this endpoint serves images, nothing else', () => {
+    const ogRoot = tmpQueue();
+    try {
+      assert.throws(() => resolveOgCardFile(ogRoot, 'model-two.md'), PathGuardError);
+      assert.throws(() => resolveOgCardFile(ogRoot, 'model-two.png.md'), PathGuardError);
+      assert.throws(() => resolveOgCardFile(ogRoot, 'no-extension'), PathGuardError);
+    } finally {
+      rmSync(ogRoot, { recursive: true, force: true });
+    }
+  });
+
+  test('an empty filename is rejected rather than resolving to the directory itself', () => {
+    const ogRoot = tmpQueue();
+    try {
+      assert.throws(() => resolveOgCardFile(ogRoot, ''), PathGuardError);
+    } finally {
+      rmSync(ogRoot, { recursive: true, force: true });
+    }
+  });
+});
+
+const CHANGELOG_WITH_PRICE_HISTORY = [
+  { date: '2026-08-21', kind: 'initial', summary: 'Initial dataset published.' }, // no model_id/price fields -- real data's shape today
+  { date: '2026-08-22', kind: 'price_change', model_id: 'model-alpha', input_per_mtok: 2, output_per_mtok: 8 },
+  { date: '2026-08-24', kind: 'price_change', model_id: 'model-alpha', input_per_mtok: 2.5, output_per_mtok: 9 },
+  { date: '2026-08-23', kind: 'price_change', model_id: 'model-beta', input_per_mtok: 5, output_per_mtok: 15 },
+];
+
+describe('extractModelPriceHistory: changelog.json -> sparkline points', () => {
+  test('pulls only the named model\'s price-change entries, sorted oldest first', () => {
+    const points = extractModelPriceHistory(CHANGELOG_WITH_PRICE_HISTORY, 'model-alpha');
+    assert.deepEqual(points, [
+      { date: '2026-08-22', input: 2, output: 8 },
+      { date: '2026-08-24', input: 2.5, output: 9 },
+    ]);
+  });
+
+  test('a model with no price-change entries in the changelog gets an empty history, not a crash', () => {
+    assert.deepEqual(extractModelPriceHistory(CHANGELOG_WITH_PRICE_HISTORY, 'model-gamma'), []);
+  });
+
+  test('entries without model_id/price fields (the real dataset\'s "initial"/"correction" kind entries) are skipped, not guessed at', () => {
+    const realShapedEntries = [
+      { date: '2026-08-21', kind: 'initial', summary: 'Initial dataset published: 25 models priced.' },
+      { date: '2026-08-23', kind: 'correction', summary: 'Research Note 01 test count corrected.' },
+    ];
+    assert.deepEqual(extractModelPriceHistory(realShapedEntries, 'claude-opus-5'), []);
+  });
+
+  test('tolerates a non-array / malformed changelog rather than throwing', () => {
+    assert.deepEqual(extractModelPriceHistory(null, 'model-alpha'), []);
+    assert.deepEqual(extractModelPriceHistory(undefined, 'model-alpha'), []);
+    assert.deepEqual(extractModelPriceHistory('not an array', 'model-alpha'), []);
+  });
+});
+
+describe('enrichPriceWatchItem', () => {
+  const fleet = [
+    { model_id: 'model-alpha', input_per_mtok: 2.5, output_per_mtok: 9, last_verified: '2026-08-24', source_url: 'https://example.com/alpha' },
+  ];
+
+  test('fills priceHistory + currentPrice on a price-watch model-check item (statusBadge set, heading = model_id)', () => {
+    const [item] = parseQueueFile(HEADER_FILE, '2026-08-26', 'price-watch.md', 1).items;
+    assert.equal(item.heading, 'model-alpha');
+    assert.equal(item.statusBadge, 'REVIEW');
+    const enriched = enrichPriceWatchItem(item, fleet, CHANGELOG_WITH_PRICE_HISTORY);
+    assert.deepEqual(enriched.priceHistory, [
+      { date: '2026-08-22', input: 2, output: 8 },
+      { date: '2026-08-24', input: 2.5, output: 9 },
+    ]);
+    assert.deepEqual(enriched.currentPrice, { input: 2.5, output: 9, lastVerified: '2026-08-24', sourceUrl: 'https://example.com/alpha' });
+  });
+
+  test('is a no-op for an item with no statusBadge (not a price-watch model check)', () => {
+    const [item] = parseQueueFile(FLAT_FILE, '2026-08-26', 'content-miner.md', 1).items;
+    assert.equal(item.statusBadge, null);
+    const enriched = enrichPriceWatchItem(item, fleet, CHANGELOG_WITH_PRICE_HISTORY);
+    assert.equal(enriched, item); // same object back, untouched
+  });
+
+  test('a flagged model absent from the current fleet gets currentPrice: null, not a crash', () => {
+    const [, item2] = parseQueueFile(HEADER_FILE, '2026-08-26', 'price-watch.md', 1).items;
+    assert.equal(item2.heading, 'model-beta');
+    const enriched = enrichPriceWatchItem(item2, fleet, CHANGELOG_WITH_PRICE_HISTORY);
+    assert.equal(enriched.currentPrice, null);
+    assert.deepEqual(enriched.priceHistory, [{ date: '2026-08-23', input: 5, output: 15 }]);
+  });
+});
+
+describe('content-miner card: line parsing', () => {
+  test('a present card path is captured as a bare filename; MISSING is flagged, not treated as a path', () => {
+    const { items } = parseQueueFile(FLAT_FILE, '2026-08-26', 'content-miner.md', 1);
+    assert.equal(items[0].cardFilename, 'model-one.png');
+    assert.equal(items[0].cardMissing, false);
+    assert.equal(items[1].cardFilename, null);
+    assert.equal(items[1].cardMissing, true);
+    assert.equal(items[2].cardFilename, 'model-three.png');
+  });
+});
+
+describe('listArchivedDates + daysBetweenIso: streak raw material', () => {
+  test('lists queue/_archive/<date> dirs, sorted, ignoring non-date entries', () => {
+    const queueRoot = tmpQueue();
+    try {
+      mkdirSync(join(queueRoot, '_archive', '2026-08-24'), { recursive: true });
+      mkdirSync(join(queueRoot, '_archive', '2026-08-25'), { recursive: true });
+      mkdirSync(join(queueRoot, '_archive', 'not-a-date'), { recursive: true });
+      writeFileSync(join(queueRoot, '_archive', 'stray-file.txt'), 'x');
+      assert.deepEqual(listArchivedDates(queueRoot), ['2026-08-24', '2026-08-25']);
+    } finally {
+      rmSync(queueRoot, { recursive: true, force: true });
+    }
+  });
+
+  test('an empty/missing _archive dir lists as empty, not an error', () => {
+    const queueRoot = tmpQueue();
+    try {
+      assert.deepEqual(listArchivedDates(queueRoot), []);
+    } finally {
+      rmSync(queueRoot, { recursive: true, force: true });
+    }
+  });
+
+  test('daysBetweenIso counts whole days, matching the "days since launch" tile', () => {
+    assert.equal(daysBetweenIso('2026-08-21', '2026-08-26'), 5);
+    assert.equal(daysBetweenIso('2026-08-26', '2026-08-26'), 0);
+  });
+});
+
+describe('buildState: v2 fields (data/ enrichment, archivedDates, overnightNumbers)', () => {
+  test('enriches a price-watch item with priceHistory/currentPrice from a fixture data/ dir, and computes overnightNumbers', () => {
+    const queueRoot = tmpQueue();
+    const dataRoot = tmpQueue();
+    try {
+      mkdirSync(join(queueRoot, '2026-08-26'), { recursive: true });
+      writeFileSync(join(queueRoot, '2026-08-26', 'content-miner.md'), FLAT_FILE);
+      writeFileSync(join(queueRoot, '2026-08-26', 'price-watch.md'), HEADER_FILE);
+
+      writeFileSync(join(dataRoot, 'models.json'), JSON.stringify({
+        models: [{ model_id: 'model-alpha', input_per_mtok: 2.5, output_per_mtok: 9, last_verified: '2026-08-24', source_url: 'https://example.com/alpha' }],
+      }));
+      // The "earliest changelog entry" fixture is pinned 5 days before the real
+      // wall-clock date (buildState's `today` is `localIsoDate(new Date())`, not
+      // anything from the queue fixtures) -- so the daysSinceLaunch assertion
+      // below holds no matter what day this test actually runs.
+      const fiveDaysAgo = new Date(Date.now() - 5 * 86_400_000).toISOString().slice(0, 10);
+      const entriesWithPinnedLaunch = [
+        { date: fiveDaysAgo, kind: 'initial', summary: 'Initial dataset published.' },
+        ...CHANGELOG_WITH_PRICE_HISTORY.filter((e) => e.kind === 'price_change'),
+      ];
+      writeFileSync(join(dataRoot, 'changelog.json'), JSON.stringify({ entries: entriesWithPinnedLaunch }));
+
+      const state = buildState(queueRoot, dataRoot);
+      const priceWatchFile = state.dates[0].files.find((f) => f.filename === 'price-watch.md')!;
+      const alpha = priceWatchFile.items.find((it) => it.heading === 'model-alpha')!;
+      assert.equal(alpha.currentPrice?.input, 2.5);
+      assert.equal(alpha.priceHistory?.length, 2);
+
+      assert.equal(state.overnightNumbers.draftsWaiting, 3); // FLAT_FILE has 3 items
+      assert.equal(state.overnightNumbers.daysSinceLaunch, 5);
+      assert.deepEqual(state.archivedDates, []);
+    } finally {
+      rmSync(queueRoot, { recursive: true, force: true });
+      rmSync(dataRoot, { recursive: true, force: true });
+    }
+  });
+
+  test('a missing/malformed data/ dir degrades gracefully -- empty models/changelog, no crash', () => {
+    const queueRoot = tmpQueue();
+    const dataRoot = join(tmpdir(), 'solvency-dash-nonexistent-' + Date.now());
+    try {
+      mkdirSync(join(queueRoot, '2026-08-26'), { recursive: true });
+      writeFileSync(join(queueRoot, '2026-08-26', 'price-watch.md'), HEADER_FILE);
+      const { models, changelogEntries } = loadPricingContext(dataRoot);
+      assert.deepEqual(models, []);
+      assert.deepEqual(changelogEntries, []);
+      const state = buildState(queueRoot, dataRoot);
+      const priceWatchFile = state.dates[0].files.find((f) => f.filename === 'price-watch.md')!;
+      assert.equal(priceWatchFile.items[0].currentPrice, null);
+      assert.deepEqual(priceWatchFile.items[0].priceHistory, []);
     } finally {
       rmSync(queueRoot, { recursive: true, force: true });
     }
