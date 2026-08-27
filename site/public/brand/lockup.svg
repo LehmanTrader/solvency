@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 100" width="400" height="100">
-  <g transform="translate(0,10) scale(0.8)"><rect x="18" y="10" width="64" height="18" fill="#17150F"></rect>
-  <rect x="10" y="44" width="80" height="7" fill="#17150F"></rect>
-  <rect x="42" y="66" width="16" height="18" fill="#E0A02E"></rect></g>
-  <text x="108" y="62" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="34" letter-spacing="4.4" fill="#17150F"><tspan font-weight="700">S</tspan><tspan font-weight="400">OLVENCY</tspan></text>
+  <g transform="translate(0,10) scale(0.8)"><rect x="18" y="10" width="64" height="18" fill="#191B22"></rect>
+  <rect x="10" y="44" width="80" height="7" fill="#191B22"></rect>
+  <rect x="42" y="66" width="16" height="18" fill="#5B45E0"></rect></g>
+  <text x="108" y="62" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="34" letter-spacing="4.4" fill="#191B22"><tspan font-weight="700">S</tspan><tspan font-weight="400">OLVENCY</tspan></text>
 </svg>

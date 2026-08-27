@@ -42,7 +42,7 @@ const FONTS = join(ROOT, 'site', 'public', 'fonts');
 const BRAND_DIR = join(ROOT, 'site', 'public', 'brand', 'providers');
 const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 
-const BRAND_AMBER = '#E0A02E';
+const BRAND_AMBER = '#5B45E0'; // enterprise indigo (2026-08-27 repaint); const name kept — it's the brand-highlight slot
 
 mkdirSync(OUT, { recursive: true });
 mkdirSync(TMP, { recursive: true });
@@ -54,7 +54,7 @@ function shot(html: string, w: number, h: number, out: string, scale = 2) {
     '--headless', '--disable-gpu', '--no-sandbox', '--hide-scrollbars',
     `--force-device-scale-factor=${scale}`, `--window-size=${w},${h}`,
     `--screenshot=${out}`, '--virtual-time-budget=4000',
-    // Every card is the cream ranked template now (RC_BG below) — no dark card remains.
+    // Every card is the light ranked template now (RC_BG below) — no dark card remains.
     `--default-background-color=${RC_BG.slice(1)}ff`, `file://${page}`,
   ], { stdio: 'pipe' });
 }
@@ -79,15 +79,15 @@ const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 // and lockup.svg already ship this exact ink-on-light variant. Bars use the
 // purple data accent (RC_PURPLE below), not amber — see basisBarCss.
 // ---------------------------------------------------------------------------
-const RC_BG = '#F8F6EE', RC_INK = '#17150F', RC_MUTED = '#8A7F6C', RC_RULE = '#E2DAC8';
+const RC_BG = '#F4F5F7', RC_INK = '#191B22', RC_MUTED = '#5D6373', RC_RULE = '#DDE0E7';
 // Data accent (docs/redesign-2026-08/direction.md §1/§3, stage 1.1 color
 // note): a vivid violet, the same hue for both measured (solid) and
 // modeled (hatched) bars — the hatch alone carries the basis distinction.
 // Brand amber is reserved for highlight/brand duty only (headline
 // highlighter, #1-row outline + circle below) and never doubles as a bar
 // color, so the two jobs stay visually separate.
-const RC_PURPLE = '#6C3BF4', RC_STALE = '#E8895A';
-const RC_LEAD_TINT = 'rgba(224,160,46,0.10)';
+const RC_PURPLE = '#5B45E0', RC_STALE = '#B23A2A';
+const RC_LEAD_TINT = 'rgba(91,69,224,0.08)';
 
 /**
  * Colored provider chips (direction doc §4), mirroring site/src/lib/providers.ts's
@@ -208,7 +208,7 @@ function rankedCardHtml(card: RankedCardData): string {
     .headline{height:${L.headH}px;margin-top:${L.gap1}px;font-family:'Source Serif 4',Georgia,serif;
       font-weight:400;color:${RC_INK};font-size:34px;line-height:1.25;max-width:1080px;
       display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-    .hl{background:${BRAND_AMBER};padding:0 6px;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+    .hl{background:#EDEAFB;padding:0 6px;box-decoration-break:clone;-webkit-box-decoration-break:clone}
     .rows{height:${L.rowsH}px;margin-top:${L.gap2}px;display:flex;flex-direction:column;gap:${L.rowGap}px}
     .row{display:grid;grid-template-columns:34px 1fr 380px 100px;align-items:center;
       column-gap:16px;padding:0 14px;border-radius:10px;border:2px solid transparent;box-sizing:border-box}
@@ -216,7 +216,7 @@ function rankedCardHtml(card: RankedCardData): string {
     .rank{width:30px;height:30px;border-radius:50%;border:1.5px solid ${RC_INK};
       display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;
       font-size:14px;font-weight:700;color:${RC_INK}}
-    .row.lead .rank{background:${BRAND_AMBER};border-color:${BRAND_AMBER}}
+    .row.lead .rank{background:${BRAND_AMBER};border-color:${BRAND_AMBER};color:#FFFFFF}
     .who{display:flex;flex-direction:row;align-items:center;gap:10px;min-width:0}
     .name{font-weight:600;font-size:19px;color:${RC_INK};white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .sub{font-size:12px;color:${RC_MUTED};white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

@@ -1017,8 +1017,10 @@ import projectPresets from '../data/composer-project-presets.json';
     const height = Math.min(2400, chartTop + chartHeight + 120);
     const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height;
     const ctx = canvas.getContext('2d'); if (!ctx) throw new Error('PNG rendering is unavailable in this browser.');
-    const CARD_BG = '#F8F6EE', CARD_PANEL_2 = '#F4F3F1', CARD_RULE = '#CFCCC6', CARD_RULE_2 = '#E2E0DC';
-    const CARD_INK = '#1A1D20', CARD_BODY = '#3E464C', CARD_MUTED = '#5F6B73', CARD_MISSING = '#5F6B73', CARD_AMBER = '#9A6410', CARD_PURPLE = '#6C3BF4';
+    // Enterprise palette (2026-08-27) — mirrors global.css light tokens; the
+    // CARD_AMBER name survives as the header-tick slot, now indigo.
+    const CARD_BG = '#F4F5F7', CARD_PANEL_2 = '#EEF0F4', CARD_RULE = '#C9CCD6', CARD_RULE_2 = '#E3E5EB';
+    const CARD_INK = '#191B22', CARD_BODY = '#3E4250', CARD_MUTED = '#5D6373', CARD_MISSING = '#5D6373', CARD_AMBER = '#5B45E0', CARD_PURPLE = '#5B45E0';
     ctx.fillStyle = CARD_BG; ctx.fillRect(0, 0, width, height);
     ctx.strokeStyle = CARD_RULE; ctx.lineWidth = 2; ctx.strokeRect(48, 48, width - 96, height - 96);
     ctx.fillStyle = CARD_AMBER; ctx.fillRect(72, 74, 7, 28);

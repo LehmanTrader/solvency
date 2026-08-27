@@ -27,39 +27,42 @@
    Type scale (nine steps, px): 10.5 · 11.5 · 12.8 · 14 · 16 · 17.6 · 22.4 · 30.4 · 48
                           (rem): .656 · .72  · .8   · .875 · 1 · 1.1 · 1.4 · 1.9 · 3 */
 @theme {
-  --color-bg: #F8F6EE;           /* cream app background, nudged off Arena's observed #FAF9F5 (see stage 1.1 note above) */
+  /* Enterprise repaint (2026-08-27, approved mocks): the cream/amber editorial
+     identity gives way to a cool slate ground with ONE indigo accent family —
+     the "AAA enterprise resource suite" idiom. Token names are unchanged so
+     every component keeps working; only the values (and the two-accent rule)
+     move. Mock hues (#F4F5F7 ground, #5B45E0 accent) are kept where they clear
+     WCAG on this ground; grays the mocks used at small scale are re-derived at
+     this file's existing contrast discipline instead of copied. */
+  --color-bg: #F4F5F7;           /* cool slate ground (enterprise mocks) */
   --color-panel: #FFFFFF;        /* white cards */
-  --color-panel-2: #F4F3F1;
-  --color-panel-3: #E6E4DF;
-  --color-ink: #1A1D20;          /* near-black text-1: 15.6:1 on cream */
-  --color-body: #3E464C;         /* text-2: 8.9:1 on cream */
-  --color-muted: #5F6B73;        /* text-3: 5.1:1 on cream */
-  --color-rule: #E2E0DC;
-  --color-rule-strong: #CFCCC6;  /* axes, section dividers */
-  --color-control-border: #858B91; /* form-control boundaries: 3.2:1 on cream (WCAG 1.4.11 ≥3:1) */
+  --color-panel-2: #EEF0F4;
+  --color-panel-3: #E3E5EB;
+  --color-ink: #191B22;          /* near-black text-1: ~16:1 on slate ground */
+  --color-body: #3E4250;         /* text-2: ~8.9:1 */
+  --color-muted: #5D6373;        /* text-3: ~5.1:1 (mock's #7A7F90 fails AA at text size; re-derived) */
+  --color-rule: #E3E5EB;
+  --color-rule-strong: #C9CCD6;  /* axes, section dividers */
+  --color-control-border: #82889A; /* form-control boundaries: ~3.2:1 (WCAG 1.4.11 ≥3:1) */
   /* Contrast ratios below are computed via the WCAG 2.x relative-luminance
-     formula against this file's own --color-bg (cream #F8F6EE); the card
-     surface (--color-panel, #FFFFFF) is always slightly higher-contrast than
-     cream, never lower, so the cream figure is the binding one. AA for
+     formula against this file's own --color-bg (#F4F5F7); the card surface
+     (--color-panel, #FFFFFF) is always slightly higher-contrast than the
+     ground, never lower, so the ground figure is the binding one. AA for
      normal text is 4.5:1; AA for UI-component boundaries (1.4.11) is 3:1.
-     --color-accent kept its prior light-theme hex (#9A6410, hue ~37, same
-     family as the brand mark's amber) — it already cleared cream at launch;
-     re-derivation here is the ratio citation the redesign asked for, not a
-     new color. */
-  --color-accent: #9A6410;       /* 4.62:1 on cream, 4.99:1 on white cards */
-  --color-accent-hover: #82530D;
-  --color-accent-dim: #B08A45;   /* frontier line */
-  --color-on-accent: #FFFFFF;    /* white on accent fill: 4.99:1 */
-  /* Data/interaction accent (stage 1.1): a vivid violet, picked in the
-     founder's named #6C3BF4–#7C4DFF neighborhood and tuned to the low end for
-     the strongest contrast on cream. Carries the chart bars (measured and
-     modelled — same hue, hatch is what separates them) plus link hover and
-     focus-ring states elsewhere in this file. Never the same element as the
-     amber accent above: purple is data/interaction, amber is brand/highlight. */
-  --color-purple: #6C3BF4;       /* 5.44:1 on cream */
+     The old two-accent rule (amber = brand/highlight, purple = data) collapses
+     to one indigo family on purpose — enterprise reads as monochrome accent
+     plus semantic green/red, nothing else. */
+  --color-accent: #5B45E0;       /* 5.7:1 on ground, 6.1:1 on white cards */
+  --color-accent-hover: #4936C4;
+  --color-accent-dim: #8E80E6;   /* frontier line */
+  --color-on-accent: #FFFFFF;    /* white on accent fill: 6.2:1 */
+  /* Data/interaction accent: same indigo as --color-accent (one-family rule
+     above). Carries the chart bars (measured and modelled — same hue, hatch is
+     what separates them) plus link hover and focus-ring states. */
+  --color-purple: #5B45E0;       /* 5.7:1 on ground */
   /* Provenance and diff semantics (brand review §4.2). Color never travels alone:
      every colored figure sits next to the word measured / modelled / stale / missing. */
-  --color-measured: var(--color-purple); /* 5.44:1 on cream — was amber; freed for the "measured" job alone */
+  --color-measured: var(--color-purple); /* tracks the indigo accent family */
   --color-modelled: var(--color-purple); /* same hue as measured on purpose: the hatch pattern is what reads as "modelled" */
   /* Free-model coverage (docs/free-models-scoping.md §4, 2026-08-26): a
      fourth basis for rate-capped $0 access paths. Reuses --color-purple's
@@ -74,9 +77,9 @@
      different dash cadence. --color-free is a straight alias, so it tracks
      --color-purple's dark-theme redeclaration below automatically. */
   --color-free: var(--color-purple);
-  --color-stale: #A8451B;        /* 5.49:1 on cream — unchanged; stale isn't part of this pivot */
-  --color-missing: #5F6B73;      /* 5.06:1 on cream */
-  --color-better: #1B7F4F;       /* 4.63:1 on cream — unchanged by the stage-1.3 red swap below */
+  --color-stale: #B23A2A;        /* 5.5:1 — cooled from the cream-era rust to sit with the slate ground */
+  --color-missing: #5D6373;      /* matches --color-muted */
+  --color-better: #1E7A3D;       /* 5.1:1 — enterprise-mock green; unchanged by the stage-1.3 red swap below */
   /* Stage 1.2 (Roy's note 4, 2026-08-26): "i like the color red used for the
      more expensive price lets come up with a better color red" — the old
      #A8331B alarm-red became a deep wine/crimson (#7B1E3D).
@@ -86,13 +89,14 @@
      (#D32F2F), eye-tuned/picked from the founder-named #D32F2F–#DC2626
      neighborhood for the better cream contrast at the darker end of that
      range: 4.60:1 on cream (AA), 4.98:1 on white cards. */
-  --color-worse: #D32F2F;        /* 4.60:1 on cream, 4.98:1 on white cards */
-  --color-fresh: #1B7F4F;
+  --color-worse: #D32F2F;        /* 4.6:1 on ground, 5.0:1 on white cards (Roy's stage-1.3 pick — untouched) */
+  --color-fresh: #1E7A3D;
   /* Categorical ramp, brand review §4.3. Six is the ceiling; dash carries basis.
-     s1/s3/s4/s6 alias the accent/better/worse/missing tokens above; s4 tracks
-     --color-worse's stage-1.3 change so the ramp never carries two reds. */
-  --color-s1: #9A6410; --color-s2: #0E6E9E; --color-s3: #1B7F4F;
-  --color-s4: #D32F2F; --color-s5: #7A3FC0; --color-s6: #5F6B73;
+     s1/s3/s4/s6 alias the accent/better/worse/missing tokens above; s5 takes
+     the amber the accent job no longer uses, so the ramp keeps six distinct
+     hues without two indigos. */
+  --color-s1: #5B45E0; --color-s2: #0E6E9E; --color-s3: #1E7A3D;
+  --color-s4: #D32F2F; --color-s5: #9A6410; --color-s6: #5D6373;
   --font-mono: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
   --font-sans: "IBM Plex Sans", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-display: "Source Serif 4", ui-serif, "New York", "Iowan Old Style", Charter, Georgia, serif;
@@ -121,21 +125,20 @@
    impression vary by OS. */
 @layer base {
   :root[data-theme="dark"] {
-    --color-bg: #0A0C0D; --color-panel: #10151A; --color-panel-2: #151B20; --color-panel-3: #1B2228;
-    --color-ink: #E8ECEF; --color-body: #B8C0C6; --color-muted: #838E95;
-    --color-rule: #232B31; --color-rule-strong: #333D45; --color-control-border: #5A6670;
-    /* The brand amber (brand/mark.svg) carries the accent on dark grounds at 8.6:1. */
-    --color-accent: #E0A02E; --color-accent-hover: #E7B55C; --color-accent-dim: #9D7020; --color-on-accent: #0A0C0D;
-    /* Purple's dark-theme derivation (stage 1.1): lightened off --color-purple's
-       light value to stay vivid on a near-black ground — 7.20:1 on #0A0C0D. */
-    --color-purple: #A78BFA;
-    --color-measured: var(--color-purple); --color-modelled: var(--color-purple); --color-free: var(--color-purple); --color-stale: #E8895A; --color-missing: #7B858C;
-    /* Stage 1.3: dark-theme derivation of the typical-error-red above — a
-       lighter red (Tailwind's red-400 neighborhood, #F87171) so it reads as
-       the same familiar error-red family, lit for a near-black ground,
-       rather than the old wine's rose/raspberry dark variant. */
-    --color-better: #45C08A; --color-worse: #F87171; /* 7.09:1 on #0A0C0D, 6.63:1 on #10151A panels */ --color-fresh: #45C08A;
-    --color-s1: #E0A02E; --color-s2: #4CC9F0; --color-s3: #45C08A; --color-s4: #F87171; --color-s5: #B98CFF; --color-s6: #A9B4BC;
+    /* Enterprise dark (2026-08-27, approved mocks): slate-black ground, same
+       one-indigo-family rule as light — periwinkle #8B77F0 carries accent AND
+       data. Grays re-derived at this file's contrast discipline. */
+    --color-bg: #101116; --color-panel: #181A21; --color-panel-2: #1D2029; --color-panel-3: #22242E;
+    --color-ink: #ECEEF5; --color-body: #B9BDCB; --color-muted: #8A8FA1;
+    --color-rule: #262933; --color-rule-strong: #3A3E4C; --color-control-border: #5C6178;
+    --color-accent: #8B77F0; --color-accent-hover: #A294F4; --color-accent-dim: #695AB8; --color-on-accent: #101116; /* dark ink on periwinkle fill: 5.4:1 */
+    --color-purple: #8B77F0; /* 5.4:1 on #101116 */
+    --color-measured: var(--color-purple); --color-modelled: var(--color-purple); --color-free: var(--color-purple); --color-stale: #E08A77; --color-missing: #8A8FA1;
+    /* Stage 1.3: dark-theme derivation of the typical-error-red — a lighter
+       red (Tailwind's red-400 neighborhood, #F87171) so it reads as the same
+       familiar error-red family, lit for a near-black ground. */
+    --color-better: #6FC088; --color-worse: #F87171; --color-fresh: #6FC088;
+    --color-s1: #8B77F0; --color-s2: #4CC9F0; --color-s3: #6FC088; --color-s4: #F87171; --color-s5: #D9A94A; --color-s6: #A9B4BC;
     color-scheme: dark;
   }
   /* Instant anchor jumps. Smooth scrolling was observed never starting in

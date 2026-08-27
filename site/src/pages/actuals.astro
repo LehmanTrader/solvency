@@ -1,0 +1,55 @@
+---
+/**
+ * /actuals — the Actuals side of the suite (enterprise pivot, 2026-08-27).
+ * Budget (the Composer) says what a stack should cost; this page is the
+ * product that checks what a team actually spent, seat by seat, repriced at
+ * the verified metered catalog. The generator behind it is
+ * tools/seats-report/generate.mjs; the linked sample is its real output on
+ * synthetic usage. In design partnership — the CTA is the audit waitlist,
+ * not a checkout. Nothing here is sold before it exists.
+ */
+import Base from '../layouts/Base.astro';
+const WAITLIST = 'mailto:robertdhanda@gmail.com?subject=Solvency%20audit%20waitlist&body=Team%20size%2C%20AI%20tools%20in%20use%2C%20and%20roughly%20what%20you%20spend%20monthly%3A';
+---
+<Base title="Actuals — Solvency" description="What your team actually spent on AI, seat by seat, repriced against verified metered rates — with a keep / review / downgrade verdict per seat.">
+  <div class="wrap pt-8 md:pt-12">
+    <p class="eyebrow">The suite · Actuals</p>
+    <h1 class="h-page mt-3 measure">What did your team actually spend — and was it worth the seats?</h1>
+    <p class="mt-5 measure" style="max-width:46rem">Subscription AI seats hide their economics: a flat fee, no meter, no way
+      to see which seats earn their price. Actuals takes a usage export — OpenRouter, Claude Code, Codex —
+      and reprices every seat's real consumption at verified metered rates, so each fee has a number next to it.</p>
+
+    <div class="mt-8 grid gap-4 sm:grid-cols-3">
+      <div class="card card-pad">
+        <p class="label">1 · Export</p>
+        <p class="small mt-2">Drop in the usage CSV your vendor already gives you. No agent, no API keys, no integration work.</p>
+      </div>
+      <div class="card card-pad">
+        <p class="label">2 · Reprice</p>
+        <p class="small mt-2">Each seat's tokens are repriced at the metered catalog rate for the same model — cache reads at cached rates, unknown models excluded and listed, never guessed.</p>
+      </div>
+      <div class="card card-pad">
+        <p class="label">3 · Verdict</p>
+        <p class="small mt-2">Every seat lands in a band: <strong>keep</strong> (heavy use, seat is cheap), <strong>near breakeven</strong>, <strong>review</strong>, or <strong>move to metered</strong> (the seat costs more than the usage).</p>
+      </div>
+    </div>
+
+    <div class="mt-8 flex flex-wrap gap-3 items-center">
+      <a class="btn btn-accent" href="/samples/seat-report-sample.html" target="_blank" rel="noopener">View a sample seat report</a>
+      <a class="btn" href={WAITLIST}>Join the audit waitlist →</a>
+    </div>
+    <p class="small mt-3" style="color:var(--color-muted)">The sample is real generator output on synthetic usage for an
+      8-seat team — fees vs metered-equivalent, seat by seat.</p>
+
+    <section class="mt-12 measure" style="max-width:46rem">
+      <h2 class="h-card">Where this is today</h2>
+      <p class="small mt-3">The seat report runs now and we operate it with design partners by hand: you send an export,
+        you get the report and a walkthrough. Self-serve upload, scheduled re-runs, and policy alerts
+        (budget thresholds, model-mix drift, idle-seat flags) are the roadmap — built with the design
+        partners, in that order.</p>
+      <p class="small mt-3">The repricing rests on the same verified catalog and first-party benchmark runs as
+        the <a href="/build-planner" style="text-decoration:underline">Budgets</a> side — see
+        <a href="/research" style="text-decoration:underline">Evidence</a> for how those numbers are made.</p>
+    </section>
+  </div>
+</Base>

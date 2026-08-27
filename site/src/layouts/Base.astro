@@ -29,14 +29,15 @@ const site = Astro.site!;
 const url = new URL(Astro.url.pathname, site).href;
 const image = new URL(og + (og.includes('?') ? '&' : '?') + 'v=' + OG_V, site).href;
 const path = Astro.url.pathname;
-// Stage 1.3 (Roy's note 3, 2026-08-26): "Lets rename the build tab to the
-// Top nav holds the four product surfaces only (operator direction,
-// 2026-08-26): Models/Compare/Harness/Methodology move to the footer,
-// Pricing is unlinked everywhere and surfaces only from the signup and
-// pro-feature gates. /build-planner and /local-hardware URLs and file
-// paths are unchanged — labels only.
+// Enterprise suite nav (2026-08-27, approved mocks): the site is the AI
+// spend suite — Budgets (the Composer, budget side), Actuals (seat
+// reprice/waitlist), Hardware (local build-out), Evidence (the benchmark
+// layer, demoted from headline to receipts). URLs and file paths are
+// unchanged — labels only, plus the new /actuals page.
+// Models/Compare/Harness/Methodology stay in the footer; Pricing surfaces
+// only from signup and pro-feature gates.
 const NAV = [
-  ['/', 'Calculator'], ['/build-planner', 'Composer'], ['/local-hardware', 'Local'], ['/research', 'Research'],
+  ['/', 'Overview'], ['/build-planner', 'Budgets'], ['/actuals', 'Actuals'], ['/local-hardware', 'Hardware'], ['/research', 'Evidence'],
 ];
 const FOOTER_NAV = [
   ...NAV, ['/models', 'Models'], ['/compare', 'Compare'], ['/harness', 'Harness'], ['/methodology', 'Methodology'],
@@ -66,7 +67,7 @@ const CHECKOUT_UI_ENABLED = import.meta.env.PUBLIC_STRIPE_CHECKOUT_ENABLED === '
   <title>{title}</title>
   <meta name="description" content={description} />
   <link rel="canonical" href={url} />
-  <meta name="theme-color" id="theme-color" content="#F8F6EE" />
+  <meta name="theme-color" id="theme-color" content="#F4F5F7" />
   <script is:inline>(function(){try{var t=localStorage.getItem('theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
   <meta property="og:type" content={type} />
   <meta property="og:site_name" content="Solvency" />
@@ -118,7 +119,7 @@ const CHECKOUT_UI_ENABLED = import.meta.env.PUBLIC_STRIPE_CHECKOUT_ENABLED === '
         <svg class="i-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
         <svg class="i-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
       </button>
-      <script is:inline>(function(){var b=document.getElementById('theme-toggle'),r=document.documentElement;function cur(){return r.getAttribute('data-theme')||'light';}function state(){var l=cur()==='light';b.setAttribute('aria-pressed',l?'true':'false');var m=document.getElementById('theme-color');if(m)m.setAttribute('content',l?'#F8F6EE':'#0A0C0D');}b.addEventListener('click',function(){var next=cur()==='light'?'dark':'light';r.setAttribute('data-theme',next);try{localStorage.setItem('theme',next);}catch(e){}state();});state();
+      <script is:inline>(function(){var b=document.getElementById('theme-toggle'),r=document.documentElement;function cur(){return r.getAttribute('data-theme')||'light';}function state(){var l=cur()==='light';b.setAttribute('aria-pressed',l?'true':'false');var m=document.getElementById('theme-color');if(m)m.setAttribute('content',l?'#F4F5F7':'#101116');}b.addEventListener('click',function(){var next=cur()==='light'?'dark':'light';r.setAttribute('data-theme',next);try{localStorage.setItem('theme',next);}catch(e){}state();});state();
       var n=document.getElementById('nav-list'),c=n.querySelector('[aria-current="page"]');function more(){if(n.scrollLeft+n.clientWidth<n.scrollWidth-1)n.setAttribute('data-more','1');else n.removeAttribute('data-more');}function place(){if(c&&n.scrollWidth>n.clientWidth+1)n.scrollLeft=Math.max(0,c.offsetLeft-(n.clientWidth-c.offsetWidth)/2);more();}n.addEventListener('scroll',more,{passive:true});addEventListener('resize',function(){requestAnimationFrame(place);});requestAnimationFrame(place);})();</script>
       {CLERK_ENABLED && (
         <div class="site-header-auth shrink-0 flex items-center">
@@ -185,8 +186,8 @@ const CHECKOUT_UI_ENABLED = import.meta.env.PUBLIC_STRIPE_CHECKOUT_ENABLED === '
     <div class="wrap pt-10 pb-16 grid gap-8 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
       <div>
         <p class="lockup"><Logo size={20} /><span class="wordmark"><b>S</b>OLVENCY</span></p>
-        <p class="mt-3 text-sm max-w-md leading-relaxed">Cost per solved task for AI coding models. Where a number does not exist, it is reported as missing rather than estimated.</p>
-        <p class="mt-4 small">Benchmark data is third-party, cited and linked, and is not redistributed.</p>
+        <p class="mt-3 text-sm max-w-md leading-relaxed">The AI spend suite: budget a stack, reconcile the bill, right-size the seats — built on first-party task-level benchmarks. Where a number does not exist, it is reported as missing rather than estimated.</p>
+        <p class="mt-4 small">Third-party benchmark data is cited and linked, and is not redistributed.</p>
         <p class="small"><a class="link small-sans" href={aa?.attribution_url}>{aa?.attribution}</a>.</p>
       </div>
       <div>
