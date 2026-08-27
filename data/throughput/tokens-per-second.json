@@ -1,0 +1,279 @@
+{
+  "derived": "2026-08-27",
+  "basis": "derived_from_bench_journals_wall_clock",
+  "note": "Output tokens / wall seconds per single-call attempt (network + queue included, so a conservative floor on generation speed); bare-API runs only; attempts under 50 output tokens or 500ms excluded; provider routing via OpenRouter unless noted. Feeds the Composer schedule-length model (\u00a721 roadmap #4).",
+  "models": [
+    {
+      "model_id": "ling-3.0-flash",
+      "openrouter_slug": "inclusionai/ling-3.0-flash",
+      "median_output_tokens_per_second": 383.8,
+      "p25": 239.5,
+      "p75": 443.3,
+      "samples": 36
+    },
+    {
+      "model_id": "qwen3.7-flash",
+      "openrouter_slug": "qwen/qwen3.7-flash",
+      "median_output_tokens_per_second": 201.2,
+      "p25": 192.1,
+      "p75": 220.4,
+      "samples": 31
+    },
+    {
+      "model_id": "nex-n2-mini",
+      "openrouter_slug": "nex-agi/nex-n2-mini",
+      "median_output_tokens_per_second": 135.5,
+      "p25": 131.3,
+      "p75": 149.4,
+      "samples": 36
+    },
+    {
+      "model_id": "lfm-2.5-2.6b:free",
+      "openrouter_slug": "liquid/lfm-2.5-2.6b:free",
+      "median_output_tokens_per_second": 132.0,
+      "p25": 108.0,
+      "p75": 146.5,
+      "samples": 36
+    },
+    {
+      "model_id": "ministral-3b-2512",
+      "openrouter_slug": "mistralai/ministral-3b-2512",
+      "median_output_tokens_per_second": 119.4,
+      "p25": 99.4,
+      "p75": 136.4,
+      "samples": 33
+    },
+    {
+      "model_id": "north-mini-code:free",
+      "openrouter_slug": "cohere/north-mini-code:free",
+      "median_output_tokens_per_second": 117.2,
+      "p25": 102.7,
+      "p75": 150.2,
+      "samples": 36
+    },
+    {
+      "model_id": "minimax-m3",
+      "openrouter_slug": "minimax/minimax-m3",
+      "median_output_tokens_per_second": 114.3,
+      "p25": 49.3,
+      "p75": 156.0,
+      "samples": 36
+    },
+    {
+      "model_id": "granite-4.1-8b",
+      "openrouter_slug": "ibm-granite/granite-4.1-8b",
+      "median_output_tokens_per_second": 102.2,
+      "p25": 93.2,
+      "p75": 107.2,
+      "samples": 33
+    },
+    {
+      "model_id": "dots-3-note-preview:free",
+      "openrouter_slug": "dots-studio/dots-3-note-preview:free",
+      "median_output_tokens_per_second": 86.0,
+      "p25": 56.2,
+      "p75": 90.8,
+      "samples": 36
+    },
+    {
+      "model_id": "reka-edge",
+      "openrouter_slug": "rekaai/reka-edge",
+      "median_output_tokens_per_second": 77.1,
+      "p25": 70.0,
+      "p75": 89.6,
+      "samples": 27
+    },
+    {
+      "model_id": "mythomax-l2-13b",
+      "openrouter_slug": "gryphe/mythomax-l2-13b",
+      "median_output_tokens_per_second": 76.6,
+      "p25": 70.5,
+      "p75": 81.1,
+      "samples": 36
+    },
+    {
+      "model_id": "nemotron-3.5-content-safety:free",
+      "openrouter_slug": "nvidia/nemotron-3.5-content-safety:free",
+      "median_output_tokens_per_second": 73.4,
+      "p25": 65.8,
+      "p75": 77.6,
+      "samples": 36
+    },
+    {
+      "model_id": "laguna-s-2.1",
+      "openrouter_slug": "poolside/laguna-s-2.1",
+      "median_output_tokens_per_second": 69.8,
+      "p25": 59.3,
+      "p75": 84.6,
+      "samples": 36
+    },
+    {
+      "model_id": "glm-5.3",
+      "openrouter_slug": "z-ai/glm-5.3",
+      "median_output_tokens_per_second": 69.7,
+      "p25": 67.4,
+      "p75": 73.4,
+      "samples": 36
+    },
+    {
+      "model_id": "llama-4-scout",
+      "openrouter_slug": "meta-llama/llama-4-scout",
+      "median_output_tokens_per_second": 67.9,
+      "p25": 59.1,
+      "p75": 123.4,
+      "samples": 33
+    },
+    {
+      "model_id": "mistral-small-24b-instruct-2501",
+      "openrouter_slug": "mistralai/mistral-small-24b-instruct-2501",
+      "median_output_tokens_per_second": 65.9,
+      "p25": 55.8,
+      "p75": 74.2,
+      "samples": 36
+    },
+    {
+      "model_id": "l3-lunaris-8b",
+      "openrouter_slug": "sao10k/l3-lunaris-8b",
+      "median_output_tokens_per_second": 65.4,
+      "p25": 58.9,
+      "p75": 72.9,
+      "samples": 33
+    },
+    {
+      "model_id": "glm-5.3-flash",
+      "openrouter_slug": "z-ai/glm-5.3-flash",
+      "median_output_tokens_per_second": 57.9,
+      "p25": 53.3,
+      "p75": 62.6,
+      "samples": 36
+    },
+    {
+      "model_id": "deepseek-v4-flash",
+      "openrouter_slug": "deepseek/deepseek-v4-flash",
+      "median_output_tokens_per_second": 56.6,
+      "p25": 22.9,
+      "p75": 88.3,
+      "samples": 36
+    },
+    {
+      "model_id": "nemotron-3-nano-omni-30b-a3b-reasoning:free",
+      "openrouter_slug": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+      "median_output_tokens_per_second": 55.8,
+      "p25": 52.1,
+      "p75": 61.0,
+      "samples": 26
+    },
+    {
+      "model_id": "hunyuan-a13b-instruct",
+      "openrouter_slug": "tencent/hunyuan-a13b-instruct",
+      "median_output_tokens_per_second": 47.4,
+      "p25": 44.2,
+      "p75": 48.9,
+      "samples": 36
+    },
+    {
+      "model_id": "gpt-5.6-sol",
+      "openrouter_slug": "openai/gpt-5.6-sol",
+      "median_output_tokens_per_second": 46.9,
+      "p25": 39.9,
+      "p75": 57.4,
+      "samples": 36
+    },
+    {
+      "model_id": "llama-4-maverick",
+      "openrouter_slug": "meta-llama/llama-4-maverick",
+      "median_output_tokens_per_second": 44.3,
+      "p25": 6.5,
+      "p75": 70.1,
+      "samples": 33
+    },
+    {
+      "model_id": "solar-pro4",
+      "openrouter_slug": "upstage/solar-pro4",
+      "median_output_tokens_per_second": 43.9,
+      "p25": 28.8,
+      "p75": 60.0,
+      "samples": 36
+    },
+    {
+      "model_id": "longcat-2.0",
+      "openrouter_slug": "meituan/longcat-2.0",
+      "median_output_tokens_per_second": 41.3,
+      "p25": 37.1,
+      "p75": 49.2,
+      "samples": 36
+    },
+    {
+      "model_id": "llama-3.1-8b-instruct",
+      "openrouter_slug": "meta-llama/llama-3.1-8b-instruct",
+      "median_output_tokens_per_second": 40.9,
+      "p25": 27.0,
+      "p75": 104.1,
+      "samples": 32
+    },
+    {
+      "model_id": "gemma-3-4b-it",
+      "openrouter_slug": "google/gemma-3-4b-it",
+      "median_output_tokens_per_second": 39.2,
+      "p25": 36.8,
+      "p75": 42.1,
+      "samples": 36
+    },
+    {
+      "model_id": "deepseek-v4-flash-0731",
+      "openrouter_slug": "deepseek/deepseek-v4-flash-0731",
+      "median_output_tokens_per_second": 37.0,
+      "p25": 12.0,
+      "p75": 89.6,
+      "samples": 36
+    },
+    {
+      "model_id": "granite-4.0-h-micro",
+      "openrouter_slug": "ibm-granite/granite-4.0-h-micro",
+      "median_output_tokens_per_second": 34.1,
+      "p25": 32.8,
+      "p75": 34.9,
+      "samples": 33
+    },
+    {
+      "model_id": "kimi-k3",
+      "openrouter_slug": "moonshotai/kimi-k3",
+      "median_output_tokens_per_second": 33.3,
+      "p25": 30.9,
+      "p75": 36.0,
+      "samples": 36
+    },
+    {
+      "model_id": "gpt-oss-120b",
+      "openrouter_slug": "openai/gpt-oss-120b",
+      "median_output_tokens_per_second": 30.2,
+      "p25": 26.7,
+      "p75": 92.1,
+      "samples": 36
+    },
+    {
+      "model_id": "mistral-nemo",
+      "openrouter_slug": "mistralai/mistral-nemo",
+      "median_output_tokens_per_second": 27.0,
+      "p25": 16.5,
+      "p75": 39.1,
+      "samples": 33
+    },
+    {
+      "model_id": "lyria-3-clip-preview",
+      "openrouter_slug": "google/lyria-3-clip-preview",
+      "median_output_tokens_per_second": 13.9,
+      "p25": 12.1,
+      "p75": 15.5,
+      "samples": 36
+    },
+    {
+      "model_id": "lyria-3-pro-preview",
+      "openrouter_slug": "google/lyria-3-pro-preview",
+      "median_output_tokens_per_second": 11.1,
+      "p25": 8.6,
+      "p75": 13.1,
+      "samples": 36
+    }
+  ]
+}
