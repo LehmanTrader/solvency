@@ -1,0 +1,111 @@
+{
+  "runId": "video-v0-2026-08-27",
+  "startedAt": "2026-08-27T02:05:36.702Z",
+  "finishedAt": "2026-08-27T02:08:03.008Z",
+  "prompts": [
+    {
+      "id": "product-orbit",
+      "text": "A slow orbit around a matte-black wireless headphone set on a marble pedestal, studio softbox lighting, shallow depth of field, premium product commercial look."
+    },
+    {
+      "id": "chef-pancake",
+      "text": "A chef in a bright kitchen flips a pancake in a cast-iron pan; the pancake spins and lands cleanly back in the pan; natural morning light."
+    },
+    {
+      "id": "valley-aerial",
+      "text": "Aerial drone shot pushing forward over a fog-covered pine valley at sunrise, god rays through the mist, cinematic color grade."
+    },
+    {
+      "id": "tokyo-rain",
+      "text": "A rainy Tokyo street at night; neon reflections on wet asphalt as a cyclist crosses frame left to right; handheld documentary feel."
+    },
+    {
+      "id": "iced-tea-spill",
+      "text": "A glass of iced tea tips over on a wooden table in slow motion; ice cubes scatter and liquid spreads toward the camera."
+    }
+  ],
+  "endpoints": [
+    {
+      "id": "bytedance/seedance-2.0/text-to-video",
+      "label": "Seedance 2.0",
+      "input": {
+        "duration": "5",
+        "resolution": "720p",
+        "aspect_ratio": "16:9"
+      }
+    },
+    {
+      "id": "bytedance/seedance-2.0/fast/text-to-video",
+      "label": "Seedance 2.0 Fast",
+      "input": {
+        "duration": "5",
+        "resolution": "720p",
+        "aspect_ratio": "16:9"
+      }
+    },
+    {
+      "id": "fal-ai/kling-video/v3/turbo/pro/text-to-video",
+      "label": "Kling V3 Turbo Pro",
+      "input": {
+        "duration": "5",
+        "aspect_ratio": "16:9"
+      }
+    },
+    {
+      "id": "fal-ai/kling-video/v3/turbo/standard/text-to-video",
+      "label": "Kling V3 Turbo Std",
+      "input": {
+        "duration": "5",
+        "aspect_ratio": "16:9"
+      }
+    },
+    {
+      "id": "minimax/h3/text-to-video",
+      "label": "MiniMax H3",
+      "input": {
+        "duration": "5",
+        "aspect_ratio": "16:9"
+      }
+    },
+    {
+      "id": "alibaba/happy-horse/v1.1/text-to-video",
+      "label": "Happy Horse 1.1",
+      "input": {
+        "duration": 5,
+        "aspect_ratio": "16:9",
+        "resolution": "720p"
+      }
+    },
+    {
+      "id": "alibaba/wan-3.0/text-to-video",
+      "label": "Wan 3.0",
+      "input": {
+        "duration": "5",
+        "aspect_ratio": "16:9"
+      }
+    },
+    {
+      "id": "fal-ai/veo3.1/lite",
+      "label": "Veo 3.1 Lite",
+      "input": {
+        "aspect_ratio": "16:9"
+      }
+    },
+    {
+      "id": "lightricks/ltx-2.5/text-to-video/fast",
+      "label": "LTX 2.5 Fast",
+      "input": {
+        "aspect_ratio": "16:9"
+      }
+    },
+    {
+      "id": "fal-ai/pixverse/c1/text-to-video",
+      "label": "PixVerse C1",
+      "input": {
+        "duration": "5",
+        "aspect_ratio": "16:9"
+      }
+    }
+  ],
+  "protocol": "solvency-video-v0: 5 prompts x 1 trial, ~5s 16:9 target, completion = playable video returned; dollars merged from fal billing records per endpoint over the run window"
+}
