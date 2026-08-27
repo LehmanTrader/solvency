@@ -39,7 +39,7 @@ test('the Markdown pipeline gives every Note 01 data table a static hidden capti
   assert.deepEqual(captions.map((caption: any) => caption.properties.className), Array(5).fill(['sr-only']));
   assert.deepEqual(captions.map((caption: any) => caption.children[0].value), [
     'Measured model and harness results, including cost per task and cost per solved task.',
-    'Modelled cost per solved task by benchmark source, pass rate, age and workload tier.',
+    'Modeled cost per solved task by benchmark source, pass rate, age and workload tier.',
     'Retry-cost calculation variants and their formulas.',
     'Cost-model assumptions, values and provenance.',
     'Research sources, coverage, cost publication and newest available entry.',

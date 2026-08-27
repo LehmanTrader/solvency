@@ -2,7 +2,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { compute, DEFAULTS, GROUPS, gateDelta, calloutHtml, projectTotalHtml, type Settings } from '../site/src/lib/calc.ts';
 
-/** Which group every model lands in (measured / modelled / stale / missing) under one setting. */
+/** Which group every model lands in (measured / modeled / stale / missing) under one setting. */
 function membership(s: Settings): Record<string, string> {
   const { rows, missing } = compute(s);
   const out: Record<string, string> = {};
@@ -93,7 +93,7 @@ describe('group membership is invariant under every assumption control', () => {
     });
   });
 
-  test('gateDelta reports a no-op when nothing moved, and names the top modelled row when it did', () => {
+  test('gateDelta reports a no-op when nothing moved, and names the top modeled row when it did', () => {
     const before = compute(DEFAULTS).rows;
     const same = gateDelta(before, compute({ ...DEFAULTS, frontier: false }).rows, 'Frontier efficiency off');
     assert.equal(same.moved, false);
@@ -101,6 +101,6 @@ describe('group membership is invariant under every assumption control', () => {
     const d = gateDelta(before, after, 'Cache 50%');
     assert.equal(d.moved, true);
     const top = after.find((r) => r.basisKey === 'modelled_by_solvency')!;
-    assert.ok(d.text.includes(top.m.display_name), `names the top modelled row: ${d.text}`);
+    assert.ok(d.text.includes(top.m.display_name), `names the top modeled row: ${d.text}`);
   });
 });

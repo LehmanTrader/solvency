@@ -3,7 +3,7 @@
  * free-model-coverage guards (docs/free-models-scoping.md §2B/§2C/§7):
  *   - ratio()/fmtX() must never render the literal string "Infinity" when a
  *     $0 price reaches them (the confirmed /research hazard, §2C).
- *   - leaderboard()'s measured/modelled/historical buckets must never admit
+ *   - leaderboard()'s measured/modeled/historical buckets must never admit
  *     an access_tier "free" row, however cheap it computes to be -- that is
  *     what keeps headline()'s cheap/dear selection (the homepage hero,
  *     /research and tweetText()) from ever presenting a rate-capped $0 row
@@ -41,7 +41,7 @@ describe('leaderboard(): free-tier rows never enter a superlative bucket', () =>
     assert.ok(models.some((m) => m.access_tier === 'free'), 'expected at least one free-tier model in data/models.json');
   });
 
-  test('no row in measured/modelled/historical belongs to an access_tier "free" model', () => {
+  test('no row in measured/modeled/historical belongs to an access_tier "free" model', () => {
     const lb = leaderboard('heavy');
     for (const bucket of [lb.measured, lb.modelled, lb.historical]) {
       for (const row of bucket) assert.notEqual(row.m.access_tier, 'free', `${row.m.model_id} leaked into a superlative bucket`);

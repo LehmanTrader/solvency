@@ -4,7 +4,7 @@
  * Three classes of control:
  *   free  — the question itself: tier, volume, retry model, compare, copy link.
  *   soft  — the assumption controls (cache, takeover, frontier). They move
- *           modelled rows only. The first touch is let through so the visitor
+ *           modeled rows only. The first touch is let through so the visitor
  *           sees the rows move, then an inline card beneath them names the
  *           concrete delta and asks for the free account. "Keep exploring
  *           without it" reverts the change; from then on (once per session)

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-27T00:27:02.258Z",
+  "generated_at": "2026-08-27T01:30:12.067Z",
   "cards": {
     "note-01": {
       "key": "note-01",
@@ -323,7 +323,7 @@
         }
       ],
       "sourceLine": "Source: Solvency Build Composer engine, template assumptions",
-      "noteLine": "NOTE: MODELLED, ROLE USAGE × VERIFIED PRICES · 2026-08-26",
+      "noteLine": "NOTE: MODELED, ROLE USAGE × VERIFIED PRICES · 2026-08-26",
       "raw": {
         "note": 4,
         "planIds": [
@@ -1095,7 +1095,7 @@
     },
     "model-gemini-3.1-pro-preview": {
       "key": "model-gemini-3.1-pro-preview",
-      "eyebrow": "COST PER SOLVED TASK, MODELLED · LEGACY & PREVIEW MODELS",
+      "eyebrow": "COST PER SOLVED TASK, MODELED · LEGACY & PREVIEW MODELS",
       "headlinePrefix": "Our loop model prices ",
       "headlineHighlight": "Gemini 3.1 Pro (preview)",
       "headlineSuffix": " at $4.30 per solved task.",
@@ -1151,7 +1151,7 @@
       ],
       "barMax": 9.806057964698192,
       "sourceLine": "Source: Scale SEAL, SWE-bench Pro (labs.scale.com)",
-      "noteLine": "NOTE: MODELLED COST, TASK-TIER MODEL · VERIFIED 2026-08-21",
+      "noteLine": "NOTE: MODELED COST, TASK-TIER MODEL · VERIFIED 2026-08-21",
       "raw": {
         "modelId": "gemini-3.1-pro-preview",
         "cost": 4.295010845986985,
@@ -1785,7 +1785,7 @@
     },
     "model-gpt-5.4": {
       "key": "model-gpt-5.4",
-      "eyebrow": "COST PER SOLVED TASK, MODELLED · LEGACY & PREVIEW MODELS",
+      "eyebrow": "COST PER SOLVED TASK, MODELED · LEGACY & PREVIEW MODELS",
       "headlinePrefix": "Our loop model prices ",
       "headlineHighlight": "GPT-5.4",
       "headlineSuffix": " at $4.19 per solved task.",
@@ -1841,7 +1841,7 @@
       ],
       "barMax": 9.806057964698192,
       "sourceLine": "Source: Scale SEAL, SWE-bench Pro (labs.scale.com)",
-      "noteLine": "NOTE: MODELLED COST, TASK-TIER MODEL · VERIFIED 2026-08-21",
+      "noteLine": "NOTE: MODELED COST, TASK-TIER MODEL · VERIFIED 2026-08-21",
       "raw": {
         "modelId": "gpt-5.4",
         "cost": 4.187817258883248,
@@ -35523,7 +35523,7 @@
     },
     "ranked-modelled-cost-per-solved-task": {
       "key": "ranked-modelled-cost-per-solved-task",
-      "eyebrow": "COST PER SOLVED TASK, MODELLED · LEGACY & PREVIEW MODELS",
+      "eyebrow": "COST PER SOLVED TASK, MODELED · LEGACY & PREVIEW MODELS",
       "headlinePrefix": "Our loop model prices ",
       "headlineHighlight": "GPT-5.4",
       "headlineSuffix": " lowest — $4.19 per solved task.",
@@ -35570,7 +35570,7 @@
         }
       ],
       "sourceLine": "Source: Scale SEAL, SWE-bench Pro (labs.scale.com)",
-      "noteLine": "NOTE: MODELLED COST, TASK-TIER MODEL · VERIFIED 2026-08-21",
+      "noteLine": "NOTE: MODELED COST, TASK-TIER MODEL · VERIFIED 2026-08-21",
       "raw": {
         "modelIds": [
           "gpt-5.4",

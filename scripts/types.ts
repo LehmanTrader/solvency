@@ -74,11 +74,11 @@ export interface BenchmarkResult {
    * `free_tier_capped` (free-model coverage, docs/free-models-scoping.md §4):
    * a benchmark row for an `access_tier === 'free'` model. Deliberately NOT
    * matched by extrasFor()'s `measured_by_source`/`source_usage_repriced`
-   * checks, so the engine always falls through to the ordinary modelled path
+   * checks, so the engine always falls through to the ordinary modeled path
    * (loop model at the model's own -- $0 -- price); it exists purely so
    * calc.ts/headline.ts's basisKey grouping puts the row in its own fourth
    * group by construction, the same mechanism that already keeps measured
-   * rows from ever blending with modelled ones.
+   * rows from ever blending with modeled ones.
    */
   cost_basis: 'measured_by_source' | 'source_usage_repriced' | 'modelled_by_solvency' | 'historical_at_run_date' | 'free_tier_capped';
   tasks_n: number;

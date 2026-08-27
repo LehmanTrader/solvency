@@ -215,7 +215,7 @@ npm test                                     # test/task-report.test.ts re-deriv
 ```
 
 Every summary figure in section 2 is directly re-derivable from `final_table.csv`'s
-`count_used` column, grouped by `bucket`. No number in this note is interpolated or modelled —
+`count_used` column, grouped by `bucket`. No number in this note is interpolated or modeled —
 every task count comes from a `gh api` response; every dollar figure in section 4 comes from a
 row in `data/models.json` or a headline number already published in
 [Cost Per Solved Task](/research/cost-per-solved-task).

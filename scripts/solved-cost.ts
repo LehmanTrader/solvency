@@ -65,7 +65,7 @@ export function costPerAttempt(
   if (opts.cacheHitFraction > 0 && model.cached_input_per_mtok === null) {
     missing.push(
       `${model.model_id}: no published cached-input price, so a ` +
-      `${(opts.cacheHitFraction * 100).toFixed(0)}% cache hit rate cannot be modelled`,
+      `${(opts.cacheHitFraction * 100).toFixed(0)}% cache hit rate cannot be modeled`,
     );
     return { value: null, missing, provenance };
   }
@@ -121,7 +121,7 @@ export interface SolvedCostExtras {
   passRateProvenance?: Provenance;
   /**
    * A per-task cost the benchmark source actually OBSERVED. When supplied it
-   * replaces the modelled attempt cost outright: no loop count, no
+   * replaces the modeled attempt cost outright: no loop count, no
    * frontier-efficiency multiplier, no per-loop token assumption is applied.
    * This is the preferred basis wherever a source publishes it.
    */

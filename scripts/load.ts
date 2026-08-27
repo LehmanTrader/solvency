@@ -31,7 +31,7 @@ export const TIER_NAMES: TierName[] = ['light', 'moderate', 'heavy'];
  * Source preference, best first. Ordered by how few Solvency assumptions the
  * row requires, then by freshness:
  *   1. AA  -- publishes an observed per-task cost, so the loop model is bypassed entirely.
- *   2. SEAL -- current models, uniform scaffolding, but pass rate only (cost is modelled).
+ *   2. SEAL -- current models, uniform scaffolding, but pass rate only (cost is modeled).
  *   3. Aider -- pass rate only AND stale (nothing newer than 2025-10-03).
  */
 export const SOURCE_PREFERENCE = ['aa-coding-agent-index', 'seal-swe-bench-pro', 'aider-polyglot', 'solvency-bench-v0', 'solvency-bench-a1'];

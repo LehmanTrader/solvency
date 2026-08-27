@@ -43,14 +43,14 @@ const nPass = models.filter((m) => bestResultFor(m.model_id)).length;
               <td class="r">{price(m.output_per_mtok)}</td>
               <td class={`r ${m.cached_input_per_mtok === null ? 'missing' : ''}`}>{price(m.cached_input_per_mtok) ?? 'missing'}</td>
               <td class={`r ${r ? '' : 'missing'}`}>{r ? `${Math.round(r.pass_rate * 100)}%` : 'missing'}</td>
-              <td class="muted">{r ? (r.cost_basis === 'measured_by_source' ? 'measured' : r.cost_basis === 'historical_at_run_date' ? 'modelled · stale' : r.cost_basis === 'free_tier_capped' ? 'free · rate-capped' : 'modelled') : '—'}</td>
+              <td class="muted">{r ? (r.cost_basis === 'measured_by_source' ? 'measured' : r.cost_basis === 'historical_at_run_date' ? 'modeled · stale' : r.cost_basis === 'free_tier_capped' ? 'free · rate-capped' : 'modelled') : '—'}</td>
               <td class={`r ${s ? (BASIS_OF[s.basisKey] ?? 'modelled') : 'missing'}`}>{s ? money(s.cost) : 'missing'}</td>
               <td class="muted">{m.last_verified}</td>
             </tr>); })}
         </tbody>
       </table></div>
     </div>
-    <Provenance verified={verified} note="Measured and modelled figures in the last column are on different bases and must not be ranked against each other; see the leaderboard for the separated ranking." />
+    <Provenance verified={verified} note="Measured and modeled figures in the last column are on different bases and must not be ranked against each other; see the leaderboard for the separated ranking." />
   </div>
 </Base>
 

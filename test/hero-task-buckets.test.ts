@@ -15,7 +15,7 @@ import { TASK_BUCKETS, bucketById, fmtTasks } from '../site/src/lib/tasks.ts';
 const ROOT = join(import.meta.dirname, '..');
 const CSV = join(ROOT, 'data', 'task-study', 'final_table.csv');
 
-// ---- minimal CSV parser, identical in behaviour to test/task-report.test.ts --
+// ---- minimal CSV parser, identical in behavior to test/task-report.test.ts --
 function parseCsv(text: string): Record<string, string>[] {
   const lines = text.trim().split('\n');
   const splitRow = (line: string): string[] => {

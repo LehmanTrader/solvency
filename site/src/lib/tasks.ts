@@ -41,7 +41,7 @@ function findRepoRoot(startDir: string): string {
 const CSV_PATH = join(findRepoRoot(dirname(fileURLToPath(import.meta.url))), 'data', 'task-study', 'final_table.csv');
 
 // ---- minimal CSV parser (handles quoted fields with embedded commas) ------
-// Identical in behaviour to the parser in test/task-report.test.ts.
+// Identical in behavior to the parser in test/task-report.test.ts.
 function parseCsv(text: string): Record<string, string>[] {
   const lines = text.trim().split('\n');
   const splitRow = (line: string): string[] => {

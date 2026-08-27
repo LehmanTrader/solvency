@@ -2,7 +2,7 @@
  * Headline table: cost per solved task at current prices.
  *   node scripts/table.ts [--variant=naive|capped|truncatedGeometric]
  *
- * Rows split by cost basis, because a measured cost and a modelled cost are not
+ * Rows split by cost basis, because a measured cost and a modeled cost are not
  * the same kind of number and must never be read as one column.
  */
 import { models, tiers, assumptions, bestResultFor, extrasFor, sourceFor, stalenessDays, TIER_NAMES } from './load.ts';
@@ -16,7 +16,7 @@ const money = (n: number) => (n >= 100 ? `$${n.toFixed(0)}` : `$${n.toFixed(2)}`
 
 const rows = models.map((m) => ({ m, r: bestResultFor(m.model_id) })).filter((x) => x.r);
 const measured = rows.filter((x) => x.r!.cost_basis === 'measured_by_source');
-const modelled = rows.filter((x) => x.r!.cost_basis !== 'measured_by_source');
+const modeled = rows.filter((x) => x.r!.cost_basis !== 'measured_by_source');
 
 console.log(`COST PER SOLVED TASK  --  variant=${variant}  --  computed ${asOf}\n`);
 
@@ -33,10 +33,10 @@ for (const { m, r } of measured.sort((a, b) => b.r!.pass_rate - a.r!.pass_rate))
   );
 }
 
-console.log(`\n== MODELLED  (pass rate published, cost from Solvency's ASSUMED loop model) ==`);
+console.log(`\n== MODELED  (pass rate published, cost from Solvency's ASSUMED loop model) ==`);
 console.log(`${'model'.padEnd(24)}${'source'.padEnd(13)}${'pass'.padStart(6)}${'age'.padStart(7)}` + TIER_NAMES.map((t) => t.padStart(10)).join(''));
 console.log('-'.repeat(80));
-for (const { m, r } of modelled.sort((a, b) => b.r!.pass_rate - a.r!.pass_rate)) {
+for (const { m, r } of modeled.sort((a, b) => b.r!.pass_rate - a.r!.pass_rate)) {
   const cells = TIER_NAMES.map((t) => {
     const out = costPerSolvedTask(m, t, tiers[t], r!.pass_rate, opts, extrasFor(r!));
     return (out.value === null ? 'MISSING' : money(out.value[variant])).padStart(10);
@@ -51,4 +51,4 @@ console.log(`\n== NO PASS RATE ANYWHERE (shown as MISSING, never imputed) ==`);
 console.log('  ' + (uncovered.map((m) => m.model_id).join(', ') || 'none'));
 
 console.log(`\nMeasured rows: ${sourceFor('aa-coding-agent-index').attribution}. Harness+model pairs, not bare models.`);
-console.log(`Modelled rows apply the loop model + frontier-efficiency multiplier -- both ASSUMPTIONS. See data/assumptions.json.`);
+console.log(`Modeled rows apply the loop model + frontier-efficiency multiplier -- both ASSUMPTIONS. See data/assumptions.json.`);

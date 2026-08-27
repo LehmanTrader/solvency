@@ -37,9 +37,9 @@ describe('report matches the dataset', () => {
     }
   });
 
-  test('modelled table figures re-derive for all three tiers', () => {
+  test('modeled table figures re-derive for all three tiers', () => {
     const rows = md.split('\n').filter((l) => /^\| .+ \| (Aider|SEAL) \| \d+% \|/.test(l));
-    assert.equal(rows.length, 11, 'expected 11 modelled rows in the report');
+    assert.equal(rows.length, 11, 'expected 11 modeled rows in the report');
     for (const line of rows) {
       const [name, , pass, , light, moderate, heavy] = cells(line);
       const m = byName(name);

@@ -32,7 +32,7 @@ import { pathToFileURL } from 'node:url';
 import { join } from 'node:path';
 import {
   ROOT, allReportFrontmatter, noteCardData, homeCardData, currentModels, modelCardData,
-  rankedCostCardData, rankedHarnessCardData, rankedSolvencyHarnessCardData, rankedModelledCardData,
+  rankedCostCardData, rankedHarnessCardData, rankedSolvencyHarnessCardData, rankedModeledCardData,
   type RankedCardData, type RankedRow, type RankedBasis,
 } from './og-card-data.ts';
 
@@ -82,7 +82,7 @@ const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 const RC_BG = '#F8F6EE', RC_INK = '#17150F', RC_MUTED = '#8A7F6C', RC_RULE = '#E2DAC8';
 // Data accent (docs/redesign-2026-08/direction.md §1/§3, stage 1.1 color
 // note): a vivid violet, the same hue for both measured (solid) and
-// modelled (hatched) bars — the hatch alone carries the basis distinction.
+// modeled (hatched) bars — the hatch alone carries the basis distinction.
 // Brand amber is reserved for highlight/brand duty only (headline
 // highlighter, #1-row outline + circle below) and never doubles as a bar
 // color, so the two jobs stay visually separate.
@@ -129,7 +129,7 @@ const rankedMarkSvg = (px: number) =>
 
 /** Measured/harness bars are solid purple (both are observed-cost bases, no
  * loop assumption — harness rows are source_usage_repriced, same solid
- * treatment as measured); modelled bars are the same purple hatched; stale
+ * treatment as measured); modeled bars are the same purple hatched; stale
  * bars are a dashed hollow outline — same basis semantics as
  * site/src/lib/charts.ts, just CSS instead of an SVG pattern. Brand amber
  * never appears here; it is reserved for the headline highlight and the
@@ -148,7 +148,7 @@ function rankedRowHtml(r: RankedRow, rank: number, maxCost: number, rowH: number
   const pct = maxCost > 0 ? Math.max(4, Math.round((r.cost / maxCost) * 100)) : 4;
   // A row's own `lead` wins when set (a per-model default card outlines its
   // subject wherever it actually ranks); otherwise rank 1 is lead, the
-  // original leaderboard-card behaviour (rankedCostCardData and friends
+  // original leaderboard-card behavior (rankedCostCardData and friends
   // never set `lead`, so nothing changes for them).
   const lead = r.lead ?? rank === 1;
   // Founder review 2026-08-26: the provider chip sits BESIDE the name, the
@@ -278,9 +278,9 @@ else console.log('ranked-harness: skipped — no model currently has more than o
 const solvencyHarnessCard = rankedSolvencyHarnessCardData();
 if (solvencyHarnessCard) rankedCards.push(solvencyHarnessCard);
 else console.log('ranked-harness-solvency: skipped — no first-party harness study on disk');
-const modelledCard = rankedModelledCardData();
-if (modelledCard) rankedCards.push(modelledCard);
-else console.log('ranked-modelled: skipped — no modelled current models to rank');
+const modeledCard = rankedModeledCardData();
+if (modeledCard) rankedCards.push(modeledCard);
+else console.log('ranked-modelled: skipped — no modeled current models to rank');
 
 for (const card of rankedCards) {
   renderRanked(card);

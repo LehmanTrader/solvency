@@ -41,7 +41,7 @@ import '../../styles/global.css';
     return out.value ? { m, r, cost: out.value.naive, basis: out.value.costBasis } : null;
   }).filter(Boolean) as any[];
 
-  // one basis only: mixing measured and modelled costs in one ranked list is invalid
+  // one basis only: mixing measured and modeled costs in one ranked list is invalid
   const measured = rows.filter((x) => x.basis === 'measured_by_source');
   const show = (measured.length ? measured : rows).sort((a, b) => a.cost - b.cost);
   const body = document.getElementById('e-body')!;
@@ -49,7 +49,7 @@ import '../../styles/global.css';
     const tr = document.createElement('tr'); tr.className = 'border-b border-[var(--color-rule)]';
     const name = document.createElement('td'); name.className = 'py-1.5 pr-3 text-[var(--color-ink)]'; name.textContent = m.display_name;
     const pass = document.createElement('td'); pass.className = 'px-3 text-right text-[var(--color-body)]'; pass.textContent = `${(r.pass_rate * 100).toFixed(0)}%`;
-    // Data accent (purple), not brand amber — this is the "measured/modelled" job, never brand/highlight.
+    // Data accent (purple), not brand amber — this is the "measured/modeled" job, never brand/highlight.
     // Two full literal class strings, not a template-built one: Tailwind's
     // static scanner needs the whole arbitrary-value class present verbatim
     // in source to generate its rule.
@@ -62,6 +62,6 @@ import '../../styles/global.css';
     return tr;
   }));
   document.getElementById('e-note')!.textContent =
-    `${measured.length ? 'Measured' : 'Modelled'} basis · ${tier} tier · prices verified ${models[0].last_verified}`;
+    `${measured.length ? 'Measured' : 'Modeled'} basis · ${tier} tier · prices verified ${models[0].last_verified}`;
 </script>
 </body></html>

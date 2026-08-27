@@ -43,7 +43,7 @@ export function solvedFor(modelId: string, tier: Tier = 'heavy'): Row | null {
  * ranked cheapest first.
  *
  * Engine guard (docs/free-models-scoping.md §2B/§7 item 4): `access_tier ===
- * 'free'` rows are excluded from measured/modelled/historical explicitly,
+ * 'free'` rows are excluded from measured/modeled/historical explicitly,
  * not just structurally (their basisKey is 'free_tier_capped', which
  * already fails every `by()` key match) — belt-and-suspenders against a
  * future data-entry mistake putting a free row's cost_basis on the wrong

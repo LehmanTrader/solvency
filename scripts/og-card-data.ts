@@ -194,7 +194,7 @@ function note04CardData(fm: ReportFrontmatter): RankedCardData {
     headlineSuffix: ' apart on composition alone — same workload, three ways to staff it.',
     rows,
     sourceLine: 'Source: Solvency Build Composer engine, template assumptions',
-    noteLine: `NOTE: MODELLED, ROLE USAGE × VERIFIED PRICES · ${fm.date}`,
+    noteLine: `NOTE: MODELED, ROLE USAGE × VERIFIED PRICES · ${fm.date}`,
     raw: { note: fm.note, planIds: rows.map((r) => r.id), spread },
   };
 }
@@ -233,7 +233,7 @@ export interface RankedRow {
   rank?: number;
   /** Marks the row the card is *about* (brand-amber outline), independent of
    * rank. Falls back to "rank 1" when no row sets this — the original
-   * leaderboard-card behaviour. */
+   * leaderboard-card behavior. */
   lead?: boolean;
 }
 
@@ -289,7 +289,7 @@ function excerptAroundId(rows: RankedRow[], keepId: string, max = 6): RankedRow[
 }
 
 /**
- * All current models with a measured (not modelled, not stale) cost per
+ * All current models with a measured (not modeled, not stale) cost per
  * solved task, cheapest first. Single basis, single source — verified by
  * asserting every row shares one benchmark before building the rows.
  * Shared by the homepage default card and every measured model's own
@@ -328,7 +328,7 @@ function measuredCostRows() {
 }
 
 /**
- * All current models with a measured (not modelled, not stale) cost per
+ * All current models with a measured (not modeled, not stale) cost per
  * solved task, cheapest first. Single basis, single source — verified by
  * asserting every row shares one benchmark before building the card.
  */
@@ -449,20 +449,20 @@ export function rankedSolvencyHarnessCardData(): RankedCardData | null {
  * All current models whose cost per solved task is modelled_by_solvency (a
  * published pass rate, but no source-observed cost — Solvency's task-tier
  * loop model fills the gap). Cheapest first. Kept separate from the measured
- * card: mixing modelled cost into a measured ranking is exactly the basis
+ * card: mixing modeled cost into a measured ranking is exactly the basis
  * blend the engine's docs forbid.
  */
-function modelledCostRows() {
-  const { modelled } = leaderboard('heavy');
-  if (!modelled.length) return null;
-  const benchmarks = new Set(modelled.map((r) => r.r.benchmark));
+function modeledCostRows() {
+  const { modelled: modeled } = leaderboard('heavy');
+  if (!modeled.length) return null;
+  const benchmarks = new Set(modeled.map((r) => r.r.benchmark));
   if (benchmarks.size !== 1) {
-    throw new Error(`modelledCostRows: modelled rows span multiple sources (${[...benchmarks].join(', ')}) — a single-basis card needs one`);
+    throw new Error(`modeledCostRows: modeled rows span multiple sources (${[...benchmarks].join(', ')}) — a single-basis card needs one`);
   }
   const src = sourceFor([...benchmarks][0]);
-  if (!src) throw new Error('modelledCostRows: no source metadata for the modelled benchmark');
+  if (!src) throw new Error('modeledCostRows: no source metadata for the modeled benchmark');
 
-  const rows: RankedRow[] = modelled.map((r) => ({
+  const rows: RankedRow[] = modeled.map((r) => ({
     id: r.m.model_id,
     name: r.m.display_name,
     chip: monogram(r.m.provider),
@@ -481,18 +481,18 @@ function modelledCostRows() {
  * All current models whose cost per solved task is modelled_by_solvency (a
  * published pass rate, but no source-observed cost — Solvency's task-tier
  * loop model fills the gap). Cheapest first. Kept separate from the measured
- * card: mixing modelled cost into a measured ranking is exactly the basis
+ * card: mixing modeled cost into a measured ranking is exactly the basis
  * blend the engine's docs forbid.
  */
-export function rankedModelledCardData(): RankedCardData | null {
-  const built = modelledCostRows();
+export function rankedModeledCardData(): RankedCardData | null {
+  const built = modeledCostRows();
   if (!built) return null;
   const { rows, src, leader, spread } = built;
 
   return {
     key: 'ranked-modelled-cost-per-solved-task',
-    eyebrow: 'COST PER SOLVED TASK, MODELLED · LEGACY & PREVIEW MODELS',
-    // Rewritten from the founder-flagged "<Model> is cheapest among modelled
+    eyebrow: 'COST PER SOLVED TASK, MODELED · LEGACY & PREVIEW MODELS',
+    // Rewritten from the founder-flagged "<Model> is cheapest among modeled
     // models." (clunky, doubled "modelled") to natural measured voice: say
     // what Solvency's loop model actually did (priced it), and lead with the
     // number, same as the measured card's headline pattern.
@@ -501,7 +501,7 @@ export function rankedModelledCardData(): RankedCardData | null {
     headlineSuffix: ` lowest — ${leader.value} per solved task.`,
     rows,
     sourceLine: `Source: Scale SEAL, SWE-bench Pro (${domainOf(src.source_url)})`,
-    noteLine: `NOTE: MODELLED COST, TASK-TIER MODEL · VERIFIED ${src.last_verified}`,
+    noteLine: `NOTE: MODELED COST, TASK-TIER MODEL · VERIFIED ${src.last_verified}`,
     raw: { modelIds: rows.map((r) => r.id), leaderId: leader.id, spread },
   };
 }
@@ -511,7 +511,7 @@ export function rankedModelledCardData(): RankedCardData | null {
  * cheapest first — the only ranking available for a model with no published
  * pass rate (so no cost-per-solved-task figure exists yet). `basis:
  * 'measured'` here means "a verified real number", not "a benchmark-measured
- * cost per solved task" — there is no modelled/stale ambiguity for a list
+ * cost per solved task" — there is no modeled/stale ambiguity for a list
  * price, so the bar is solid, same as any other verified figure.
  */
 function priceRankedRows(): RankedRow[] {
@@ -535,16 +535,16 @@ function priceRankedRows(): RankedRow[] {
  * it actually falls in the field, not repositioned to look like a winner.
  *
  * Basis is decided by which leaderboard('heavy') bucket the model is
- * actually in (the same split rankedCostCardData/rankedModelledCardData use)
+ * actually in (the same split rankedCostCardData/rankedModeledCardData use)
  * rather than re-deriving it — one source of truth for "is this row
- * measured or modelled." A model with no cost-per-solved-task result at all
+ * measured or modeled." A model with no cost-per-solved-task result at all
  * (no published pass rate yet) falls back to the list-price ranking above,
  * so every current model gets a truthful default card instead of none.
  */
 export function modelCardData(model: any): RankedCardData {
-  const { measured, modelled } = leaderboard('heavy');
+  const { measured, modelled: modeled } = leaderboard('heavy');
   const inMeasured = measured.some((r) => r.m.model_id === model.model_id);
-  const inModelled = modelled.some((r) => r.m.model_id === model.model_id);
+  const inModeled = modeled.some((r) => r.m.model_id === model.model_id);
 
   if (inMeasured) {
     const { allRows, src } = measuredCostRows();
@@ -564,21 +564,21 @@ export function modelCardData(model: any): RankedCardData {
     };
   }
 
-  if (inModelled) {
-    const built = modelledCostRows()!;
+  if (inModeled) {
+    const built = modeledCostRows()!;
     const { rows, src } = built;
     const barMax = Math.max(...rows.map((r) => r.cost));
     const mine = rows.find((r) => r.id === model.model_id)!;
     return {
       key: `model-${model.model_id}`,
-      eyebrow: 'COST PER SOLVED TASK, MODELLED · LEGACY & PREVIEW MODELS',
+      eyebrow: 'COST PER SOLVED TASK, MODELED · LEGACY & PREVIEW MODELS',
       headlinePrefix: 'Our loop model prices ',
       headlineHighlight: model.display_name,
       headlineSuffix: ` at ${mine.value} per solved task.`,
       rows: excerptAroundId(rows, model.model_id),
       barMax,
       sourceLine: `Source: Scale SEAL, SWE-bench Pro (${domainOf(src.source_url)})`,
-      noteLine: `NOTE: MODELLED COST, TASK-TIER MODEL · VERIFIED ${src.last_verified}`,
+      noteLine: `NOTE: MODELED COST, TASK-TIER MODEL · VERIFIED ${src.last_verified}`,
       raw: { modelId: model.model_id, cost: mine.cost, basisKey: 'modelled_by_solvency' },
     };
   }

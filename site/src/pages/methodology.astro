@@ -50,8 +50,8 @@ cost_per_solved_task = cost_per_attempt / pass_rate</code></pre>
     <h3 id="frontier">The frontier</h3>
     <p>The scatter on the calculator plots pass rate against cost per solved task. The
       frontier joins the <strong>measured</strong> models that no other measured model beats on
-      both axes at once — cheaper and at least as likely to solve the task. Modelled points are
-      drawn hollow and are never on the line, because a modelled cost and a measured cost are
+      both axes at once — cheaper and at least as likely to solve the task. Modeled points are
+      drawn hollow and are never on the line, because a modeled cost and a measured cost are
       not the same kind of number.</p>
 
     <h3 id="retry">Retry variants</h3>
@@ -73,13 +73,13 @@ cost_per_solved_task = cost_per_attempt / pass_rate</code></pre>
       unadjusted results. Solvency's own measured runs will replace it outright.</p>
     <p>Task tiers (light / moderate / heavy) are modelling assumptions inherited from a public
       cost calculator that states they are not industry-standard benchmarks; Solvency inherits
-      that caveat verbatim. They move modelled rows only.</p>
+      that caveat verbatim. They move modeled rows only.</p>
 
     <h3 id="rules">Rules</h3>
     <ul>
       <li>Prices are verified against the provider's own pricing page on the date recorded. Prices recalled from memory are never used.</li>
       <li>Missing is missing. A number that does not exist is reported as missing, never estimated, and a missing cache price is never treated as zero.</li>
-      <li>Every modelled parameter is labelled an assumption, carries its provenance, and is adjustable.</li>
+      <li>Every modeled parameter is labelled an assumption, carries its provenance, and is adjustable.</li>
       <li>Benchmark figures are third-party, cited and linked, and are not redistributed.</li>
       <li>Measured rows are harness + model pairs, not properties of the bare model; the harness travels with every row.</li>
       <li>Source-usage-repriced rows compare harnesses only within the same model and benchmark. They are never ranked against another benchmark’s rows.</li>

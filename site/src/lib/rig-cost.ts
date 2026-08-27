@@ -6,7 +6,7 @@ export type PowerDrawMethod = 'wall_meter' | 'software_reported' | 'nameplate_td
 export type ThroughputMethod = 'llama_bench' | 'self_reported';
 export type LocalPassRateBasis = 'measured_by_solvency' | 'measured_by_user' | 'published' | 'user_assumption';
 
-export const RIG_QUOTE_BASIS = 'local_tco_modelled' as const;
+export const RIG_QUOTE_BASIS = 'local_tco_modeled' as const;
 
 export interface RigComponentV1 {
   componentId: string;
@@ -344,7 +344,7 @@ export type SubscriptionScaling = 'multi_seat' | 'hard_cap';
  * Cost per solved task for a subscription with an optional usage cap.
  * No cap (tasksPerMonthCap null/absent): plain flat-fee dilution,
  * usdPerMonth/(V*p_c) — identical to the uncapped math subscriptionBreakEven
- * has always used. With a cap under 'multi_seat', the buyer is modelled as
+ * has always used. With a cap under 'multi_seat', the buyer is modeled as
  * stacking ceil(V/cap) seats/tiers to cover the volume, so cost/solved is
  * ceil(V/cap)*usdPerMonth/(V*p_c) — this is a documented assumption, not a
  * measured fact: real multi-seat pricing may include per-seat discounts this

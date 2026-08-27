@@ -118,7 +118,7 @@ describe('cost per solved task', () => {
 describe('measured cost supersedes the loop model', () => {
   const m = () => modelById('claude-opus-5')!;
 
-  test('a measured attempt cost replaces the modelled one outright', () => {
+  test('a measured attempt cost replaces the modeled one outright', () => {
     const out = costPerSolvedTask(m(), 'heavy', tiers.heavy, 0.68, opts, { measuredAttemptCostUsd: 8.17 });
     assert.equal(out.value!.costBasis, 'measured_by_source');
     near(out.value!.attempt.costUsd, 8.17);
@@ -137,16 +137,16 @@ describe('measured cost supersedes the loop model', () => {
     assert.equal(new Set(vals).size, 1, 'a measured per-task cost is not a function of Solvency task tiers');
   });
 
-  test('rows without a measured cost still report the modelled basis', () => {
+  test('rows without a measured cost still report the modeled basis', () => {
     const out = costPerSolvedTask(m(), 'heavy', tiers.heavy, 0.68, opts);
     assert.equal(out.value!.costBasis, 'modelled_by_solvency');
   });
 
-  test('measured and modelled figures for the same model genuinely differ', () => {
+  test('measured and modeled figures for the same model genuinely differ', () => {
     // Guards against a refactor that silently makes the bypass a no-op.
     const meas = costPerSolvedTask(m(), 'heavy', tiers.heavy, 0.68, opts, { measuredAttemptCostUsd: 8.17 }).value!.naive;
     const mod = costPerSolvedTask(m(), 'heavy', tiers.heavy, 0.68, opts).value!.naive;
-    assert.ok(Math.abs(meas - mod) > 1, `measured ${meas} vs modelled ${mod}`);
+    assert.ok(Math.abs(meas - mod) > 1, `measured ${meas} vs modeled ${mod}`);
   });
 });
 
@@ -229,7 +229,7 @@ describe('data integrity', () => {
     for (const r of withTotals) near(r.cost_per_task!, r.total_cost_usd! / r.tasks_n, 1e-5);
   });
 
-  test('historical costs are never presented as current, and measured costs never as modelled', () => {
+  test('historical costs are never presented as current, and measured costs never as modeled', () => {
     for (const r of results) {
       if (r.cost_basis === 'historical_at_run_date') {
         assert.ok(r.run_date < '2026-01-01',
@@ -237,7 +237,7 @@ describe('data integrity', () => {
       }
       if (r.cost_basis === 'modelled_by_solvency') {
         assert.equal(r.measured_cost_per_task_usd, undefined,
-          `${r.entry_label}: a modelled row must not carry a measured cost`);
+          `${r.entry_label}: a modeled row must not carry a measured cost`);
       }
       if (r.cost_basis === 'free_tier_capped') {
         assert.equal(r.measured_cost_per_task_usd, undefined,
@@ -260,7 +260,7 @@ describe('data integrity', () => {
     }
   });
 
-  test('every modelled assumption is labelled as an assumption with provenance', () => {
+  test('every modeled assumption is labelled as an assumption with provenance', () => {
     for (const [name, t] of Object.entries(tiers)) {
       assert.equal((t as any).kind, 'assumption', name);
       assert.match((t as any).provenance_url, /^https:\/\//, name);
@@ -322,15 +322,15 @@ describe('data integrity', () => {
   });
 
   test('the engine produces a finite number for every joinable model, on its own basis', () => {
-    let measured = 0, modelled = 0;
+    let measured = 0, modeled = 0;
     for (const m of models as Model[]) {
       const r = bestResultFor(m.model_id);
       if (!r) continue;
       const out = costPerSolvedTask(m, 'heavy', tiers.heavy, r.pass_rate, opts, extrasFor(r));
       assert.ok(out.value !== null && Number.isFinite(out.value.naive), m.model_id);
-      if (out.value!.costBasis === 'measured_by_source') measured++; else modelled++;
+      if (out.value!.costBasis === 'measured_by_source') measured++; else modeled++;
     }
     assert.ok(measured >= 6, `expected at least 6 measured rows, got ${measured}`);
-    assert.ok(modelled >= 10, `expected at least 10 modelled rows, got ${modelled}`);
+    assert.ok(modeled >= 10, `expected at least 10 modeled rows, got ${modeled}`);
   });
 });

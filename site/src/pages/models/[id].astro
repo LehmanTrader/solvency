@@ -32,17 +32,17 @@ const tierCosts = TIER_NAMES.map((t) => {
 });
 const measured = best?.cost_basis === 'measured_by_source' || best?.cost_basis === 'measured_by_solvency';
 const basis = best ? (BASIS_OF[best.cost_basis] ?? 'modelled') : null;
-const basisWord = basis === 'measured' ? 'measured cost' : basis === 'free' ? 'free tier · rate-capped' : basis === 'stale' ? 'modelled cost · stale pass rate' : 'modelled cost';
+const basisWord = basis === 'measured' ? 'measured cost' : basis === 'free' ? 'free tier · rate-capped' : basis === 'stale' ? 'modeled cost · stale pass rate' : 'modeled cost';
 const bestSrc = best ? sourceFor(best.benchmark) : null;
 const price = (n) => n === null || n === undefined ? null : `$${n.toFixed(3).replace(/0+$/, '').replace(/\.$/, '')}`;
 const context = (n) => !n ? 'missing' : n >= 1_000_000 ? `${(n / 1_000_000).toFixed(n % 1_000_000 ? 1 : 0)}M` : `${(n / 1000).toFixed(0)}k`;
 const mine = solvedFor(model.model_id, 'heavy');
-// peers: same cost basis only, so the chart never ranks measured against modelled.
+// peers: same cost basis only, so the chart never ranks measured against modeled.
 // The same Chart A component as the calculator, pinned on this model.
 const PEER_TIER = 'heavy', PEER_VOLUME = 200;
 const lb = leaderboard(PEER_TIER);
 // Free-model coverage: a free_tier_capped row's peers are other free rows
-// (lb.free), never lb.modelled — a free $0 row is not a modelled paid
+// (lb.free), never lb.modelled — a free $0 row is not a modeled paid
 // estimate, and mixing the two would silently rank a rate-capped price
 // against an uncapped one on this very peer chart.
 const pool = mine ? (mine.basisKey === 'measured_by_source' ? lb.measured : mine.basisKey === 'measured_by_solvency' ? lb.bench : mine.basisKey === 'historical_at_run_date' ? lb.historical : mine.basisKey === 'free_tier_capped' ? lb.free : lb.modelled) : [];
@@ -154,7 +154,7 @@ const ogCard = existsSync(modelCardPath) ? `/og/cards/model-${model.model_id}.pn
         )}
         {best && (
           <Provenance source={bestSrc?.attribution} href={bestSrc?.attribution_url ?? best.source_url} verified={bestSrc?.last_verified ?? best.run_date}
-            note={measured ? 'measured basis: the benchmark observed this cost, so no tier assumption touches it and the three tiers are identical' : 'modelled basis: pass rate published, cost from Solvency\'s loop model at current prices'} />
+            note={measured ? 'measured basis: the benchmark observed this cost, so no tier assumption touches it and the three tiers are identical' : 'modeled basis: pass rate published, cost from Solvency\'s loop model at current prices'} />
         )}
       </div>
     </div>
@@ -188,7 +188,7 @@ const ogCard = existsSync(modelCardPath) ? `/og/cards/model-${model.model_id}.pn
       <Section id="peers" eyebrow={`${peerBasis} peers`} title="Cost per solved task against its peers"
         caption={peerBasis === 'measured' ? `Measured rows only, ranked as on the calculator. Monthly figures at ${PEER_VOLUME} tasks. Lower is better.`
           : peerBasis === 'free' ? `FREE · rate-capped rows only, ranked by pass rate — cost is uniformly $0 within this group, so it is not a useful sort key here.`
-          : `${peerBasis === 'stale' ? 'Stale' : 'Modelled'} rows only, heavy tier, ${PEER_VOLUME} tasks a month. Lower is better. These are Solvency estimates, not observed costs.`}>
+          : `${peerBasis === 'stale' ? 'Stale' : 'Modeled'} rows only, heavy tier, ${PEER_VOLUME} tasks a month. Lower is better. These are Solvency estimates, not observed costs.`}>
         <div class="card overflow-hidden">
           <div class="px-5 pt-4 pb-2">
             <p class="ghead"><span class={`gword t-${peerBasis}`}>{peerBasis}</span> · {peerBasis === 'measured' ? 'the benchmark ran the model and observed this cost' : peerBasis === 'free' ? 'zero-dollar access path with a provider-set rate cap' : 'pass rate published; cost is Solvency\'s loop model at verified prices'}</p>

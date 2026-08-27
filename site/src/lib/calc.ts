@@ -30,7 +30,7 @@ export const TIER_HELP: Record<Settings['tier'], string> = {
 export const GROUPS: { key: string; basis: Basis; title: string; note: string }[] = [
   { key: 'measured_by_source', basis: 'measured', title: 'Measured',
     note: 'The benchmark ran the model and observed this cost. No Solvency assumption is inside these figures.' },
-  { key: 'modelled_by_solvency', basis: 'modelled', title: 'Modelled',
+  { key: 'modelled_by_solvency', basis: 'modelled', title: 'Modeled',
     note: "Pass rate published; cost is Solvency's loop model at verified prices." },
   // Free-model coverage (docs/free-models-scoping.md §4): rate-capped $0
   // access paths — real prices, not comparable to an uncapped paid row, so
@@ -88,7 +88,7 @@ export function compute(s: Settings): { rows: Row[]; missing: string[] } {
       if (m.status === 'current') missing.push(m.display_name);
       continue;
     }
-    // An assumption may move a modelled row; it may never move it out of its
+    // An assumption may move a modeled row; it may never move it out of its
     // group. A model with no published cached-input price is computed at the
     // uncached price and annotated, rather than dropping into "Not shown".
     const uncached = s.cache > 0 && m.cached_input_per_mtok === null;
@@ -155,7 +155,7 @@ export interface GroupOpts {
 }
 
 /**
- * The grouped result: measured, then modelled, each with its own header and
+ * The grouped result: measured, then modeled, each with its own header and
  * its own scale; stale rows behind a disclosure. Never interleaved.
  */
 /** The population toggle (arena-style): one visible list, switched between
@@ -163,7 +163,7 @@ export interface GroupOpts {
  * still carries the full provenance sentence when selected. */
 export const GROUP_TABS: { key: string; label: string }[] = [
   { key: 'measured_by_source', label: 'Agentic index' },
-  { key: 'modelled_by_solvency', label: 'Modelled' },
+  { key: 'modelled_by_solvency', label: 'Modeled' },
   { key: 'measured_by_solvency', label: 'Solvency Bench' },
   { key: 'free_tier_capped', label: 'Free' },
 ];
@@ -186,7 +186,7 @@ export function groupsHtml(rows: Row[], s: Settings, o: GroupOpts): string {
     const empty = `<p class="small py-2">No ${emptyWord} row has both a verified price and a published pass rate under these settings.</p>`;
     const head = `<p class="ghead"><span class="gword t-${g.basis}">${g.title}</span> · ${g.note}</p>`;
     // FREE · rate-capped renders as its own always-visible section (same
-    // grammar as Measured/Modelled), positioned below them and above the
+    // grammar as Measured/Modeled), positioned below them and above the
     // collapsed Stale disclosure — never interleaved by cost, per
     // docs/free-models-scoping.md §4.
     return `<div class="group-${g.basis} px-5 pt-4 pb-2${g.basis === 'modelled' || g.basis === 'free' ? ' border-t border-[var(--color-rule)]' : ''}" data-group="${g.basis}">
@@ -198,7 +198,7 @@ export function groupsHtml(rows: Row[], s: Settings, o: GroupOpts): string {
 
 /**
  * The result headline. Compares only within one cost basis; ranking measured
- * against modelled is invalid. Names are neutral bold — the verdict is carried
+ * against modeled is invalid. Names are neutral bold — the verdict is carried
  * by the "▼ Nx cheaper" figure in the better/worse color, the same treatment
  * the compare page uses.
  */
@@ -214,14 +214,14 @@ export function calloutHtml(rows: Row[], volume: number): string {
   const name = (x: Row) => `<strong>${escapeHtml(x.m.display_name)}</strong>`;
   if (cheapest.m.model_id === best.m.model_id) {
     // Stage 1.3 (Roy's note 4, 2026-08-26): "GPT-5.4 is cheapest among
-    // modelled models sounds weird please rewrite that sentence." The old
+    // modeled models sounds weird please rewrite that sentence." The old
     // single sentence below ("X is both the cheapest ... and the highest
     // pass rate here") read as a benchmark verdict even when the matched
-    // pool was modelled, not measured — nothing ran a cost benchmark on
+    // pool was modeled, not measured — nothing ran a cost benchmark on
     // these rows, so claiming "the highest pass rate here" alongside
     // "cheapest" sounded like an observed result instead of a priced
-    // estimate. Measured pools keep the direct sentence; modelled/stale
-    // pools name the modelled basis up front instead.
+    // estimate. Measured pools keep the direct sentence; modeled/stale
+    // pools name the modeled basis up front instead.
     if (g!.g.basis !== 'measured')
       return `No harness has published a cost run for these; our loop model prices ${name(cheapest)} lowest at ${money(cheapest.cost)} per solved task, ${moneyMonth(cheapest.cost * volume)} a month — it also carries the highest published pass rate here.`;
     return `${name(cheapest)} is both the cheapest per solved task and the highest pass rate here — ${money(cheapest.cost)} per solved task, ${moneyMonth(cheapest.cost * volume)} a month.`;
@@ -266,18 +266,18 @@ export interface GateDelta { moved: boolean; text: string; }
 /**
  * The sentence the soft gate uses after it has let an assumption change
  * through. It names the visitor's pinned model if that moved, otherwise the
- * top modelled row (the one the eye is on), otherwise the largest mover.
+ * top modeled row (the one the eye is on), otherwise the largest mover.
  * Measured rows are never in this list — no assumption can move them.
  * `moved: false` means no row changed: the caller must not gate a no-op.
  */
 export function gateDelta(before: Row[], after: Row[], control: string, highlight?: string): GateDelta {
   const prev = new Map(before.filter((r) => r.basisKey !== 'measured_by_source').map((r) => [r.m.model_id, r.cost]));
   const movedOf = (r: Row) => { const a = prev.get(r.m.model_id); return a !== undefined && Math.abs(a - r.cost) >= 0.005 ? { name: r.m.display_name, a, b: r.cost } : null; };
-  const modelled = after.filter((r) => r.basisKey === 'modelled_by_solvency');
+  const modeled = after.filter((r) => r.basisKey === 'modelled_by_solvency');
   const pinned = highlight ? after.find((r) => r.m.model_id === highlight && r.basisKey !== 'measured_by_source') : undefined;
-  let pick = (pinned && movedOf(pinned)) || (modelled[0] && movedOf(modelled[0])) || null;
+  let pick = (pinned && movedOf(pinned)) || (modeled[0] && movedOf(modeled[0])) || null;
   if (!pick) {
-    // the visible modelled group first; stale rows (behind a disclosure) only if nothing else moved
+    // the visible modeled group first; stale rows (behind a disclosure) only if nothing else moved
     for (const key of ['modelled_by_solvency', 'historical_at_run_date']) {
       for (const r of after) {
         if (r.basisKey !== key) continue;
@@ -289,7 +289,7 @@ export function gateDelta(before: Row[], after: Row[], control: string, highligh
   }
   return pick
     ? { moved: true, text: `${control} moves ${pick.name} from ${money(pick.a)} to ${money(pick.b)} a task.` }
-    : { moved: false, text: `${control} leaves every modelled row where it is at this tier.` };
+    : { moved: false, text: `${control} leaves every modeled row where it is at this tier.` };
 }
 
 const escText = (t: string) => t.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!));

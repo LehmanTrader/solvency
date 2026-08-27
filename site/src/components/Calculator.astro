@@ -191,7 +191,7 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
         <div class="min-w-0">
           <p id="c-gate-h" class="h-card">Keep these assumptions.</p>
           <p class="mt-1 text-[0.875rem] leading-relaxed text-[var(--color-body)]"><span id="c-gate-delta"></span> Create a free account to keep assumptions and save this scenario.</p>
-          <p class="small mt-1">GitHub, Google or email. Assumptions move modelled rows only; measured rows never change.</p>
+          <p class="small mt-1">GitHub, Google or email. Assumptions move modeled rows only; measured rows never change.</p>
         </div>
         <div class="flex flex-wrap gap-2 items-center md:flex-col md:items-stretch">
           <button id="c-gate-signin" type="button" class="btn btn-accent" data-analytics="gate-signup">Create free account</button>
@@ -232,10 +232,10 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
     </div>
 
     <details class="disc px-5 py-3 border-t border-[var(--color-rule)]" id="c-assume">
-      <summary>Assumptions (4) · move modelled rows only</summary>
+      <summary>Assumptions (4) · move modeled rows only</summary>
       <!-- Task tier, relocated from the hero (stage 1.1, see the note above
            #c-mode-toggle): not one of the 4 assumptions below — it doesn't
-           move modelled rows, it picks which tier's rows are shown — so it
+           move modeled rows, it picks which tier's rows are shown — so it
            gets its own line above that grid rather than a 5th tile in it.
            mode-bucket keeps it in step with the hero: hidden in monthly mode,
            where #c-tier (in the "I build [tier] tasks…" sentence) already
@@ -266,7 +266,7 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
         </label>
       </div>
       <p id="c-assume-note" class="small mt-3 text-[var(--color-ink)]" role="status"></p>
-      <p class="mt-4 text-[0.8rem] leading-relaxed text-[var(--color-muted)] max-w-[70ch]">These move modelled rows only. A model with no published cached-input price is computed uncached and says so in its row, rather than dropping out of its group. Measured rows carry a cost the benchmark observed and cannot be changed by any assumption. Frontier efficiency has no published source and is applied only to modelled rows — untick it to see unadjusted results. <a class="link" href="/methodology">Methodology</a>.</p>
+      <p class="mt-4 text-[0.8rem] leading-relaxed text-[var(--color-muted)] max-w-[70ch]">These move modeled rows only. A model with no published cached-input price is computed uncached and says so in its row, rather than dropping out of its group. Measured rows carry a cost the benchmark observed and cannot be changed by any assumption. Frontier efficiency has no published source and is applied only to modeled rows — untick it to see unadjusted results. <a class="link" href="/methodology">Methodology</a>.</p>
     </details>
   </div>
 </section>
@@ -324,7 +324,7 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
 
   // ---- Sortable Ranking table (stage 2, deferred from stage 1) ------------
   // One sort state per basis group ("sort state per basis group" in the
-  // brief) — clicking a header in the Measured group never touches Modelled
+  // brief) — clicking a header in the Measured group never touches Modeled
   // or Stale. Default matches what rankedBars already does with no `sort`
   // passed (cost ascending), so the very first render is pixel-identical to
   // before this feature existed.

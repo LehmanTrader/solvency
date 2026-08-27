@@ -50,12 +50,12 @@ describe('reference rig catalog: sourcing honesty', () => {
     }
   });
 
-  test('fields this research pass could not independently verify (resale, most throughput) are honestly labeled modelled, not falsely "source_verified"', () => {
+  test('fields this research pass could not independently verify (resale, most throughput) are honestly labeled modeled, not falsely "source_verified"', () => {
     for (const entry of RIG_CATALOG) {
       assert.notEqual(entry.resale.assertionOrigin, 'source_verified', `${entry.id}: resale residual is a forecast, not a cited fact`);
     }
     // The two used-GPU throughput defaults have no independently disclosed llama-bench figure for
-    // this exact model+quant as of 2026-08-26 (see module doc comment) and must stay modelled.
+    // this exact model+quant as of 2026-08-26 (see module doc comment) and must stay modeled.
     for (const id of ['used-rtx-4090', 'used-rtx-3090']) {
       const entry = referenceRigById(id)!;
       assert.notEqual(entry.throughput.assertionOrigin, 'source_verified');

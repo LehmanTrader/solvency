@@ -325,7 +325,7 @@ documentation — capability notes, not endorsements:
 | Models | Anthropic (login/key) | OpenAI (login/key) | any (provider/model) | any (15+ providers) | any (provider registry) | any (multiplexer) | any (provider/model) | any (LiteLLM-style) | any (OpenRouter) |
 | Headless one-shot | `-p --output-format json` | `exec --json` | `-p --mode json` | `run -t` (+recipes) | `-y --json` | `-z --usage-file` | `run --format json` | `--message` | library call |
 | Machine-readable usage | full incl. cache r/w | full incl. cache r/w | full incl. cache r/w + cost | session store (SQLite) | full incl. cache r/w + cost | full incl. reasoning | per-step tokens+cost | tokens line (k-rounded ≥1k) | API usage object |
-| Cache behaviour observed | heavy reads | heavy reads | small scaffold, read back | mixed read/write | heavy fresh input + writes | writes each session | writes each session | none (lean prompt) | none |
+| Cache behavior observed | heavy reads | heavy reads | small scaffold, read back | mixed read/write | heavy fresh input + writes | writes each session | writes each session | none (lean prompt) | none |
 | Agentic tool loop | yes | yes | yes (extensible) | yes (MCP/extensions) | yes (submit-gated) | yes | yes | edit-focused | minimal by design |
 | Execution sandboxing | policy/hooks | sandbox modes | extension-defined | tool permission modes | approval model (`-y` bypasses) | egress controls | permission prompts | none (git-scoped) | docker, network-less |
 
@@ -392,7 +392,7 @@ success rate. Until the system is measured, the honest result is: **success rate
 - **Population three's dollars are usage repriced at catalog list rates.** The Codex arm ran
   on a subscription login (basis `subscription_usage_repriced` — precedent: population one);
   metered arms ran via OpenRouter. Cache writes price at the uncached input rate; vendors'
-  write premiums are not modelled.
+  write premiums are not modeled.
 - **Aider's token counts are its own rounded reporting** (k-rounded above 1,000), recorded
   as reported.
 - **Grok Build is still unmeasured by Solvency.** It appears only in population one

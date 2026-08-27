@@ -4,7 +4,7 @@
  * and again by the island on every input. No library.
  *
  * Rules (docs/landing-spec.md §4, revised by the stage-1.1 color note in
- * docs/redesign-2026-08/direction.md): measured = solid purple, modelled =
+ * docs/redesign-2026-08/direction.md): measured = solid purple, modeled =
  * the SAME purple hatched (the hatch carries the basis distinction, not a
  * second hue), stale = hollow + dashed coral, unchanged — and the word is
  * always printed, never color alone. The lead row in each group gets an
@@ -22,7 +22,7 @@
  * from docs/redesign-2026-08/direction.md §6: a rank digit, the provider's
  * logo chip (site/src/lib/providers.ts), the model name in mono, a small
  * "Provider" subline, and — since Solvency already groups rows into their
- * own Measured/Modelled/Stale sections (unlike Arena's single interleaved
+ * own Measured/Modeled/Stale sections (unlike Arena's single interleaved
  * table) — a repeated "· basis" on the subline would be redundant, so it is
  * left off; the group header already carries that word once. The best row
  * in each group (the actual cheapest by cost — see `bestId` in rankedBars,
@@ -45,8 +45,8 @@ import type { RateCaps } from '../../../scripts/types.ts';
 
 /**
  * Free-model coverage (docs/free-models-scoping.md §4): a fourth basis,
- * `free`, alongside measured/modelled/stale. It is visually distinguished
- * from measured (solid fill) and modelled (hatch fill) by a dotted OUTLINE
+ * `free`, alongside measured/modeled/stale. It is visually distinguished
+ * from measured (solid fill) and modeled (hatch fill) by a dotted OUTLINE
  * instead of a new hue — reusing --color-purple's already-cited contrast
  * (5.44:1 light / 7.20:1 dark, site/src/styles/global.css) rather than
  * inventing a color the "two accents, two jobs" rule would then have to
@@ -84,7 +84,7 @@ export const BASIS_OF: Record<string, Basis> = {
   measured_by_solvency: 'measured',
 };
 
-export const BASIS_WORD: Record<Basis, string> = { measured: 'MEASURED', modelled: 'MODELLED', stale: 'STALE', free: 'FREE · RATE-CAPPED' };
+export const BASIS_WORD: Record<Basis, string> = { measured: 'MEASURED', modelled: 'MODELED', stale: 'STALE', free: 'FREE · RATE-CAPPED' };
 
 /**
  * The compact per-row cap label ("cap: 20 req/min, 50 req/day", "cap: 1M
@@ -120,7 +120,7 @@ const trunc = (s: string, px: number, size = FS_M) => {
   return s.length > n ? s.slice(0, Math.max(1, n - 1)) + '…' : s;
 };
 
-/** The modelled hatch, referenced by every modelled bar. Stale bars are a dashed outline instead. */
+/** The modeled hatch, referenced by every modeled bar. Stale bars are a dashed outline instead. */
 const hatch = () =>
   `<pattern id="hatch-modelled" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)" style="color:var(--color-modelled)">` +
   `<line x1="0" y1="0" x2="0" y2="6" stroke="currentColor" stroke-width="2"/></pattern>`;
@@ -238,7 +238,7 @@ export function rankedBars(rowsIn: ChartRow[], o: RankedOpts): string {
 
   // measured: solid, non-lead dimmed by CSS; modelled: hatched; stale: dashed
   // outline, no hatch; free: DOTTED outline, no hatch, no fill — same purple
-  // hue as measured/modelled (not a new color, see the Basis doc comment
+  // hue as measured/modeled (not a new color, see the Basis doc comment
   // above) but neither solid nor hatched, so it can never be mistaken for
   // either, and a tighter dash than stale's so the two outline styles don't
   // read as the same thing in a different color.
@@ -552,7 +552,7 @@ export function scatterPareto(rows: ChartRow[], o: ScatterOpts): string {
   // named, stage 1.2 note 1). Frontier models draw full-size and full
   // opacity; dominated models draw smaller and muted (note 6: "dominated
   // models as smaller, muted markers"). A basis ring around the chip —
-  // solid for measured, dashed for modelled, dashed+muted for stale — is
+  // solid for measured, dashed for modeled, dashed+muted for stale — is
   // the outline that keeps bases from ever blending silently; the legend
   // repeats the same distinction in words, never color alone.
   const FRONT_SIZE = compact ? 20 : 26, DOM_SIZE = compact ? 13 : 16;
@@ -630,7 +630,7 @@ export function scatterPareto(rows: ChartRow[], o: ScatterOpts): string {
     ? `<g font-size="${FS_S}" class="t3"><text x="${ml}" y="${legendY}">PASS RATE ↑</text></g>`
     : `<g font-size="${FS_S}" class="t3"><text x="${ml}" y="${legendY}">PASS RATE ↑</text>` +
       `<rect class="chip-ring pt-measured" x="${ml + pw - 300}" y="${legendY - 8}" width="10" height="10" rx="2"/><text x="${ml + pw - 285}" y="${legendY}">MEASURED</text>` +
-      `<rect class="chip-ring pt-modelled" x="${ml + pw - 205}" y="${legendY - 8}" width="10" height="10" rx="2"/><text x="${ml + pw - 190}" y="${legendY}">MODELLED · never on the frontier</text></g>`;
+      `<rect class="chip-ring pt-modelled" x="${ml + pw - 205}" y="${legendY - 8}" width="10" height="10" rx="2"/><text x="${ml + pw - 190}" y="${legendY}">MODELED · never on the frontier</text></g>`;
 
   const title = 'Cost per solved task against pass rate, with the measured Pareto frontier';
   const zeroNote = zeroCount ? ` ${zeroCount} free-tier ($0) row${zeroCount === 1 ? '' : 's'} excluded from this log-scale chart — cost is uniformly $0, which cannot be plotted on a log axis.` : '';

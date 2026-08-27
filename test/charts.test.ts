@@ -22,16 +22,16 @@ describe('inline SVG charts', () => {
   // basisKey rides in `harness` for fixture purposes: one chart never mixes
   // the AA population with the first-party Solvency Bench population.
   const measured = all.filter((r) => r.harness === 'measured_by_source');
-  const modelled = all.filter((r) => r.harness === 'modelled_by_solvency');
+  const modeled = all.filter((r) => r.harness === 'modelled_by_solvency');
 
-  test('the measured ranked chart contains no modelled row, and vice versa', () => {
+  test('the measured ranked chart contains no modeled row, and vice versa', () => {
     const svg = rankedBars(measured, { width: 846, volume: 200, basis: 'measured' });
     assert.equal(svg.match(/role="listitem"/g)?.length, measured.length);
-    for (const r of modelled) assert.ok(!svg.includes(`data-id="${r.id}"`), `${r.id} leaked into the measured group`);
+    for (const r of modeled) assert.ok(!svg.includes(`data-id="${r.id}"`), `${r.id} leaked into the measured group`);
     assert.ok(svg.includes('MEASURED'), 'the word is printed, never color alone');
-    const m2 = rankedBars(modelled, { width: 846, volume: 200, basis: 'modelled' });
-    for (const r of measured) assert.ok(!m2.includes(`data-id="${r.id}"`), `${r.id} leaked into the modelled group`);
-    assert.ok(m2.includes('url(#hatch-modelled)'), 'modelled bars are hatched');
+    const m2 = rankedBars(modeled, { width: 846, volume: 200, basis: 'modelled' });
+    for (const r of measured) assert.ok(!m2.includes(`data-id="${r.id}"`), `${r.id} leaked into the modeled group`);
+    assert.ok(m2.includes('url(#hatch-modelled)'), 'modeled bars are hatched');
   });
 
   test('rows are ranked cheapest first and carry the month figure at the volume', () => {
@@ -115,7 +115,7 @@ describe('free-model coverage: rendering (docs/free-models-scoping.md §3/§4)',
     assert.equal(capsLabel({ requests_per_minute: null, requests_per_day: null, tokens_per_minute: null, tokens_per_day: null, source_url: null, last_verified: null }), 'cap: not published');
   });
 
-  test('a free-basis ranked row is dotted/outlined (never solid or hatched, and never the measured/modelled fill), carries the FREE badge, and shows its cap compactly', () => {
+  test('a free-basis ranked row is dotted/outlined (never solid or hatched, and never the measured/modeled fill), carries the FREE badge, and shows its cap compactly', () => {
     const row: ChartRow = { id: 'free-row', name: 'Free Row', href: '/models/free-row', cost: 0, pass: 0.6, basis: 'free', provider: 'openrouter', caps: 'cap: 20 req/min, 50 req/day' };
     const svg = rankedBars([row], { width: 846, volume: 200, basis: 'free' });
     assert.match(svg, /FREE · RATE-CAPPED/);

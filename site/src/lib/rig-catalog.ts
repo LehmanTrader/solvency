@@ -12,7 +12,7 @@
  * pass could not independently verify (Apple Silicon inference throughput for M5-generation
  * hardware that has not shipped yet as of 2026-08-26; RTX 30/40-series throughput at this exact
  * model+quant; resale residuals; the non-GPU portion of a used-GPU rig's price and power draw) are
- * marked `assertionOrigin: 'solvency_template'` (a modelled/editable default) instead of inventing
+ * marked `assertionOrigin: 'solvency_template'` (a modeled/editable default) instead of inventing
  * a citation, exactly as the brief allows for throughput. Component prices and the electricity
  * rate ARE independently sourced and dated 2026-08-26.
  */
@@ -137,7 +137,7 @@ export const RIG_CATALOG: ReferenceRigCatalogEntry[] = [
     id: 'used-rtx-4090',
     name: 'Used RTX 4090 rig (24GB VRAM)',
     family: 'used_gpu',
-    summary: 'A used flagship consumer GPU plus a modelled budget host system — the fastest, most power-hungry reference rig.',
+    summary: 'A used flagship consumer GPU plus a modeled budget host system — the fastest, most power-hungry reference rig.',
     components: [
       {
         componentId: 'rtx-4090-used',

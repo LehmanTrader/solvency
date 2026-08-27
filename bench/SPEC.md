@@ -11,7 +11,7 @@ licensing problem).
   asking for ONE exported function, a deterministic checker (`check.mjs`)
   with hidden test vectors, and a reference solution the self-test validates.
 - One API call per attempt (single-turn — this protocol measures single-turn
-  code correctness, NOT agentic harness behaviour; that is Phase B).
+  code correctness, NOT agentic harness behavior; that is Phase B).
 - temperature 0, max_tokens capped (default 1600), 3 trials per task.
 - The model's reply must contain a fenced code block exporting the named
   function; the last fenced block wins. No retry on malformed output — a
@@ -84,7 +84,7 @@ runs, usage repriced at API rates, basis `source_usage_repriced`).
 - What it measures: the MODEL+HARNESS pair, recorded with harness name and
   version — never presented as the model alone.
 - Cache reads priced at the cached-input rate; cache writes at the uncached
-  input rate, stated in the record (write premiums not modelled).
+  input rate, stated in the record (write premiums not modeled).
 - An attempt whose usage cannot be read from the harness is excluded
   fail-closed — no usage, no reprice, no number.
 - Practical notes: subscription rate windows throttle throughput (runs

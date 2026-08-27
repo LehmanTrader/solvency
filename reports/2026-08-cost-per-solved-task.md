@@ -11,7 +11,7 @@ pdf_method: cost ÷ pass rate
 # Cost Per Solved Task
 
 **AI coding models, August 2026.** Every price in this report was verified against the
-provider's own pricing page or listing (2026-08-21 for the modelled table's rates; catalog
+provider's own pricing page or listing (2026-08-21 for the modeled table's rates; catalog
 rows added since carry their own dates). Every pass rate is linked to its source. Nothing
 is interpolated; where a number does not exist, this report says so.
 
@@ -63,7 +63,7 @@ Source: [Artificial Analysis (artificialanalysis.ai)](https://artificialanalysis
 per-token price and no OpenRouter listing (Cursor's Composer 2.5 Fast, Cognition's SWE-1.7
 Lightning Max); they are recorded as observed but cannot join a cost-per-solved comparison.
 
-### B. Modelled
+### B. Modeled
 
 These models publish a pass rate but no cost. Cost is **our** estimate: an assumed agent loop
 model priced at today's verified rates. The assumptions are listed in full in the methodology.
@@ -107,7 +107,7 @@ Two mechanisms drive the divergence, and neither is visible on a pricing page:
 
 1. **Token burn per task.** A model that reasons less, calls fewer tools, and takes fewer turns
    consumes fewer tokens to close the same task. DeepSeek V4 Flash's per-task cost is 136x below
-   Opus 5's, far more than its 19x output-price advantage — the extra factor is behavioural.
+   Opus 5's, far more than its 19x output-price advantage — the extra factor is behavioral.
 2. **Pass rate.** Every failed attempt is paid for and delivers nothing. Dividing by pass rate
    is what converts a price into a cost.
 
@@ -250,7 +250,7 @@ to table A. Set it to 1.0 in the calculator to see unadjusted results.
 Several providers do not have a single price. We record the tier used and state the alternative:
 
 - **Gemini 3.1 Pro** and **Grok 4.5** are prompt-length tiered. We use the sub-200k rate, which
-  is correct for every task tier modelled here.
+  is correct for every task tier modeled here.
 - **Gemini 3.7 Flash** is on promotional pricing that the pricing page says **doubles on
   2027-01-01**.
 - **DeepSeek V4** has peak and off-peak rates. We record the **peak** rate, the conservative
@@ -304,6 +304,6 @@ number is wrong, the fastest way to prove it is to change it and see what happen
 
 ---
 
-*Modelled-table prices verified 2026-08-21 against provider pricing pages. Coding Agent Index read 2026-08-26.
+*Modeled-table prices verified 2026-08-21 against provider pricing pages. Coding Agent Index read 2026-08-26.
 Filed under the verification date rather than a publication date; if this is published later,
 the numbers above still carry the date they were checked.*

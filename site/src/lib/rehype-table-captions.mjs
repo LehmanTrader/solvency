@@ -1,6 +1,6 @@
 const TABLE_CAPTIONS = new Map([
   ['model|harness|index|$ / task|$ / solved task', 'Measured model and harness results, including cost per task and cost per solved task.'],
-  ['model|source|pass|age|light|moderate|heavy', 'Modelled cost per solved task by benchmark source, pass rate, age and workload tier.'],
+  ['model|source|pass|age|light|moderate|heavy', 'Modeled cost per solved task by benchmark source, pass rate, age and workload tier.'],
   ['variant|formula', 'Retry-cost calculation variants and their formulas.'],
   ['parameter|value|provenance', 'Cost-model assumptions, values and provenance.'],
   ['source|tasks|covers 2026 models|publishes cost|newest entry', 'Research sources, coverage, cost publication and newest available entry.'],

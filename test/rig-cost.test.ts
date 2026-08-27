@@ -42,8 +42,8 @@ describe('RigSpecV1 local-rig quote engine', () => {
   test('happy path: every derived number matches independent arithmetic', () => {
     const quote = quoteRig(rig(), '2026-08-24T00:00:00.000Z');
     assert.equal(quote.valid, true, quote.errors.join('; '));
-    assert.equal(quote.basis, 'local_tco_modelled');
-    assert.equal(RIG_QUOTE_BASIS, 'local_tco_modelled');
+    assert.equal(quote.basis, 'local_tco_modeled');
+    assert.equal(RIG_QUOTE_BASIS, 'local_tco_modeled');
 
     const buildCostUsd = 4700 + 800 + 300;
     assert.equal(quote.buildCostUsd, buildCostUsd);

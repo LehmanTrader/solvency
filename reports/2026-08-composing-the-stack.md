@@ -7,7 +7,7 @@ price_verified: 2026-08-21
 pdf_verified: 2026-08-26
 pdf_sources: Solvency Build Composer engine
 pdf_method: role usage × verified price
-pdf_status: Modelled — template assumptions
+pdf_status: Modeled — template assumptions
 pdf_tagline: The org chart is a price sheet.
 pdf_hero: COMPOSING|THE STACK
 ---
@@ -98,7 +98,7 @@ Four rules fall straight out of the arithmetic above and the two earlier notes:
 
 ## What this note cannot tell you
 
-- **These are modelled figures, not measurements.** The token profile per role is the
+- **These are modeled figures, not measurements.** The token profile per role is the
   Composer's template assumption (6,000 in / 600 out for the orchestrator call; 20,000 in /
   3,000 out for worker and fallback calls; zero cache traffic), and real workloads differ. The
   point estimates above will not survive contact with your traces; the *structure* — judgment
