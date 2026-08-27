@@ -96,11 +96,22 @@ function toolImpl(workDir, box) {
 }
 
 async function chat(apiKey, model, messages) {
-  const res = await fetch(OR_URL, {
+  let res = await fetch(OR_URL, {
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ model, temperature: 0, max_tokens: 4000, messages, tools: TOOLS }),
   });
+  // Upstream 429/503 is capacity, not an answer — back off before failing
+  // the attempt (mirrors bench/runner.mjs; the first a2 ling/laguna arms
+  // died on a single upstream rate-limit without this).
+  for (let retry = 0; (res.status === 429 || res.status === 503) && retry < 5; retry++) {
+    await new Promise((r) => setTimeout(r, Math.min(20_000 * 2 ** retry, 120_000)));
+    res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model, temperature: 0, max_tokens: 4000, messages, tools: TOOLS }),
+    });
+  }
   if (!res.ok) throw new Error(`OpenRouter ${res.status}: ${(await res.text()).slice(0, 300)}`);
   const body = await res.json();
   if (body.error) throw new Error(JSON.stringify(body.error).slice(0, 300));
