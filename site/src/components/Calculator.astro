@@ -26,6 +26,7 @@ const WIDE = 1046, NARROW = 350;
 // live sort state per basis group and re-renders through this same
 // groupsHtml/patchRanked path on every click — one authority, not a DOM
 // shuffle (site/src/lib/charts.ts's rankedBars/patchRanked doc comments).
+const defaultBucket = bucketById('mobile')!;
 const wide = groupsHtml(rows, DEFAULTS, { width: WIDE, compact: false, sortable: true, only: GROUP_TABS[0].key, project: defaultBucket.label });
 const narrow = groupsHtml(rows, DEFAULTS, { width: NARROW, compact: true, sortable: true, only: GROUP_TABS[0].key, project: defaultBucket.label });
 // Stage 1.2 (Roy's note 6): the Frontier view of the same leaderboard —
@@ -44,7 +45,6 @@ const frontierNarrow = scatterPareto(frontierAll, { width: NARROW, height: NARRO
 // Monthly mode (the previous "I build [tier] tasks, about [n] a month."
 // sentence) is a quiet secondary affordance for existing users and links —
 // see the #c-mode-toggle wiring below and the URL-compat note there.
-const defaultBucket = bucketById('mobile')!;
 // Stage 1.2 (Roy's note 2): "the drop down should just be the type of
 // project without a in front a should be part of the sentence" — the
 // visible article sits in the sentence text (#c-bucket-article), not baked
