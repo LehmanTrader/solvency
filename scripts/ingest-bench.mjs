@@ -46,7 +46,12 @@ for (const dir of readdirSync(RESULTS)) {
   if (existsSync(join(base, 'SUPERSEDED.json'))) { skipped.superseded++; continue; }
   const s = JSON.parse(readFileSync(sumPath, 'utf8'));
   const tail = String(s.model ?? '').split('/').pop();
-  const m = modelByNorm.get(norm(tail));
+  // Free-tier OR slugs end ':free'; their catalog rows carry an
+  // '-or-free' (or provider-suffixed '-free') id. Try the literal tail,
+  // then the or-free variant, before giving up.
+  const tailNorm = norm(tail);
+  const m = modelByNorm.get(tailNorm)
+    ?? (tailNorm.endsWith('free') ? modelByNorm.get(tailNorm.replace(/free$/, 'orfree')) : undefined);
   if (!m) { skipped.unmapped.push(dir); continue; }
   if (s.harness && norm(tail) === norm(HARNESS_STUDY_MODEL)) { skipped.harnessStudy++; continue; }
   const protocol = s.protocol ?? 'solvency-bench-v0';
