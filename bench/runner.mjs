@@ -25,7 +25,11 @@ export const PROTOCOL = 'solvency-bench-v0';
 // compat) for the eleven catalog models OpenRouter does not serve. The key
 // comes from --key-env (name of the env var), so no secret ever lands in a
 // journal or shell history. Pricing stays fail-closed against the catalog.
-const OR_URL = process.env.SBENCH_BASE_URL || 'https://openrouter.ai/api/v1/chat/completions';
+// Resolved at CALL time, not import time — the --base-url CLI flag sets the
+// env var after this module has loaded (learned the hard way: the first Z.ai
+// vendor-direct run bound the const early and sent 72 attempts to OpenRouter
+// with the wrong key; all 36+36 journaled as INFRA, run INVALIDated).
+const apiUrl = () => process.env.SBENCH_BASE_URL || 'https://openrouter.ai/api/v1/chat/completions';
 
 // ---------------------------------------------------------------------------
 export function loadTasks() {
@@ -102,17 +106,27 @@ export function runChecker(task, code) {
 }
 
 async function callModel({ slug, prompt, maxTokens, apiKey }) {
-  const res = await fetch(OR_URL, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: slug, temperature: 0, max_tokens: maxTokens,
-      messages: [{ role: 'user', content: prompt }],
-    }),
-  });
-  if (!res.ok) throw new Error(`OpenRouter ${res.status}: ${(await res.text()).slice(0, 300)}`);
+  // Free vendor tiers rate-limit hard; 429/503 are capacity, not answers —
+  // back off (20s/40s/80s/120s/120s) before giving up to an infra journal.
+  let res;
+  for (let attempt = 0; ; attempt++) {
+    res = await fetch(apiUrl(), {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: slug, temperature: 0, max_tokens: maxTokens,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+    if ((res.status === 429 || res.status === 503) && attempt < 5) {
+      await new Promise((r) => setTimeout(r, Math.min(20_000 * 2 ** attempt, 120_000)));
+      continue;
+    }
+    break;
+  }
+  if (!res.ok) throw new Error(`provider ${res.status}: ${(await res.text()).slice(0, 300)}`);
   const body = await res.json();
-  if (body.error) throw new Error(`OpenRouter error: ${JSON.stringify(body.error).slice(0, 300)}`);
+  if (body.error) throw new Error(`provider error: ${JSON.stringify(body.error).slice(0, 300)}`);
   const usage = body.usage ?? { prompt_tokens: 0, completion_tokens: 0 };
   const choice = body.choices?.[0] ?? {};
   return { text: choice.message?.content ?? '', usage, finish: choice.finish_reason ?? null };
@@ -133,9 +147,13 @@ export async function runBenchmark(cfg, emit = () => {}) {
   const { slug, tasks, trials, maxTokens, budgetUsd, prices, apiKey, runId } = cfg;
   mkdirSync(join(RESULTS_DIR, runId), { recursive: true });
   const resultsPath = join(RESULTS_DIR, runId, 'results.jsonl');
+  // Resume-never-rebill covers BILLED attempts; an infra-failed attempt
+  // (429/503/timeout — never billed, never counted) stays retryable, so a
+  // same-id rerun after a rate-limit storm fills the gaps instead of
+  // permanently recording an empty run.
   const done = new Set(existsSync(resultsPath)
     ? readFileSync(resultsPath, 'utf8').trim().split('\n').filter(Boolean)
-        .map((l) => JSON.parse(l)).map((r) => `${r.taskId}#${r.trial}`)
+        .map((l) => JSON.parse(l)).filter((r) => !r.infra).map((r) => `${r.taskId}#${r.trial}`)
     : []);
   let spent = existsSync(resultsPath)
     ? readFileSync(resultsPath, 'utf8').trim().split('\n').filter(Boolean)
@@ -149,6 +167,7 @@ export async function runBenchmark(cfg, emit = () => {}) {
     for (let trial = 1; trial <= trials; trial++) {
       const key = `${task.id}#${trial}`;
       if (done.has(key)) { emit({ type: 'skip', taskId: task.id, trial }); continue; }
+      if (cfg.throttleMs) await new Promise((r) => setTimeout(r, cfg.throttleMs));
       if (cfg.stop?.()) { aborted = 'stopped by operator'; break outer; }
       if (spent >= budgetUsd) { aborted = `budget cap $${budgetUsd} reached at $${spent.toFixed(4)}`; break outer; }
       emit({ type: 'attempt-start', taskId: task.id, trial, spent });
@@ -204,7 +223,7 @@ export async function runBenchmark(cfg, emit = () => {}) {
     access: cfg.harness ? ADAPTERS[cfg.harness].access ?? null : 'metered API',
     harness: cfg.harness ? { name: cfg.harness, version: cfg.harnessVersion ?? null,
       note: 'usage measured from the harness; dollars are catalog API list prices; cache writes priced at the uncached input rate (write premium not modelled); the subscription flat fee never enters the math' } : null,
-    runId, model: slug, prices: { ...prices }, trials, maxTokens,
+    runId, model: cfg.asId ?? slug, vendor_model: cfg.asId ? slug : undefined, prices: { ...prices }, trials, maxTokens,
     attemptsCountable: countable, infraExcluded: counted.infra,
     passRate, costPerTaskUsd: costPerTask,
     costPerSolvedUsd: passRate ? costPerTask / passRate : null,
@@ -253,16 +272,21 @@ if (isMain) {
     if (!harness && !apiKey) { console.error(`${keyEnv} is not set (or use --harness to run on a local subscription login)`); process.exit(1); }
     const override = arg('price-in') && arg('price-out')
       ? { inputPerMtok: Number(arg('price-in')), outputPerMtok: Number(arg('price-out')) } : null;
-    const prices = resolvePrices(slug, override);
-    if (!prices) { console.error(`no catalog price row matches "${slug}" — supply --price-in/--price-out (fail-closed pricing, SPEC.md guard 5)`); process.exit(1); }
+    // --as <catalog-id>: record the run under this catalog row (vendor-direct
+    // free tiers, where the vendor's model name collides with a different
+    // paid catalog row — e.g. Z.ai's glm-4.7-flash vs glm-4.7-flash-zai-free).
+    const asId = arg('as');
+    const prices = resolvePrices(asId ?? slug, override);
+    if (!prices) { console.error(`no catalog price row matches "${asId ?? slug}" — supply --price-in/--price-out (fail-closed pricing, SPEC.md guard 5)`); process.exit(1); }
     const tasks = loadTasks();
     const trials = Number(arg('trials', 3)), maxTokens = Number(arg('max-tokens', 1600));
+    const throttleMs = Number(arg('throttle-ms', 0));
     const budgetUsd = Number(arg('budget', 5));
     const est = estimateRun({ tasks, trials, maxTokens, prices });
     console.log(`[estimate] ${est.attempts} attempts, ceiling $${est.estUsdCeiling.toFixed(3)} (${prices.priceNote}); budget cap $${budgetUsd}`);
     const runId = arg('run', `${(harness ? harness + '-' : '') + slug.replace(/[^a-z0-9.-]+/gi, '-')}-${new Date().toISOString().slice(0, 10)}`);
     const boot = async () => harness ? await ADAPTERS[harness].version() : null;
-    boot().then((hv) => runBenchmark({ slug, tasks, trials, maxTokens, budgetUsd, prices, apiKey, runId,
+    boot().then((hv) => runBenchmark({ slug, asId, tasks, trials, maxTokens, budgetUsd, prices, apiKey, runId, throttleMs,
       harness, harnessModel: slug, harnessVersion: hv }, (e) => {
       if (e.type === 'attempt-done') console.log(`${e.infra ? 'INFRA' : e.pass ? 'pass ' : 'FAIL '} ${e.taskId}#${e.trial}  $${e.spent.toFixed(4)} spent${e.detail && !e.pass ? '  ' + e.detail.split('\n')[0].slice(0, 80) : ''}`);
       if (e.type === 'run-done') console.log('\n' + JSON.stringify(e.summary, null, 2));
