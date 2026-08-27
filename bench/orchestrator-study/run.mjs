@@ -72,7 +72,7 @@ const usageShape = (u) => ({
 const tasks = loadTasks();
 const journalPath = join(HERE, 'results.jsonl');
 const done = new Set(existsSync(journalPath)
-  ? readFileSync(journalPath, 'utf8').split('\n').filter(Boolean).map((l) => { const r = JSON.parse(l); return `${r.orchestrator}::${r.taskId}`; })
+  ? readFileSync(journalPath, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)).filter((r) => !r.infra).map((r) => `${r.orchestrator}::${r.taskId}`)
   : []);
 
 for (const orch of ORCHESTRATORS) {
@@ -84,8 +84,21 @@ for (const orch of ORCHESTRATORS) {
     if (done.has(key)) { console.log(`skip ${key}`); continue; }
     let rec = { orchestrator: orch, worker: WORKER, taskId: task.id, at: new Date().toISOString() };
     try {
-      const o = await chat(orch, META(task), 4000);
+      const o = await chat(orch, META(task), 8000); // 8k cap, same as every run tonight — 4k starved reasoning orchestrators into empty instructions (r1 rows journaled infra)
       const instruction = o.text.trim();
+      if (!instruction) {
+        // At the shared 8k cap an empty instruction is the orchestrator's own
+        // failure (it spent the budget reasoning and delivered nothing) —
+        // countable, not infra.
+        rec = { ...rec, pass: false, detail: `orchestrator produced empty instruction (finish=${o.finish})`,
+                instructionChars: 0, instructionLeakedCode: false,
+                orchUsage: usageShape(o.usage), workerUsage: null,
+                orchCostUsd: attemptCostUsd(o.usage, oPrices), workerCostUsd: 0,
+                orchMs: o.ms, workerMs: 0, orchFinish: o.finish, workerFinish: null };
+        appendFileSync(journalPath, JSON.stringify(rec) + '\n');
+        console.log(`FAIL  ${orch.padEnd(28)} ${task.id.padEnd(16)} empty instruction (finish=${o.finish})`);
+        continue;
+      }
       const leaked = /```/.test(instruction);
       const w = await chat(WORKER, instruction, 8000);
       const code = extractCode(w.text);

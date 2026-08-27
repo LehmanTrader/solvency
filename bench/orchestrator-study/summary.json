@@ -1,0 +1,58 @@
+{
+  "protocol": "orchestrator-study-v0",
+  "worker": "z-ai/glm-5.3-flash",
+  "runDate": "2026-08-27",
+  "baseline_note": "worker direct-prompt baseline: 36/36 on these tasks (bench/results, solvency-bench-v0)",
+  "orchestrators": {
+    "openai/gpt-5.6-sol": {
+      "countable": 12,
+      "pass_rate": 1,
+      "orchestrator_cost_usd": 0.1792,
+      "worker_cost_usd": 0.0038,
+      "end_to_end_cost_per_solved_usd": 0.01525,
+      "mean_latency_ms": 35063,
+      "instructions_leaking_code": 1,
+      "mean_instruction_chars": 1039
+    },
+    "anthropic/claude-opus-5": {
+      "countable": 12,
+      "pass_rate": 0.9166666666666666,
+      "orchestrator_cost_usd": 0.4841,
+      "worker_cost_usd": 0.0074,
+      "end_to_end_cost_per_solved_usd": 0.04468,
+      "mean_latency_ms": 86232,
+      "instructions_leaking_code": 6,
+      "mean_instruction_chars": 2826
+    },
+    "z-ai/glm-5.3": {
+      "countable": 12,
+      "pass_rate": 0.3333333333333333,
+      "orchestrator_cost_usd": 0.3549,
+      "worker_cost_usd": 0.007,
+      "end_to_end_cost_per_solved_usd": 0.09047,
+      "mean_latency_ms": 307600,
+      "instructions_leaking_code": 2,
+      "mean_instruction_chars": 1659
+    },
+    "moonshotai/kimi-k3": {
+      "countable": 12,
+      "pass_rate": 1,
+      "orchestrator_cost_usd": 0.542,
+      "worker_cost_usd": 0.0039,
+      "end_to_end_cost_per_solved_usd": 0.04549,
+      "mean_latency_ms": 130611,
+      "instructions_leaking_code": 10,
+      "mean_instruction_chars": 2816
+    },
+    "z-ai/glm-5.3-flash": {
+      "countable": 12,
+      "pass_rate": 0.75,
+      "orchestrator_cost_usd": 0.0109,
+      "worker_cost_usd": 0.0049,
+      "end_to_end_cost_per_solved_usd": 0.00176,
+      "mean_latency_ms": 87326,
+      "instructions_leaking_code": 3,
+      "mean_instruction_chars": 2482
+    }
+  }
+}
