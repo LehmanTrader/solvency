@@ -112,8 +112,12 @@ test('the Composer accepts a free-form harness and gates paid features honestly'
   // /build-planner. Free-form harness entry survives with its new ids; the
   // paid workflow is gated, not faked.
   const page = read('site/src/pages/build-planner.astro');
-  assert.match(page, /id="cp-harness"[^>]*list="cp-harness-examples"/);
-  assert.doesNotMatch(page, /<select[^>]+id="cp-harness"/);
+  // Composer overhaul (operator, 2026-08-27): measured harnesses are a
+  // select; free-form entry SURVIVES as the cp-harness input beside it.
+  assert.match(page, /id="cp-harness-select"/);
+  assert.match(page, /measured/);
+  assert.match(page, /<input[^>]+id="cp-harness"/);
+  assert.doesNotMatch(page, /<select[^>]+id="cp-harness"[^-]/);
   assert.match(page, /GATE_ADD_ROLE/);
   assert.match(page, /DEMO_ROLE_CEILING/);
   assert.match(page, /href="\/pricing#pro"/);

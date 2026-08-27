@@ -12,6 +12,8 @@
 import Base from '../layouts/Base.astro';
 import { models } from '../lib/data.ts';
 import { BUILD_PLAN_LIMITS } from '../lib/build-plan-limits.ts';
+import harnessProfiles from '../data/composer-harness-profiles.json';
+import projectPresets from '../data/composer-project-presets.json';
 
 // Reviewed production client gate (deploy attestation checks the live page
 // for this attribute): the org-chart Composer carries the same plans-gate
@@ -27,16 +29,13 @@ const harnessExamples = [
       description="Prototype: an interactive org-chart view of the Build Composer. Add orchestrator, worker and fallback roles, assign models, and watch price and sensitivity update live.">
   <div class="wrap pt-8 md:pt-12" id="composer-preview"
        data-account-plans-enabled={ACCOUNT_PLANS_ENABLED ? 'true' : 'false'}>
-    <p class="eyebrow">Composer · prototype preview</p>
-    <div class="mt-3 flex flex-wrap items-center gap-3">
-      <h1 class="h-page">Build your stack.</h1>
-      <span class="pill pill-ink">PROTOTYPE · not linked from navigation</span>
+    <div class="cp-appbar">
+      <div class="cp-appbar-id">
+        <p class="eyebrow">Build Composer</p>
+        <h1 class="h-page">Build your stack.</h1>
+      </div>
+      <p class="cp-appbar-sub">Pick roles, models and a harness — the quote reprices live from measured data. Plans travel in the share link.</p>
     </div>
-    <p class="mt-4 lede max-w-2xl">
-      An org-chart view of the same Build Composer pricing engine: add a role, assign a model,
-      and the chart, totals and sensitivity band reprice together. Local only in this
-      preview — nothing here saves to an account, shares, or persists past this tab.
-    </p>
 
     <section class="card mt-6 overflow-hidden" aria-labelledby="cp-settings-title">
       <div class="card-head">
@@ -49,9 +48,25 @@ const harnessExamples = [
           <input class="ctl ctl-row mt-2 w-full" id="cp-name" maxlength={BUILD_PLAN_LIMITS.maxPlanNameChars} value="Composer preview stack" />
         </label>
         <label class="block">
+          <span class="label">Project type</span>
+          <select class="ctl ctl-row mt-2 w-full" id="cp-project-type">
+            <option value="">Custom workload</option>
+            {projectPresets.presets.map((p) => (
+              <option value={p.id}>{p.label} — {p.median_tasks_to_first_ship} tasks median</option>
+            ))}
+          </select>
+          <p class="small mt-1" id="cp-project-note" hidden></p>
+        </label>
+        <label class="block">
           <span class="label">Harness name</span>
-          <input class="ctl ctl-row mt-2 w-full" id="cp-harness" list="cp-harness-examples" maxlength={BUILD_PLAN_LIMITS.maxHarnessNameChars} value="Custom harness" autocomplete="off" />
-          <datalist id="cp-harness-examples">{harnessExamples.map((name) => <option value={name} />)}</datalist>
+          <select class="ctl ctl-row mt-2 w-full" id="cp-harness-select">
+            <option value="">Custom harness (type your own)</option>
+            {harnessProfiles.profiles.filter((p) => p.overhead_per_invocation).map((p) => (
+              <option value={p.id}>{p.label}{p.version ? ` · ${p.version}` : ''} — measured</option>
+            ))}
+          </select>
+          <input class="ctl ctl-row mt-2 w-full" id="cp-harness" maxlength={BUILD_PLAN_LIMITS.maxHarnessNameChars} value="Custom harness" autocomplete="off" />
+          <p class="small mt-1" id="cp-harness-overhead-note" hidden></p>
         </label>
         <label class="block">
           <span class="label">Build volume / month</span>
@@ -208,6 +223,10 @@ const harnessExamples = [
   import { analyzeBuildSensitivity, breakEvenBuildPlans, type SensitivityAxis } from '../lib/build-sensitivity.ts';
   import { buildExportCsv, buildExportFilename, buildExportJson, buildExportSummary } from '../lib/build-export.ts';
   import { BUILD_PLAN_LIMITS } from '../lib/build-plan-limits.ts';
+  import harnessProfilesJson from '../data/composer-harness-profiles.json';
+  import projectPresetsJson from '../data/composer-project-presets.json';
+import harnessProfiles from '../data/composer-harness-profiles.json';
+import projectPresets from '../data/composer-project-presets.json';
   import { chipMarkup, providerLabel } from '../lib/providers.ts';
   import { groupsFor, toEnginePlan, TRUNK_STUB_KEY, type ComposerRole, type ComposerPlan, type RoleGroup } from '../lib/composer-tree.ts';
   import type { Model } from '../lib/engine.ts';
@@ -450,6 +469,70 @@ const harnessExamples = [
   // object rather than rebuilt from the DOM on every render.
 
   function setPlanName(v: string) { plan.name = v.normalize('NFC').trim().slice(0, BUILD_PLAN_LIMITS.maxPlanNameChars) || plan.name; scheduleRender(); }
+  // ---- measured harness profiles (§21: every tested harness selectable) ----
+  const HARNESS_PROFILES = new Map(harnessProfilesJson.profiles
+    .filter((p: any) => p.overhead_per_invocation)
+    .map((p: any) => [p.id, p]));
+  let selectedHarnessId: string = '';
+  /** Overhead per build attempt = Σ roles (invocations × measured harness
+   * tokens priced at that role's model). Written into
+   * plan.harness.fixedCostPerBuildAttemptUsd with provenance shown — the
+   * scaffold rides every call, so the figure follows the plan's own roles. */
+  function applyHarnessOverhead() {
+    const note = document.getElementById('cp-harness-overhead-note') as HTMLElement;
+    const p: any = selectedHarnessId ? HARNESS_PROFILES.get(selectedHarnessId) : null;
+    if (!p) { note.hidden = true; return; }
+    const o = p.overhead_per_invocation;
+    let total = 0;
+    for (const role of plan.roles) {
+      const m = modelById.get(role.modelId);
+      if (!m) continue;
+      const cached = m.cached_input_per_mtok ?? m.input_per_mtok;
+      const per = (o.input_tokens * m.input_per_mtok + o.cache_read_tokens * cached
+        + o.cache_write_tokens * m.input_per_mtok + o.output_tokens * m.output_per_mtok) / 1e6;
+      total += per * role.expectedInvocationsPerBuildAttempt;
+    }
+    plan.harness.fixedCostPerBuildAttemptUsd = Number(total.toFixed(6));
+    note.hidden = false;
+    note.textContent = `Measured overhead: ${p.label}'s scaffold (${o.input_tokens + o.cache_read_tokens + o.cache_write_tokens} tokens/call median, 8-arm study 2026-08-26) priced at each role's model — $${total.toFixed(4)} per build attempt.`;
+  }
+  function pickHarnessProfile(id: string) {
+    selectedHarnessId = id;
+    const nameInput = document.getElementById('cp-harness') as HTMLInputElement;
+    const p: any = id ? HARNESS_PROFILES.get(id) : null;
+    if (p) {
+      plan.harness.name = p.label;
+      plan.harness.version = p.version ?? null;
+      plan.harness.configBasis = 'solvency_template';
+      nameInput.value = p.label;
+      nameInput.disabled = true;
+    } else {
+      plan.harness.configBasis = 'user_supplied';
+      plan.harness.fixedCostPerBuildAttemptUsd = 0;
+      nameInput.disabled = false;
+    }
+    applyHarnessOverhead();
+    scheduleRender();
+  }
+
+  // ---- project presets (task-study medians + a2 tool-call medians) ----
+  const PROJECT_PRESETS = new Map(projectPresetsJson.presets.map((p: any) => [p.id, p]));
+  function pickProjectType(id: string) {
+    const note = document.getElementById('cp-project-note') as HTMLElement;
+    const p: any = id ? PROJECT_PRESETS.get(id) : null;
+    if (!p) { note.hidden = true; scheduleRender(); return; }
+    plan.workload.buildsPerMonth = p.median_tasks_to_first_ship;
+    (document.getElementById('cp-volume') as HTMLInputElement).value = String(p.median_tasks_to_first_ship);
+    for (const role of plan.roles) {
+      if (role.kind === 'worker') role.expectedInvocationsPerBuildAttempt = p.tool_calls_per_task_median;
+    }
+    applyHarnessOverhead();
+    note.hidden = false;
+    note.textContent = `${p.label}: median ${p.median_tasks_to_first_ship} tasks to first ship (${p.repos_n} public repos, note 03) × ${p.tool_calls_per_task_median} tool calls/task (median of 311 sandboxed runs). The total below is the shipping estimate for one project of this shape.`;
+    setStatus(`Project preset applied: ${p.label}.`);
+    scheduleRender();
+  }
+
   function setHarnessName(v: string) { plan.harness.name = v.normalize('NFC').trim().slice(0, BUILD_PLAN_LIMITS.maxHarnessNameChars) || plan.harness.name; scheduleRender(); }
   function setHarnessVersion(v: string) { plan.harness.version = v.trim() ? v.trim().slice(0, BUILD_PLAN_LIMITS.maxHarnessVersionChars) : null; scheduleRender(); }
   function setHarnessBasis(v: string) { plan.harness.configBasis = v as ComposerPlan['harness']['configBasis']; scheduleRender(); }
@@ -835,7 +918,7 @@ const harnessExamples = [
   function scheduleRender() {
     if (renderScheduled) return;
     renderScheduled = true;
-    requestAnimationFrame(() => { renderScheduled = false; render(); writePlanHash(); });
+    requestAnimationFrame(() => { renderScheduled = false; if (selectedHarnessId) applyHarnessOverhead(); render(); writePlanHash(); });
   }
 
   function render() {
@@ -1127,6 +1210,8 @@ const harnessExamples = [
     else if (el.matches('[data-action="move-to"]')) setParent(el.dataset.roleId!, (el as HTMLSelectElement).value || null);
     else if (el.id === 'cp-sens-axis' || el.id === 'cp-sens-range') scheduleRender();
     else if (el.id === 'cp-name') setPlanName((el as HTMLInputElement).value);
+    else if (el.id === 'cp-harness-select') pickHarnessProfile((el as HTMLSelectElement).value);
+    else if (el.id === 'cp-project-type') pickProjectType((el as HTMLSelectElement).value);
     else if (el.id === 'cp-harness') setHarnessName((el as HTMLInputElement).value);
     else if (el.id === 'cp-version') setHarnessVersion((el as HTMLInputElement).value);
     else if (el.id === 'cp-harness-basis') setHarnessBasis((el as HTMLSelectElement).value);
@@ -1304,6 +1389,13 @@ const harnessExamples = [
     .cp-children::before { left: 1rem; }
     .cp-node { width: 100%; }
   }
+
+  .cp-appbar {
+    display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between;
+    gap: .75rem 2rem; padding-bottom: 1.1rem; margin-bottom: .25rem;
+    border-bottom: 1px solid var(--color-rule);
+  }
+  .cp-appbar-sub { max-width: 34rem; color: var(--color-muted); font-size: .92rem; line-height: 1.5; }
 
   /* Reuses the exact demo-gate-toast pattern from build-planner.astro
      (title/detail/actions, fixed bottom-right, accent left rule). */
