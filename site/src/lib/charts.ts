@@ -140,6 +140,10 @@ export interface RankSort { key: RankSortKey; dir: 'asc' | 'desc'; }
 export interface RankedOpts {
   width: number;
   volume: number;
+  /** When the hero is in bucket ("I want to ship a …") mode, the monthly
+   * column is really the project's shipping total — this label reframes the
+   * headers dynamically per product (operator, 2026-08-27). */
+  project?: string;
   basis: Basis;
   /** Narrow layout: $/month under the name, taller rows. */
   compact?: boolean;
@@ -286,13 +290,13 @@ export function rankedBars(rowsIn: ChartRow[], o: RankedOpts): string {
       sortBtn('name', 'Model', nameX, labelW - nameX, false) +
       sortBtn('pass', 'Pass', xPass, passW, true) +
       sortBtn('cost', '$ / solved', xSolved, solvedW, true) +
-      sortBtn('month', '$ / month', xMonth, monthW, true) +
+      sortBtn('month', o.project ? '$ / project' : '$ / month', xMonth, monthW, true) +
       `</div></foreignObject>`
     : `<g class="t3 cap" font-size="${FS_S}" aria-hidden="true">` +
-      `<text x="${barX}" y="12">$ / SOLVED TASK · LOWER IS BETTER</text>` +
+      `<text x="${barX}" y="12">${o.project ? `$ TO SHIP ${esc(o.project.toUpperCase())} · LOWER IS BETTER` : `$ / SOLVED TASK · LOWER IS BETTER`}</text>` +
       `<text x="${xPass}" y="12" text-anchor="end">PASS</text>` +
       `<text x="${xSolved}" y="12" text-anchor="end">$ / SOLVED<title>cost per solved task = cost per attempt ÷ pass rate. What it costs to get a task finished, not what a token costs.</title></text>` +
-      `<text x="${xMonth}" y="12" text-anchor="end">$ / MONTH<title>$ / solved task × your monthly task volume.</title></text></g>`);
+      `<text x="${xMonth}" y="12" text-anchor="end">${o.project ? `$ / PROJECT` : `$ / MONTH`}<title>${o.project ? `$ / solved task × the ${esc(o.project)} median task count — what this model charges to ship it.` : `$ / solved task × your monthly task volume.`}</title></text></g>`);
 
   const body = rows.map((r, i) => {
     const y = headH + i * rowH;
@@ -306,7 +310,7 @@ export function rankedBars(rowsIn: ChartRow[], o: RankedOpts): string {
     const detail = [r.harness ? `harness ${r.harness}` : '', `pass rate ${pct(r.pass)}`, r.attempt != null ? `${money(r.attempt)} per attempt` : '', r.caps ?? '', r.note ?? ''].filter(Boolean).join(' · ');
     const provider = r.provider ? providerLabel(r.provider) : undefined;
     const subline = [provider, r.caps].filter(Boolean).join(' · ');
-    const label = `${i + 1}. ${r.name}${provider ? `, ${provider}` : ''}, ${basis}, ${money(r.cost)} per solved task, ${month} a month at ${o.volume.toLocaleString()} tasks. ${detail}.`;
+    const label = `${i + 1}. ${r.name}${provider ? `, ${provider}` : ''}, ${basis}, ${money(r.cost)} per solved task, ${month} ${o.project ? `to ship ${o.project} (${o.volume.toLocaleString()} tasks median)` : `a month at ${o.volume.toLocaleString()} tasks`}. ${detail}.`;
     const cls = `row${r.id === bestId ? ' lead' : ''}${o.highlight === r.id ? ' hl' : ''}`;
     // full-row-height hit rects so every link is a ≥ 44 px target on small screens
     const hitRow = `<rect class="hit" x="0" y="0" width="${compact ? w - 120 : barX}" height="${rowH}" fill="transparent"/>`;

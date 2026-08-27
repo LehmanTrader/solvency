@@ -154,6 +154,8 @@ export interface GroupOpts {
   highlight?: string;
   /** Render just this GROUPS key (the population toggle); omit for all. */
   only?: string;
+  /** Bucket-mode product label — reframes the month column as $/project. */
+  project?: string;
   /** Sort state per basis group (stage 2's homepage Ranking view). Omitted —
    * or a group with no entry — falls back to rankedBars' own default
    * (cost ascending), so callers that don't sort (e.g. the model page's peer
@@ -189,7 +191,7 @@ export function groupsHtml(rows: Row[], s: Settings, o: GroupOpts): string {
   const headGap = o.sortable && !o.compact ? 'mt-7' : 'mt-2';
   return GROUPS.filter((g) => !o.only || g.key === o.only).map((g) => {
     const cr = chartRows(rows, g.key, s);
-    const svg = cr.length ? rankedBars(cr, { width: o.width, volume: s.volume, basis: g.basis, compact: o.compact, highlight: o.highlight, sort: o.sort?.[g.basis], sortable: o.sortable }) : '';
+    const svg = cr.length ? rankedBars(cr, { width: o.width, volume: s.volume, basis: g.basis, compact: o.compact, highlight: o.highlight, sort: o.sort?.[g.basis], sortable: o.sortable, project: o.project }) : '';
     // Free-model coverage: a row-count-dependent wording tweak only — "No
     // free row has..." reads oddly, "No free-tier row has..." doesn't.
     const emptyWord = g.basis === 'free' ? 'free-tier' : g.basis;

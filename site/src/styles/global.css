@@ -383,7 +383,10 @@
   @media (min-width: 640px) {
     .find { position: absolute; top: .55rem; right: 1.25rem; width: 13rem; padding: 0; z-index: 1; }
     .find-msg { position: absolute; right: 0; top: 100%; width: 22rem; text-align: right; }
-    .group-measured .ghead { padding-right: 15rem; }
+    /* Population toggle (2026-08-27): ANY group can render first now, so
+       every group header reserves the find-a-model box's width, not just
+       the old MEASURED group (the Free note ran under the box). */
+    #c-groups [data-group] .ghead { padding-right: 15rem; }
   }
   .gate { background: var(--color-panel); }
 

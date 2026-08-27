@@ -26,8 +26,8 @@ const WIDE = 1046, NARROW = 350;
 // live sort state per basis group and re-renders through this same
 // groupsHtml/patchRanked path on every click — one authority, not a DOM
 // shuffle (site/src/lib/charts.ts's rankedBars/patchRanked doc comments).
-const wide = groupsHtml(rows, DEFAULTS, { width: WIDE, compact: false, sortable: true, only: GROUP_TABS[0].key });
-const narrow = groupsHtml(rows, DEFAULTS, { width: NARROW, compact: true, sortable: true, only: GROUP_TABS[0].key });
+const wide = groupsHtml(rows, DEFAULTS, { width: WIDE, compact: false, sortable: true, only: GROUP_TABS[0].key, project: defaultBucket.label });
+const narrow = groupsHtml(rows, DEFAULTS, { width: NARROW, compact: true, sortable: true, only: GROUP_TABS[0].key, project: defaultBucket.label });
 // Stage 1.2 (Roy's note 6): the Frontier view of the same leaderboard —
 // pulled forward from stage 2's plan, replacing the old collapsed scatter
 // section on the homepage. Same allChartRows(rows, settings) the old
@@ -478,8 +478,9 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
     const narrowEl = groupsEl.querySelector<HTMLElement>('[data-layout="narrow"]')!;
     const visible = wideEl.offsetParent ? wideEl : narrowEl;
     const w = widthOf(visible.querySelector('[data-chart]') ?? visible);
-    patchGroups(wideEl, groupsHtml(rows, s, { width: visible === wideEl ? w : Number(groupsEl.dataset.wide), compact: false, highlight, sort: groupSort, sortable: true, only: currentPop }));
-    patchGroups(narrowEl, groupsHtml(rows, s, { width: visible === narrowEl ? w : Number(groupsEl.dataset.narrow), compact: true, highlight, sort: groupSort, sortable: true, only: currentPop }));
+    const projectLabel = mode === 'bucket' ? (bucketById(CTRL.bucket.value)?.label ?? (CTRL.bucket.value === 'other' ? 'your project' : undefined)) : undefined;
+    patchGroups(wideEl, groupsHtml(rows, s, { width: visible === wideEl ? w : Number(groupsEl.dataset.wide), compact: false, highlight, sort: groupSort, sortable: true, only: currentPop, project: projectLabel }));
+    patchGroups(narrowEl, groupsHtml(rows, s, { width: visible === narrowEl ? w : Number(groupsEl.dataset.narrow), compact: true, highlight, sort: groupSort, sortable: true, only: currentPop, project: projectLabel }));
     $('c-missing')!.innerHTML = missingHtml(missing, highlight ? models.find((m) => m.model_id === highlight)?.display_name : undefined);
     $('c-missing-d')!.querySelector('[data-count]')!.textContent = String(missing.length);
     renderScatter(rows, s);
