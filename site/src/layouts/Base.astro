@@ -20,9 +20,14 @@ interface Props {
 // is too dense to read at Discord/X unfurl and thumbnail sizes. The old file
 // is left on disk untouched -- other references to it are unaffected.
 const { title, description, og = '/og/cards/home.png', type = 'website' } = Astro.props;
+// Cache-buster for social crawlers: X/Discord cache og:image by URL, so a
+// regenerated card behind a stable path keeps unfurling stale (seen live
+// 2026-08-26: X served the four-harness note-02 card after the eight-arm one
+// deployed). Versioning by deploy SHA makes every deploy a fresh crawl.
+const OG_V = (import.meta.env.PUBLIC_BUILD_SHA ?? 'dev').slice(0, 10);
 const site = Astro.site!;
 const url = new URL(Astro.url.pathname, site).href;
-const image = new URL(og, site).href;
+const image = new URL(og + (og.includes('?') ? '&' : '?') + 'v=' + OG_V, site).href;
 const path = Astro.url.pathname;
 // Stage 1.3 (Roy's note 3, 2026-08-26): "Lets rename the build tab to the
 // Top nav holds the four product surfaces only (operator direction,
