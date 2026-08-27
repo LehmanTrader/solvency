@@ -144,6 +144,7 @@ const harnessExamples = [
           <button type="button" class="btn btn-quiet" id="cp-export-kebab" data-popover-toggle="export"
                   aria-haspopup="true" aria-expanded="false" aria-label="Chart options">⋯</button>
           <div class="export-menu" id="cp-export-menu" data-popover="export" hidden role="menu" aria-label="Chart options">
+            <button type="button" class="export-item" id="cp-share-link" data-action="share-link" role="menuitem" disabled>Copy share link</button>
             <button type="button" class="export-item" id="cp-export-json" data-action="export-json" role="menuitem" disabled>Download JSON</button>
             <button type="button" class="export-item" id="cp-export-csv" data-action="export-csv" role="menuitem" disabled>Download CSV</button>
             <button type="button" class="export-item" id="cp-export-png" data-action="export-png" role="menuitem" disabled>Download PNG <span class="cp-lock" aria-hidden="true" hidden>🔒</span></button>
@@ -297,6 +298,56 @@ const harnessExamples = [
     : `$${n.toLocaleString(undefined, { minimumFractionDigits: n < 1 ? 3 : 2, maximumFractionDigits: n < 1 ? 4 : 2 })}`;
 
   const prefersReducedMotion = (): boolean => matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---------- shareable plan permalinks (§21 roadmap #3) ----------
+  // The WHOLE untrusted surface is validateUntrustedBuildPlanV1: a plan
+  // arriving in the URL hash is parsed, converted to an engine-plan shape and
+  // pushed through the same schema gate as any imported JSON; only the
+  // schema's re-parsed value is adopted. parentRoleId (presentational only)
+  // is re-attached from a whitelist of the validated role ids. Anything that
+  // fails validation silently falls back to the default plan.
+  const PLAN_HASH_KEY = '#plan=';
+  const encodePlanHash = (): string =>
+    PLAN_HASH_KEY + btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify({ v: 1, p: toEnginePlan(plan), t: plan.roles.map((r) => ({ id: r.roleId, parent: r.parentRoleId ?? null })) }))))
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  function writePlanHash() {
+    if (plan.roles.length === 0) { history.replaceState(null, '', location.pathname + location.search); return; }
+    try { history.replaceState(null, '', location.pathname + location.search + encodePlanHash()); } catch { /* oversized or blocked: keep the app working */ }
+  }
+  function loadPlanFromHash(): boolean {
+    if (!location.hash.startsWith(PLAN_HASH_KEY)) return false;
+    try {
+      const b64 = location.hash.slice(PLAN_HASH_KEY.length).replace(/-/g, '+').replace(/_/g, '/');
+      if (b64.length > 60_000) return false;
+      const raw = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))));
+      if (!raw || raw.v !== 1) return false;
+      const result = validateUntrustedBuildPlanV1(raw.p, eligibleModels);
+      if (!result.ok) { setStatus('Shared plan link could not be validated; starting fresh.'); return false; }
+      const validated = result.value;
+      const ids = new Set(validated.roles.map((r: { roleId: string }) => r.roleId));
+      const parentOf = new Map<string, string | null>();
+      if (Array.isArray(raw.t)) for (const t of raw.t) {
+        if (t && typeof t.id === 'string' && (t.parent === null || typeof t.parent === 'string')) {
+          parentOf.set(t.id, t.parent !== null && ids.has(t.parent) ? t.parent : null);
+        }
+      }
+      plan = { ...validated, roles: validated.roles.map((r: ComposerPlan['roles'][number]) => ({ ...r, parentRoleId: parentOf.get(r.roleId) ?? null })) };
+      setStatus(`Loaded shared plan: ${plan.name}.`);
+      return true;
+    } catch { return false; }
+  }
+  async function copyShareLink() {
+    if (plan.roles.length === 0) return;
+    const result = validateUntrustedBuildPlanV1(toEnginePlan(plan), eligibleModels);
+    if (!result.ok || !result.quote.valid) { setStatus('Fix the plan before sharing: it does not validate.'); return; }
+    writePlanHash();
+    try {
+      await navigator.clipboard.writeText(location.href);
+      setStatus('Share link copied - anyone opening it sees this exact plan.');
+    } catch {
+      setStatus('Could not access the clipboard; copy the address bar URL - it now encodes this plan.');
+    }
+  }
 
   function providerChipSvg(provider: string, size = 20): string {
     return `<svg class="logo-chip" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" role="img" aria-label="${esc(providerLabel(provider))}">${chipMarkup(provider, size)}</svg>`;
@@ -728,6 +779,7 @@ const harnessExamples = [
   function updateExportButtons(quote: BuildQuoteV1 | null) {
     const ok = Boolean(quote && quote.valid);
     (document.getElementById('cp-export-json') as HTMLButtonElement).disabled = !ok;
+    (document.getElementById('cp-share-link') as HTMLButtonElement).disabled = !ok;
     (document.getElementById('cp-export-csv') as HTMLButtonElement).disabled = !ok;
     (document.getElementById('cp-export-png') as HTMLButtonElement).disabled = !ok;
   }
@@ -783,7 +835,7 @@ const harnessExamples = [
   function scheduleRender() {
     if (renderScheduled) return;
     renderScheduled = true;
-    requestAnimationFrame(() => { renderScheduled = false; render(); });
+    requestAnimationFrame(() => { renderScheduled = false; render(); writePlanHash(); });
   }
 
   function render() {
@@ -1050,6 +1102,7 @@ const harnessExamples = [
       else if (kind === 'add-worker') addRole('worker');
       else if (kind === 'add-fallback') addRole('other');
       else if (kind === 'preset') applyPreset(action.dataset.preset ?? '');
+      else if (kind === 'share-link') void copyShareLink();
       else if (kind === 'export-json') void exportCurrent('json');
       else if (kind === 'export-csv') void exportCurrent('csv');
       else if (kind === 'export-png') void exportCurrent('png');
@@ -1121,6 +1174,7 @@ const harnessExamples = [
     document.getElementById('cp-save-baseline')?.querySelector('.cp-lock')?.removeAttribute('hidden');
   }
 
+  loadPlanFromHash();
   render();
 </script>
 
