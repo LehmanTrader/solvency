@@ -13,10 +13,34 @@ const how = [
   { k: 'Modeled', v: 'pass rate published, cost from verified prices', n: 'Solvency\'s loop model, labelled as an assumption and adjustable. Never ranked against measured rows.' },
 ];
 ---
-<Base title="Solvency — which AI coding model is cheapest per solved task"
-      description="Which AI coding model is cheapest for your tasks and volume? Cost per solved task from measured benchmark runs, ranked."
+<Base title="Solvency — the AI spend suite"
+      description="Budget the work. Reconcile the bill. Right-size the seats. Enterprise budget-to-actuals for AI spend, built on first-party task-level benchmarks."
       og="/og/cards/home.png">
   <div class="wrap pt-8 md:pt-10">
+    <!-- Enterprise pivot (operator approval 2026-08-27, handoff §22): the
+         two-door suite narrative leads; the calculator + evidence stay below
+         as the measured layer that makes the suite's numbers credible. -->
+    <section class="suite-hero" aria-labelledby="suite-h">
+      <p class="eyebrow">The AI spend suite</p>
+      <h1 class="h-page mt-3" id="suite-h">What does your AI stack actually cost — and what should it?</h1>
+      <p class="mt-4 lede max-w-2xl">Budget a stack before you commit. Reconcile what you really spent. Get told the day the math changes. Every number below carries its receipt.</p>
+      <div class="mt-6 grid gap-4 sm:grid-cols-2 max-w-3xl">
+        <a class="card card-pad block suite-door suite-door-primary" href="/build-planner">
+          <p class="label" style="color:var(--color-accent)">Budget</p>
+          <h2 class="h-card mt-1">Plan a stack</h2>
+          <p class="small mt-2">Roles, models, harness, workload — priced from measured pass rates and harness overheads, not list-price arithmetic. Plans travel in the share link.</p>
+          <p class="mt-3 font-semibold" style="color:var(--color-accent)">Open the Composer →</p>
+        </a>
+        <a class="card card-pad block suite-door" href="mailto:robertdhanda@gmail.com?subject=Solvency%20audit%20waitlist&body=Team%20size%2C%20AI%20tools%20in%20use%2C%20and%20roughly%20what%20you%20spend%20monthly%3A">
+          <p class="label">Actuals</p>
+          <h2 class="h-card mt-1">Check what you spent</h2>
+          <p class="small mt-2">Drop in an OpenRouter, Claude Code or Codex usage export: reconciliation against verified prices, cache-waste findings, seat economics. In design partnership now.</p>
+          <p class="mt-3 font-semibold">Join the audit waitlist →</p>
+        </a>
+      </div>
+      <p class="small mt-5" style="color:var(--color-muted)">Below: the measurement layer — every model we've benchmarked first-party, the verified catalog, and the studies. The receipts behind every budget.</p>
+    </section>
+    <div class="mt-10"></div>
     <Calculator />
     <!-- Radical subtraction (direction doc §5): the hero, its input and the
          ranked table above are the whole homepage by default. The method

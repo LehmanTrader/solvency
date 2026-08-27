@@ -742,3 +742,9 @@
 .sentence-sub { font-size: 1.05rem; color: var(--color-body); }
 @media (min-width: 640px) { .sentence.sentence-sub { font-size: 1.3rem; } }
 .sentence-sub .ctl-inline { min-width: 3.2em; text-align: center; }
+
+/* Enterprise suite hero (2026-08-27, handoff §22) */
+.suite-hero .lede { color: var(--color-body); }
+.suite-door { border: 1px solid var(--color-rule-strong); transition: border-color .15s; text-decoration: none; }
+.suite-door:hover { border-color: var(--color-accent); }
+.suite-door-primary { border-color: var(--color-accent); box-shadow: 0 0 0 1px var(--color-accent); }
