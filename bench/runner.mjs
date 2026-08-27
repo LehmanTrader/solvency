@@ -212,9 +212,26 @@ export async function runBenchmark(cfg, emit = () => {}) {
     }
   }
 
-  const countable = counted.pass + counted.fail;
-  const passRate = countable ? counted.pass / countable : null;
-  const costPerTask = countable ? spent / countable : null;
+  // Summary derives from the FULL journal, never the in-memory counters:
+  // a resumed run's counters hold only the new attempts, which produced
+  // summaries like "countable 2" over a 35-attempt journal (caught on the
+  // vendor-direct gap-fill, 2026-08-27). Duplicate task#trial keys keep the
+  // LAST record (an infra row later retried successfully resolves to the
+  // retry).
+  const journal = new Map();
+  for (const line of readFileSync(resultsPath, 'utf8').split('\n').filter(Boolean)) {
+    const r = JSON.parse(line);
+    journal.set(`${r.taskId}#${r.trial}`, r);
+  }
+  const all = [...journal.values()];
+  const jPass = all.filter((r) => !r.infra && r.pass).length;
+  const jFail = all.filter((r) => !r.infra && !r.pass).length;
+  const jInfra = all.filter((r) => r.infra).length;
+  const jSpent = all.reduce((a, r) => a + (r.costUsd ?? 0), 0);
+  counted.pass = jPass; counted.fail = jFail; counted.infra = jInfra; spent = jSpent;
+  const countable = jPass + jFail;
+  const passRate = countable ? jPass / countable : null;
+  const costPerTask = countable ? jSpent / countable : null;
   const summary = {
     protocol: cfg.harness ? PROTOCOL + 'h' : PROTOCOL, protocolHash: protocolHash(tasks, trials, maxTokens),
     costBasis: cfg.harness
