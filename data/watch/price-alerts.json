@@ -1,0 +1,8 @@
+{
+  "alerts": [
+    {
+      "date": "2026-09-09",
+      "note": "GLM-5.3-Flash 50%-off promo ends: list becomes $0.15/M in, $0.50/M out (was $0.075/$0.25). Re-verify catalog row glm-5.3-flash and every measured_by_solvency GLM row priced during the promo; annotate the change in the changelog."
+    }
+  ]
+}

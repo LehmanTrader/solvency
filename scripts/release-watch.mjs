@@ -73,6 +73,14 @@ const state = existsSync(STATE_PATH) ? JSON.parse(readFileSync(STATE_PATH, 'utf8
 const [models, harnesses] = await Promise.all([openRouterModels(), harnessVersions()]);
 
 const findings = [];
+// Dated price alerts (promo expiries etc.) — fire on/after their date until cleared.
+const alertsPath = join(ROOT, 'data', 'watch', 'price-alerts.json');
+if (existsSync(alertsPath)) {
+  const today = new Date().toISOString().slice(0, 10);
+  for (const a of JSON.parse(readFileSync(alertsPath, 'utf8')).alerts ?? []) {
+    if (a.date <= today) findings.push(`PRICE ALERT (due ${a.date}): ${a.note}`);
+  }
+}
 if (!SEED) {
   for (const [id, m] of Object.entries(models)) {
     if (!(id in state.models)) {
