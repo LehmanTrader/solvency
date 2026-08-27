@@ -115,7 +115,13 @@ async function chat(apiKey, model, messages) {
   if (!res.ok) throw new Error(`OpenRouter ${res.status}: ${(await res.text()).slice(0, 300)}`);
   const body = await res.json();
   if (body.error) throw new Error(JSON.stringify(body.error).slice(0, 300));
-  return { msg: body.choices?.[0]?.message ?? {}, usage: body.usage ?? { prompt_tokens: 0, completion_tokens: 0 } };
+  const rawMsg = body.choices?.[0]?.message ?? {};
+  // Replaying provider-specific extras (reasoning_content etc.) back in the
+  // history 400s on some providers ("duplicate field `reasoning_content`",
+  // seen on Laguna's a2 arm) — keep only the OpenAI-standard fields.
+  const msg = { role: rawMsg.role ?? 'assistant', content: rawMsg.content ?? null };
+  if (rawMsg.tool_calls) msg.tool_calls = rawMsg.tool_calls;
+  return { msg, usage: body.usage ?? { prompt_tokens: 0, completion_tokens: 0 } };
 }
 
 /** One agentic attempt: fresh fixture, tool loop, then post-hoc hidden grading. */
