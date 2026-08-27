@@ -24,7 +24,7 @@ type Arm = {
 };
 const arms: Arm[] = study.arms;
 const armLabel = (a: Arm) => a.harness === null ? 'API, no harness'
-  : a.harness === 'aider' ? 'Aider' : a.harness === 'codex' ? 'Codex' : a.harness === 'pi' ? 'Pi'
+  : a.harness === 'aider' ? 'Aider' : a.harness === 'codex' ? 'Codex' : a.harness === 'pi' ? 'Pi' : a.harness === 'goose' ? 'Goose' : a.harness === 'cline' ? 'Cline'
   : a.harness === 'opencode' ? 'OpenCode' : a.harness === 'hermes' ? 'Hermes Agent' : a.harness;
 
 describe('Research Note 02, population three, matches the first-party study', () => {
@@ -32,14 +32,14 @@ describe('Research Note 02, population three, matches the first-party study', ()
 
   test('the note actually carries the population-three section', () => {
     assert.ok(section.length > 500, 'Population three section missing or truncated');
-    assert.match(md, /# Same Model, Eight Harnesses/);
+    assert.match(md, /# Same Model, Ten Harnesses/);
   });
 
   test('all five ranked rows re-derive: pass, $/solved, ratio vs cheapest', () => {
     const rows = section.split('\n')
-      .filter((l) => /^\| (Aider|API, no harness|Pi|Codex|OpenCode|Hermes Agent) \| /.test(l))
+      .filter((l) => /^\| (Aider|API, no harness|Pi|Codex|Goose|Cline|OpenCode|Hermes Agent) \| /.test(l))
       .filter((l) => cells(l).length === 6); // ranked table only; the anatomy table has 5 columns
-    assert.equal(rows.length, 6, 'expected exactly six arms in the table');
+    assert.equal(rows.length, 8, 'expected exactly eight arms in the table');
     const cheapest = Math.min(...arms.map((a) => a.cost_per_solved_usd));
     const sorted = [...arms].sort((a, b) => a.cost_per_solved_usd - b.cost_per_solved_usd);
     rows.forEach((line, i) => {
@@ -54,8 +54,8 @@ describe('Research Note 02, population three, matches the first-party study', ()
   });
 
   test('the anatomy medians re-derive from the study, verbatim', () => {
-    const rows = section.split('Output |')[1].split('\n').filter((l) => /^\| (Aider|API, no harness|Pi|Codex|OpenCode|Hermes Agent) \| /.test(l));
-    assert.equal(rows.length, 6);
+    const rows = section.split('Output |')[1].split('\n').filter((l) => /^\| (Aider|API, no harness|Pi|Codex|Goose|Cline|OpenCode|Hermes Agent) \| /.test(l));
+    assert.equal(rows.length, 8);
     for (const line of rows) {
       const [label, input, cr, cw, out] = cells(line);
       const arm = arms.find((a) => armLabel(a) === label)!;
@@ -70,8 +70,7 @@ describe('Research Note 02, population three, matches the first-party study', ()
   test('the 7.7x headline is the true max/min ratio, and every arm passed everything', () => {
     const costs = arms.map((a) => a.cost_per_solved_usd);
     const spread = Math.max(...costs) / Math.min(...costs);
-    assert.equal(spread.toFixed(1), '7.7');
-    assert.match(md, /spans \*\*7\.7x\*\*/);
+    assert.match(md, new RegExp(`spans \\*\\*${spread.toFixed(1)}x\\*\\*`), 'note prose spread must match the study');
     for (const a of arms) assert.equal(a.pass_rate, 1, `${armLabel(a)} must be 100% for the "pass explains none of this" claim`);
   });
 
@@ -92,6 +91,6 @@ describe('Research Note 02, population three, matches the first-party study', ()
     assert.match(md, /Agent = Model \+ Harness/);
     const p12 = ['Pi', 'Claude Code', 'Grok Build', 'Codex', 'OpenClaw', 'Hermes Agent'];
     const p3 = arms.filter((a) => a.harness).map(armLabel);
-    assert.equal(new Set([...p12, ...p3]).size, 8);
+    assert.equal(new Set([...p12, ...p3]).size, 10);
   });
 });

@@ -582,7 +582,11 @@ describe('buildState: v2 fields (data/ enrichment, archivedDates, overnightNumbe
       // wall-clock date (buildState's `today` is `localIsoDate(new Date())`, not
       // anything from the queue fixtures) -- so the daysSinceLaunch assertion
       // below holds no matter what day this test actually runs.
-      const fiveDaysAgo = new Date(Date.now() - 5 * 86_400_000).toISOString().slice(0, 10);
+      // Local-date arithmetic, matching buildState's localIsoDate — the old
+      // toISOString() (UTC) version made this test fail between 8pm and
+      // midnight ET, when the UTC date is already tomorrow.
+      const d5 = new Date(Date.now() - 5 * 86_400_000);
+      const fiveDaysAgo = `${d5.getFullYear()}-${String(d5.getMonth() + 1).padStart(2, '0')}-${String(d5.getDate()).padStart(2, '0')}`;
       const entriesWithPinnedLaunch = [
         { date: fiveDaysAgo, kind: 'initial', summary: 'Initial dataset published.' },
         ...CHANGELOG_WITH_PRICE_HISTORY.filter((e) => e.kind === 'price_change'),

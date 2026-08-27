@@ -81,8 +81,9 @@ describe('og cards: manifest matches the live data', () => {
     assert.ok(expected, 'expected a first-party harness study on disk');
     assertRankedCardMatches(expected!.key, cards[expected!.key], expected);
     // spread pinned to the study itself, same figure Note 02 publishes
-    assert.equal(expected!.raw.spread, '7.7x');
-    assert.equal(expected!.rows.length, 6);
+    const costs = expected!.rows.map((r: any) => r.cost);
+    assert.equal(expected!.raw.spread, `${(Math.max(...costs) / Math.min(...costs)).toFixed(1)}x`);
+    assert.equal(expected!.rows.length, 8);
   });
 
   test('every current model has a card, and each matches modelCardData() computed now', () => {

@@ -1,27 +1,27 @@
 ---
-title: Same Model, Eight Harnesses
+title: Same Model, Ten Harnesses
 note: 2
 date: 2026-08-26
-description: Three benchmarks, eight coding harnesses, one result three times over — hold the model constant, change only the scaffold, and the bill moves 3.8x, 2.8x, and in Solvency's own measurements 7.7x.
+description: Three benchmarks, ten coding harnesses, one result three times over — hold the model constant, change only the scaffold, and the bill moves 3.8x, 2.8x, and in Solvency's own measurements 9.1x.
 price_verified: 2026-08-21
 pdf_verified: 2026-08-26
 pdf_sources: OpenBench · WildClawBench · Solvency Bench
 pdf_method: usage × price · source-measured · first-party
 pdf_status: Phase 1 — harness
 pdf_tagline: The harness changes the bill.
-pdf_hero: SAME MODEL|EIGHT HARNESSES
+pdf_hero: SAME MODEL|TEN HARNESSES
 ---
 
-# Same Model, Eight Harnesses
+# Same Model, Ten Harnesses
 
-**Three benchmarks that have never met, eight coding harnesses between them, the same result
+**Three benchmarks that have never met, ten coding harnesses between them, the same result
 three times.** OpenBench ran GPT-5.6 Sol through four harnesses and published the token
 usage; Solvency repriced it at verified API rates. WildClawBench (InternLM) held four models
 constant across four scaffolds, including Hermes Agent and OpenClaw. And on 2026-08-26
-Solvency ran the measurement itself: the same GPT-5.6 Sol through six arms of its own
-benchmark — Pi, Aider, Codex, OpenCode, Hermes Agent, and a bare API call as the
-no-scaffold control. Three populations, reported separately below, never sharing a table;
-together they cover eight distinct harnesses.
+Solvency ran the measurement itself: the same GPT-5.6 Sol through eight arms of its own
+benchmark — Pi, Aider, Codex, Goose, OpenCode, Cline, Hermes Agent, and a bare API call
+as the no-scaffold control. Three populations, reported separately below, never sharing a
+table; together they cover ten distinct harnesses.
 
 This revision replaces the earlier editions at this URL ("Same Model, Four Harnesses",
 2026-08-23; "Six Harnesses", earlier 2026-08-26). Nothing in the earlier tables changed;
@@ -64,10 +64,9 @@ in three benchmarks, independently.
   by **1.9x to 2.8x within each model**, and the harness that scores best is never the one
   that bills least.
 - **Solvency Bench (12 single-turn tasks, GPT-5.6 Sol, run by Solvency):** every arm scores
-  **100%**, and the bill still spans **7.7x** — from Aider's $0.0093 per solved task to
-  Hermes Agent's $0.0717, with Pi (OpenBench's cheapest arm on its own population) at
-  $0.0097. With correctness held perfectly equal, what remains is the pure price of the
-  scaffold.
+  **100%**, and the bill still spans **9.1x** — from Aider's $0.0093 per solved task to
+  Cline's $0.0851, with Pi (OpenBench's cheapest arm on its own population) at $0.0097.
+  With correctness held perfectly equal, what remains is the pure price of the scaffold.
 
 This is not a finding that any harness is universally better. It is a finding that the
 harness changes the bill, even when the name in the model column does not. A useful cost
@@ -223,7 +222,7 @@ same caution applies to any stack that wraps one harness in another.
 ## Population three — Solvency Bench: the harness tax, isolated
 
 On 2026-08-26 Solvency stopped repricing other people's runs and ran its own: the same
-GPT-5.6 Sol through six arms of [Solvency Bench](https://github.com/LehmanTrader/solvency/tree/main/bench)'s
+GPT-5.6 Sol through eight arms of [Solvency Bench](https://github.com/LehmanTrader/solvency/tree/main/bench)'s
 single-turn suite — 12 code tasks, deterministic hidden-test graders, 3 trials, temperature
 0. A bare API call is the control; every other arm is a real harness driving the same
 prompts, including Pi — the arm OpenBench's own population crowns cheapest. Dollars are the harness's own token accounting priced at verified catalog rates
@@ -236,8 +235,10 @@ input rate, stated).
 | API, no harness | — | metered, single call | 100% | **$0.0095** | 1.01x |
 | Pi | 0.84.3 | metered (OpenRouter) | 100% | **$0.0097** | 1.04x |
 | Codex | codex-cli 0.150.0 | local subscription | 100% | **$0.0248** | 2.65x |
+| Goose | 1.47.0 | metered (OpenRouter) | 100% | **$0.0284** | 3.05x |
 | OpenCode | 1.18.20 | metered (OpenRouter) | 100% | **$0.0364** | 3.90x |
 | Hermes Agent | Hermes Agent v0.20.5 (2026.8.19) | metered (OpenRouter) | 100% | **$0.0717** | 7.68x |
+| Cline | 3.0.60 | metered (OpenRouter) | 100% | **$0.0851** | 9.12x |
 
 Dataset: `data/harness-study/solvency-bench-v0.json`; per-attempt journals under `bench/results/`.
 Every arm passed every countable attempt, so pass rate explains none of this spread. The
@@ -249,8 +250,10 @@ anatomy does — median tokens per attempt, from the harnesses' own accounting:
 | Aider | 752 | 0 | 0 | 166 |
 | Pi | 3 | 1,192 | 0 | 206.5 |
 | Codex | 528 | 15,104 | 0 | 214 |
+| Goose | 3,282.5 | 3,169 | 0 | 349.5 |
 | OpenCode | 3 | 0 | 6,106 | 171 |
 | Hermes Agent | 3 | 0 | 12,682 | 249 |
+| Cline | 8,394 | 4,904.5 | 0 | 1,144.5 |
 
 ---
 
@@ -261,11 +264,12 @@ tokens against the bare call's 288) more than pays for it: **the harness arm com
 no-harness-at-all.** Overhead is not a law of nature; it is a design budget, and it can be
 negative.
 
-At the other end, Hermes carries a ~12.7k-token scaffold into every one-shot session. On a
-100-token task, that is a 120x context multiplier before any work happens. Nothing about
-that is wrong — that scaffold is what buys Hermes its skills, memory and tool surface on
-real agentic work — but on a bounded single call it is pure tax, and now it has a price:
-**7.7x**.
+At the other end, Cline runs a full iterating agent on every one-shot call — a median
+8.4k fresh input tokens, 1.1k of output across its reasoning-and-submit loop — and Hermes
+carries a ~12.7k-token scaffold into every session. On a 100-token task that is a
+two-orders-of-magnitude context multiplier before any work happens. Nothing about that is
+wrong — those scaffolds buy skills, memory and tool surface on real agentic work — but on
+a bounded single call they are pure tax, and now it has a price: **9.1x**.
 
 ---
 
@@ -281,7 +285,8 @@ re-reads its context at the discount or rebuilds it at list.
 Pi makes the same point from the light end: a ~1.2k-token scaffold arriving almost entirely
 as cache reads leaves it **4% over the bare call** — the OpenBench population's cheapest
 arm rides nearly free on ours too, and for the same reason: small context, read at the
-discount. This is the cache manager (subsystem five) earning its keep, and it is invisible
+discount. Goose sits mid-pack the same way from the other side: a ~3.3k scaffold, roughly
+half re-read at the cached rate. This is the cache manager (subsystem five) earning its keep, and it is invisible
 on every pricing page in the industry.
 
 ---
@@ -315,14 +320,14 @@ through a harness whose verification loop and cache discipline you have priced.
 First-hand observations from running each arm (2026-08-26 builds), plus each project's
 documentation — capability notes, not endorsements:
 
-| | Claude Code | Codex | Pi | Hermes Agent | OpenCode | Aider | solvency-loop |
-|---|---|---|---|---|---|---|---|
-| Models | Anthropic (login/key) | OpenAI (login/key) | any (provider/model) | any (multiplexer) | any (provider/model) | any (LiteLLM-style) | any (OpenRouter) |
-| Headless one-shot | `-p --output-format json` | `exec --json` | `-p --mode json` | `-z --usage-file` | `run --format json` | `--message` | library call |
-| Machine-readable usage | full incl. cache r/w | full incl. cache r/w | full incl. cache r/w + cost | full incl. reasoning | per-step tokens+cost | tokens line (k-rounded ≥1k) | API usage object |
-| Cache behaviour observed | heavy reads | heavy reads | small scaffold, read back | writes each session | writes each session | none (lean prompt) | none |
-| Agentic tool loop | yes | yes | yes (extensible) | yes | yes | edit-focused | minimal by design |
-| Execution sandboxing | policy/hooks | sandbox modes | extension-defined | egress controls | permission prompts | none (git-scoped) | docker, network-less |
+| | Claude Code | Codex | Pi | Goose | Cline | Hermes Agent | OpenCode | Aider | solvency-loop |
+|---|---|---|---|---|---|---|---|---|---|
+| Models | Anthropic (login/key) | OpenAI (login/key) | any (provider/model) | any (15+ providers) | any (provider registry) | any (multiplexer) | any (provider/model) | any (LiteLLM-style) | any (OpenRouter) |
+| Headless one-shot | `-p --output-format json` | `exec --json` | `-p --mode json` | `run -t` (+recipes) | `-y --json` | `-z --usage-file` | `run --format json` | `--message` | library call |
+| Machine-readable usage | full incl. cache r/w | full incl. cache r/w | full incl. cache r/w + cost | session store (SQLite) | full incl. cache r/w + cost | full incl. reasoning | per-step tokens+cost | tokens line (k-rounded ≥1k) | API usage object |
+| Cache behaviour observed | heavy reads | heavy reads | small scaffold, read back | mixed read/write | heavy fresh input + writes | writes each session | writes each session | none (lean prompt) | none |
+| Agentic tool loop | yes | yes | yes (extensible) | yes (MCP/extensions) | yes (submit-gated) | yes | yes | edit-focused | minimal by design |
+| Execution sandboxing | policy/hooks | sandbox modes | extension-defined | tool permission modes | approval model (`-y` bypasses) | egress controls | permission prompts | none (git-scoped) | docker, network-less |
 
 ---
 
@@ -392,7 +397,11 @@ success rate. Until the system is measured, the honest result is: **success rate
   as reported.
 - **Grok Build is still unmeasured by Solvency.** It appears only in population one
   (OpenBench's usage, repriced); adding it first-party needs xAI-side access not yet
-  in place. The eight-harness union is complete; the first-party arm set is not.
+  in place. The ten-harness union is complete; the first-party arm set is not.
+- **The Cline arm is graded from files.** Its first run was invalidated as an adapter
+  artifact (the agent narrates in text and writes code to the workspace; reply-fence
+  extraction under-scored it 50%) and rerun with file-based grading — the same
+  precedent as Aider. Both runs' journals are retained.
 - **The two Claude Code rows are not the same Claude Code.** Population one pins CLI 2.1.214;
   population two records a Docker image tag from a different build line, months apart. Even
   the shared harness name does not license a cross-population comparison.

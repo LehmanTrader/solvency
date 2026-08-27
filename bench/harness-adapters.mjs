@@ -21,8 +21,8 @@
  */
 import { spawn } from 'node:child_process';
 
-const run = (cmd, args, { timeoutMs = 300000, input } = {}) => new Promise((resolve) => {
-  const child = spawn(cmd, args, { stdio: [input ? 'pipe' : 'ignore', 'pipe', 'pipe'] });
+const run = (cmd, args, { timeoutMs = 300000, input, env, cwd } = {}) => new Promise((resolve) => {
+  const child = spawn(cmd, args, { stdio: [input ? 'pipe' : 'ignore', 'pipe', 'pipe'], env: env ?? process.env, cwd });
   let out = '', err = '';
   child.stdout.on('data', (d) => { out += d; });
   child.stderr.on('data', (d) => { err += d; });
@@ -118,6 +118,85 @@ export const ADAPTERS = {
       if (!usage.input && !usage.output && !usage.cacheRead && !usage.cacheWrite)
         return { infra: true, detail: 'pi reported zero usage — cannot reprice, attempt excluded (fail closed)' };
       return { text, usage };
+    },
+  },
+
+  /** Goose (Block / Linux Foundation), headless `goose run -t`. Reply is
+   * stdout (banner stripped); usage is read back from Goose's own session
+   * store (~/.local/share/goose/sessions/sessions.db) by unique session name
+   * — accumulated input/output/cache token columns per session. Provider via
+   * GOOSE_PROVIDER=openrouter + GOOSE_MODEL env. */
+  goose: {
+    label: 'Goose (headless, metered provider)',
+    access: 'metered provider (OpenRouter)',
+    async version() { return versionOf('goose'); },
+    async attempt({ prompt, model, timeoutMs }) {
+      const name = `sbench-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const env = { ...process.env, GOOSE_PROVIDER: 'openrouter', GOOSE_MODEL: model, GOOSE_DISABLE_KEYRING: '1' };
+      const r = await run('goose', ['run', '-n', name, '--max-turns', '3', '-t', prompt], { timeoutMs, env });
+      if (r.signal === 'SIGKILL') return { infra: true, detail: `harness timeout after ${timeoutMs}ms` };
+      const text = r.out
+        .split('\n')
+        .filter((l) => !/^\s*(__\(|\\____\)|L L|starting session|logging to|working directory)/i.test(l))
+        .join('\n');
+      try {
+        const { DatabaseSync } = await import('node:sqlite');
+        const { homedir } = await import('node:os');
+        const db = new DatabaseSync(`${homedir()}/.local/share/goose/sessions/sessions.db`, { readOnly: true });
+        const row = db.prepare(
+          'SELECT accumulated_input_tokens AS i, accumulated_output_tokens AS o, accumulated_cache_read_tokens AS cr, accumulated_cache_write_tokens AS cw FROM sessions WHERE name = ? OR user_set_name = ? ORDER BY created_at DESC LIMIT 1'
+        ).get(name, name);
+        db.close();
+        if (!row || (!row.i && !row.o)) return { infra: true, detail: `no usage row for goose session ${name} — cannot reprice, attempt excluded (fail closed)` };
+        return { text, usage: { input: (row.i ?? 0) - (row.cr ?? 0), cacheRead: row.cr ?? 0, cacheWrite: row.cw ?? 0, output: row.o ?? 0 } };
+      } catch (e) {
+        return { infra: true, detail: `goose session store unreadable: ${e.message}` };
+      }
+    },
+  },
+
+  /** Cline CLI 2.0, headless `-y --json`, provider openrouter with explicit
+   * key. The final `run_result` event carries aggregateUsage with a full
+   * cache split; reply text is the concatenation of text content events
+   * (the submit_and_exit summary alone is not the reply). */
+  cline: {
+    label: 'Cline (headless, metered provider)',
+    access: 'metered provider (OpenRouter)',
+    async version() { return versionOf('cline'); },
+    async attempt({ prompt, model, timeoutMs }) {
+      // Cline is file-native (its agent edits the workspace rather than
+      // replying with a fence) — grade from a file, aider precedent (r1 of
+      // this arm was INVALIDated for exactly that extraction artifact).
+      const { mkdtempSync, readFileSync: rf, existsSync: ex, rmSync } = await import('node:fs');
+      const { tmpdir } = await import('node:os');
+      const { join } = await import('node:path');
+      const dir = mkdtempSync(join(tmpdir(), 'sbench-cline-'));
+      try {
+        const r = await run('cline',
+          ['-y', '--json', '-P', 'openrouter', '-k', process.env.OPENROUTER_API_KEY, '-m', model,
+           `${prompt}\n\nWrite the complete implementation to a file named solution.mjs in the current directory.`],
+          { timeoutMs, cwd: dir });
+        if (r.signal === 'SIGKILL') return { infra: true, detail: `harness timeout after ${timeoutMs}ms` };
+        let usage = null;
+        for (const line of r.out.split('\n')) {
+          if (!line.trim().startsWith('{')) continue;
+          let e; try { e = JSON.parse(line); } catch { continue; }
+          if (e.type === 'run_result' && e.aggregateUsage) {
+            usage = {
+              input: e.aggregateUsage.inputTokens ?? 0,
+              cacheRead: e.aggregateUsage.cacheReadTokens ?? 0,
+              cacheWrite: e.aggregateUsage.cacheWriteTokens ?? 0,
+              output: e.aggregateUsage.outputTokens ?? 0,
+            };
+          }
+        }
+        if (!usage) return { infra: true, detail: 'no run_result usage in cline JSON stream — cannot reprice, attempt excluded (fail closed)' };
+        const file = join(dir, 'solution.mjs');
+        const text = ex(file) ? '```js\n' + rf(file, 'utf8') + '\n```' : '';
+        return { text, usage };
+      } finally {
+        try { rmSync(dir, { recursive: true, force: true }); } catch {}
+      }
     },
   },
 

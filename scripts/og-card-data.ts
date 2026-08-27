@@ -415,7 +415,7 @@ export function rankedSolvencyHarnessCardData(): RankedCardData | null {
   if (!existsSync(studyPath)) return null;
   const study = JSON.parse(readFileSync(studyPath, 'utf8'));
   const armName = (h: string | null) => h === null ? 'API, no harness'
-    : h === 'aider' ? 'Aider' : h === 'codex' ? 'Codex' : h === 'pi' ? 'Pi'
+    : h === 'aider' ? 'Aider' : h === 'codex' ? 'Codex' : h === 'pi' ? 'Pi' : h === 'goose' ? 'Goose' : h === 'cline' ? 'Cline'
     : h === 'opencode' ? 'OpenCode' : h === 'hermes' ? 'Hermes Agent' : h;
   const arms = [...study.arms].sort((a: any, b: any) => a.cost_per_solved_usd - b.cost_per_solved_usd);
   if (arms.length < 2) return null;
