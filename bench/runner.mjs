@@ -179,8 +179,16 @@ export async function runBenchmark(cfg, emit = () => {}) {
           const a = await ADAPTERS[cfg.harness].attempt({ prompt: task.prompt, model: cfg.harnessModel, timeoutMs: 300000 });
           if (a.infra) throw new Error(a.detail);
           text = a.text;
-          costUsd = repriceUsage(a.usage, prices);
-          usageRec = a.usage;
+          if (a.usageMissing) {
+            // BYO harness without a usage line: grade correctness, report no
+            // dollars (fail-closed pricing — never a guessed cost).
+            costUsd = 0;
+            usageRec = null;
+            finishNote = 'usage unreported by custom harness — correctness graded, cost excluded (fail closed)';
+          } else {
+            costUsd = repriceUsage(a.usage, prices);
+            usageRec = a.usage;
+          }
         } else {
           const r = await callModel({ slug, prompt: task.prompt, maxTokens, apiKey });
           text = r.text;

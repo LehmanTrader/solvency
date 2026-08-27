@@ -200,6 +200,47 @@ export const ADAPTERS = {
     },
   },
 
+  /** BYO harness (operator, 2026-08-27: "people that build their own custom
+   * harness ... test it out ... before putting it into production"). The
+   * user supplies a command template via SBENCH_CUSTOM_CMD; {PROMPT_FILE}
+   * is replaced with a temp file holding the task prompt. The command must
+   * print the model reply on stdout and, for repricing, a final line
+   * `SBENCH_USAGE {"input":N,"cacheRead":N,"cacheWrite":N,"output":N}`.
+   * No usage line -> the attempt is excluded fail-closed (pass/fail still
+   * graded, so a harness can be scored on correctness alone first).
+   * SBENCH_CUSTOM_NAME/SBENCH_CUSTOM_VERSION label the arm. */
+  custom: {
+    label: 'Custom harness (user-supplied command)',
+    access: 'user-supplied',
+    async version() { return process.env.SBENCH_CUSTOM_VERSION ?? process.env.SBENCH_CUSTOM_NAME ?? 'custom'; },
+    async attempt({ prompt, timeoutMs }) {
+      const cmd = process.env.SBENCH_CUSTOM_CMD;
+      if (!cmd) return { infra: true, detail: 'SBENCH_CUSTOM_CMD is not set' };
+      const { mkdtempSync, writeFileSync: wf, rmSync } = await import('node:fs');
+      const { tmpdir } = await import('node:os');
+      const { join } = await import('node:path');
+      const dir = mkdtempSync(join(tmpdir(), 'sbench-custom-'));
+      try {
+        const pf = join(dir, 'prompt.txt');
+        wf(pf, prompt);
+        const full = cmd.replaceAll('{PROMPT_FILE}', pf);
+        const r = await run('zsh', ['-c', full], { timeoutMs, cwd: dir });
+        if (r.signal === 'SIGKILL') return { infra: true, detail: `custom harness timeout after ${timeoutMs}ms` };
+        let usage = null;
+        const lines = r.out.split('\n');
+        for (const line of lines) {
+          const m = line.match(/^SBENCH_USAGE (\{.*\})\s*$/);
+          if (m) { try { const u = JSON.parse(m[1]); usage = { input: u.input ?? 0, cacheRead: u.cacheRead ?? 0, cacheWrite: u.cacheWrite ?? 0, output: u.output ?? 0 }; } catch { /* malformed: stays null, excluded fail-closed */ } }
+        }
+        const text = lines.filter((l) => !l.startsWith('SBENCH_USAGE ')).join('\n');
+        if (!usage) return { text, usage: null, usageMissing: true };
+        return { text, usage };
+      } finally {
+        try { rmSync(dir, { recursive: true, force: true }); } catch {}
+      }
+    },
+  },
+
   /** Aider one-shot (`--message`), model via openrouter/<slug>. Usage parsed
    * from aider's own "Tokens: X sent, Y received" line; counts >= 1k are
    * k-rounded by aider (recorded as reported — a stated precision limit,
