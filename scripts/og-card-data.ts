@@ -691,16 +691,20 @@ function note01CardData(fm: ReportFrontmatter): RankedCardData {
 /** Research note 02 (Same Model, Four Harnesses) IS the harness ranking — no
  * separate construction, just the note's own key and eyebrow on top of it. */
 function note02CardData(fm: ReportFrontmatter): RankedCardData {
-  const card = rankedHarnessCardData();
-  if (!card) throw new Error('note02CardData: rankedHarnessCardData() returned null — research note 02 needs a model with 2+ harness results');
-  // Eyebrow comes from the note's own frontmatter title (now "Same Model,
-  // Six Harnesses" — two populations), not from the OpenBench row count: the
-  // rows below are population one, which the source/note lines attribute.
+  // The note's title counts the distinct-harness union across all three
+  // populations ("Ten Harnesses"); the ranked rows must come from ONE
+  // population — ranking across benchmarks is the exact basis blend the
+  // note forbids. Since 2026-08-26 the rows are population three, the
+  // first-party eight-arm Solvency Bench run (the note's lead finding);
+  // the footer names the population so the banner count and the row count
+  // can never read as the same claim.
+  const card = rankedSolvencyHarnessCardData();
+  if (!card) throw new Error('note02CardData: rankedSolvencyHarnessCardData() returned null — research note 02 needs the first-party harness study on disk');
   return {
     ...card,
     key: 'note-02',
     eyebrow: `RESEARCH NOTE 02 · ${fm.title.toUpperCase()}`,
-    noteLine: `NOTE: OPENBENCH POPULATION 1 OF 2 · VERIFIED ${sourceFor(HARNESS_BENCHMARKS[0])!.last_verified}`,
+    noteLine: 'NOTE: SOLVENCY BENCH · POPULATION 3 OF 3 · FIRST-PARTY, RUN 2026-08-26',
     raw: { ...card.raw, note: fm.note },
   };
 }

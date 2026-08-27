@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-27T00:04:02.880Z",
+  "generated_at": "2026-08-27T00:27:02.258Z",
   "cards": {
     "note-01": {
       "key": "note-01",
@@ -123,56 +123,96 @@
       "eyebrow": "RESEARCH NOTE 02 · SAME MODEL, TEN HARNESSES",
       "headlinePrefix": "",
       "headlineHighlight": "GPT-5.6 Sol",
-      "headlineSuffix": ", 4 harnesses, 3.8x apart on cost.",
+      "headlineSuffix": ", 8 harness arms, 9.1x apart on cost — measured by Solvency.",
       "rows": [
         {
-          "id": "gpt-5.6-sol-Pi",
+          "id": "gpt-5.6-sol-aider",
+          "name": "Aider",
+          "sub": "aider 0.86.2",
+          "cost": 0.009326250000000001,
+          "value": "$0.0093",
+          "basis": "harness",
+          "detail": "100% pass rate"
+        },
+        {
+          "id": "gpt-5.6-sol-bare",
+          "name": "API, no harness",
+          "sub": null,
+          "cost": 0.009459999999999998,
+          "value": "$0.0095",
+          "basis": "harness",
+          "detail": "100% pass rate"
+        },
+        {
+          "id": "gpt-5.6-sol-pi",
           "name": "Pi",
-          "sub": "0.80.10",
-          "cost": 0.36329165625000004,
-          "value": "$0.36",
+          "sub": "0.84.3",
+          "cost": 0.0096585,
+          "value": "$0.0097",
           "basis": "harness",
-          "detail": "73% pass rate"
+          "detail": "100% pass rate"
         },
         {
-          "id": "gpt-5.6-sol-Claude Code",
-          "name": "Claude Code",
-          "sub": "2.1.214",
-          "cost": 0.4199064857142857,
-          "value": "$0.42",
-          "basis": "harness",
-          "detail": "78% pass rate"
-        },
-        {
-          "id": "gpt-5.6-sol-Grok Build",
-          "name": "Grok Build",
-          "sub": "0.2.103 (89c3d36fb6f1)",
-          "cost": 0.5974231081081082,
-          "value": "$0.60",
-          "basis": "harness",
-          "detail": "82% pass rate"
-        },
-        {
-          "id": "gpt-5.6-sol-Codex",
+          "id": "gpt-5.6-sol-codex",
           "name": "Codex",
-          "sub": "0.144.5",
-          "cost": 1.37037084375,
-          "value": "$1.37",
+          "sub": "codex-cli 0.150.0",
+          "cost": 0.024755666666666665,
+          "value": "$0.0248",
           "basis": "harness",
-          "detail": "73% pass rate"
+          "detail": "100% pass rate"
+        },
+        {
+          "id": "gpt-5.6-sol-goose",
+          "name": "Goose",
+          "sub": "1.47.0",
+          "cost": 0.028438972222222223,
+          "value": "$0.0284",
+          "basis": "harness",
+          "detail": "100% pass rate"
+        },
+        {
+          "id": "gpt-5.6-sol-opencode",
+          "name": "OpenCode",
+          "sub": "1.18.20",
+          "cost": 0.03637583333333335,
+          "value": "$0.0364",
+          "basis": "harness",
+          "detail": "100% pass rate"
+        },
+        {
+          "id": "gpt-5.6-sol-hermes",
+          "name": "Hermes Agent",
+          "sub": "Hermes Agent v0.20.5 (2026.8.19)",
+          "cost": 0.07166083333333334,
+          "value": "$0.0717",
+          "basis": "harness",
+          "detail": "100% pass rate"
+        },
+        {
+          "id": "gpt-5.6-sol-cline",
+          "name": "Cline",
+          "sub": "3.0.60",
+          "cost": 0.08505263888888889,
+          "value": "$0.0851",
+          "basis": "harness",
+          "detail": "100% pass rate"
         }
       ],
-      "sourceLine": "Source: OpenBench harness benchmark (openbench.run)",
-      "noteLine": "NOTE: OPENBENCH POPULATION 1 OF 2 · VERIFIED 2026-08-23",
+      "sourceLine": "Source: Solvency Bench v0 — run by Solvency, 2026-08-26",
+      "noteLine": "NOTE: SOLVENCY BENCH · POPULATION 3 OF 3 · FIRST-PARTY, RUN 2026-08-26",
       "raw": {
         "modelId": "gpt-5.6-sol",
-        "harnesses": [
-          "gpt-5.6-sol-Pi",
-          "gpt-5.6-sol-Claude Code",
-          "gpt-5.6-sol-Grok Build",
-          "gpt-5.6-sol-Codex"
+        "arms": [
+          "gpt-5.6-sol-aider",
+          "gpt-5.6-sol-bare",
+          "gpt-5.6-sol-pi",
+          "gpt-5.6-sol-codex",
+          "gpt-5.6-sol-goose",
+          "gpt-5.6-sol-opencode",
+          "gpt-5.6-sol-hermes",
+          "gpt-5.6-sol-cline"
         ],
-        "spread": "3.8x",
+        "spread": "9.1x",
         "note": 2
       }
     },
