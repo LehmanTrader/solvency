@@ -34,7 +34,7 @@ export const TIER_NAMES: TierName[] = ['light', 'moderate', 'heavy'];
  *   2. SEAL -- current models, uniform scaffolding, but pass rate only (cost is modeled).
  *   3. Aider -- pass rate only AND stale (nothing newer than 2025-10-03).
  */
-export const SOURCE_PREFERENCE = ['aa-coding-agent-index', 'seal-swe-bench-pro', 'aider-polyglot', 'solvency-bench-v0', 'solvency-bench-a1'];
+export const SOURCE_PREFERENCE = ['aa-coding-agent-index', 'seal-swe-bench-pro', 'aider-polyglot', 'solvency-bench-a2', 'solvency-bench-v0', 'solvency-bench-a1'];
 /** Harness-only sources are isolated from the general model leaderboard. */
 export const HARNESS_BENCHMARKS = ['openbench-gpt56-harness'];
 

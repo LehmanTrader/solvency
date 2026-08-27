@@ -10,7 +10,10 @@ import { costPerSolvedTask, defaultOptions } from './engine.ts';
 export type Tier = 'light' | 'moderate' | 'heavy';
 
 export const money = (n: number) =>
-  n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : n >= 100 ? `$${n.toFixed(0)}` : `$${n.toFixed(2)}`;
+  n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : n >= 100 ? `$${n.toFixed(0)}`
+  // Sub-cent measured costs are real data since the 2026-08-27 first-party
+  // ingest ($0.0008/solved is not $0.00); a literal zero (free tier) stays $0.00.
+  : n > 0 && n < 0.01 ? `$${n.toFixed(4)}` : `$${n.toFixed(2)}`;
 /**
  * Engine guard (docs/free-models-scoping.md §2C): a $0 input on either side
  * used to produce a literal `Infinity` (x/0), which fmtX() then rendered as

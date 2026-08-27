@@ -104,10 +104,14 @@ export function capsLabel(caps: RateCaps | null | undefined): string {
 }
 
 export const money = (n: number) =>
-  n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : n >= 100 ? `$${n.toFixed(0)}` : `$${n.toFixed(2)}`;
+  n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : n >= 100 ? `$${n.toFixed(0)}`
+  // Sub-cent measured costs are real data since the 2026-08-27 first-party
+  // ingest ($0.0008/solved is not $0.00); a literal zero (free tier) stays $0.00.
+  : n > 0 && n < 0.01 ? `$${n.toFixed(4)}` : `$${n.toFixed(2)}`;
 /** Monthly totals are whole dollars: $24, $423, $2.4k, $1.2M. */
 export const moneyMonth = (n: number) =>
-  n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` : n >= 1000 ? `$${(n / 1000).toFixed(1)}k` : `$${Math.round(n)}`;
+  n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` : n >= 1000 ? `$${(n / 1000).toFixed(1)}k`
+  : n > 0 && n < 1 ? `$${n.toFixed(2)}` : `$${Math.round(n)}`;
 
 const esc = (s: string) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 const r1 = (n: number) => Math.round(n * 10) / 10;

@@ -11,7 +11,7 @@ export const tiers = assumptions.task_tiers as any;
 export const TIER_NAMES = ['light', 'moderate', 'heavy'] as const;
 
 /** Same source-preference policy as the repo loader. */
-export const SOURCE_PREFERENCE = ['aa-coding-agent-index', 'seal-swe-bench-pro', 'aider-polyglot', 'solvency-bench-v0', 'solvency-bench-a1'];
+export const SOURCE_PREFERENCE = ['aa-coding-agent-index', 'seal-swe-bench-pro', 'aider-polyglot', 'solvency-bench-a2', 'solvency-bench-v0', 'solvency-bench-a1'];
 /** Harness-only sources are isolated from the general model leaderboard. */
 export const HARNESS_BENCHMARKS = ['openbench-gpt56-harness'];
 
