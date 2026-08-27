@@ -1,758 +1,276 @@
 ---
+/**
+ * PROTOTYPE — Local Rig Composer (drag-and-drop), deliberately unlinked from
+ * the nav, same rollout pattern as /composer-preview (operator direction
+ * 2026-08-26: "The local rig UI needs to be something similar to the Compose
+ * UI where people can drag and drop various PC components to get their
+ * desired build").
+ *
+ * Drag parts from the shelf into the bay. When the bay's parts exactly match
+ * a reference rig profile (the only combinations with a recorded
+ * power/throughput profile), quoteRig prices it: build cost, amortization,
+ * energy per attempt, $/attempt — and $/solved only once a pass rate is
+ * supplied, per the engine's fail-closed rule. Any other combination gates
+ * honestly: Solvency does not synthesize a throughput profile for hardware
+ * nobody measured.
+ */
 import Base from '../layouts/Base.astro';
-import Section from '../components/Section.astro';
-import Provenance from '../components/Provenance.astro';
-import { CLERK_ENABLED } from '../lib/clerk.ts';
-import { RIG_CATALOG } from '../lib/rig-catalog.ts';
-import { RIG_LIMITS } from '../lib/rig-limits.ts';
+import { RIG_CATALOG, ELECTRICITY_DEFAULT, DEFAULT_WORKLOAD, DEFAULT_HORIZON_MONTHS } from '../lib/rig-catalog.ts';
+import { models, bestResultFor, extrasFor, tiers, assumptions } from '../lib/data.ts';
+import { costPerSolvedTask, defaultOptions } from '../lib/engine.ts';
 
-// Same launch-day demo-mode soft gating as build-planner.astro (site/src/lib/gate.ts's sibling
-// pattern): dark (false) until the paid-launch checklist is approved. Free visitors get the four
-// canned reference rigs at catalog defaults; Pro unlocks every editable rig control, a supplied
-// pass rate, and the break-even comparison against a cloud subscription. This page is its own
-// Astro script scope (client scripts do not share runtime state across pages), so it defines its
-// own DEMO_GATED_SELECTOR / DEMO_GATE_DESCRIPTIONS below, following build-planner.astro's pattern
-// rather than literally sharing its objects.
-const CHECKOUT_UI_ENABLED = import.meta.env.PUBLIC_STRIPE_CHECKOUT_ENABLED === 'true';
+// Cloud comparators: the measured leaderboard, computed server-side once.
+const opts = defaultOptions(assumptions);
+const cloud = models
+  .map((m) => {
+    const r = bestResultFor(m.model_id);
+    if (!r || r.cost_basis !== 'measured_by_source') return null;
+    const v = costPerSolvedTask(m as any, 'heavy', tiers.heavy, r.pass_rate, opts, extrasFor(r)).value;
+    return v ? { id: m.model_id, name: m.display_name, perSolved: Number(v.naive.toFixed(2)) } : null;
+  })
+  .filter(Boolean)
+  .sort((a: any, b: any) => a!.perSolved - b!.perSolved);
+
+// The parts shelf: every component of every reference rig, deduped by id.
+const shelf = RIG_CATALOG.flatMap((e) => e.components.map((c) => ({
+  id: c.componentId, label: c.label, condition: c.condition, priceUsd: c.priceUsd, rig: e.id,
+})));
+const CATALOG_LITE = RIG_CATALOG.map((e) => ({
+  id: e.id, name: e.name, family: e.family, summary: e.summary,
+  componentIds: e.components.map((c) => c.componentId),
+  components: e.components, resale: e.resale, power: e.power, throughput: e.throughput,
+  model: e.model, defaultHorizonMonths: e.defaultHorizonMonths,
+}));
 ---
-<Base title="Local hardware vs cloud — Solvency"
-      description="Assemble a local rig — components, resale value, power draw, electricity rate, throughput, model and workload — and see cost per attempt, cost per solved task and monthly cost, with the exact task volume where it beats your cloud subscription.">
-  <div class="wrap pt-8 md:pt-12" id="local-hardware">
-    <p class="eyebrow">Local hardware vs cloud · Pro</p>
-    <div class="mt-3 flex flex-wrap items-center gap-3">
-      <h1 class="h-page">Would a rig beat your subscription?</h1>
-      <span class="pill pill-ink" id="rig-access-badge">{CHECKOUT_UI_ENABLED ? 'FREE DEMO · reference rigs' : 'PREVIEW · no checkout yet'}</span>
+<Base title="Local Rig Composer — Solvency"
+      description="Prototype: drag PC components into a bay and price the build the way the Composer prices an agent stack — TCO-modelled cost per attempt, honest Missing until a pass rate exists.">
+  <main id="main" class="wrap py-10">
+    <p class="label">Local rig composer · preview</p>
+    <h1 class="h-page mt-3">Build the box.</h1>
+    <p class="mt-2 small">Saved rigs and fleet exports are a planned <a class="link" href="/pricing#pro">Pro</a> feature — everything on this page is free.</p>
+    <p class="mt-3 max-w-[62ch] text-[var(--color-body)]">
+      Drag parts from the shelf into the bay — or use the Add buttons. A build that matches a
+      measured reference profile gets a full quote: hardware amortized over {DEFAULT_HORIZON_MONTHS} months,
+      wall power at your electricity rate, cost per attempt, and break-even against a measured
+      cloud model. A combination nobody has profiled says so instead of guessing.
+    </p>
+
+    <div class="grid gap-4 md:grid-cols-3 mt-6" aria-live="polite">
+      <div class="card card-pad"><p class="label">Build cost</p><p class="h-card num mt-1" id="lr-build">—</p></div>
+      <div class="card card-pad"><p class="label">Per attempt</p><p class="h-card num mt-1" id="lr-attempt">—</p></div>
+      <div class="card card-pad"><p class="label">Per solved task</p><p class="h-card num mt-1" id="lr-solved">Missing</p><p class="small" id="lr-solved-why">Needs a pass rate — never estimated.</p></div>
     </div>
-    <p class="mt-4 lede max-w-3xl">
-      Pick a reference rig, or build your own: components, resale value, power draw, your
-      electricity rate, measured throughput, the model and quant you’d run, and your monthly task
-      volume. Solvency prices cost per solved task — amortized hardware plus electricity, divided
-      by pass rate — the same way it prices every cloud model, then finds the exact monthly volume
-      where this rig beats a cloud subscription you enter.
-    </p>
-    <p class="mt-3 small max-w-3xl" id="rig-access-detail">
-      <strong class="text-[var(--color-ink)]">Current access:</strong>{' '}
-      <span id="rig-access-title">{CHECKOUT_UI_ENABLED
-        ? 'Free demo — view the four reference rigs at their catalog defaults. Pro unlocks every control, a supplied pass rate and the break-even comparison.'
-        : 'No subscription or Pro entitlement is active yet.'}</span>{' '}
-      <a class="link" href="/pricing#pro">See Pro plans →</a>
-    </p>
 
-    <Section id="reference-rigs" eyebrow="Step 1" title="Pick a reference rig"
-      caption="Four editable defaults: two current Apple Silicon configs, two used-GPU builds. Selecting one prefills every field below — nothing here is a fixed quote.">
-      <div class="grid gap-4 sm:grid-cols-2" id="rig-picker" role="group" aria-label="Reference rig">
-        {RIG_CATALOG.map((entry, i) => (
-          <button type="button" class="card card-pad text-left" data-rig-option data-rig-id={entry.id} aria-pressed={i === 0 ? 'true' : 'false'}>
-            <p class="label">{entry.family === 'apple_silicon' ? 'Apple Silicon' : 'Used GPU'}</p>
-            <h3 class="h-card mt-1">{entry.name}</h3>
-            <p class="small mt-2 text-[var(--color-body)]">{entry.summary}</p>
-            <p class="small mt-3">
-              <span class="small-sans">{entry.components[0].label}</span> · verified <span class="t-fresh">{entry.components[0].lastVerified}</span>
-            </p>
-          </button>
-        ))}
-      </div>
-      <p class="small mt-3" id="rig-picker-source"></p>
-    </Section>
-
-    <form class="mt-10 grid gap-6" id="rig-form" novalidate
-          data-clerk-enabled={CLERK_ENABLED ? 'true' : 'false'}
-          data-checkout-ui-enabled={CHECKOUT_UI_ENABLED ? 'true' : 'false'}>
-      <Section id="rig-build" eyebrow="Step 2" title="Your rig"
-        caption="Every field is an editable default. Changing a component, resale value, power draw, electricity rate or throughput clears its citation — Solvency never leaves a stale source attached to a number you changed.">
-        <div class="card overflow-hidden">
-          <div class="card-head">
-            <div><p class="label">Rig name</p></div>
-          </div>
-          <div class="card-pad grid gap-5 sm:grid-cols-2">
-            <label class="block sm:col-span-2">
-              <span class="label">Name</span>
-              <input class="ctl ctl-row mt-2 w-full" id="rig-name" data-field="rig-name" maxlength={RIG_LIMITS.maxRigNameChars} value="" />
-            </label>
-          </div>
-          <div class="card-head border-t border-[var(--color-rule)]">
-            <div><p class="label">Components</p><p class="small mt-1">Every dollar in the rig. Add a component for anything not already listed.</p></div>
-            <button type="button" class="btn" id="rig-add-component" data-analytics="rig-add-component">Add component</button>
-          </div>
-          <div class="card-pad grid gap-4" id="rig-components"></div>
-          <div class="card-pad border-t border-[var(--color-rule)] grid gap-5 sm:grid-cols-3">
-            <label class="block">
-              <span class="label">Resale value at horizon end</span>
-              <span class="money-input mt-2"><span>$</span><input class="ctl ctl-row w-full" id="rig-resale-usd" data-field="resale-usd" type="number" min="0" max={RIG_LIMITS.maxComponentPriceUsd} step="any" value="0" /></span>
-            </label>
-            <label class="block">
-              <span class="label">Amortization horizon (months)</span>
-              <input class="ctl ctl-row mt-2 w-full" id="rig-horizon-months" data-field="horizon-months" type="number" min="1" max={RIG_LIMITS.maxHorizonMonths} step="1" value="36" />
-            </label>
-            <div class="block">
-              <span class="label">Build cost</span>
-              <p class="tile-v mt-2" id="rig-build-cost">—</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="mt-6 grid gap-4 lg:grid-cols-2">
-          <div class="card card-pad">
-            <p class="label">Power draw</p>
-            <div class="mt-3 grid gap-4 sm:grid-cols-2">
-              <label class="block">
-                <span class="label">System watts (whole system, not GPU-only)</span>
-                <input class="ctl ctl-row mt-2 w-full" id="rig-power-watts" data-field="power-watts" type="number" min="1" max={RIG_LIMITS.maxSystemWatts} step="any" value="55" />
-              </label>
-              <label class="block">
-                <span class="label">Measurement method</span>
-                <select class="ctl ctl-row mt-2 w-full" id="rig-power-method" data-field="power-method">
-                  <option value="wall_meter">Wall meter (measured)</option>
-                  <option value="software_reported">Software-reported (powermetrics / nvidia-smi)</option>
-                  <option value="nameplate_tdp">Nameplate TDP (not measured)</option>
-                </select>
-              </label>
-            </div>
-            <p class="small mt-3" id="rig-power-source"></p>
-          </div>
-          <div class="card card-pad">
-            <p class="label">Electricity rate</p>
-            <div class="mt-3 grid gap-4 sm:grid-cols-2">
-              <label class="block">
-                <span class="label">Price</span>
-                <span class="money-input mt-2"><span>$</span><input class="ctl ctl-row w-full" id="rig-electricity-rate" data-field="electricity-rate" type="number" min="0" max={RIG_LIMITS.maxUsdPerKwh} step="any" value="0.1844" /><span>/kWh</span></span>
-              </label>
-              <label class="block">
-                <span class="label">Region (optional)</span>
-                <input class="ctl ctl-row mt-2 w-full" id="rig-electricity-region" data-field="electricity-region" maxlength={RIG_LIMITS.maxRegionChars} value="US average (EIA, May 2026 data)" />
-              </label>
-            </div>
-            <p class="small mt-3" id="rig-electricity-source"></p>
-          </div>
-        </div>
-
-        <div class="mt-6 grid gap-4 lg:grid-cols-2">
-          <div class="card card-pad">
-            <p class="label">Throughput</p>
-            <div class="mt-3 grid gap-4 sm:grid-cols-2">
-              <label class="block">
-                <span class="label">Tokens / second</span>
-                <input class="ctl ctl-row mt-2 w-full" id="rig-throughput-tps" data-field="throughput-tps" type="number" min="0.01" max={RIG_LIMITS.maxTokensPerSecond} step="any" value="55" />
-              </label>
-              <label class="block">
-                <span class="label">Method</span>
-                <select class="ctl ctl-row mt-2 w-full" id="rig-throughput-method" data-field="throughput-method">
-                  <option value="llama_bench">llama-bench (reproducible)</option>
-                  <option value="self_reported">Self-reported / modelled</option>
-                </select>
-              </label>
-              <label class="block">
-                <span class="label">Runtime</span>
-                <input class="ctl ctl-row mt-2 w-full" id="rig-throughput-runtime" data-field="throughput-runtime" maxlength={RIG_LIMITS.maxRuntimeChars} value="llama.cpp" />
-              </label>
-              <label class="block">
-                <span class="label">Runtime version (pins $/solved)</span>
-                <input class="ctl ctl-row mt-2 w-full" id="rig-throughput-runtime-version" data-field="throughput-runtime-version" maxlength={RIG_LIMITS.maxRuntimeVersionChars} placeholder="e.g. b3600" value="" />
-              </label>
-              <label class="block sm:col-span-2">
-                <span class="label">Context length (tokens, optional)</span>
-                <input class="ctl ctl-row mt-2 w-full" id="rig-throughput-context" data-field="throughput-context" type="number" min="1" max={RIG_LIMITS.maxContextTokens} step="1" value="8192" />
-              </label>
-            </div>
-            <p class="small mt-3" id="rig-throughput-source"></p>
-          </div>
-          <div class="card card-pad">
-            <p class="label">Model, quant and pass rate</p>
-            <div class="mt-3 grid gap-4 sm:grid-cols-2">
-              <label class="block">
-                <span class="label">Model</span>
-                <input class="ctl ctl-row mt-2 w-full" id="rig-model-name" data-field="model-name" maxlength={RIG_LIMITS.maxModelNameChars} value="Llama-3-8B-Instruct" />
-              </label>
-              <label class="block">
-                <span class="label">Quantization</span>
-                <input class="ctl ctl-row mt-2 w-full" id="rig-model-quant" data-field="model-quant" maxlength={RIG_LIMITS.maxQuantizationChars} placeholder="e.g. Q4_K_M" value="Q4_K_M" />
-              </label>
-              <label class="sm:col-span-2 inline-flex items-center gap-2 min-h-11 text-sm text-[var(--color-ink)] cursor-pointer">
-                <input type="checkbox" class="chk" id="rig-passrate-enabled" data-field="passrate-enabled" /> Supply a measured or assumed pass rate
-              </label>
-              <div class="sm:col-span-2 grid gap-4 sm:grid-cols-3" id="rig-passrate-fields" hidden>
-                <label class="block">
-                  <span class="label">Pass rate</span>
-                  <span class="percent-input mt-2"><input class="ctl ctl-row w-full" id="rig-passrate-value" data-field="passrate-value" type="number" min="0.01" max="100" step="any" value="50" /><span>%</span></span>
-                </label>
-                <label class="block sm:col-span-2">
-                  <span class="label">Benchmark / task set</span>
-                  <input class="ctl ctl-row mt-2 w-full" id="rig-passrate-benchmark" data-field="passrate-benchmark" value="" placeholder="e.g. internal-agent-tasks" />
-                </label>
-                <label class="block sm:col-span-3">
-                  <span class="label">Basis</span>
-                  <select class="ctl ctl-row mt-2 w-full" id="rig-passrate-basis" data-field="passrate-basis">
-                    <option value="measured_by_solvency">Measured by Solvency</option>
-                    <option value="measured_by_user">Measured by you</option>
-                    <option value="published">Published</option>
-                    <option value="user_assumption" selected>Your assumption</option>
-                  </select>
-                </label>
+    <div class="grid gap-6 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] mt-8">
+      <section aria-labelledby="lr-shelf-h">
+        <h2 id="lr-shelf-h" class="h-card">Parts shelf</h2>
+        <p class="small mt-1">Every part carries its verified or template price.</p>
+        <ul id="lr-shelf" class="mt-3 grid gap-2" role="list">
+          {shelf.map((p) => (
+            <li class="lr-part card" draggable="true" data-part={p.id} data-rig={p.rig}>
+              <div class="flex items-start justify-between gap-3 p-3">
+                <div class="min-w-0">
+                  <p class="text-[0.9rem] leading-snug">{p.label}</p>
+                  <p class="small mt-1"><span class={`lr-cond lr-cond-${p.condition}`}>{p.condition}</span> · <span class="num">${p.priceUsd.toLocaleString()}</span></p>
+                </div>
+                <button type="button" class="btn btn-quiet lr-add" data-part={p.id} aria-label={`Add ${p.label} to the rig bay`}>Add</button>
               </div>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section aria-labelledby="lr-bay-h">
+        <h2 id="lr-bay-h" class="h-card">Rig bay</h2>
+        <div id="lr-bay" class="lr-bay card mt-3" role="list" aria-label="Your build" aria-describedby="lr-bay-hint">
+          <p id="lr-bay-hint" class="small lr-bay-empty">Drop parts here.</p>
+        </div>
+        <p id="lr-profile" class="small mt-2" role="status"></p>
+
+        <div class="card card-pad mt-4" id="lr-quote-card" hidden>
+          <p class="ghead"><span class="gword">Quote</span> · <span id="lr-quote-name"></span></p>
+          <dl class="grid gap-x-8 gap-y-2 sm:grid-cols-2 mt-3 text-[0.9rem]">
+            <div class="flex justify-between gap-4"><dt>Amortization / month</dt><dd class="num" id="lr-amort">—</dd></div>
+            <div class="flex justify-between gap-4"><dt>Electricity / attempt</dt><dd class="num" id="lr-power">—</dd></div>
+            <div class="flex justify-between gap-4"><dt>Attempt wall time</dt><dd class="num" id="lr-secs">—</dd></div>
+            <div class="flex justify-between gap-4"><dt>Monthly, at this volume</dt><dd class="num" id="lr-month">—</dd></div>
+          </dl>
+          <p class="small mt-3" id="lr-basis"></p>
+          <div class="mt-4 grid gap-3 sm:grid-cols-2">
+            <label class="block"><span class="label">Tasks / month</span>
+              <input id="lr-volume" class="ctl mt-2 w-full" type="number" min="1" max="1000000" step="1" value={DEFAULT_WORKLOAD.tasksPerMonth} /></label>
+            <label class="block"><span class="label">Electricity $/kWh</span>
+              <input id="lr-kwh" class="ctl mt-2 w-full" type="number" min="0" max="2" step="0.0001" value={ELECTRICITY_DEFAULT.usdPerKwh} /></label>
+            <label class="block sm:col-span-2"><span class="label">Pass rate % (yours — measured on your model + quant; blank keeps Missing)</span>
+              <input id="lr-pass" class="ctl mt-2 w-full" type="number" min="1" max="100" step="0.1" placeholder="never estimated" /></label>
+          </div>
+          <div class="mt-5 border-t border-[var(--color-rule)] pt-4">
+            <p class="label">Break-even vs a measured cloud model</p>
+            <div class="mt-2 flex flex-wrap items-center gap-3">
+              <select id="lr-cloud" class="ctl">
+                {cloud.map((c: any) => <option value={c.perSolved}>{c.name} — ${c.perSolved.toFixed(2)}/solved</option>)}
+              </select>
+              <p class="small" id="lr-break" role="status"></p>
             </div>
-            <p class="small mt-3">Without a pass rate, cost per solved task stays Missing — quoteRig refuses to synthesize one. An unquantified pass rate is refused the same way harness/version mismatches are refused elsewhere on the site.</p>
           </div>
         </div>
 
-        <div class="mt-6 card card-pad">
-          <p class="label">Your workload</p>
-          <div class="mt-3 grid gap-4 sm:grid-cols-3">
-            <label class="block">
-              <span class="label">Tasks / month</span>
-              <input class="ctl ctl-row mt-2 w-full" id="rig-workload-tasks" data-field="workload-tasks" type="number" min="1" max={RIG_LIMITS.maxTasksPerMonth} step="any" value="500" />
-            </label>
-            <label class="block">
-              <span class="label">Tokens / attempt</span>
-              <input class="ctl ctl-row mt-2 w-full" id="rig-workload-tokens" data-field="workload-tokens" type="number" min="1" max={RIG_LIMITS.maxTokensPerAttempt} step="any" value="8000" />
-            </label>
-            <label class="block">
-              <span class="label">Fixed overhead / attempt (seconds)</span>
-              <input class="ctl ctl-row mt-2 w-full" id="rig-workload-overhead" data-field="workload-overhead" type="number" min="0" max={RIG_LIMITS.maxOverheadSecondsPerAttempt} step="any" value="30" />
-            </label>
-          </div>
+        <div class="card card-pad mt-4 lr-gate" id="lr-gate" hidden>
+          <p class="ghead"><span class="gword">No measured profile</span></p>
+          <p class="small mt-2" id="lr-gate-why"></p>
+          <p class="small mt-2">Solvency prices only hardware combinations with a recorded power and
+            throughput profile — it never synthesizes tokens-per-second for a box nobody measured.
+            Complete one of the reference builds, or clear the bay.</p>
         </div>
-      </Section>
+      </section>
+    </div>
 
-      <Section id="rig-answer" eyebrow="Result" title="Cost per attempt, per solved task, per month"
-        caption="Amortized hardware plus electricity, per rig-cost.ts — the same engine as the calculator's cloud rows, on its own local_tco_modelled basis. Never mixed with the measured cloud groups.">
-        <div class="tile-grid grid-cols-3" id="rig-answer-strip" aria-live="polite" aria-atomic="false">
-          <div class="tile"><p class="label">Per attempt</p><p class="tile-v" id="rig-strip-attempt">—</p></div>
-          <div class="tile">
-            <p class="label">Per solved task</p>
-            <p class="tile-v" id="rig-strip-solved">Missing</p>
-            <p class="tile-n" id="rig-strip-solved-note">Supply a pass rate above</p>
-          </div>
-          <div class="tile"><p class="label">Per month</p><p class="tile-v" id="rig-strip-month">—</p></div>
-        </div>
-        <div class="mt-4" id="rig-messages"></div>
-        <ul class="mt-3 ledger" id="rig-ledger"></ul>
-      </Section>
+    <p class="small mt-8 max-w-[68ch]">Basis: <code>local_tco_modelled</code> (rig-cost-v1) — hardware
+      amortized against resale over {DEFAULT_HORIZON_MONTHS} months, wall power at the rate above, reference-model
+      throughput as recorded per profile. Cloud comparators are the measured leaderboard. Cost per
+      solved task appears only with a pass rate you assert for your own model and quant.</p>
+  </main>
 
-      <Section id="rig-cloud" eyebrow="Step 3 · Pro" title="Compare against your cloud subscription"
-        caption="Enter your current cloud Composer quote. subscriptionBreakEven (uncapped) or breakEvenScan (capped) finds the exact monthly task volume where this rig gets cheaper per solved task.">
-        <div id="rig-cloud-locked" class="card card-pad" hidden>
-          <p class="label">Pro unlocks this comparison</p>
-          <p class="mt-2 text-sm text-[var(--color-body)] max-w-xl">Custom rig edits, a supplied pass rate and the break-even volume against your subscription are Pro controls. The four reference rigs above stay free at their catalog defaults.</p>
-          <a class="btn btn-accent mt-4" href="/pricing#pro">See Pro plans</a>
-        </div>
-        <div id="rig-cloud-unlocked">
-          <div class="card card-pad">
-            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <label class="block">
-                <span class="label">Your subscription</span>
-                <span class="money-input mt-2"><span>$</span><input class="ctl ctl-row w-full" id="cloud-usd-month" data-field="cloud-usd-month" type="number" min="0" max={RIG_LIMITS.maxSubscriptionUsdPerMonth} step="any" value="200" /><span>/mo</span></span>
-              </label>
-              <label class="block">
-                <span class="label">Cloud pass rate</span>
-                <span class="percent-input mt-2"><input class="ctl ctl-row w-full" id="cloud-passrate" data-field="cloud-passrate" type="number" min="0.01" max="100" step="any" value="90" /><span>%</span></span>
-              </label>
-              <label class="sm:col-span-2 inline-flex items-center gap-2 min-h-11 text-sm text-[var(--color-ink)] cursor-pointer">
-                <input type="checkbox" class="chk" id="cloud-cap-enabled" data-field="cloud-cap-enabled" /> This tier has a monthly task cap
-              </label>
-              <div class="sm:col-span-4 grid gap-4 sm:grid-cols-3" id="cloud-cap-fields" hidden>
-                <label class="block">
-                  <span class="label">Cap (tasks / month)</span>
-                  <input class="ctl ctl-row mt-2 w-full" id="cloud-cap-value" data-field="cloud-cap-value" type="number" min="1" max={RIG_LIMITS.maxTasksPerMonth} step="any" value="500" />
-                </label>
-                <label class="block sm:col-span-2">
-                  <span class="label">Above the cap</span>
-                  <select class="ctl ctl-row mt-2 w-full" id="cloud-scaling" data-field="cloud-scaling">
-                    <option value="multi_seat">Stack more seats/tiers (multi_seat)</option>
-                    <option value="hard_cap">Cannot serve it (hard_cap)</option>
-                  </select>
-                </label>
-              </div>
-            </div>
-            <p class="small mt-3">An uncapped flat subscription always wins per-solved task at high enough volume — its fee dilutes with volume, electricity does not. If your tier has a real cap, say so above; capped math uses breakEvenScan instead of the closed-form crossover.</p>
-          </div>
-          <div class="card card-pad mt-4">
-            <p class="label">Break-even</p>
-            <p class="mt-3 font-[var(--font-display)] text-xl sm:text-2xl leading-tight text-[var(--color-ink)]" id="rig-crossover-headline">Missing — supply a pass rate above to compare.</p>
-            <p class="small mt-2" id="rig-crossover-detail"></p>
-          </div>
-        </div>
-      </Section>
-    </form>
+  <script type="application/json" id="lr-catalog" is:inline set:html={JSON.stringify(CATALOG_LITE)}></script>
+  <script type="application/json" id="lr-electricity" is:inline set:html={JSON.stringify(ELECTRICITY_DEFAULT)}></script>
+  <script type="application/json" id="lr-workload" is:inline set:html={JSON.stringify(DEFAULT_WORKLOAD)}></script>
 
-    {CHECKOUT_UI_ENABLED && (
-      <div class="demo-gate-toast" id="rig-demo-gate" hidden role="status" aria-live="polite">
-        <p class="demo-gate-title">This is a Pro control</p>
-        <p class="demo-gate-detail" id="rig-demo-gate-detail"></p>
-        <div class="demo-gate-actions">
-          <a class="btn btn-accent" href="/pricing#pro">See Pro plans</a>
-          <button type="button" class="btn btn-quiet" id="rig-demo-gate-dismiss">Dismiss</button>
-        </div>
-      </div>
-    )}
+  <script>
+    import { quoteRig } from '../lib/rig-cost.ts';
 
-    <p class="mt-10 small"><a class="link" href="/build-planner">← Back to the Build Composer</a></p>
-  </div>
-</Base>
+    const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
+    const catalog = JSON.parse($('lr-catalog').textContent!) as any[];
+    const electricityDefault = JSON.parse($('lr-electricity').textContent!) as any;
+    const workloadDefault = JSON.parse($('lr-workload').textContent!) as any;
+    const money = (v: number, dp = 2) => `$${v.toFixed(dp)}`;
 
-<script>
-  import {
-    quoteRig, subscriptionBreakEven, breakEvenScan,
-    type RigSpecV1, type RigComponentV1, type RigQuoteV1,
-    type PowerDrawMethod, type ThroughputMethod, type LocalPassRateBasis,
-    type SubscriptionScaling,
-  } from '../lib/rig-cost.ts';
-  import type { BuildInputOrigin } from '../lib/build-cost.ts';
-  import { RIG_CATALOG, ELECTRICITY_DEFAULT, catalogEntryToRigSpec, referenceRigById } from '../lib/rig-catalog.ts';
-  import { observeClerkAuth, authenticatedJsonFetch, type ClerkAuthState } from '../lib/clerk-client.ts';
+    const bay = $('lr-bay');
+    const parts: string[] = [];
+    const partById = new Map<string, any>();
+    for (const e of catalog) for (const c of e.components) partById.set(c.componentId, c);
 
-  const byId = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
-  const setText = (id: string, next: string) => { const target = byId(id); if (target.textContent !== next) target.textContent = next; };
-  const money = (n: number | null) => n === null ? 'Missing' : `$${n.toLocaleString(undefined, { minimumFractionDigits: n < 1 ? 3 : 2, maximumFractionDigits: n < 1 ? 4 : 2 })}`;
-  const value = (id: string) => (byId<HTMLInputElement>(id).value ?? '').normalize('NFC').trim();
-  const numericInput = (input: HTMLInputElement) => input.value === '' ? Number.NaN : input.valueAsNumber;
-  const number = (id: string) => numericInput(byId<HTMLInputElement>(id));
-
-  const form = byId<HTMLFormElement>('rig-form');
-  const clerkEnabled = form.dataset.clerkEnabled === 'true';
-  const CHECKOUT_UI_ENABLED = form.dataset.checkoutUiEnabled === 'true';
-
-  type FieldMeta = { assertionOrigin?: BuildInputOrigin; sourceUrl?: string; lastVerified?: string };
-  interface ComponentRow extends FieldMeta { componentId: string; label: string; condition: 'new' | 'used'; priceUsd: number; }
-
-  let selectedRigId = RIG_CATALOG[0].id;
-  let componentRows: ComponentRow[] = [];
-  const resaleMeta: FieldMeta = {};
-  const powerMeta: FieldMeta = {};
-  const electricityMeta: FieldMeta = { ...ELECTRICITY_DEFAULT };
-  const throughputMeta: FieldMeta = {};
-  let componentSeq = 0;
-
-  // ---- Launch-day demo-mode soft gating (mirrors build-planner.astro's pattern in this page's
-  // own script scope: Astro bundles each page's <script> separately, so this defines its own
-  // demoTier/demoLocked/DEMO_GATED_SELECTOR/DEMO_GATE_DESCRIPTIONS rather than importing
-  // build-planner's). Free: the four reference-rig buttons. Pro: every editable control below. ----
-  type DemoTier = 'unknown' | 'free' | 'pro';
-  let demoTier: DemoTier = 'unknown';
-  let demoEntitlementRequest: AbortController | null = null;
-  let demoAuthGeneration = 0;
-  const demoLocked = () => CHECKOUT_UI_ENABLED && demoTier !== 'pro';
-  const demoGateEl = CHECKOUT_UI_ENABLED ? byId<HTMLElement>('rig-demo-gate') : null;
-
-  function isEntitlementPayload(input: unknown): input is { data: { tier: 'free' | 'pro'; active: boolean } } {
-    if (!input || typeof input !== 'object') return false;
-    const data = (input as Record<string, unknown>).data;
-    if (!data || typeof data !== 'object') return false;
-    const d = data as Record<string, unknown>;
-    return (d.tier === 'free' || d.tier === 'pro') && typeof d.active === 'boolean';
-  }
-
-  function renderDemoGateState() {
-    if (!CHECKOUT_UI_ENABLED) return;
-    byId<HTMLElement>('local-hardware').classList.toggle('demo-gate-locked', demoLocked());
-    const pro = demoTier === 'pro';
-    setText('rig-access-badge', pro ? 'PRO · full rig editor' : 'FREE DEMO · reference rigs');
-    setText('rig-access-title', pro
-      ? 'Pro is active. Every rig control and the cloud break-even below are unlocked.'
-      : 'Free demo — view the four reference rigs at their catalog defaults. Pro unlocks every control, a supplied pass rate and the break-even comparison.');
-    byId<HTMLElement>('rig-cloud-locked').hidden = !demoLocked();
-    byId<HTMLElement>('rig-cloud-unlocked').hidden = demoLocked();
-    render();
-  }
-
-  async function refreshDemoEntitlement() {
-    if (!CHECKOUT_UI_ENABLED) return;
-    demoAuthGeneration += 1;
-    const generation = demoAuthGeneration;
-    demoEntitlementRequest?.abort();
-    const controller = new AbortController();
-    demoEntitlementRequest = controller;
-    try {
-      const payload = await authenticatedJsonFetch('/api/entitlement', { signal: controller.signal });
-      if (generation !== demoAuthGeneration) return;
-      demoTier = isEntitlementPayload(payload) && payload.data.tier === 'pro' && payload.data.active ? 'pro' : 'free';
-    } catch {
-      // Any transport failure, 503, signed-out or non-Pro response fails closed to Free — never unlocked.
-      if (generation !== demoAuthGeneration) return;
-      demoTier = 'free';
-    } finally {
-      if (generation === demoAuthGeneration) { demoEntitlementRequest = null; renderDemoGateState(); }
-    }
-  }
-
-  function handleDemoAuth(state: ClerkAuthState) {
-    if (!CHECKOUT_UI_ENABLED || state.status === 'checking') return;
-    void refreshDemoEntitlement();
-  }
-
-  function showDemoGatePrompt(detail: string) {
-    if (!CHECKOUT_UI_ENABLED || !demoGateEl) return;
-    byId('rig-demo-gate-detail').textContent = detail;
-    demoGateEl.hidden = false;
-  }
-  function hideDemoGatePrompt() { if (demoGateEl) demoGateEl.hidden = true; }
-
-  const DEMO_GATE_DESCRIPTIONS: Record<string, string> = {
-    'rig-add-component': 'Add a component to this rig.',
-    'passrate-enabled': 'Supply a pass rate for cost per solved task.',
-    'cloud-cap-enabled': 'Model a capped subscription tier.',
-  };
-  function demoGateDetail(target: Element): string {
-    const field = (target as HTMLElement).dataset?.field;
-    if (field && DEMO_GATE_DESCRIPTIONS[field]) return DEMO_GATE_DESCRIPTIONS[field];
-    if (target.id && DEMO_GATE_DESCRIPTIONS[target.id]) return DEMO_GATE_DESCRIPTIONS[target.id];
-    return 'Edit this rig assumption.';
-  }
-  const DEMO_GATED_SELECTOR = ['#rig-add-component', '[data-action="remove-component"]'].join(', ');
-
-  function handleDemoGateClick(event: MouseEvent) {
-    if (!demoLocked()) return;
-    const target = (event.target as Element).closest<HTMLElement>(DEMO_GATED_SELECTOR);
-    if (!target) return;
-    if (target.id === 'rig-add-component' && componentRows.length === 0) return; // never block down to zero components
-    event.preventDefault();
-    event.stopPropagation();
-    showDemoGatePrompt(demoGateDetail(target));
-  }
-
-  /** Every scalar `[data-field]` input in the rig form reverts on edit while locked, and shows the
-   * upsell toast — the same technique build-planner.astro uses for its sensitivity controls,
-   * generalized across every rig field since the whole editor is a Pro control here. */
-  function guardAllRigFields() {
-    form.querySelectorAll<HTMLInputElement | HTMLSelectElement>('[data-field]').forEach((el) => {
-      let lastGoodValue = el.value;
-      const guard = (event: Event) => {
-        if (!demoLocked()) { lastGoodValue = el.value; return; }
-        event.stopPropagation();
-        if (el.value !== lastGoodValue) el.value = lastGoodValue;
-        showDemoGatePrompt(demoGateDetail(el));
-      };
-      el.addEventListener('input', guard);
-      el.addEventListener('change', guard);
-    });
-  }
-
-  // ---- Catalog selection ----
-  function resetComponentRowsFromCatalog(components: RigComponentV1[]) {
-    componentRows = components.map((c) => ({
-      componentId: c.componentId, label: c.label, condition: c.condition, priceUsd: c.priceUsd,
-      assertionOrigin: c.assertionOrigin, sourceUrl: c.sourceUrl, lastVerified: c.lastVerified,
-    }));
-  }
-
-  function selectRig(id: string) {
-    const entry = referenceRigById(id);
-    if (!entry) return;
-    selectedRigId = id;
-    byId<HTMLInputElement>('rig-name').value = entry.name;
-    resetComponentRowsFromCatalog(entry.components);
-    byId<HTMLInputElement>('rig-resale-usd').value = String(entry.resale.residualUsd);
-    Object.assign(resaleMeta, { assertionOrigin: entry.resale.assertionOrigin, sourceUrl: entry.resale.sourceUrl, lastVerified: entry.resale.lastVerified });
-    byId<HTMLInputElement>('rig-horizon-months').value = String(entry.defaultHorizonMonths);
-    byId<HTMLInputElement>('rig-power-watts').value = String(entry.power.systemWatts);
-    byId<HTMLSelectElement>('rig-power-method').value = entry.power.method;
-    Object.assign(powerMeta, { assertionOrigin: entry.power.assertionOrigin, sourceUrl: entry.power.sourceUrl, lastVerified: entry.power.lastVerified });
-    byId<HTMLInputElement>('rig-throughput-tps').value = String(entry.throughput.tokensPerSecond);
-    byId<HTMLInputElement>('rig-throughput-runtime').value = entry.throughput.runtime;
-    byId<HTMLInputElement>('rig-throughput-runtime-version').value = entry.throughput.runtimeVersion ?? '';
-    byId<HTMLInputElement>('rig-throughput-context').value = entry.throughput.contextTokens === null ? '' : String(entry.throughput.contextTokens);
-    byId<HTMLSelectElement>('rig-throughput-method').value = entry.throughput.method;
-    Object.assign(throughputMeta, { assertionOrigin: entry.throughput.assertionOrigin, sourceUrl: entry.throughput.sourceUrl, lastVerified: entry.throughput.lastVerified });
-    byId<HTMLInputElement>('rig-model-name').value = entry.model.modelName;
-    byId<HTMLInputElement>('rig-model-quant').value = entry.model.quantization ?? '';
-    byId<HTMLInputElement>('rig-passrate-enabled').checked = false;
-    byId<HTMLElement>('rig-passrate-fields').hidden = true;
-
-    document.querySelectorAll<HTMLButtonElement>('[data-rig-option]').forEach((btn) => {
-      const active = btn.dataset.rigId === id;
-      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
-      btn.classList.toggle('card-active', active);
-    });
-    const primary = entry.components[0];
-    const src = byId<HTMLElement>('rig-picker-source');
-    src.replaceChildren();
-    if (primary.sourceUrl) {
-      const a = document.createElement('a'); a.className = 'link small-sans'; a.href = primary.sourceUrl; a.textContent = primary.sourceUrl;
-      src.append('Primary component price: ', a, ` · verified ${primary.lastVerified}`);
-    }
-    renderComponentRows();
-    renderFieldSources();
-    render();
-  }
-
-  function componentRowEl(row: ComponentRow): HTMLElement {
-    const wrap = document.createElement('div');
-    wrap.className = 'grid gap-4 sm:grid-cols-[1fr_10rem_8rem_auto] items-end';
-    wrap.dataset.componentId = row.componentId;
-
-    const labelWrap = document.createElement('label'); labelWrap.className = 'block';
-    labelWrap.innerHTML = '<span class="label">Component</span>';
-    const labelInput = document.createElement('input');
-    labelInput.className = 'ctl ctl-row mt-2 w-full'; labelInput.dataset.field = 'component-label'; labelInput.value = row.label;
-    labelWrap.appendChild(labelInput);
-
-    const priceWrap = document.createElement('label'); priceWrap.className = 'block';
-    priceWrap.innerHTML = '<span class="label">Price</span>';
-    const priceSpan = document.createElement('span'); priceSpan.className = 'money-input mt-2';
-    const dollar = document.createElement('span'); dollar.textContent = '$';
-    const priceInput = document.createElement('input');
-    priceInput.className = 'ctl ctl-row w-full'; priceInput.type = 'number'; priceInput.min = '0'; priceInput.step = 'any';
-    priceInput.dataset.field = 'component-price'; priceInput.value = String(row.priceUsd);
-    priceSpan.append(dollar, priceInput); priceWrap.appendChild(priceSpan);
-
-    const conditionWrap = document.createElement('label'); conditionWrap.className = 'block';
-    conditionWrap.innerHTML = '<span class="label">Condition</span>';
-    const conditionSelect = document.createElement('select');
-    conditionSelect.className = 'ctl ctl-row mt-2 w-full'; conditionSelect.dataset.field = 'component-condition';
-    conditionSelect.innerHTML = '<option value="new">New</option><option value="used">Used</option>';
-    conditionSelect.value = row.condition;
-    conditionWrap.appendChild(conditionSelect);
-
-    const removeBtn = document.createElement('button');
-    removeBtn.type = 'button'; removeBtn.className = 'btn btn-quiet'; removeBtn.textContent = 'Remove';
-    removeBtn.dataset.action = 'remove-component';
-    removeBtn.disabled = componentRows.length <= 1;
-
-    const downgrade = () => {
-      row.label = labelInput.value; row.priceUsd = priceInput.valueAsNumber; row.condition = conditionSelect.value as 'new' | 'used';
-      row.assertionOrigin = 'user_asserted'; row.sourceUrl = undefined; row.lastVerified = undefined;
-      render();
-    };
-    labelInput.addEventListener('input', downgrade);
-    priceInput.addEventListener('input', downgrade);
-    conditionSelect.addEventListener('change', downgrade);
-    removeBtn.addEventListener('click', () => {
-      if (demoLocked()) { showDemoGatePrompt('Remove a component from this rig.'); return; }
-      if (componentRows.length <= 1) return;
-      componentRows = componentRows.filter((c) => c.componentId !== row.componentId);
-      renderComponentRows(); render();
-    });
-
-    wrap.append(labelWrap, priceWrap, conditionWrap, removeBtn);
-    return wrap;
-  }
-
-  function renderComponentRows() {
-    const container = byId('rig-components');
-    container.replaceChildren(...componentRows.map(componentRowEl));
-  }
-
-  function addComponent() {
-    if (demoLocked()) { showDemoGatePrompt(DEMO_GATE_DESCRIPTIONS['rig-add-component']); return; }
-    componentSeq += 1;
-    componentRows = [...componentRows, {
-      componentId: `custom-${componentSeq}`, label: 'New component', condition: 'new', priceUsd: 0, assertionOrigin: 'user_asserted',
-    }];
-    renderComponentRows(); render();
-  }
-
-  function renderFieldSources() {
-    const sourceLine = (meta: FieldMeta) => meta.sourceUrl ? `sourced · verified ${meta.lastVerified}` : 'modelled default — edit freely';
-    setText('rig-power-source', sourceLine(powerMeta));
-    setText('rig-electricity-source', `${electricityMeta.region ?? ''} ${sourceLine(electricityMeta)}`.trim());
-    setText('rig-throughput-source', sourceLine(throughputMeta));
-  }
-
-  // ---- Assembling and quoting the current rig ----
-  function currentRigSpec(): RigSpecV1 {
-    const passRateEnabled = byId<HTMLInputElement>('rig-passrate-enabled').checked;
-    const contextRaw = value('rig-throughput-context');
-    return {
-      schemaVersion: 1,
-      name: value('rig-name'),
-      components: componentRows.map((c) => ({
-        componentId: c.componentId, label: c.label, condition: c.condition, priceUsd: c.priceUsd,
-        assertionOrigin: c.assertionOrigin, sourceUrl: c.sourceUrl, lastVerified: c.lastVerified,
-      })),
-      resale: { residualUsd: number('rig-resale-usd'), ...resaleMeta },
-      horizonMonths: number('rig-horizon-months'),
-      power: { systemWatts: number('rig-power-watts'), method: byId<HTMLSelectElement>('rig-power-method').value as PowerDrawMethod, ...powerMeta },
-      electricity: { usdPerKwh: number('rig-electricity-rate'), region: value('rig-electricity-region') || undefined, ...electricityMeta },
-      throughput: {
-        tokensPerSecond: number('rig-throughput-tps'),
-        runtime: value('rig-throughput-runtime'),
-        runtimeVersion: value('rig-throughput-runtime-version') || null,
-        contextTokens: contextRaw === '' ? null : Number(contextRaw),
-        method: byId<HTMLSelectElement>('rig-throughput-method').value as ThroughputMethod,
-        ...throughputMeta,
-      },
-      model: {
-        modelName: value('rig-model-name'),
-        quantization: value('rig-model-quant') || null,
-        passRate: passRateEnabled ? {
-          rate: number('rig-passrate-value') / 100,
-          benchmark: value('rig-passrate-benchmark'),
-          basis: byId<HTMLSelectElement>('rig-passrate-basis').value as LocalPassRateBasis,
-        } : undefined,
-      },
-      workload: {
-        tasksPerMonth: number('rig-workload-tasks'),
-        tokensPerAttempt: number('rig-workload-tokens'),
-        overheadSecondsPerAttempt: number('rig-workload-overhead'),
-      },
-    };
-  }
-
-  function originLabel(origin: BuildInputOrigin | undefined) {
-    return (origin ?? 'user_asserted').replaceAll('_', ' ');
-  }
-
-  function renderLedger(quote: RigQuoteV1, spec: RigSpecV1) {
-    const ledger = byId('rig-ledger'); ledger.replaceChildren();
-    const line = (text: string) => { const li = document.createElement('li'); li.textContent = text; ledger.appendChild(li); };
-    for (const c of spec.components) {
-      line(`${c.label}: ${money(c.priceUsd)} · ${c.condition} · origin ${originLabel(c.assertionOrigin)}${c.sourceUrl ? ` · ${c.sourceUrl} (verified ${c.lastVerified})` : ''}`);
-    }
-    line(`Resale residual: ${money(spec.resale.residualUsd)} · origin ${originLabel(spec.resale.assertionOrigin)}`);
-    line(`Power: ${spec.power.systemWatts}W · ${spec.power.method.replaceAll('_', ' ')} · origin ${originLabel(spec.power.assertionOrigin)}`);
-    line(`Electricity: $${spec.electricity.usdPerKwh}/kWh${spec.electricity.region ? ` · ${spec.electricity.region}` : ''} · origin ${originLabel(spec.electricity.assertionOrigin)}`);
-    line(`Throughput: ${spec.throughput.tokensPerSecond} tok/s · ${spec.throughput.runtime}${spec.throughput.runtimeVersion ? ` ${spec.throughput.runtimeVersion}` : ' (version unpinned)'} · ${spec.throughput.method.replaceAll('_', ' ')} · origin ${originLabel(spec.throughput.assertionOrigin)}`);
-    line(spec.model.passRate
-      ? `Pass rate: ${(spec.model.passRate.rate * 100).toFixed(1)}% on ${spec.model.passRate.benchmark} · basis ${spec.model.passRate.basis.replaceAll('_', ' ')} · origin ${originLabel(spec.model.passRate.assertionOrigin)}`
-      : 'Pass rate: not supplied — cost per solved task stays Missing.');
-    if (quote.warnings.length) for (const w of quote.warnings) line(`Warning: ${w}`);
-  }
-
-  let lastQuote: RigQuoteV1 | null = null;
-
-  function renderCrossover(quote: RigQuoteV1) {
-    const headline = byId('rig-crossover-headline');
-    const detail = byId('rig-crossover-detail');
-    if (demoLocked()) return; // the locked overlay covers this section entirely
-    if (!quote.valid || quote.passRate === null || quote.amortizationPerMonthUsd === null || quote.electricityPerAttemptUsd === null) {
-      headline.textContent = 'Missing — supply a valid rig and a pass rate above to compare.';
-      detail.textContent = '';
-      return;
-    }
-    const cloudUsd = number('cloud-usd-month');
-    const cloudPassRatePct = number('cloud-passrate');
-    const capEnabled = byId<HTMLInputElement>('cloud-cap-enabled').checked;
-    const capRaw = capEnabled ? number('cloud-cap-value') : null;
-    const scaling = byId<HTMLSelectElement>('cloud-scaling').value as SubscriptionScaling;
-    if (!Number.isFinite(cloudUsd) || !Number.isFinite(cloudPassRatePct) || cloudPassRatePct <= 0 || cloudPassRatePct > 100) {
-      headline.textContent = 'Missing — enter a valid subscription price and pass rate.';
-      detail.textContent = '';
-      return;
-    }
-    const rigSide = { amortizationPerMonthUsd: quote.amortizationPerMonthUsd, electricityPerAttemptUsd: quote.electricityPerAttemptUsd, passRate: quote.passRate.rate };
-    const subscription = { usdPerMonth: cloudUsd, passRate: cloudPassRatePct / 100, tasksPerMonthCap: capEnabled ? capRaw : null, scaling };
-
-    if (!capEnabled) {
-      const out = subscriptionBreakEven(rigSide, subscription);
-      if (out.kind === 'crossover') {
-        headline.textContent = `Above ~${Math.ceil(out.tasksPerMonth).toLocaleString()} tasks/month, this rig beats that subscription per solved task.`;
-        detail.textContent = 'Uncapped comparison via subscriptionBreakEven — the closed-form crossover.';
-      } else if (out.kind === 'local_always_cheaper') {
-        headline.textContent = 'This rig is cheaper than that subscription at every volume in this scenario.';
-        detail.textContent = 'Uncapped comparison via subscriptionBreakEven.';
-      } else if (out.kind === 'subscription_always_cheaper') {
-        headline.textContent = 'That subscription is cheaper at every volume in this scenario.';
-        detail.textContent = 'An uncapped flat fee dilutes toward zero with volume; this rig has a nonzero electricity floor per solved task, so it never catches up.';
-      } else if (out.kind === 'equal') {
-        headline.textContent = 'Tied at every volume in this scenario.';
-        detail.textContent = '';
-      } else {
-        headline.textContent = 'Missing — the inputs on both sides must be valid, finite numbers.';
-        detail.textContent = '';
+    function renderBay() {
+      bay.querySelectorAll('.lr-bay-item').forEach((n) => n.remove());
+      const empty = bay.querySelector<HTMLElement>('.lr-bay-empty')!;
+      empty.hidden = parts.length > 0;
+      for (const id of parts) {
+        const c = partById.get(id)!;
+        const row = document.createElement('div');
+        row.className = 'lr-bay-item';
+        row.setAttribute('role', 'listitem');
+        row.innerHTML = `<span class="min-w-0 text-[0.9rem]">${c.label}</span>
+          <span class="num small">$${c.priceUsd.toLocaleString()}</span>
+          <button type="button" class="btn btn-quiet" data-remove="${id}" aria-label="Remove ${c.label}">×</button>`;
+        bay.appendChild(row);
       }
-      return;
+      quote();
     }
 
-    const out = breakEvenScan(rigSide, subscription);
-    if (out.kind === 'crossover') {
-      headline.textContent = `Above ~${Math.ceil(out.tasksPerMonth).toLocaleString()} tasks/month, this rig beats that capped subscription per solved task.`;
-      detail.textContent = 'Capped comparison via breakEvenScan (stacked seats above the cap).';
-    } else if (out.kind === 'mixed') {
-      headline.textContent = `First cheaper around ${Math.ceil(out.firstLocalWin).toLocaleString()} tasks/month, but the seat cap makes this flip more than once.`;
-      detail.textContent = 'Capped comparison via breakEvenScan: the subscription’s per-seat cap creates a sawtooth cost curve, so this is not a single stable crossover.';
-    } else if (out.kind === 'local_always_cheaper') {
-      headline.textContent = 'This rig is cheaper than that capped subscription at every scanned volume.';
-      detail.textContent = 'Capped comparison via breakEvenScan.';
-    } else if (out.kind === 'subscription_always_cheaper') {
-      headline.textContent = 'That capped subscription is cheaper at every scanned volume.';
-      detail.textContent = 'Capped comparison via breakEvenScan.';
-    } else {
-      headline.textContent = 'Missing — the inputs on both sides must be valid, finite numbers.';
-      detail.textContent = '';
-    }
-  }
-
-  function render() {
-    if (!componentRows.length) return;
-    const spec = currentRigSpec();
-    const quote = quoteRig(spec, new Date().toISOString());
-    lastQuote = quote;
-
-    setText('rig-build-cost', money(quote.buildCostUsd));
-    setText('rig-strip-attempt', money(quote.costPerAttemptUsd));
-    const solvedMissing = quote.costPerSolvedTaskUsd === null;
-    setText('rig-strip-solved', money(quote.costPerSolvedTaskUsd));
-    byId('rig-strip-solved').classList.toggle('missing', solvedMissing);
-    setText('rig-strip-solved-note', solvedMissing
-      ? (quote.missing.includes('model.passRate') ? 'Supply a pass rate above' : quote.missing.includes('throughput.runtimeVersion') ? 'Supply a runtime version above' : quote.missing.includes('model.quantization') ? 'Supply a quantization above' : 'Missing input above')
-      : 'Amortization + electricity ÷ pass rate');
-    setText('rig-strip-month', money(quote.monthlyCostUsd));
-
-    const messages = byId('rig-messages'); messages.replaceChildren();
-    if (quote.errors.length) {
-      const ul = document.createElement('ul'); ul.className = 'small list-disc pl-5 text-[var(--color-worse)]';
-      for (const e of quote.errors) { const li = document.createElement('li'); li.textContent = e; ul.appendChild(li); }
-      messages.appendChild(ul);
-    } else {
-      const p = document.createElement('p'); p.className = 'small';
-      p.textContent = quote.warnings.length ? 'Quote valid, with warnings below.' : 'Quote valid.';
-      messages.appendChild(p);
+    function matchProfile(): { entry?: any; hint: string } {
+      if (!parts.length) return { hint: '' };
+      const set = [...parts].sort().join('|');
+      const entry = catalog.find((e) => [...e.componentIds].sort().join('|') === set);
+      if (entry) return { entry, hint: '' };
+      const partial = catalog.find((e) => parts.every((p) => e.componentIds.includes(p)));
+      if (partial) {
+        const missing = partial.componentIds.filter((p: string) => !parts.includes(p)).map((p: string) => partById.get(p).label);
+        return { hint: `On the way to the ${partial.name} profile — still needs: ${missing.join('; ')}.` };
+      }
+      return { hint: 'These parts span different reference builds; no recorded profile covers the mix.' };
     }
 
-    renderLedger(quote, spec);
-    renderCrossover(quote);
-  }
+    function quote() {
+      const { entry, hint } = matchProfile();
+      const gate = $('lr-gate'), card = $('lr-quote-card'), profile = $('lr-profile');
+      const buildTotal = parts.reduce((a, id) => a + partById.get(id).priceUsd, 0);
+      $('lr-build').textContent = parts.length ? money(buildTotal, 0) : '—';
+      if (!entry) {
+        card.hidden = true;
+        gate.hidden = parts.length === 0;
+        $('lr-gate-why').textContent = hint;
+        profile.textContent = '';
+        $('lr-attempt').textContent = '—';
+        $('lr-solved').textContent = 'Missing';
+        $('lr-solved-why').textContent = 'Needs a pass rate — never estimated.';
+        return;
+      }
+      gate.hidden = true;
+      profile.textContent = `Matched profile: ${entry.name} — ${entry.summary}`;
+      const volume = Math.max(1, Number(($('lr-volume') as unknown as HTMLInputElement).value) || workloadDefault.tasksPerMonth);
+      const kwh = Math.max(0, Number(($('lr-kwh') as unknown as HTMLInputElement).value) || electricityDefault.usdPerKwh);
+      const passPct = Number(($('lr-pass') as unknown as HTMLInputElement).value);
+      const model = { ...entry.model };
+      if (passPct >= 1 && passPct <= 100) {
+        model.passRate = { rate: passPct / 100, benchmark: 'user-supplied benchmark', basis: 'measured_by_user', assertionOrigin: 'user_asserted' };
+      }
+      const spec = {
+        schemaVersion: 1, name: entry.name,
+        components: entry.components, resale: entry.resale, power: entry.power, throughput: entry.throughput,
+        electricity: { ...electricityDefault, usdPerKwh: kwh, ...(kwh !== electricityDefault.usdPerKwh ? { assertionOrigin: 'user_asserted', region: 'your rate' } : {}) },
+        workload: { ...workloadDefault, tasksPerMonth: volume },
+        horizonMonths: entry.defaultHorizonMonths,
+        model,
+      };
+      const q = quoteRig(spec as any, '2026-08-26T00:00:00.000Z');
+      card.hidden = false;
+      $('lr-quote-name').textContent = q.rigName;
+      $('lr-attempt').textContent = q.costPerAttemptUsd != null ? money(q.costPerAttemptUsd, 4) : '—';
+      $('lr-amort').textContent = q.amortizationPerMonthUsd != null ? money(q.amortizationPerMonthUsd) : '—';
+      $('lr-power').textContent = q.electricityPerAttemptUsd != null ? money(q.electricityPerAttemptUsd, 4) : '—';
+      $('lr-secs').textContent = q.attemptSeconds != null ? `${q.attemptSeconds.toFixed(0)}s` : '—';
+      $('lr-month').textContent = q.monthlyCostUsd != null ? money(q.monthlyCostUsd) : '—';
+      $('lr-solved').textContent = q.costPerSolvedTaskUsd != null ? money(q.costPerSolvedTaskUsd, 4) : 'Missing';
+      $('lr-solved-why').textContent = q.costPerSolvedTaskUsd != null
+        ? `at your asserted ${passPct.toFixed(1)}% pass rate` : 'Needs a pass rate — never estimated.';
+      $('lr-basis').textContent = `Throughput ${q.throughput.tokensPerSecond} tok/s (${q.throughput.runtime}, ${q.throughput.method}); power ${q.power.systemWatts}W (${q.power.method}); ${q.missing.length ? 'missing: ' + q.missing.join(', ') : 'no missing inputs'}.`;
+      const cloudPerSolved = Number(($('lr-cloud') as unknown as HTMLSelectElement).value);
+      const breakEl = $('lr-break');
+      if (q.costPerSolvedTaskUsd == null) {
+        breakEl.textContent = 'Break-even needs the rig’s cost per solved task — supply a pass rate first.';
+      } else if (q.costPerSolvedTaskUsd >= cloudPerSolved) {
+        breakEl.textContent = `Not at this volume: the rig’s ${money(q.costPerSolvedTaskUsd, 2)}/solved is not below the cloud’s ${money(cloudPerSolved)}/solved.`;
+      } else {
+        breakEl.textContent = `Cheaper per solved task than this cloud row at your asserted pass rate — ${money(q.costPerSolvedTaskUsd, 2)} vs ${money(cloudPerSolved)}; hardware is already amortized inside the rig figure.`;
+      }
+    }
 
-  // ---- Wiring ----
-  document.getElementById('rig-picker')!.addEventListener('click', (event) => {
-    const btn = (event.target as Element).closest<HTMLButtonElement>('[data-rig-option]');
-    if (!btn?.dataset.rigId) return;
-    selectRig(btn.dataset.rigId);
-  });
-  byId('rig-add-component').addEventListener('click', addComponent);
-  byId<HTMLInputElement>('rig-passrate-enabled').addEventListener('change', (event) => {
-    if (demoLocked()) { (event.target as HTMLInputElement).checked = false; showDemoGatePrompt(DEMO_GATE_DESCRIPTIONS['passrate-enabled']); return; }
-    byId<HTMLElement>('rig-passrate-fields').hidden = !(event.target as HTMLInputElement).checked;
-    render();
-  });
-  byId<HTMLInputElement>('cloud-cap-enabled').addEventListener('change', (event) => {
-    if (demoLocked()) { (event.target as HTMLInputElement).checked = false; showDemoGatePrompt(DEMO_GATE_DESCRIPTIONS['cloud-cap-enabled']); return; }
-    byId<HTMLElement>('cloud-cap-fields').hidden = !(event.target as HTMLInputElement).checked;
-    render();
-  });
-  form.addEventListener('input', (event) => {
-    const field = (event.target as HTMLElement).dataset?.field;
-    if (field && field.startsWith('cloud-')) render();
-    else if (field && !field.startsWith('component-') && field !== 'passrate-enabled' && field !== 'cloud-cap-enabled') render();
-  });
-  form.addEventListener('change', (event) => {
-    const field = (event.target as HTMLElement).dataset?.field;
-    if (field === 'power-method' || field === 'throughput-method' || field === 'passrate-basis' || field === 'cloud-scaling') render();
-  });
+    function add(id: string) { if (!parts.includes(id)) { parts.push(id); renderBay(); } }
+    document.querySelectorAll<HTMLElement>('.lr-part').forEach((el) => {
+      el.addEventListener('dragstart', (e) => {
+        (e as DragEvent).dataTransfer!.setData('text/plain', el.dataset.part!);
+        (e as DragEvent).dataTransfer!.effectAllowed = 'copy';
+        el.classList.add('lr-dragging');
+      });
+      el.addEventListener('dragend', () => el.classList.remove('lr-dragging'));
+    });
+    document.querySelectorAll<HTMLButtonElement>('.lr-add').forEach((b) =>
+      b.addEventListener('click', () => add(b.dataset.part!)));
+    bay.addEventListener('dragover', (e) => { e.preventDefault(); bay.classList.add('lr-over'); });
+    bay.addEventListener('dragleave', () => bay.classList.remove('lr-over'));
+    bay.addEventListener('drop', (e) => {
+      e.preventDefault(); bay.classList.remove('lr-over');
+      const id = (e as DragEvent).dataTransfer!.getData('text/plain');
+      if (partById.has(id)) add(id);
+    });
+    bay.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-remove]');
+      if (btn) { parts.splice(parts.indexOf(btn.dataset.remove!), 1); renderBay(); }
+    });
+    for (const id of ['lr-volume', 'lr-kwh', 'lr-pass', 'lr-cloud']) $(id).addEventListener('input', quote);
+    renderBay();
+  </script>
 
-  if (CHECKOUT_UI_ENABLED) {
-    form.addEventListener('click', handleDemoGateClick, true);
-    guardAllRigFields();
-    byId<HTMLButtonElement>('rig-demo-gate-dismiss').addEventListener('click', hideDemoGatePrompt);
-    document.addEventListener('keydown', (event) => { if (event.key === 'Escape') hideDemoGatePrompt(); });
-    const stopDemoAuth = observeClerkAuth(handleDemoAuth, { enabled: clerkEnabled });
-    addEventListener('pagehide', () => { stopDemoAuth(); demoEntitlementRequest?.abort(); }, { once: true });
-    renderDemoGateState();
-  } else {
-    byId<HTMLElement>('rig-cloud-locked').hidden = true;
-    byId<HTMLElement>('rig-cloud-unlocked').hidden = false;
-  }
-
-  selectRig(selectedRigId);
-</script>
-
-<style is:global>
-  #reference-rigs [data-rig-option] { cursor: pointer; border: 1px solid var(--color-rule); transition: border-color .12s; }
-  #reference-rigs [data-rig-option][aria-pressed='true'], #reference-rigs [data-rig-option].card-active {
-    border-color: var(--color-accent); box-shadow: inset 0 0 0 1px var(--color-accent);
-  }
-  #rig-components > div + div { padding-top: 1rem; border-top: 1px solid var(--color-rule); }
-
-  /* Launch-day demo-mode soft gating: dark by default, matches build-planner.astro. */
-  #local-hardware.demo-gate-locked #rig-form :is(input, select) { opacity: .6; transition: opacity .12s; }
-  #local-hardware.demo-gate-locked #rig-form :is(input, select):hover { opacity: .9; }
-</style>
+  <style>
+    .lr-part { cursor: grab; }
+    .lr-part.lr-dragging { opacity: .5; }
+    .lr-bay { min-height: 9rem; padding: .75rem; border-style: dashed; transition: border-color .12s, background .12s; }
+    .lr-bay.lr-over { border-color: var(--color-purple); background: color-mix(in srgb, var(--color-purple) 6%, transparent); }
+    .lr-bay-item { display: flex; align-items: center; justify-content: space-between; gap: .75rem;
+      padding: .5rem .25rem; border-top: 1px solid var(--color-rule); }
+    .lr-bay-item:first-of-type { border-top: 0; }
+    .lr-cond { font-family: var(--font-mono); font-size: .6875rem; text-transform: uppercase; letter-spacing: .06em;
+      border: 1px solid var(--color-rule-strong); border-radius: 4px; padding: 0 .3rem; }
+    .lr-cond-used { color: var(--color-purple); border-color: var(--color-purple); }
+    .lr-gate { border-color: var(--color-rule-strong); }
+  </style>
+</Base>
