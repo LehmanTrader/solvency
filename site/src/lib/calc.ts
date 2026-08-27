@@ -143,6 +143,8 @@ export interface GroupOpts {
   width: number;
   compact?: boolean;
   highlight?: string;
+  /** Render just this GROUPS key (the population toggle); omit for all. */
+  only?: string;
   /** Sort state per basis group (stage 2's homepage Ranking view). Omitted —
    * or a group with no entry — falls back to rankedBars' own default
    * (cost ascending), so callers that don't sort (e.g. the model page's peer
@@ -156,6 +158,16 @@ export interface GroupOpts {
  * The grouped result: measured, then modelled, each with its own header and
  * its own scale; stale rows behind a disclosure. Never interleaved.
  */
+/** The population toggle (arena-style): one visible list, switched between
+ * populations — never merged. Labels are short; each group's own ghead line
+ * still carries the full provenance sentence when selected. */
+export const GROUP_TABS: { key: string; label: string }[] = [
+  { key: 'measured_by_source', label: 'Agentic index' },
+  { key: 'modelled_by_solvency', label: 'Modelled' },
+  { key: 'measured_by_solvency', label: 'Solvency Bench' },
+  { key: 'free_tier_capped', label: 'Free' },
+];
+
 export function groupsHtml(rows: Row[], s: Settings, o: GroupOpts): string {
   // Founder fix (screenshot review, 2026-08-26): on the wide/sortable layout
   // the "Find a model" search box (site/src/components/Calculator.astro's
@@ -165,7 +177,7 @@ export function groupsHtml(rows: Row[], s: Settings, o: GroupOpts): string {
   // and the old 8px gap between them read as the search box crowding the
   // headers. Wide + sortable groups get real breathing room here instead.
   const headGap = o.sortable && !o.compact ? 'mt-7' : 'mt-2';
-  return GROUPS.map((g) => {
+  return GROUPS.filter((g) => !o.only || g.key === o.only).map((g) => {
     const cr = chartRows(rows, g.key, s);
     const svg = cr.length ? rankedBars(cr, { width: o.width, volume: s.volume, basis: g.basis, compact: o.compact, highlight: o.highlight, sort: o.sort?.[g.basis], sortable: o.sortable }) : '';
     // Free-model coverage: a row-count-dependent wording tweak only — "No

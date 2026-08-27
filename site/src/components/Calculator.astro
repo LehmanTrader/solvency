@@ -6,7 +6,7 @@
  * island takes over. The island re-renders from compute() on every input.
  */
 import { TIER_NAMES, sources, models } from '../lib/data.ts';
-import { DEFAULTS, compute, groupsHtml, calloutHtml, projectTotalHtml, missingHtml, TIER_HELP, allChartRows } from '../lib/calc.ts';
+import { DEFAULTS, compute, groupsHtml, calloutHtml, projectTotalHtml, missingHtml, TIER_HELP, allChartRows, GROUP_TABS } from '../lib/calc.ts';
 import { scatterPareto } from '../lib/charts.ts';
 import { TASK_BUCKETS, bucketById, provenanceHtml, bucketArticle } from '../lib/tasks.ts';
 import { CLERK_ENABLED } from '../lib/clerk.ts';
@@ -26,8 +26,8 @@ const WIDE = 1046, NARROW = 350;
 // live sort state per basis group and re-renders through this same
 // groupsHtml/patchRanked path on every click — one authority, not a DOM
 // shuffle (site/src/lib/charts.ts's rankedBars/patchRanked doc comments).
-const wide = groupsHtml(rows, DEFAULTS, { width: WIDE, compact: false, sortable: true });
-const narrow = groupsHtml(rows, DEFAULTS, { width: NARROW, compact: true, sortable: true });
+const wide = groupsHtml(rows, DEFAULTS, { width: WIDE, compact: false, sortable: true, only: GROUP_TABS[0].key });
+const narrow = groupsHtml(rows, DEFAULTS, { width: NARROW, compact: true, sortable: true, only: GROUP_TABS[0].key });
 // Stage 1.2 (Roy's note 6): the Frontier view of the same leaderboard —
 // pulled forward from stage 2's plan, replacing the old collapsed scatter
 // section on the homepage. Same allChartRows(rows, settings) the old
@@ -143,7 +143,16 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
          the default; the old collapsed "Show the frontier chart" disclosure
          on the homepage (site/src/pages/index.astro) is gone, replaced by
          this. -->
-    <div class="px-5 pt-4 pb-1">
+    <div class="px-5 pt-4 pb-1 flex flex-wrap gap-3 items-center">
+      <!-- Population toggle (operator, 2026-08-26): one visible list,
+           switched between populations — the stacked groups read as clutter.
+           Populations still never merge into one ranking; the toggle changes
+           which one is on screen, arena-style. -->
+      <div class="view-toggle" role="group" aria-label="Population" id="c-pop-toggle">
+        {GROUP_TABS.map((t, i) => (
+          <button type="button" data-pop={t.key} aria-pressed={i === 0 ? 'true' : 'false'}>{t.label}</button>
+        ))}
+      </div>
       <div class="view-toggle" role="group" aria-label="Leaderboard view">
         <button type="button" id="c-view-ranking" aria-pressed="true">Ranking</button>
         <button type="button" id="c-view-frontier" aria-pressed="false">Frontier</button>
@@ -263,7 +272,7 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
 </section>
 
 <script>
-  import { compute, groupsHtml, calloutHtml, projectTotalHtml, missingHtml, gateDelta, TIER_HELP, validModelId, allChartRows, type Settings, type Row } from '../lib/calc.ts';
+  import { compute, groupsHtml, calloutHtml, projectTotalHtml, missingHtml, gateDelta, TIER_HELP, validModelId, allChartRows, GROUP_TABS, type Settings, type Row } from '../lib/calc.ts';
   // ../lib/tasks.ts reads data/task-study/final_table.csv via node:fs at
   // import time and must never reach a browser bundle. The server already
   // computed TASK_BUCKETS from it and embedded the result as #task-buckets-data
@@ -294,6 +303,20 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
     frontier: $<HTMLInputElement>('c-frontier')!,
   };
   const groupsEl = $('c-groups')!;
+  // ---- population toggle: one list on screen at a time -------------------
+  let currentPop: string = GROUP_TABS[0].key;
+  const popToggle = $('c-pop-toggle')!;
+  const setPop = (key: string) => {
+    if (!GROUP_TABS.some((t) => t.key === key)) return;
+    currentPop = key;
+    popToggle.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', (b as HTMLButtonElement).dataset.pop === key ? 'true' : 'false'));
+  };
+  popToggle.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-pop]');
+    if (!btn || btn.dataset.pop === currentPop) return;
+    setPop(btn.dataset.pop!);
+    render();
+  });
   // First-load bar entrance: the SSR wrapper carries data-bars-animate (see
   // global.css). Drop it once the entrance has played, so settings changes
   // and sorts never replay the animation.
@@ -372,6 +395,7 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
   const res = num(q.get('residual'), 0, 1_000_000); if (res !== null) CTRL.residual.value = String(res);
   if (q.get('frontier') === '0' || q.get('frontier') === '1') CTRL.frontier.checked = q.get('frontier') === '1';
   let highlight = validModelId(q.get('highlight'));
+  if (q.get('pop')) setPop(q.get('pop')!);
 
   // ---- hero mode: "I want to ship a [bucket]" (default) vs the legacy
   // "I build [tier] tasks, about [n] a month." slider. A link that already
@@ -454,8 +478,8 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
     const narrowEl = groupsEl.querySelector<HTMLElement>('[data-layout="narrow"]')!;
     const visible = wideEl.offsetParent ? wideEl : narrowEl;
     const w = widthOf(visible.querySelector('[data-chart]') ?? visible);
-    patchGroups(wideEl, groupsHtml(rows, s, { width: visible === wideEl ? w : Number(groupsEl.dataset.wide), compact: false, highlight, sort: groupSort, sortable: true }));
-    patchGroups(narrowEl, groupsHtml(rows, s, { width: visible === narrowEl ? w : Number(groupsEl.dataset.narrow), compact: true, highlight, sort: groupSort, sortable: true }));
+    patchGroups(wideEl, groupsHtml(rows, s, { width: visible === wideEl ? w : Number(groupsEl.dataset.wide), compact: false, highlight, sort: groupSort, sortable: true, only: currentPop }));
+    patchGroups(narrowEl, groupsHtml(rows, s, { width: visible === narrowEl ? w : Number(groupsEl.dataset.narrow), compact: true, highlight, sort: groupSort, sortable: true, only: currentPop }));
     $('c-missing')!.innerHTML = missingHtml(missing, highlight ? models.find((m) => m.model_id === highlight)?.display_name : undefined);
     $('c-missing-d')!.querySelector('[data-count]')!.textContent = String(missing.length);
     renderScatter(rows, s);
@@ -466,6 +490,7 @@ const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Ti
         mode, bucket: CTRL.bucket.value });
       if (CTRL.bucket.value === 'other') p.set('taskcount', CTRL.taskcount.value);
       if (highlight) p.set('highlight', highlight);
+      if (currentPop !== GROUP_TABS[0].key) p.set('pop', currentPop);
       history.replaceState(null, '', `${location.pathname}?${p}`);
     }
   }
