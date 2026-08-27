@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-08-26T23:46:30.234Z",
+  "updated_at": "2026-08-27T10:05:58.538Z",
   "models": {
     "qwen/qwen3.8-flash": {
       "name": "Qwen: Qwen3.8 Flash"
@@ -1276,7 +1276,7 @@
     },
     "Codex CLI": {
       "repo": "openai/codex",
-      "version": "rust-v0.150.0"
+      "version": "rust-v0.150.1"
     },
     "Claude Code": {
       "repo": "anthropics/claude-code",

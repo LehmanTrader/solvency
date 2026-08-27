@@ -36,7 +36,7 @@ for (const [aliasNorm, id] of Object.entries(ALIASES)) {
 const HARNESS_STUDY_MODEL = 'gpt-5.6-sol';
 
 const candidates = new Map(); // model_id -> { benchmark -> best summary }
-const skipped = { invalid: 0, superseded: 0, incomplete: 0, unmapped: [], harnessStudy: 0 };
+const skipped = { invalid: 0, superseded: 0, incomplete: 0, unmapped: [], harnessStudy: 0, unrankable: [] };
 
 for (const dir of readdirSync(RESULTS)) {
   const base = join(RESULTS, dir);
@@ -57,6 +57,11 @@ for (const dir of readdirSync(RESULTS)) {
   const protocol = s.protocol ?? 'solvency-bench-v0';
   const benchmark = protocol.startsWith('solvency-bench-a') ? protocol : 'solvency-bench-v0';
   const key = m.model_id;
+  // Unrankable runs never become leaderboard rows: countable below one full
+  // task set, a null pass rate (all-infra), or 0% (cost per solved task is
+  // undefined) stay in the journals/notes, not in benchmarks.json.
+  const countableN = s.attemptsCountable ?? s.countableAttempts ?? 0;
+  if (countableN < 12 || s.passRate === null || s.passRate === 0) { skipped.unrankable.push(`${dir} (countable ${countableN}, pass ${s.passRate})`); continue; }
   const cur = candidates.get(key)?.[benchmark];
   // bare metered beats subscription-harness; later run date beats earlier
   const better = !cur
@@ -70,6 +75,12 @@ for (const [modelId, byBench] of [...candidates.entries()].sort()) {
   for (const [benchmark, s] of Object.entries(byBench)) {
     const countable = s.countableAttempts ?? 36;
     const solved = Math.round((s.passRate ?? 0) * countable);
+    // A free-tier model's bench run measures its PASS RATE; its dollar cost
+    // is genuinely $0 and rate-capped — it stays in the free_tier_capped
+    // basis (docs/free-models-scoping.md), now with a first-party measured
+    // pass rate instead of none.
+    const model = models.find((x) => x.model_id === modelId);
+    const isFree = model?.access_tier === 'free';
     rows.push({
       model_id: modelId,
       harness: s.harness?.name ?? null,
@@ -84,8 +95,8 @@ for (const [modelId, byBench] of [...candidates.entries()].sort()) {
       attempts_n: countable,
       countable_attempts_n: countable,
       solved_attempts_n: solved,
-      measured_cost_per_task_usd: Number((s.costPerTaskUsd ?? 0).toFixed(6)),
-      cost_basis: 'measured_by_solvency',
+      ...(isFree ? {} : { measured_cost_per_task_usd: Number((s.costPerTaskUsd ?? 0).toFixed(6)) }),
+      cost_basis: isFree ? 'free_tier_capped' : 'measured_by_solvency',
       tasks_n: benchmark.startsWith('solvency-bench-a') ? (s.tasksN ?? 30) : 12,
       run_date: s.runDate ?? '2026-08-26',
       date_basis: 'run_executed_by_solvency',
@@ -100,7 +111,7 @@ const thirdParty = bench.results.filter((r) => r.cost_basis !== 'measured_by_sol
 const next = { ...bench, results: [...thirdParty, ...rows] };
 
 console.log(`ingest: ${rows.length} first-party rows (${candidates.size} models); third-party rows untouched: ${thirdParty.length}`);
-console.log(`skipped: ${skipped.invalid} INVALID, ${skipped.superseded} SUPERSEDED, ${skipped.incomplete} incomplete, ${skipped.harnessStudy} harness-study arms, ${skipped.unmapped.length} unmapped`);
+console.log(`skipped: ${skipped.invalid} INVALID, ${skipped.superseded} SUPERSEDED, ${skipped.incomplete} incomplete, ${skipped.harnessStudy} harness-study arms, ${skipped.unmapped.length} unmapped, ${skipped.unrankable.length} unrankable (tiny/zero/all-infra)`);
 if (skipped.unmapped.length) console.log('unmapped:', skipped.unmapped.slice(0, 8).join(', '));
 if (!DRY) {
   writeFileSync(BENCH_PATH, JSON.stringify(next, null, 2) + '\n');

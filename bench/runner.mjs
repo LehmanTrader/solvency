@@ -227,7 +227,7 @@ export async function runBenchmark(cfg, emit = () => {}) {
   const jPass = all.filter((r) => !r.infra && r.pass).length;
   const jFail = all.filter((r) => !r.infra && !r.pass).length;
   const jInfra = all.filter((r) => r.infra).length;
-  const jSpent = all.reduce((a, r) => a + (r.costUsd ?? 0), 0);
+  const jSpent = all.reduce((a, r) => a + (r.costUsd ?? r.cost ?? 0), 0);
   counted.pass = jPass; counted.fail = jFail; counted.infra = jInfra; spent = jSpent;
   const countable = jPass + jFail;
   const passRate = countable ? jPass / countable : null;

@@ -66,7 +66,7 @@ describe('report matches the dataset', () => {
     assert.equal(Number(bullet![1]), actual.length);
     assert.equal(Number(bullet![2]), current.length);
     // The names the paragraph does single out must be real, current and data-less.
-    for (const n of ['Claude Sonnet 5', 'Claude Haiku 4.5', 'GPT-5.3 Codex', 'GLM-5.3']) {
+    for (const n of ['Claude Sonnet 5', 'Claude Haiku 4.5', 'GPT-5.3 Codex', 'Grok 4.6']) {
       const m = byName(n);
       assert.ok(m, `report names an unknown model: ${n}`);
       assert.equal(bestResultFor(m!.model_id), null, `${n} actually has a pass rate`);
