@@ -63,17 +63,16 @@ describe('og cards: manifest matches the live data', () => {
     }
   });
 
-  test('the homepage card matches the measured leaderboard computed now', () => {
+  test('the homepage card matches the long-horizon tier computed now', () => {
     const expected = homeCardData();
     assertRankedCardMatches('home', cards.home, expected);
-    // Cross-check against the engine directly, not just against the generator's
-    // own function. The card excerpts the cheapest 9 when the measured set
-    // outgrows the 630px canvas (measuredCostRows CARD_MAX_ROWS) and records
-    // the full set in raw.allModelIds — both sides are pinned here.
-    const { measured } = leaderboard('heavy');
-    assert.equal(expected.rows.length, Math.min(9, measured.length), 'home: shown rows disagree with the capped excerpt of leaderboard(\'heavy\').measured');
-    assert.deepEqual(expected.raw.allModelIds, measured.map((r: any) => r.m.model_id), 'home: full measured set disagrees with leaderboard(\'heavy\').measured computed here');
-    assert.equal(expected.rows[0].id, measured[0].m.model_id, 'home: #1 row disagrees with leaderboard(\'heavy\').measured computed here');
+    // §21: the default card is the a2 population, cheapest-first, capped at 9
+    // with the full set recorded in raw.allModelIds.
+    assert.equal(expected.raw.population, 'solvency-bench-a2', 'home card must be the long-horizon population');
+    assert.ok(expected.rows.length >= 3 && expected.rows.length <= 9);
+    const costs = expected.rows.map((r: any) => r.cost);
+    assert.deepEqual(costs, [...costs].sort((a: number, b: number) => a - b), 'home: rows must be cheapest-first');
+    assert.ok((expected.raw.allModelIds as string[]).length >= expected.rows.length);
   });
 
   test('the first-party harness card matches the study computed now', () => {

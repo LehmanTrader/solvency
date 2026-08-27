@@ -133,7 +133,34 @@ export function noteCardData(fm: ReportFrontmatter): RankedCardData {
 /** The homepage default card: the same measured cost-per-solved-task ranking as
  * rankedCostCardData(), keyed 'home' for site/src/layouts/Base.astro's default og image. */
 export function homeCardData(): RankedCardData {
-  return { ...rankedCostCardData(), key: 'home' };
+  // §21 + operator (2026-08-27): the site's default card is Solvency's own
+  // long-horizon tier — one population, our measurement, ranked.
+  const opts = defaultOptions(assumptions);
+  const arms = results
+    .filter((r) => r.benchmark === 'solvency-bench-a2' && r.pass_rate > 0)
+    .map((r) => ({ m: modelById(r.model_id)!, r }))
+    .filter((x) => x.m && x.m.status === 'current')
+    .map((x) => ({ ...x, cost: costPerSolvedTask(x.m as any, 'heavy', tiers.heavy, x.r.pass_rate, opts, extrasFor(x.r)).value!.naive }))
+    .sort((a, b) => a.cost - b.cost);
+  if (arms.length < 3) return { ...rankedCostCardData(), key: 'home' }; // fallback until the tier fills
+  const rows: RankedRow[] = arms.slice(0, 9).map((x) => ({
+    id: x.m.model_id, name: x.m.display_name, chip: monogram(x.m.provider), provider: x.m.provider,
+    cost: x.cost, value: money(x.cost), basis: 'measured' as const,
+    detail: `${(x.r.pass_rate * 100).toFixed(0)}% pass · 30 hard tasks`,
+  }));
+  const leader = rows[0], priciest = arms[arms.length - 1];
+  return {
+    key: 'home',
+    eyebrow: 'SOLVENCY BENCH · LONG-HORIZON TIER · COST PER SOLVED TASK',
+    headlinePrefix: '',
+    headlineHighlight: leader.name,
+    headlineSuffix: ` solves a hard agentic task for ${leader.value} — measured by Solvency, 30 tasks, sandboxed.`,
+    rows,
+    barMax: priciest.cost,
+    sourceLine: 'Source: Solvency Bench a2 — run by Solvency',
+    noteLine: `NOTE: FIRST-PARTY MEASUREMENT · ${arms.length} MODELS ON IDENTICAL TASKS${arms.length > 9 ? ` · CHEAPEST 9 SHOWN` : ''}`,
+    raw: { allModelIds: arms.map((x) => x.m.model_id), population: 'solvency-bench-a2' },
+  };
 }
 
 export function currentModels() {
@@ -296,10 +323,17 @@ function excerptAroundId(rows: RankedRow[], keepId: string, max = 6): RankedRow[
  * default card (modelCardData), so both agree on one computation.
  */
 function measuredCostRows() {
-  // The measured leaderboard card is the AA population by definition; the
-  // first-party Solvency Bench population (2026-08-26) is its own group and
-  // never joins this ranking.
-  const measured = leaderboard('heavy').measured.filter((r) => r.r.benchmark === 'aa-coding-agent-index');
+  // This card is the AA population by definition — derived from the AA rows
+  // DIRECTLY, not through the leaderboard bucket: since the §21 ours-first
+  // flip, models we have measured no longer surface AA rows via
+  // bestResultFor, but the note's population is unchanged.
+  const opts = defaultOptions(assumptions);
+  const measured = results
+    .filter((r) => r.benchmark === 'aa-coding-agent-index')
+    .map((r) => ({ m: modelById(r.model_id)!, r }))
+    .filter((x) => x.m && x.m.status === 'current')
+    .map((x) => ({ ...x, cost: costPerSolvedTask(x.m as any, 'heavy', tiers.heavy, x.r.pass_rate, opts, extrasFor(x.r)).value!.naive }))
+    .sort((a, b) => a.cost - b.cost);
   if (!measured.length) throw new Error('measuredCostRows: no measured current models to rank');
   const src = sourceFor(measured[0].r.benchmark);
   if (!src) throw new Error('measuredCostRows: no source metadata for the measured benchmark');
@@ -542,9 +576,32 @@ function priceRankedRows(): RankedRow[] {
  * so every current model gets a truthful default card instead of none.
  */
 export function modelCardData(model: any): RankedCardData {
-  const { measured, modelled: modeled } = leaderboard('heavy');
+  const { measured, modelled: modeled, bench } = leaderboard('heavy');
+  const inBench = bench.some((r) => r.m.model_id === model.model_id);
   const inMeasured = measured.some((r) => r.m.model_id === model.model_id);
   const inModeled = modeled.some((r) => r.m.model_id === model.model_id);
+
+  if (inBench) {
+    const rows: RankedRow[] = bench.map((r) => ({
+      id: r.m.model_id, name: r.m.display_name, chip: monogram(r.m.provider), provider: r.m.provider,
+      cost: r.cost, value: money(r.cost), basis: 'measured' as const,
+      detail: `${(r.r.pass_rate * 100).toFixed(0)}% pass · ${r.r.benchmark === 'solvency-bench-a2' ? '30 hard tasks' : 'single-turn tier'}`,
+    }));
+    const mine = rows.find((r) => r.id === model.model_id)!;
+    const barMax = Math.max(...rows.map((r) => r.cost));
+    return {
+      key: `model-${model.model_id}`,
+      eyebrow: 'COST PER SOLVED TASK · SOLVENCY BENCH',
+      headlinePrefix: '',
+      headlineHighlight: model.display_name,
+      headlineSuffix: ` costs ${mine.value} per solved task — measured by Solvency.`,
+      rows: excerptAroundId(rows, model.model_id),
+      barMax,
+      sourceLine: 'Source: Solvency Bench — run by Solvency',
+      noteLine: 'NOTE: FIRST-PARTY MEASUREMENT · OWN POPULATION',
+      raw: { modelId: model.model_id, cost: mine.cost, basisKey: 'measured_by_solvency' },
+    };
+  }
 
   if (inMeasured) {
     const { allRows, src } = measuredCostRows();

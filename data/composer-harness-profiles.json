@@ -1,0 +1,127 @@
+{
+  "derived": "2026-08-27",
+  "source": "data/harness-study/solvency-bench-v0.json",
+  "profiles": [
+    {
+      "id": "bare-api",
+      "label": "API, no harness",
+      "version": null,
+      "access": "metered API, single call, no scaffold",
+      "overhead_per_invocation": {
+        "input_tokens": 103,
+        "cache_read_tokens": 0,
+        "cache_write_tokens": 0,
+        "output_tokens": 288
+      },
+      "measured_cost_per_solved_usd_gpt56sol": 0.009459999999999998,
+      "basis": "median usage per attempt, solvency-bench-v0 8-arm study, run 2026-08-26"
+    },
+    {
+      "id": "aider",
+      "label": "Aider",
+      "version": "aider 0.86.2",
+      "access": "metered provider (OpenRouter)",
+      "overhead_per_invocation": {
+        "input_tokens": 752,
+        "cache_read_tokens": 0,
+        "cache_write_tokens": 0,
+        "output_tokens": 166
+      },
+      "measured_cost_per_solved_usd_gpt56sol": 0.009326250000000001,
+      "basis": "median usage per attempt, solvency-bench-v0 8-arm study, run 2026-08-26"
+    },
+    {
+      "id": "pi",
+      "label": "Pi",
+      "version": "0.84.3",
+      "access": "metered provider (OpenRouter)",
+      "overhead_per_invocation": {
+        "input_tokens": 3,
+        "cache_read_tokens": 1192,
+        "cache_write_tokens": 0,
+        "output_tokens": 206.5
+      },
+      "measured_cost_per_solved_usd_gpt56sol": 0.0096585,
+      "basis": "median usage per attempt, solvency-bench-v0 8-arm study, run 2026-08-26"
+    },
+    {
+      "id": "codex",
+      "label": "Codex",
+      "version": "codex-cli 0.150.0",
+      "access": "local subscription login",
+      "overhead_per_invocation": {
+        "input_tokens": 528,
+        "cache_read_tokens": 15104,
+        "cache_write_tokens": 0,
+        "output_tokens": 214
+      },
+      "measured_cost_per_solved_usd_gpt56sol": 0.024755666666666665,
+      "basis": "median usage per attempt, solvency-bench-v0 8-arm study, run 2026-08-26"
+    },
+    {
+      "id": "goose",
+      "label": "Goose",
+      "version": "1.47.0",
+      "access": "metered provider (OpenRouter)",
+      "overhead_per_invocation": {
+        "input_tokens": 3282.5,
+        "cache_read_tokens": 3169,
+        "cache_write_tokens": 0,
+        "output_tokens": 349.5
+      },
+      "measured_cost_per_solved_usd_gpt56sol": 0.028438972222222223,
+      "basis": "median usage per attempt, solvency-bench-v0 8-arm study, run 2026-08-26"
+    },
+    {
+      "id": "opencode",
+      "label": "OpenCode",
+      "version": "1.18.20",
+      "access": "metered provider (OpenRouter)",
+      "overhead_per_invocation": {
+        "input_tokens": 3,
+        "cache_read_tokens": 0,
+        "cache_write_tokens": 6106,
+        "output_tokens": 171
+      },
+      "measured_cost_per_solved_usd_gpt56sol": 0.03637583333333335,
+      "basis": "median usage per attempt, solvency-bench-v0 8-arm study, run 2026-08-26"
+    },
+    {
+      "id": "hermes",
+      "label": "Hermes Agent",
+      "version": "Hermes Agent v0.20.5 (2026.8.19)",
+      "access": "metered provider (OpenRouter)",
+      "overhead_per_invocation": {
+        "input_tokens": 3,
+        "cache_read_tokens": 0,
+        "cache_write_tokens": 12682,
+        "output_tokens": 249
+      },
+      "measured_cost_per_solved_usd_gpt56sol": 0.07166083333333334,
+      "basis": "median usage per attempt, solvency-bench-v0 8-arm study, run 2026-08-26"
+    },
+    {
+      "id": "cline",
+      "label": "Cline",
+      "version": "3.0.60",
+      "access": "metered provider (OpenRouter)",
+      "overhead_per_invocation": {
+        "input_tokens": 8394,
+        "cache_read_tokens": 4904.5,
+        "cache_write_tokens": 0,
+        "output_tokens": 1144.5
+      },
+      "measured_cost_per_solved_usd_gpt56sol": 0.08505263888888889,
+      "basis": "median usage per attempt, solvency-bench-v0 8-arm study, run 2026-08-26"
+    },
+    {
+      "id": "claude-code",
+      "label": "Claude Code",
+      "version": null,
+      "access": "local subscription login",
+      "overhead_per_invocation": null,
+      "measured_cost_per_solved_usd_gpt56sol": null,
+      "basis": "measured on Claude Opus 5 (subscription_usage_repriced) \u2014 no same-model overhead profile yet; treated as heavy-cache-read family pending its GPT-5.6 Sol arm"
+    }
+  ]
+}

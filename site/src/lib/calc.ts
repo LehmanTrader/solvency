@@ -27,7 +27,7 @@ export const TIER_HELP: Record<Settings['tier'], string> = {
   light: tiers.light.examples, moderate: tiers.moderate.examples, heavy: tiers.heavy.examples,
 };
 
-export const GROUPS: { key: string; basis: Basis; title: string; note: string }[] = [
+export const GROUPS: { key: string; basis: Basis; title: string; note: string; basisKey?: string; pick?: (r: Row) => boolean }[] = [
   { key: 'measured_by_source', basis: 'measured', title: 'Measured',
     note: 'The benchmark ran the model and observed this cost. No Solvency assumption is inside these figures.' },
   { key: 'modelled_by_solvency', basis: 'modelled', title: 'Modeled',
@@ -42,8 +42,15 @@ export const GROUPS: { key: string; basis: Basis; title: string; note: string }[
   // own population — single-turn correctness, not the agentic index above —
   // so they render as their own group and never join a "cheapest" claim
   // computed against a different task population.
-  { key: 'measured_by_solvency', basis: 'measured', title: 'MEASURED · SOLVENCY BENCH',
-    note: 'Solvency ran these itself (single-turn suite, deterministic graders; bench/ in the repo). Own population — not comparable with the agentic index above.' },
+  // §21 (operator, 2026-08-27): the long-horizon a2 tier is what models are
+  // judged on; single-turn results are a screening signal, split into their
+  // own group so a saturated 100% never reads as a hard-tier score.
+  { key: 'measured_by_solvency', basis: 'measured', title: 'SOLVENCY BENCH · LONG-HORIZON',
+    pick: (r: Row) => r.r.benchmark === 'solvency-bench-a2',
+    note: 'Solvency ran these itself: 30 hard agentic repo tasks, sandboxed tool loop, hidden tests (bench/ in the repo). Own population — the tier models are judged on.' },
+  { key: 'measured_by_solvency_screen', basisKey: 'measured_by_solvency', basis: 'measured', title: 'SCREENED · single-turn',
+    pick: (r: Row) => r.r.benchmark !== 'solvency-bench-a2',
+    note: 'Single-turn screening runs (12 easy tasks — strong models saturate at 100%). A smoke signal, not a hard-tier score; each earns a long-horizon run above.' },
   { key: 'free_tier_capped', basis: 'free', title: 'FREE · rate-capped',
     note: 'Zero-dollar access paths with a provider-set rate cap — not comparable to an uncapped paid price, and never counted toward a "cheapest" figure. $0 rows stay off the log-scale Frontier chart; cost is uniformly $0, which cannot be plotted on a log axis.' },
 ];
@@ -124,7 +131,9 @@ export function pairHref(aId: string, bId: string, s: Pick<Settings, 'tier' | 'v
 
 /** Rows of one cost basis, as the chart module wants them, each with a Compare link to the group lead. */
 export function chartRows(rows: Row[], key: string, s: Settings): ChartRow[] {
-  const g = rows.filter((x) => x.basisKey === key);
+  const group = GROUPS.find((x) => x.key === key);
+  const baseKey = group?.basisKey ?? key;
+  const g = rows.filter((x) => x.basisKey === baseKey && (!group?.pick || group.pick(x)));
   const lead = g[0], second = g[1];
   return g.map((x) => ({
     id: x.m.model_id, name: x.m.display_name, href: `/models/${x.m.model_id}`,
@@ -162,9 +171,10 @@ export interface GroupOpts {
  * populations — never merged. Labels are short; each group's own ghead line
  * still carries the full provenance sentence when selected. */
 export const GROUP_TABS: { key: string; label: string }[] = [
+  { key: 'measured_by_solvency', label: 'Solvency Bench' },
+  { key: 'measured_by_solvency_screen', label: 'Screened' },
   { key: 'measured_by_source', label: 'Agentic index' },
   { key: 'modelled_by_solvency', label: 'Modeled' },
-  { key: 'measured_by_solvency', label: 'Solvency Bench' },
   { key: 'free_tier_capped', label: 'Free' },
 ];
 

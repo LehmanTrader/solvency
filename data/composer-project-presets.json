@@ -1,0 +1,59 @@
+{
+  "derived": "2026-08-27",
+  "presets": [
+    {
+      "id": "a",
+      "label": "Docs & marketing site",
+      "examples": "docs sites, marketing pages, handbooks",
+      "median_tasks_to_first_ship": 248,
+      "repos_n": 10,
+      "tool_calls_per_task_median": 5,
+      "basis": "tasks: median of 10 public repos (data/task-study, research note 03); tool calls: median turns across 311 sandboxed a2 attempts"
+    },
+    {
+      "id": "b",
+      "label": "Web app",
+      "examples": "dashboards, SaaS frontends, CRUD apps",
+      "median_tasks_to_first_ship": 306,
+      "repos_n": 11,
+      "tool_calls_per_task_median": 5,
+      "basis": "tasks: median of 11 public repos (data/task-study, research note 03); tool calls: median turns across 311 sandboxed a2 attempts"
+    },
+    {
+      "id": "c",
+      "label": "Mobile app",
+      "examples": "iOS/Android apps",
+      "median_tasks_to_first_ship": 240,
+      "repos_n": 10,
+      "tool_calls_per_task_median": 5,
+      "basis": "tasks: median of 10 public repos (data/task-study, research note 03); tool calls: median turns across 311 sandboxed a2 attempts"
+    },
+    {
+      "id": "d",
+      "label": "CLI & dev tool",
+      "examples": "CLIs, SDKs, developer tooling",
+      "median_tasks_to_first_ship": 133,
+      "repos_n": 9,
+      "tool_calls_per_task_median": 5,
+      "basis": "tasks: median of 9 public repos (data/task-study, research note 03); tool calls: median turns across 311 sandboxed a2 attempts"
+    },
+    {
+      "id": "e",
+      "label": "Data/ML pipeline",
+      "examples": "ETL, training and eval pipelines",
+      "median_tasks_to_first_ship": 479,
+      "repos_n": 9,
+      "tool_calls_per_task_median": 5,
+      "basis": "tasks: median of 9 public repos (data/task-study, research note 03); tool calls: median turns across 311 sandboxed a2 attempts"
+    },
+    {
+      "id": "f",
+      "label": "Backend service",
+      "examples": "APIs, services, infra glue",
+      "median_tasks_to_first_ship": 48,
+      "repos_n": 11,
+      "tool_calls_per_task_median": 5,
+      "basis": "tasks: median of 11 public repos (data/task-study, research note 03); tool calls: median turns across 311 sandboxed a2 attempts"
+    }
+  ]
+}

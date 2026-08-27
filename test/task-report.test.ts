@@ -17,7 +17,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { assumptions, tiers, modelById, bestResultFor, extrasFor } from '../scripts/load.ts';
+import { assumptions, tiers, modelById, resultIn, extrasFor } from '../scripts/load.ts';
 import { costPerSolvedTask, defaultOptions } from '../scripts/solved-cost.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -165,7 +165,7 @@ describe('Research Note 03 matches the task-count dataset', () => {
   test('worked example 1 (mobile app, Claude Opus 5) arithmetic matches the engine and data/models.json', () => {
     const model = modelById('claude-opus-5')!;
     assert.ok(model, 'claude-opus-5 missing from data/models.json');
-    const r = bestResultFor(model.model_id)!;
+    const r = resultIn(model.model_id, 'aa-coding-agent-index')!; // note's worked examples are AA-population claims, pinned to that population (§21 flip)
     const perSolved = costPerSolvedTask(model, 'heavy', tiers.heavy, r.pass_rate, opts, extrasFor(r)).value!.naive;
     assert.equal(perSolved.toFixed(2), '12.01');
     assert.ok(md.includes('$12.01 per solved task'));
@@ -192,7 +192,7 @@ describe('Research Note 03 matches the task-count dataset', () => {
   test('worked example 2 (CLI tool, DeepSeek V4 Flash) arithmetic matches the engine and data/models.json', () => {
     const model = modelById('deepseek-v4-flash')!;
     assert.ok(model, 'deepseek-v4-flash missing from data/models.json');
-    const r = bestResultFor(model.model_id)!;
+    const r = resultIn(model.model_id, 'aa-coding-agent-index')!; // note's worked examples are AA-population claims, pinned to that population (§21 flip)
     const perSolved = costPerSolvedTask(model, 'heavy', tiers.heavy, r.pass_rate, opts, extrasFor(r)).value!.naive;
     assert.equal(perSolved.toFixed(2), '0.12');
     assert.ok(md.includes('$0.12 per solved task'));

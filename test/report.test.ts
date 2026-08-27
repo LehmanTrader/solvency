@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { models, tiers, assumptions, bestResultFor, extrasFor } from '../scripts/load.ts';
+import { models, tiers, assumptions, bestResultFor, resultIn, extrasFor } from '../scripts/load.ts';
 import { costPerSolvedTask, defaultOptions } from '../scripts/solved-cost.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -28,7 +28,7 @@ describe('report matches the dataset', () => {
       const [name, harness, idx, perTask, perSolved] = cells(line);
       const m = byName(name);
       assert.ok(m, `report names a model not in models.json: ${name}`);
-      const r = bestResultFor(m!.model_id)!;
+      const r = resultIn(m!.model_id, 'aa-coding-agent-index')!;
       assert.equal(r.harness, harness, `${name}: harness`);
       assert.equal(num(idx), r.index_score, `${name}: index`);
       assert.equal(num(perTask), r.measured_cost_per_task_usd, `${name}: cost per task`);
@@ -44,7 +44,8 @@ describe('report matches the dataset', () => {
       const [name, , pass, , light, moderate, heavy] = cells(line);
       const m = byName(name);
       assert.ok(m, `report names a model not in models.json: ${name}`);
-      const r = bestResultFor(m!.model_id)!;
+      const srcCol = cells(line)[1];
+      const r = resultIn(m!.model_id, srcCol === 'Aider' ? 'aider-polyglot' : 'seal-swe-bench-pro')!;
       assert.equal(num(pass), Math.round(r.pass_rate * 100), `${name}: pass rate`);
       const got = (['light', 'moderate', 'heavy'] as const).map((t) =>
         costPerSolvedTask(m!, t, tiers[t], r.pass_rate, opts, extrasFor(r)).value!.naive.toFixed(2));
@@ -88,18 +89,18 @@ describe('report matches the dataset', () => {
     assert.equal(Math.round(op.input_per_mtok / ds.input_per_mtok), 11, 'input token ratio');
     assert.equal(Math.round(op.output_per_mtok / ds.output_per_mtok), 19, 'output token ratio');
     const solved = (m: typeof ds) => {
-      const r = bestResultFor(m.model_id)!;
+      const r = resultIn(m.model_id, 'aa-coding-agent-index')!;
       return costPerSolvedTask(m, 'heavy', tiers.heavy, r.pass_rate, opts, extrasFor(r)).value!.naive;
     };
     assert.equal(Math.round(solved(op) / solved(ds)), 100, 'cost per solved task ratio');
-    const perTask = (m: typeof ds) => bestResultFor(m.model_id)!.measured_cost_per_task_usd!;
+    const perTask = (m: typeof ds) => resultIn(m.model_id, 'aa-coding-agent-index')!.measured_cost_per_task_usd!;
     assert.equal(Math.round(perTask(op) / perTask(ds)), 136, 'cost per task ratio');
   });
 
   test('the one-index-point premium claim matches the data', () => {
     const g = byName('Grok 4.5')!, s = byName('GPT-5.6 Sol')!;
     const solved = (m: typeof g) => {
-      const r = bestResultFor(m.model_id)!;
+      const r = resultIn(m.model_id, 'aa-coding-agent-index')!;
       return costPerSolvedTask(m, 'heavy', tiers.heavy, r.pass_rate, opts, extrasFor(r)).value!.naive;
     };
     assert.equal((solved(s) - solved(g)).toFixed(2), '6.06', 'premium per index point');

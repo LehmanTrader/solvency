@@ -58,12 +58,12 @@ describe('group membership is invariant under every assumption control', () => {
     assert.ok(a.some((r) => r.basisKey === 'measured_by_solvency'), 'expected at least one first-party measured row');
   });
 
-  test('GROUPS are the four groups, measured first, Solvency Bench isolated', () => {
-    // Stale retired 2026-08-26 (operator); the first-party Solvency Bench
-    // group joined the same day — measured styling, own population, and
-    // excluded from every superlative (see SUPERLATIVE_GROUPS).
+  test('GROUPS are the five groups, Solvency long-horizon split from screening', () => {
+    // §21 (2026-08-27): the a2 long-horizon tier is the judged group; the
+    // single-turn screening runs render separately so a saturated 100% never
+    // reads as a hard-tier score. Third-party groups remain as context.
     assert.deepEqual(GROUPS.map((g) => g.key),
-      ['measured_by_source', 'modelled_by_solvency', 'measured_by_solvency', 'free_tier_capped']);
+      ['measured_by_source', 'modelled_by_solvency', 'measured_by_solvency', 'measured_by_solvency_screen', 'free_tier_capped']);
   });
 
   test('a free_tier_capped row never moves group under any assumption, same as measured', () => {

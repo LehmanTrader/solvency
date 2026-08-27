@@ -48,7 +48,9 @@ describe('Research Note 02 matches the harness dataset', () => {
     assert.equal(pi.pass_rate, codex.pass_rate);
     assert.equal((solved(codex) / solved(pi)).toFixed(2), '3.77');
     assert.match(md, /3\.77x spread at the same 72\.7% pass rate/);
-    assert.equal(bestResultFor(model.model_id)!.benchmark, 'aa-coding-agent-index');
+    // §21 flip: the leaderboard row is Solvency's own; the invariant here is
+    // only that harness-study rows never take that slot.
+    assert.notEqual(bestResultFor(model.model_id)!.benchmark, 'openbench-gpt56-harness');
   });
 
   test('measurement basis, exclusions, dates and limitations are explicit', () => {

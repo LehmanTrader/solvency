@@ -75,7 +75,11 @@ describe('OpenBench GPT-5.6 Sol harness slice', () => {
   test('forms one isolated comparable group and never replaces the general leaderboard row', () => {
     assert.equal(rows.length, 4);
     for (let i = 1; i < rows.length; i++) assert.equal(harnessComparable(rows[0], rows[i]), true);
-    assert.equal(bestResultFor('gpt-5.6-sol')!.benchmark, 'aa-coding-agent-index');
+    // §21 flip: the leaderboard row is now Solvency's own measurement; the
+    // invariant this test protects is narrower — the HARNESS-study rows must
+    // never become the model's leaderboard row.
+    assert.notEqual(bestResultFor('gpt-5.6-sol')!.benchmark, 'openbench-gpt56-harness');
+    assert.ok(bestResultFor('gpt-5.6-sol')!.benchmark.startsWith('solvency-bench'), 'ours-first: bench row leads');
     assert.equal(sourceFor('openbench-gpt56-harness')!.tasks_n, 15);
   });
 });
