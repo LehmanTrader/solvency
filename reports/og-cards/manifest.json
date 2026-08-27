@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-27T12:36:43.282Z",
+  "generated_at": "2026-08-27T13:16:23.625Z",
   "cards": {
     "note-01": {
       "key": "note-01",
@@ -526,7 +526,7 @@
           "value": "$0.10",
           "basis": "measured",
           "detail": "100% pass · single-turn tier",
-          "rank": 70,
+          "rank": 75,
           "lead": true
         }
       ],
@@ -795,7 +795,7 @@
           "value": "$0.0095",
           "basis": "measured",
           "detail": "100% pass · single-turn tier",
-          "rank": 67,
+          "rank": 72,
           "lead": true
         }
       ],
@@ -1395,7 +1395,7 @@
           "value": "$0.02",
           "basis": "measured",
           "detail": "73% pass · 30 hard tasks",
-          "rank": 68,
+          "rank": 73,
           "lead": true
         }
       ],
@@ -2177,7 +2177,7 @@
           "value": "$0.10",
           "basis": "measured",
           "detail": "33% pass · 30 hard tasks",
-          "rank": 71,
+          "rank": 76,
           "lead": true
         }
       ],
@@ -2266,7 +2266,7 @@
           "value": "$0.16",
           "basis": "measured",
           "detail": "43% pass · 30 hard tasks",
-          "rank": 72,
+          "rank": 77,
           "lead": true
         }
       ],
@@ -2355,7 +2355,7 @@
           "value": "$0.02",
           "basis": "measured",
           "detail": "47% pass · 30 hard tasks",
-          "rank": 69,
+          "rank": 74,
           "lead": true
         }
       ],
@@ -2804,7 +2804,7 @@
           "value": "$0.0003",
           "basis": "measured",
           "detail": "75% pass · single-turn tier",
-          "rank": 42,
+          "rank": 44,
           "lead": true
         }
       ],
@@ -3163,7 +3163,7 @@
           "value": "$0.0054",
           "basis": "measured",
           "detail": "50% pass · 30 hard tasks",
-          "rank": 66,
+          "rank": 71,
           "lead": true
         }
       ],
@@ -3612,7 +3612,7 @@
           "value": "$0.0044",
           "basis": "measured",
           "detail": "23% pass · 30 hard tasks",
-          "rank": 65,
+          "rank": 70,
           "lead": true
         }
       ],
@@ -3701,7 +3701,7 @@
           "value": "$0.0033",
           "basis": "measured",
           "detail": "50% pass · 30 hard tasks",
-          "rank": 62,
+          "rank": 66,
           "lead": true
         }
       ],
@@ -3970,7 +3970,7 @@
           "value": "$0.0004",
           "basis": "measured",
           "detail": "6% pass · single-turn tier",
-          "rank": 47,
+          "rank": 50,
           "lead": true
         }
       ],
@@ -4148,7 +4148,7 @@
           "value": "$0.0003",
           "basis": "measured",
           "detail": "17% pass · single-turn tier",
-          "rank": 43,
+          "rank": 45,
           "lead": true
         }
       ],
@@ -4957,7 +4957,7 @@
           "value": "$0.0003",
           "basis": "measured",
           "detail": "86% pass · single-turn tier",
-          "rank": 44,
+          "rank": 46,
           "lead": true
         }
       ],
@@ -5404,7 +5404,7 @@
           "value": "$0.0002",
           "basis": "measured",
           "detail": "89% pass · single-turn tier",
-          "rank": 34,
+          "rank": 36,
           "lead": true
         }
       ],
@@ -5583,7 +5583,7 @@
           "value": "$0.0029",
           "basis": "measured",
           "detail": "53% pass · 30 hard tasks",
-          "rank": 60,
+          "rank": 64,
           "lead": true
         }
       ],
@@ -6212,7 +6212,7 @@
           "value": "$0.0036",
           "basis": "measured",
           "detail": "81% pass · single-turn tier",
-          "rank": 63,
+          "rank": 67,
           "lead": true
         }
       ],
@@ -7741,7 +7741,7 @@
           "value": "$0.0020",
           "basis": "measured",
           "detail": "67% pass · single-turn tier",
-          "rank": 59,
+          "rank": 63,
           "lead": true
         }
       ],
@@ -7830,7 +7830,7 @@
           "value": "$0.0006",
           "basis": "measured",
           "detail": "78% pass · single-turn tier",
-          "rank": 48,
+          "rank": 52,
           "lead": true
         }
       ],
@@ -8099,7 +8099,7 @@
           "value": "$0.0003",
           "basis": "measured",
           "detail": "78% pass · single-turn tier",
-          "rank": 41,
+          "rank": 43,
           "lead": true
         }
       ],
@@ -11966,7 +11966,7 @@
           "value": "$0.0011",
           "basis": "measured",
           "detail": "75% pass · single-turn tier",
-          "rank": 51,
+          "rank": 55,
           "lead": true
         }
       ],
@@ -13403,7 +13403,7 @@
           "value": "$0.0002",
           "basis": "measured",
           "detail": "8% pass · single-turn tier",
-          "rank": 37,
+          "rank": 39,
           "lead": true
         }
       ],
@@ -14032,7 +14032,7 @@
           "value": "$0.0003",
           "basis": "measured",
           "detail": "89% pass · single-turn tier",
-          "rank": 45,
+          "rank": 47,
           "lead": true
         }
       ],
@@ -14211,7 +14211,7 @@
           "value": "$0.0038",
           "basis": "measured",
           "detail": "28% pass · single-turn tier",
-          "rank": 64,
+          "rank": 68,
           "lead": true
         }
       ],
@@ -14750,7 +14750,7 @@
           "value": "$0.0014",
           "basis": "measured",
           "detail": "94% pass · single-turn tier",
-          "rank": 55,
+          "rank": 59,
           "lead": true
         }
       ],
@@ -15199,7 +15199,7 @@
           "value": "$0.0015",
           "basis": "measured",
           "detail": "89% pass · single-turn tier",
-          "rank": 56,
+          "rank": 60,
           "lead": true
         }
       ],
@@ -16278,7 +16278,7 @@
           "value": "$0.0031",
           "basis": "measured",
           "detail": "50% pass · single-turn tier",
-          "rank": 61,
+          "rank": 65,
           "lead": true
         }
       ],
@@ -16817,7 +16817,7 @@
           "value": "$0.0011",
           "basis": "measured",
           "detail": "71% pass · single-turn tier",
-          "rank": 52,
+          "rank": 56,
           "lead": true
         }
       ],
@@ -16996,7 +16996,7 @@
           "value": "$0.0013",
           "basis": "measured",
           "detail": "75% pass · single-turn tier",
-          "rank": 54,
+          "rank": 58,
           "lead": true
         }
       ],
@@ -17445,7 +17445,7 @@
           "value": "$0.0002",
           "basis": "measured",
           "detail": "81% pass · single-turn tier",
-          "rank": 38,
+          "rank": 40,
           "lead": true
         }
       ],
@@ -19870,7 +19870,7 @@
           "value": "$0.0002",
           "basis": "measured",
           "detail": "97% pass · single-turn tier",
-          "rank": 35,
+          "rank": 37,
           "lead": true
         }
       ],
@@ -20333,68 +20333,68 @@
     },
     "model-qwen3-vl-8b-instruct": {
       "key": "model-qwen3-vl-8b-instruct",
-      "eyebrow": "LIST PRICE PER MILLION INPUT TOKENS · CURRENT MODELS",
+      "eyebrow": "COST PER SOLVED TASK · SOLVENCY BENCH",
       "headlinePrefix": "",
       "headlineHighlight": "Qwen3 VL 8B Instruct",
-      "headlineSuffix": " lists at $0.117/M input — no published pass rate yet.",
+      "headlineSuffix": " costs $0.0001 per solved task — measured by Solvency.",
       "rows": [
         {
-          "id": "gemini-3.7-flash-google-free-tier",
-          "name": "Gemini 3.7 Flash (free tier)",
-          "chip": "GO",
-          "provider": "google",
-          "cost": 0,
-          "value": "$0/M",
+          "id": "mistral-nemo",
+          "name": "Mistral Nemo",
+          "chip": "MI",
+          "provider": "mistral",
+          "cost": 0.0000165,
+          "value": "$0.0000",
           "basis": "measured",
-          "detail": "list price per million input tokens",
+          "detail": "36% pass · single-turn tier",
           "rank": 1,
           "lead": false
         },
         {
-          "id": "glm-4.7-flash-zai-free",
-          "name": "GLM 4.7 Flash (Z.ai free)",
-          "chip": "ZA",
-          "provider": "zai",
-          "cost": 0,
-          "value": "$0/M",
+          "id": "granite-4.1-8b",
+          "name": "Granite 4.1 8B",
+          "chip": "IB",
+          "provider": "ibm-granite",
+          "cost": 0.000028173913043478262,
+          "value": "$0.0000",
           "basis": "measured",
-          "detail": "list price per million input tokens",
+          "detail": "64% pass · single-turn tier",
           "rank": 2,
           "lead": false
         },
         {
-          "id": "glm-4.5-flash-zai-free",
-          "name": "GLM 4.5 Flash (Z.ai free)",
-          "chip": "ZA",
-          "provider": "zai",
-          "cost": 0,
-          "value": "$0/M",
+          "id": "granite-4.0-h-micro",
+          "name": "Granite 4.0 Micro",
+          "chip": "IB",
+          "provider": "ibm-granite",
+          "cost": 0.0000384,
+          "value": "$0.0000",
           "basis": "measured",
-          "detail": "list price per million input tokens",
+          "detail": "42% pass · single-turn tier",
           "rank": 3,
           "lead": false
         },
         {
-          "id": "north-mini-code-cohere-free",
-          "name": "North Mini Code (Cohere free)",
-          "chip": "CO",
-          "provider": "cohere",
-          "cost": 0,
-          "value": "$0/M",
+          "id": "llama-3.1-8b-instruct",
+          "name": "Llama 3.1 8B Instruct",
+          "chip": "ME",
+          "provider": "meta",
+          "cost": 0.0000384,
+          "value": "$0.0000",
           "basis": "measured",
-          "detail": "list price per million input tokens",
+          "detail": "42% pass · single-turn tier",
           "rank": 4,
           "lead": false
         },
         {
-          "id": "dots-3-note-preview-or-free",
-          "name": "Dots3-Note Preview (free)",
-          "chip": "DO",
-          "provider": "dots-studio",
-          "cost": 0,
-          "value": "$0/M",
+          "id": "phi-4",
+          "name": "Phi 4",
+          "chip": "MI",
+          "provider": "microsoft",
+          "cost": 0.000039,
+          "value": "$0.0000",
           "basis": "measured",
-          "detail": "list price per million input tokens",
+          "detail": "67% pass · single-turn tier",
           "rank": 5,
           "lead": false
         },
@@ -20403,22 +20403,21 @@
           "name": "Qwen3 VL 8B Instruct",
           "chip": "QW",
           "provider": "qwen",
-          "cost": 0.117,
-          "value": "$0.117/M",
+          "cost": 0.00012436363636363635,
+          "value": "$0.0001",
           "basis": "measured",
-          "detail": "list price per million input tokens",
-          "rank": 79,
+          "detail": "61% pass · single-turn tier",
+          "rank": 31,
           "lead": true
         }
       ],
-      "barMax": 150,
-      "sourceLine": "Source: qwen pricing page (openrouter.ai)",
-      "noteLine": "NOTE: LIST PRICE, NO SOLVED-TASK COST YET · VERIFIED 2026-08-26",
+      "barMax": 0.16392692307692308,
+      "sourceLine": "Source: Solvency Bench — run by Solvency",
+      "noteLine": "NOTE: FIRST-PARTY MEASUREMENT · OWN POPULATION",
       "raw": {
         "modelId": "qwen3-vl-8b-instruct",
-        "cost": null,
-        "basisKey": null,
-        "inputPerMtok": 0.117
+        "cost": 0.00012436363636363635,
+        "basisKey": "measured_by_solvency"
       }
     },
     "model-gpt-5-image": {
@@ -22656,7 +22655,7 @@
           "value": "$0.0001",
           "basis": "measured",
           "detail": "58% pass · single-turn tier",
-          "rank": 31,
+          "rank": 32,
           "lead": true
         }
       ],
@@ -23375,7 +23374,7 @@
           "value": "$0.0010",
           "basis": "measured",
           "detail": "100% pass · single-turn tier",
-          "rank": 49,
+          "rank": 53,
           "lead": true
         }
       ],
@@ -23554,7 +23553,7 @@
           "value": "$0.0011",
           "basis": "measured",
           "detail": "60% pass · 30 hard tasks",
-          "rank": 50,
+          "rank": 54,
           "lead": true
         }
       ],
@@ -23643,7 +23642,7 @@
           "value": "$0.0003",
           "basis": "measured",
           "detail": "94% pass · single-turn tier",
-          "rank": 40,
+          "rank": 42,
           "lead": true
         }
       ],
@@ -24540,7 +24539,7 @@
           "value": "$0.0003",
           "basis": "measured",
           "detail": "25% pass · single-turn tier",
-          "rank": 39,
+          "rank": 41,
           "lead": true
         }
       ],
@@ -25078,7 +25077,7 @@
           "value": "$0.0020",
           "basis": "measured",
           "detail": "83% pass · single-turn tier",
-          "rank": 58,
+          "rank": 62,
           "lead": true
         }
       ],
@@ -26532,68 +26531,68 @@
     },
     "model-qwen3-8b": {
       "key": "model-qwen3-8b",
-      "eyebrow": "LIST PRICE PER MILLION INPUT TOKENS · CURRENT MODELS",
+      "eyebrow": "COST PER SOLVED TASK · SOLVENCY BENCH",
       "headlinePrefix": "",
       "headlineHighlight": "Qwen3 8B",
-      "headlineSuffix": " lists at $0.117/M input — no published pass rate yet.",
+      "headlineSuffix": " costs $0.0043 per solved task — measured by Solvency.",
       "rows": [
         {
-          "id": "gemini-3.7-flash-google-free-tier",
-          "name": "Gemini 3.7 Flash (free tier)",
-          "chip": "GO",
-          "provider": "google",
-          "cost": 0,
-          "value": "$0/M",
+          "id": "mistral-nemo",
+          "name": "Mistral Nemo",
+          "chip": "MI",
+          "provider": "mistral",
+          "cost": 0.0000165,
+          "value": "$0.0000",
           "basis": "measured",
-          "detail": "list price per million input tokens",
+          "detail": "36% pass · single-turn tier",
           "rank": 1,
           "lead": false
         },
         {
-          "id": "glm-4.7-flash-zai-free",
-          "name": "GLM 4.7 Flash (Z.ai free)",
-          "chip": "ZA",
-          "provider": "zai",
-          "cost": 0,
-          "value": "$0/M",
+          "id": "granite-4.1-8b",
+          "name": "Granite 4.1 8B",
+          "chip": "IB",
+          "provider": "ibm-granite",
+          "cost": 0.000028173913043478262,
+          "value": "$0.0000",
           "basis": "measured",
-          "detail": "list price per million input tokens",
+          "detail": "64% pass · single-turn tier",
           "rank": 2,
           "lead": false
         },
         {
-          "id": "glm-4.5-flash-zai-free",
-          "name": "GLM 4.5 Flash (Z.ai free)",
-          "chip": "ZA",
-          "provider": "zai",
-          "cost": 0,
-          "value": "$0/M",
+          "id": "granite-4.0-h-micro",
+          "name": "Granite 4.0 Micro",
+          "chip": "IB",
+          "provider": "ibm-granite",
+          "cost": 0.0000384,
+          "value": "$0.0000",
           "basis": "measured",
-          "detail": "list price per million input tokens",
+          "detail": "42% pass · single-turn tier",
           "rank": 3,
           "lead": false
         },
         {
-          "id": "north-mini-code-cohere-free",
-          "name": "North Mini Code (Cohere free)",
-          "chip": "CO",
-          "provider": "cohere",
-          "cost": 0,
-          "value": "$0/M",
+          "id": "llama-3.1-8b-instruct",
+          "name": "Llama 3.1 8B Instruct",
+          "chip": "ME",
+          "provider": "meta",
+          "cost": 0.0000384,
+          "value": "$0.0000",
           "basis": "measured",
-          "detail": "list price per million input tokens",
+          "detail": "42% pass · single-turn tier",
           "rank": 4,
           "lead": false
         },
         {
-          "id": "dots-3-note-preview-or-free",
-          "name": "Dots3-Note Preview (free)",
-          "chip": "DO",
-          "provider": "dots-studio",
-          "cost": 0,
-          "value": "$0/M",
+          "id": "phi-4",
+          "name": "Phi 4",
+          "chip": "MI",
+          "provider": "microsoft",
+          "cost": 0.000039,
+          "value": "$0.0000",
           "basis": "measured",
-          "detail": "list price per million input tokens",
+          "detail": "67% pass · single-turn tier",
           "rank": 5,
           "lead": false
         },
@@ -26602,22 +26601,21 @@
           "name": "Qwen3 8B",
           "chip": "QW",
           "provider": "qwen",
-          "cost": 0.117,
-          "value": "$0.117/M",
+          "cost": 0.00432775,
+          "value": "$0.0043",
           "basis": "measured",
-          "detail": "list price per million input tokens",
-          "rank": 80,
+          "detail": "57% pass · single-turn tier",
+          "rank": 69,
           "lead": true
         }
       ],
-      "barMax": 150,
-      "sourceLine": "Source: qwen pricing page (openrouter.ai)",
-      "noteLine": "NOTE: LIST PRICE, NO SOLVED-TASK COST YET · VERIFIED 2026-08-26",
+      "barMax": 0.16392692307692308,
+      "sourceLine": "Source: Solvency Bench — run by Solvency",
+      "noteLine": "NOTE: FIRST-PARTY MEASUREMENT · OWN POPULATION",
       "raw": {
         "modelId": "qwen3-8b",
-        "cost": null,
-        "basisKey": null,
-        "inputPerMtok": 0.117
+        "cost": 0.00432775,
+        "basisKey": "measured_by_solvency"
       }
     },
     "model-qwen3-14b": {
@@ -26696,7 +26694,7 @@
           "value": "$0.0012",
           "basis": "measured",
           "detail": "78% pass · single-turn tier",
-          "rank": 53,
+          "rank": 57,
           "lead": true
         }
       ],
@@ -26785,7 +26783,7 @@
           "value": "$0.0016",
           "basis": "measured",
           "detail": "83% pass · single-turn tier",
-          "rank": 57,
+          "rank": 61,
           "lead": true
         }
       ],
@@ -27863,7 +27861,7 @@
           "value": "$0.0002",
           "basis": "measured",
           "detail": "69% pass · single-turn tier",
-          "rank": 33,
+          "rank": 35,
           "lead": true
         }
       ],
@@ -31469,68 +31467,68 @@
     },
     "model-unslopnemo-12b": {
       "key": "model-unslopnemo-12b",
-      "eyebrow": "LIST PRICE PER MILLION INPUT TOKENS · CURRENT MODELS",
+      "eyebrow": "COST PER SOLVED TASK · SOLVENCY BENCH",
       "headlinePrefix": "",
       "headlineHighlight": "UnslopNemo 12B",
-      "headlineSuffix": " lists at $0.4/M input — no published pass rate yet.",
+      "headlineSuffix": " costs $0.0003 per solved task — measured by Solvency.",
       "rows": [
         {
-          "id": "gemini-3.7-flash-google-free-tier",
-          "name": "Gemini 3.7 Flash (free tier)",
-          "chip": "GO",
-          "provider": "google",
-          "cost": 0,
-          "value": "$0/M",
+          "id": "mistral-nemo",
+          "name": "Mistral Nemo",
+          "chip": "MI",
+          "provider": "mistral",
+          "cost": 0.0000165,
+          "value": "$0.0000",
           "basis": "measured",
-          "detail": "list price per million input tokens",
+          "detail": "36% pass · single-turn tier",
           "rank": 1,
           "lead": false
         },
         {
-          "id": "glm-4.7-flash-zai-free",
-          "name": "GLM 4.7 Flash (Z.ai free)",
-          "chip": "ZA",
-          "provider": "zai",
-          "cost": 0,
-          "value": "$0/M",
+          "id": "granite-4.1-8b",
+          "name": "Granite 4.1 8B",
+          "chip": "IB",
+          "provider": "ibm-granite",
+          "cost": 0.000028173913043478262,
+          "value": "$0.0000",
           "basis": "measured",
-          "detail": "list price per million input tokens",
+          "detail": "64% pass · single-turn tier",
           "rank": 2,
           "lead": false
         },
         {
-          "id": "glm-4.5-flash-zai-free",
-          "name": "GLM 4.5 Flash (Z.ai free)",
-          "chip": "ZA",
-          "provider": "zai",
-          "cost": 0,
-          "value": "$0/M",
+          "id": "granite-4.0-h-micro",
+          "name": "Granite 4.0 Micro",
+          "chip": "IB",
+          "provider": "ibm-granite",
+          "cost": 0.0000384,
+          "value": "$0.0000",
           "basis": "measured",
-          "detail": "list price per million input tokens",
+          "detail": "42% pass · single-turn tier",
           "rank": 3,
           "lead": false
         },
         {
-          "id": "north-mini-code-cohere-free",
-          "name": "North Mini Code (Cohere free)",
-          "chip": "CO",
-          "provider": "cohere",
-          "cost": 0,
-          "value": "$0/M",
+          "id": "llama-3.1-8b-instruct",
+          "name": "Llama 3.1 8B Instruct",
+          "chip": "ME",
+          "provider": "meta",
+          "cost": 0.0000384,
+          "value": "$0.0000",
           "basis": "measured",
-          "detail": "list price per million input tokens",
+          "detail": "42% pass · single-turn tier",
           "rank": 4,
           "lead": false
         },
         {
-          "id": "dots-3-note-preview-or-free",
-          "name": "Dots3-Note Preview (free)",
-          "chip": "DO",
-          "provider": "dots-studio",
-          "cost": 0,
-          "value": "$0/M",
+          "id": "phi-4",
+          "name": "Phi 4",
+          "chip": "MI",
+          "provider": "microsoft",
+          "cost": 0.000039,
+          "value": "$0.0000",
           "basis": "measured",
-          "detail": "list price per million input tokens",
+          "detail": "67% pass · single-turn tier",
           "rank": 5,
           "lead": false
         },
@@ -31539,22 +31537,21 @@
           "name": "UnslopNemo 12B",
           "chip": "TH",
           "provider": "thedrummer",
-          "cost": 0.4,
-          "value": "$0.4/M",
+          "cost": 0.00030000000000000003,
+          "value": "$0.0003",
           "basis": "measured",
-          "detail": "list price per million input tokens",
-          "rank": 188,
+          "detail": "33% pass · single-turn tier",
+          "rank": 48,
           "lead": true
         }
       ],
-      "barMax": 150,
-      "sourceLine": "Source: thedrummer pricing page (openrouter.ai)",
-      "noteLine": "NOTE: LIST PRICE, NO SOLVED-TASK COST YET · VERIFIED 2026-08-26",
+      "barMax": 0.16392692307692308,
+      "sourceLine": "Source: Solvency Bench — run by Solvency",
+      "noteLine": "NOTE: FIRST-PARTY MEASUREMENT · OWN POPULATION",
       "raw": {
         "modelId": "unslopnemo-12b",
-        "cost": null,
-        "basisKey": null,
-        "inputPerMtok": 0.4
+        "cost": 0.00030000000000000003,
+        "basisKey": "measured_by_solvency"
       }
     },
     "model-magnum-v4-72b": {
@@ -31991,7 +31988,7 @@
           "value": "$0.0003",
           "basis": "measured",
           "detail": "8% pass · single-turn tier",
-          "rank": 46,
+          "rank": 49,
           "lead": true
         }
       ],
@@ -32080,7 +32077,7 @@
           "value": "$0.0001",
           "basis": "measured",
           "detail": "33% pass · single-turn tier",
-          "rank": 32,
+          "rank": 33,
           "lead": true
         }
       ],
@@ -32095,68 +32092,68 @@
     },
     "model-qwen-2.5-72b-instruct": {
       "key": "model-qwen-2.5-72b-instruct",
-      "eyebrow": "LIST PRICE PER MILLION INPUT TOKENS · CURRENT MODELS",
+      "eyebrow": "COST PER SOLVED TASK · SOLVENCY BENCH",
       "headlinePrefix": "",
       "headlineHighlight": "Qwen2.5 72B Instruct",
-      "headlineSuffix": " lists at $0.36/M input — no published pass rate yet.",
+      "headlineSuffix": " costs $0.0002 per solved task — measured by Solvency.",
       "rows": [
         {
-          "id": "gemini-3.7-flash-google-free-tier",
-          "name": "Gemini 3.7 Flash (free tier)",
-          "chip": "GO",
-          "provider": "google",
-          "cost": 0,
-          "value": "$0/M",
+          "id": "mistral-nemo",
+          "name": "Mistral Nemo",
+          "chip": "MI",
+          "provider": "mistral",
+          "cost": 0.0000165,
+          "value": "$0.0000",
           "basis": "measured",
-          "detail": "list price per million input tokens",
+          "detail": "36% pass · single-turn tier",
           "rank": 1,
           "lead": false
         },
         {
-          "id": "glm-4.7-flash-zai-free",
-          "name": "GLM 4.7 Flash (Z.ai free)",
-          "chip": "ZA",
-          "provider": "zai",
-          "cost": 0,
-          "value": "$0/M",
+          "id": "granite-4.1-8b",
+          "name": "Granite 4.1 8B",
+          "chip": "IB",
+          "provider": "ibm-granite",
+          "cost": 0.000028173913043478262,
+          "value": "$0.0000",
           "basis": "measured",
-          "detail": "list price per million input tokens",
+          "detail": "64% pass · single-turn tier",
           "rank": 2,
           "lead": false
         },
         {
-          "id": "glm-4.5-flash-zai-free",
-          "name": "GLM 4.5 Flash (Z.ai free)",
-          "chip": "ZA",
-          "provider": "zai",
-          "cost": 0,
-          "value": "$0/M",
+          "id": "granite-4.0-h-micro",
+          "name": "Granite 4.0 Micro",
+          "chip": "IB",
+          "provider": "ibm-granite",
+          "cost": 0.0000384,
+          "value": "$0.0000",
           "basis": "measured",
-          "detail": "list price per million input tokens",
+          "detail": "42% pass · single-turn tier",
           "rank": 3,
           "lead": false
         },
         {
-          "id": "north-mini-code-cohere-free",
-          "name": "North Mini Code (Cohere free)",
-          "chip": "CO",
-          "provider": "cohere",
-          "cost": 0,
-          "value": "$0/M",
+          "id": "llama-3.1-8b-instruct",
+          "name": "Llama 3.1 8B Instruct",
+          "chip": "ME",
+          "provider": "meta",
+          "cost": 0.0000384,
+          "value": "$0.0000",
           "basis": "measured",
-          "detail": "list price per million input tokens",
+          "detail": "42% pass · single-turn tier",
           "rank": 4,
           "lead": false
         },
         {
-          "id": "dots-3-note-preview-or-free",
-          "name": "Dots3-Note Preview (free)",
-          "chip": "DO",
-          "provider": "dots-studio",
-          "cost": 0,
-          "value": "$0/M",
+          "id": "phi-4",
+          "name": "Phi 4",
+          "chip": "MI",
+          "provider": "microsoft",
+          "cost": 0.000039,
+          "value": "$0.0000",
           "basis": "measured",
-          "detail": "list price per million input tokens",
+          "detail": "67% pass · single-turn tier",
           "rank": 5,
           "lead": false
         },
@@ -32165,22 +32162,21 @@
           "name": "Qwen2.5 72B Instruct",
           "chip": "QW",
           "provider": "qwen",
-          "cost": 0.36,
-          "value": "$0.36/M",
+          "cost": 0.0001591578947368421,
+          "value": "$0.0002",
           "basis": "measured",
-          "detail": "list price per million input tokens",
-          "rank": 179,
+          "detail": "53% pass · single-turn tier",
+          "rank": 34,
           "lead": true
         }
       ],
-      "barMax": 150,
-      "sourceLine": "Source: qwen pricing page (openrouter.ai)",
-      "noteLine": "NOTE: LIST PRICE, NO SOLVED-TASK COST YET · VERIFIED 2026-08-26",
+      "barMax": 0.16392692307692308,
+      "sourceLine": "Source: Solvency Bench — run by Solvency",
+      "noteLine": "NOTE: FIRST-PARTY MEASUREMENT · OWN POPULATION",
       "raw": {
         "modelId": "qwen-2.5-72b-instruct",
-        "cost": null,
-        "basisKey": null,
-        "inputPerMtok": 0.36
+        "cost": 0.0001591578947368421,
+        "basisKey": "measured_by_solvency"
       }
     },
     "model-command-r-08-2024": {
@@ -32814,68 +32810,68 @@
     },
     "model-llama-3.1-70b-instruct": {
       "key": "model-llama-3.1-70b-instruct",
-      "eyebrow": "LIST PRICE PER MILLION INPUT TOKENS · CURRENT MODELS",
+      "eyebrow": "COST PER SOLVED TASK · SOLVENCY BENCH",
       "headlinePrefix": "",
       "headlineHighlight": "Llama 3.1 70B Instruct",
-      "headlineSuffix": " lists at $0.4/M input — no published pass rate yet.",
+      "headlineSuffix": " costs $0.0005 per solved task — measured by Solvency.",
       "rows": [
         {
-          "id": "gemini-3.7-flash-google-free-tier",
-          "name": "Gemini 3.7 Flash (free tier)",
-          "chip": "GO",
-          "provider": "google",
-          "cost": 0,
-          "value": "$0/M",
+          "id": "mistral-nemo",
+          "name": "Mistral Nemo",
+          "chip": "MI",
+          "provider": "mistral",
+          "cost": 0.0000165,
+          "value": "$0.0000",
           "basis": "measured",
-          "detail": "list price per million input tokens",
+          "detail": "36% pass · single-turn tier",
           "rank": 1,
           "lead": false
         },
         {
-          "id": "glm-4.7-flash-zai-free",
-          "name": "GLM 4.7 Flash (Z.ai free)",
-          "chip": "ZA",
-          "provider": "zai",
-          "cost": 0,
-          "value": "$0/M",
+          "id": "granite-4.1-8b",
+          "name": "Granite 4.1 8B",
+          "chip": "IB",
+          "provider": "ibm-granite",
+          "cost": 0.000028173913043478262,
+          "value": "$0.0000",
           "basis": "measured",
-          "detail": "list price per million input tokens",
+          "detail": "64% pass · single-turn tier",
           "rank": 2,
           "lead": false
         },
         {
-          "id": "glm-4.5-flash-zai-free",
-          "name": "GLM 4.5 Flash (Z.ai free)",
-          "chip": "ZA",
-          "provider": "zai",
-          "cost": 0,
-          "value": "$0/M",
+          "id": "granite-4.0-h-micro",
+          "name": "Granite 4.0 Micro",
+          "chip": "IB",
+          "provider": "ibm-granite",
+          "cost": 0.0000384,
+          "value": "$0.0000",
           "basis": "measured",
-          "detail": "list price per million input tokens",
+          "detail": "42% pass · single-turn tier",
           "rank": 3,
           "lead": false
         },
         {
-          "id": "north-mini-code-cohere-free",
-          "name": "North Mini Code (Cohere free)",
-          "chip": "CO",
-          "provider": "cohere",
-          "cost": 0,
-          "value": "$0/M",
+          "id": "llama-3.1-8b-instruct",
+          "name": "Llama 3.1 8B Instruct",
+          "chip": "ME",
+          "provider": "meta",
+          "cost": 0.0000384,
+          "value": "$0.0000",
           "basis": "measured",
-          "detail": "list price per million input tokens",
+          "detail": "42% pass · single-turn tier",
           "rank": 4,
           "lead": false
         },
         {
-          "id": "dots-3-note-preview-or-free",
-          "name": "Dots3-Note Preview (free)",
-          "chip": "DO",
-          "provider": "dots-studio",
-          "cost": 0,
-          "value": "$0/M",
+          "id": "phi-4",
+          "name": "Phi 4",
+          "chip": "MI",
+          "provider": "microsoft",
+          "cost": 0.000039,
+          "value": "$0.0000",
           "basis": "measured",
-          "detail": "list price per million input tokens",
+          "detail": "67% pass · single-turn tier",
           "rank": 5,
           "lead": false
         },
@@ -32884,22 +32880,21 @@
           "name": "Llama 3.1 70B Instruct",
           "chip": "ME",
           "provider": "meta",
-          "cost": 0.4,
-          "value": "$0.4/M",
+          "cost": 0.00053,
+          "value": "$0.0005",
           "basis": "measured",
-          "detail": "list price per million input tokens",
-          "rank": 189,
+          "detail": "50% pass · single-turn tier",
+          "rank": 51,
           "lead": true
         }
       ],
-      "barMax": 150,
-      "sourceLine": "Source: meta pricing page (openrouter.ai)",
-      "noteLine": "NOTE: LIST PRICE, NO SOLVED-TASK COST YET · VERIFIED 2026-08-26",
+      "barMax": 0.16392692307692308,
+      "sourceLine": "Source: Solvency Bench — run by Solvency",
+      "noteLine": "NOTE: FIRST-PARTY MEASUREMENT · OWN POPULATION",
       "raw": {
         "modelId": "llama-3.1-70b-instruct",
-        "cost": null,
-        "basisKey": null,
-        "inputPerMtok": 0.4
+        "cost": 0.00053,
+        "basisKey": "measured_by_solvency"
       }
     },
     "model-llama-3.1-8b-instruct": {
@@ -34866,7 +34861,7 @@
           "value": "$0.0002",
           "basis": "measured",
           "detail": "11% pass · single-turn tier",
-          "rank": 36,
+          "rank": 38,
           "lead": true
         }
       ],
