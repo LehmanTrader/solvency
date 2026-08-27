@@ -20,7 +20,12 @@ export const BENCH_DIR = dirname(fileURLToPath(import.meta.url));
 export const ROOT = join(BENCH_DIR, '..');
 export const RESULTS_DIR = join(BENCH_DIR, 'results');
 export const PROTOCOL = 'solvency-bench-v0';
-const OR_URL = 'https://openrouter.ai/api/v1/chat/completions';
+// Default provider is OpenRouter; --base-url swaps in any OpenAI-compatible
+// vendor endpoint (Z.ai, Upstage, Mistral, Ant Ling, Google-compat, Cohere
+// compat) for the eleven catalog models OpenRouter does not serve. The key
+// comes from --key-env (name of the env var), so no secret ever lands in a
+// journal or shell history. Pricing stays fail-closed against the catalog.
+const OR_URL = process.env.SBENCH_BASE_URL || 'https://openrouter.ai/api/v1/chat/completions';
 
 // ---------------------------------------------------------------------------
 export function loadTasks() {
@@ -241,8 +246,11 @@ if (isMain) {
     const harness = arg('harness'); // claude-code | codex
     if (!slug) { console.error('usage: node bench/runner.mjs --model <slug-or-catalog-id> [--harness claude-code|codex] [--trials 3] [--budget 5] [--max-tokens 1600] [--price-in X --price-out Y] [--run <id>]'); process.exit(1); }
     if (harness && !ADAPTERS[harness]) { console.error(`unknown harness "${harness}" (have: ${Object.keys(ADAPTERS).join(', ')})`); process.exit(1); }
-    const apiKey = process.env.OPENROUTER_API_KEY;
-    if (!harness && !apiKey) { console.error('OPENROUTER_API_KEY is not set (or use --harness to run on a local subscription login)'); process.exit(1); }
+    const baseUrl = arg('base-url');
+    if (baseUrl) process.env.SBENCH_BASE_URL = baseUrl;
+    const keyEnv = arg('key-env', 'OPENROUTER_API_KEY');
+    const apiKey = process.env[keyEnv];
+    if (!harness && !apiKey) { console.error(`${keyEnv} is not set (or use --harness to run on a local subscription login)`); process.exit(1); }
     const override = arg('price-in') && arg('price-out')
       ? { inputPerMtok: Number(arg('price-in')), outputPerMtok: Number(arg('price-out')) } : null;
     const prices = resolvePrices(slug, override);

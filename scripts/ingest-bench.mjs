@@ -24,6 +24,13 @@ const DRY = process.argv.includes('--dry');
 const models = JSON.parse(readFileSync(join(ROOT, 'data', 'models.json'), 'utf8')).models;
 const norm = (s) => String(s).toLowerCase().replace(/[^a-z0-9]/g, '');
 const modelByNorm = new Map(models.map((m) => [norm(m.model_id), m]));
+// OR slug tails that differ from catalog ids (free-tier rows carry
+// provider/tier suffixes in the catalog): map them explicitly.
+const ALIASES = { 'northminicodefree': 'north-mini-code-cohere-free' };
+for (const [aliasNorm, id] of Object.entries(ALIASES)) {
+  const m = models.find((x) => x.model_id === id);
+  if (m) modelByNorm.set(aliasNorm, m);
+}
 
 /** The GPT-5.6 Sol harness-arm study: same model many scaffolds — never a leaderboard row per arm. */
 const HARNESS_STUDY_MODEL = 'gpt-5.6-sol';
