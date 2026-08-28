@@ -57,7 +57,7 @@ import { CLERK_ENABLED } from '../lib/clerk.ts';
 // time-limited refund windows were superseded by the owner's decided
 // no-refund stance below. Mirrored in /terms and /privacy.
 const DISCLOSURE = [
-  { label: 'Amount and cadence', copy: 'The exact USD amount and billing cadence — $19/month or $190/year, billed in advance — is confirmed on the Stripe Checkout page before you pay.' },
+  { label: 'Amount and cadence', copy: 'The exact USD amount and billing cadence ($19/month or $190/year, billed in advance) is confirmed on the Stripe Checkout page before you pay.' },
   { label: 'Auto-renewal', copy: 'The subscription auto-renews at the end of each billing period until cancelled.' },
   { label: 'Cancellation', copy: 'Cancel any time from Manage billing below; Pro access continues through the end of the period already paid for.' },
   { label: 'Refunds', copy: 'All sales are final except where required by law.' },
@@ -70,7 +70,7 @@ const DISCLOSURE = [
   <p class="tile-v mt-3">$19/month <span class="text-base font-normal text-[var(--color-muted)]">or $190/year</span></p>
 
   <div class="mt-4 border-t border-b border-[var(--color-rule)] py-4" id="pro-checkout-funding">
-    <p class="text-sm leading-relaxed"><strong>Pro funds the measurements.</strong> Solvency's benchmark runs — the measured cost-per-solved-task data this site exists to publish — are paid for by subscriptions, not by model vendors. One full run of a 90-task-per-model batch costs about $2,700: roughly 142 subscriber-months. You are not just buying software; you are funding independent measurement.</p>
+    <p class="text-sm leading-relaxed"><strong>Pro funds the measurements.</strong> Solvency's benchmark runs, the measured cost-per-solved-task data this site exists to publish, are paid for by subscriptions, not by model vendors. One full run of a 90-task-per-model batch costs about $2,700: roughly 142 subscriber-months. You are not just buying software; you are funding independent measurement.</p>
   </div>
 
   <h3 class="h-card mt-6" id="pro-checkout-title">Keep the budget current</h3>
@@ -88,7 +88,7 @@ const DISCLOSURE = [
     <button type="button" class="btn btn-accent min-w-0 w-full whitespace-normal text-center" id="pro-checkout-year" disabled>Upgrade to Pro — $190/year</button>
   </div>
   <div class="mt-5" id="pro-checkout-subscribed" hidden>
-    <p class="small" id="pro-checkout-subscribed-status" role="status" aria-live="polite" aria-atomic="true">You're subscribed — Pro is active.</p>
+    <p class="small" id="pro-checkout-subscribed-status" role="status" aria-live="polite" aria-atomic="true">You're subscribed; Pro is active.</p>
   </div>
   <button type="button" class="btn btn-quiet mt-3" id="pro-checkout-portal" disabled>Manage billing</button>
   <p class="small mt-3" id="pro-checkout-status" role="status" aria-live="polite" aria-atomic="true">Account controls are loading.</p>

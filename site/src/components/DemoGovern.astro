@@ -1,0 +1,98 @@
+---
+/**
+ * DemoGovern: the governance workflow, played by a cursor. The mouse pulls
+ * the engineering budget threshold down to 80%, arms alerts, and the spend
+ * bar crosses the line and trips the alert. Companion to DemoBudget and
+ * DemoActuals; states are CSS off data-state, driven by demo-cursor.ts.
+ */
+import DemoWindow from './DemoWindow.astro';
+---
+<DemoWindow>
+  <div class="dm" data-demo-govern data-state="" aria-hidden="true">
+    <div class="dm-side">
+      <span class="dm-mark"></span>
+      <span class="dm-nav">Overview</span>
+      <span class="dm-nav">Actuals</span>
+      <span class="dm-nav">Budgets</span>
+      <span class="dm-nav hot">Operations</span>
+    </div>
+    <div class="dm-main">
+      <p class="dm-h">Team budgets · August</p>
+      <div class="dm-team">
+        <span class="dm-team-name">engineering</span>
+        <span class="dm-track">
+          <span class="dm-bar"></span>
+          <span class="dm-handle"></span>
+        </span>
+        <span class="dm-amt"><b class="a1">61%</b><b class="a2">84%</b></span>
+      </div>
+      <div class="dm-team quiet">
+        <span class="dm-team-name">marketing</span>
+        <span class="dm-track"><span class="dm-bar m"></span></span>
+        <span class="dm-amt">42%</span>
+      </div>
+      <div class="dm-armrow">
+        <span class="dm-toggle"><span class="dm-knob"></span></span>
+        <span class="dm-armlabel">Alert at threshold</span>
+      </div>
+      <span class="dm-alert">⚠ engineering · 84% of budget, alert sent</span>
+    </div>
+  </div>
+</DemoWindow>
+
+<style>
+  .dm { position: relative; display: grid; grid-template-columns: 5.6rem 1fr; background: var(--color-bg); min-height: 17rem; }
+  .dm-side { border-right: 1px solid var(--color-rule); background: var(--color-panel-2); padding: .8rem .55rem; display: flex; flex-direction: column; gap: .4rem; }
+  .dm-mark { width: 14px; height: 14px; border-radius: 3px; margin-bottom: .35rem;
+             background: linear-gradient(135deg, var(--color-ink) 38%, var(--color-accent) 38% 62%, var(--color-ink) 62%); opacity: .85; }
+  .dm-nav { font-family: var(--font-sans); font-size: .6rem; color: var(--color-muted); padding: .18rem .4rem; border-radius: 4px; }
+  .dm-nav.hot { color: var(--color-ink); background: var(--color-panel); border: 1px solid var(--color-rule); font-weight: 600; }
+  .dm-main { padding: .9rem 1.1rem 1rem; position: relative; }
+  .dm-h { font-family: var(--font-sans); font-weight: 600; font-size: .78rem; color: var(--color-ink); margin: 0 0 .8rem; }
+
+  .dm-team { display: grid; grid-template-columns: 4.6rem 1fr 2.4rem; gap: .7rem; align-items: center; margin-top: .55rem;
+             background: var(--color-panel); border: 1px solid var(--color-rule); border-radius: 8px; padding: .55rem .7rem; }
+  .dm-team-name { font-family: var(--font-sans); font-size: .64rem; color: var(--color-ink); transition: color .3s; }
+  .dm-track { position: relative; display: block; height: 9px; background: var(--color-panel-3); border-radius: 5px; }
+  .dm-bar { position: absolute; inset: 0; border-radius: 5px; background: linear-gradient(90deg, var(--color-accent), var(--color-accent-dim));
+            transform: scaleX(.61); transform-origin: left; transition: transform 1.3s cubic-bezier(.22,1,.36,1); }
+  .dm-bar.m { transform: scaleX(.42); }
+  .dm-handle { position: absolute; top: -5px; bottom: -5px; left: 95%; width: 4px; border-radius: 2px;
+               background: var(--color-worse); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-worse) 18%, transparent);
+               transition: left .7s cubic-bezier(.22,1,.36,1); }
+  .dm-amt { position: relative; font-family: var(--font-mono); font-size: .64rem; color: var(--color-ink); font-variant-numeric: tabular-nums; }
+  .dm-amt b { font-weight: 500; }
+  .dm-amt .a2 { position: absolute; left: 0; top: 0; opacity: 0; transition: opacity .3s; }
+  .dm-team.quiet .dm-amt { color: var(--color-muted); }
+
+  .dm-armrow { display: flex; align-items: center; gap: .55rem; margin-top: .9rem; }
+  .dm-toggle { display: inline-flex; width: 30px; height: 17px; border-radius: 99px; background: var(--color-panel-3);
+               border: 1px solid var(--color-control-border); padding: 1px; transition: background .25s, border-color .25s; }
+  .dm-knob { width: 13px; height: 13px; border-radius: 50%; background: var(--color-panel); border: 1px solid var(--color-control-border);
+             transition: transform .3s cubic-bezier(.22,1,.36,1); }
+  .dm-armlabel { font-family: var(--font-sans); font-size: .64rem; color: var(--color-body); }
+  .dm-alert { position: absolute; left: 1.1rem; right: 1.1rem; bottom: 1rem; font-family: var(--font-sans); font-size: .64rem;
+              color: #9A6A10; background: color-mix(in srgb, #9A6A10 12%, transparent); border-radius: 7px; padding: .4rem .65rem;
+              opacity: 0; transform: translateY(8px); transition: opacity .35s ease, transform .45s cubic-bezier(.22,1,.36,1); }
+
+  /* thresh -> armed -> alert */
+  :is([data-state="thresh"], [data-state="armed"], [data-state="alert"]) .dm-handle { left: 80%; }
+  :is([data-state="armed"], [data-state="alert"]) .dm-toggle { background: var(--color-accent); border-color: var(--color-accent); }
+  :is([data-state="armed"], [data-state="alert"]) .dm-knob { transform: translateX(13px); }
+  [data-state="alert"] .dm-bar:not(.m) { transform: scaleX(.84); }
+  [data-state="alert"] .dm-amt .a1 { opacity: 0; }
+  [data-state="alert"] .dm-amt .a2 { opacity: 1; }
+  [data-state="alert"] .dm-team:not(.quiet) .dm-team-name { color: #9A6A10; }
+  [data-state="alert"] .dm-alert { opacity: 1; transform: none; }
+</style>
+
+<script>
+  import { runDemo } from '../lib/demo-cursor.ts';
+  for (const scene of document.querySelectorAll<HTMLElement>('[data-demo-govern]')) {
+    runDemo(scene, [
+      { sel: '.dm-handle', dur: 800, click: true, state: 'thresh', wait: 900 },
+      { sel: '.dm-toggle', dur: 700, click: true, state: 'armed', wait: 700 },
+      { sel: '.dm-alert', dur: 600, state: 'alert', wait: 2400 },
+    ], 'alert');
+  }
+</script>

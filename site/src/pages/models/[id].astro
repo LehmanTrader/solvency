@@ -72,7 +72,7 @@ const peers = bestResultFor(model.model_id)
 const modelCardPath = fileURLToPath(new URL(`../../../public/og/cards/model-${model.model_id}.png`, import.meta.url));
 const ogCard = existsSync(modelCardPath) ? `/og/cards/model-${model.model_id}.png` : '/og/divergence-og.png';
 ---
-<Base title={`${model.display_name} — pricing and cost per solved task — Solvency`}
+<Base title={`${model.display_name}, pricing and cost per solved task, Solvency`}
       description={`${model.display_name} API pricing verified ${model.last_verified}: $${model.input_per_mtok}/M input, $${model.output_per_mtok}/M output${mine ? `, ${money(mine.cost)} per solved task (${measured ? 'measured' : 'modelled'})` : ', no published pass rate'}.`}
       og={ogCard}>
   <div class="wrap pt-8 md:pt-12">
@@ -98,7 +98,7 @@ const ogCard = existsSync(modelCardPath) ? `/og/cards/model-${model.model_id}.pn
         </p>
         {model.vendor_provider && model.vendor_provider !== model.provider && (
           <p class="small mt-1 text-[var(--color-muted)]">
-            Served by {providerLabel(model.provider)}; weights by {providerLabel(model.vendor_provider)} — a different serving venue can mean different quantization, latency or rate limits than the vendor's own API.
+            Served by {providerLabel(model.provider)}; weights by {providerLabel(model.vendor_provider)}, a different serving venue can mean different quantization, latency or rate limits than the vendor's own API.
           </p>
         )}
       </div>
@@ -131,8 +131,8 @@ const ogCard = existsSync(modelCardPath) ? `/og/cards/model-${model.model_id}.pn
               href={model.rate_caps?.source_url ?? undefined}
               verified={model.rate_caps?.last_verified ?? undefined}
               note={model.rate_caps?.source_url && !model.rate_caps?.last_verified
-                ? 'Checked, but the page publishes no static rate-limit numbers — MISSING, not unlimited.'
-                : !model.rate_caps?.source_url ? 'No rate-limit page found to cite — MISSING, not unlimited.' : undefined} />
+                ? 'Checked, but the page publishes no static rate-limit numbers, MISSING, not unlimited.'
+                : !model.rate_caps?.source_url ? 'No rate-limit page found to cite, MISSING, not unlimited.' : undefined} />
           </div>
         )}
       </div>
@@ -187,7 +187,7 @@ const ogCard = existsSync(modelCardPath) ? `/og/cards/model-${model.model_id}.pn
     {peerRows.length > 1 && (
       <Section id="peers" eyebrow={`${peerBasis} peers`} title="Cost per solved task against its peers"
         caption={peerBasis === 'measured' ? `Measured rows only, ranked as on the calculator. Monthly figures at ${PEER_VOLUME} tasks. Lower is better.`
-          : peerBasis === 'free' ? `FREE · rate-capped rows only, ranked by pass rate — cost is uniformly $0 within this group, so it is not a useful sort key here.`
+          : peerBasis === 'free' ? `FREE · rate-capped rows only, ranked by pass rate, cost is uniformly $0 within this group, so it is not a useful sort key here.`
           : `${peerBasis === 'stale' ? 'Stale' : 'Modeled'} rows only, heavy tier, ${PEER_VOLUME} tasks a month. Lower is better. These are Solvency estimates, not observed costs.`}>
         <div class="card overflow-hidden">
           <div class="px-5 pt-4 pb-2">

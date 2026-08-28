@@ -26,7 +26,7 @@ const solCheapest = solArms[0].cost_per_solved_usd;
 const solSpread = solArms[solArms.length - 1].cost_per_solved_usd / solCheapest;
 const money4 = (n: number) => `$${n.toFixed(4)}`;
 ---
-<Base title="GPT-5.6 Sol harness economics — Solvency"
+<Base title="GPT-5.6 Sol harness economics · Solvency"
       description="Four coding harnesses ran the same GPT-5.6 Sol model on the same OpenBench tasks. Compare source-observed token usage repriced at current verified API rates."
       og="/og/cards/ranked-harness-solvency-gpt-5.6-sol.png">
   <div class="wrap pt-8 md:pt-12">
@@ -89,7 +89,7 @@ const money4 = (n: number) => `$${n.toFixed(4)}`;
     </Section>
 
     <Section id="solvency-bench" eyebrow="Measured by Solvency · own population" title="Eight arms, same model, run by Solvency"
-      caption={`On ${solStudy.run_date} Solvency ran ${model.display_name} through eight arms of its own single-turn suite — ${solStudy.suite}. Every arm passed every countable attempt, and the bill still spans ${solSpread.toFixed(1)}×. Own task population: never comparable with the OpenBench table above.`}>
+      caption={`On ${solStudy.run_date} Solvency ran ${model.display_name} through eight arms of its own single-turn suite, ${solStudy.suite}. Every arm passed every countable attempt, and the bill still spans ${solSpread.toFixed(1)}×. Own task population: never comparable with the OpenBench table above.`}>
       <div class="card overflow-hidden"><div class="tbl-wrap"><table class="tbl tone-best">
         <caption>Solvency Bench v0 harness comparison: eight access paths for GPT-5.6 Sol, harness-reported usage priced at verified catalog rates</caption>
         <thead><tr><th scope="col" class="rank">#</th><th scope="col">Arm</th><th scope="col">Access</th><th scope="col" class="r">Pass</th><th scope="col" class="r">$ / solved</th><th scope="col" class="r">vs lowest</th></tr></thead>

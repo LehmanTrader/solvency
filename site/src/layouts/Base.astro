@@ -102,7 +102,7 @@ const DEMO_MAILTO = 'mailto:robertdhanda@gmail.com?subject=Solvency%20demo&body=
     <script async crossorigin="anonymous"
             data-clerk-publishable-key={CLERK_PUBLISHABLE_KEY}
             src={`https://${CLERK_FRONTEND_API}/npm/@clerk/clerk-js@5/dist/clerk.browser.js`}
-            onload="Promise.resolve().then(()=>window.Clerk.load({localization:{signUp:{start:{title:'Create your free Solvency account',subtitle:'Tune assumptions, keep scenario links and save Build Composer plans when available — free.'}},signIn:{start:{title:'Sign in to Solvency',subtitle:'Continue with your free account.'}}}})).then(()=>{delete document.documentElement.dataset.clerkUiError;document.documentElement.dataset.clerkUiReady='true';document.dispatchEvent(new Event('clerk:ready'))}).catch(()=>{delete document.documentElement.dataset.clerkUiReady;document.documentElement.dataset.clerkUiError='true';document.dispatchEvent(new Event('clerk:error'))})"
+            onload="Promise.resolve().then(()=>window.Clerk.load({localization:{signUp:{start:{title:'Create your free Solvency account',subtitle:'Tune assumptions, keep scenario links and save Build Composer plans when available, free.'}},signIn:{start:{title:'Sign in to Solvency',subtitle:'Continue with your free account.'}}}})).then(()=>{delete document.documentElement.dataset.clerkUiError;document.documentElement.dataset.clerkUiReady='true';document.dispatchEvent(new Event('clerk:ready'))}).catch(()=>{delete document.documentElement.dataset.clerkUiReady;document.documentElement.dataset.clerkUiError='true';document.dispatchEvent(new Event('clerk:error'))})"
             onerror="delete document.documentElement.dataset.clerkUiReady;document.documentElement.dataset.clerkUiError='true';document.dispatchEvent(new Event('clerk:error'))"></script>
   )}
   {CF_BEACON_TOKEN && (
@@ -200,7 +200,7 @@ const DEMO_MAILTO = 'mailto:robertdhanda@gmail.com?subject=Solvency%20demo&body=
     <div class="wrap pt-10 pb-16 grid gap-8 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
       <div>
         <p class="lockup"><Logo size={20} /><span class="wordmark"><b>S</b>OLVENCY</span></p>
-        <p class="mt-3 text-sm max-w-md leading-relaxed">The AI spend suite: budget a stack, reconcile the bill, right-size the seats — built on first-party task-level benchmarks. Where a number does not exist, it is reported as missing rather than estimated.</p>
+        <p class="mt-3 text-sm max-w-md leading-relaxed">The AI spend suite: budget a stack, reconcile the bill, right-size the seats, built on first-party task-level benchmarks. Where a number does not exist, it is reported as missing rather than estimated.</p>
         <p class="mt-4 small">Third-party benchmark data is cited and linked, and is not redistributed.</p>
         <p class="small"><a class="link small-sans" href={aa?.attribution_url}>{aa?.attribution}</a>.</p>
       </div>

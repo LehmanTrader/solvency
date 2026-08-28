@@ -14,7 +14,7 @@ const basisFor = (benchmark) => benchmark === 'aa-coding-agent-index' ? 'measure
   : benchmark === 'openbench-gpt56-harness' ? 'usage-repriced'
   : benchmark === 'aider-polyglot' ? 'stale' : 'modelled';
 ---
-<Base title="Methodology — Solvency" description="Every formula, every assumption, where every number comes from, and what the numbers cannot show.">
+<Base title="Methodology · Solvency" description="Every formula, every assumption, where every number comes from, and what the numbers cannot show.">
   <div class="wrap pt-8 md:pt-12">
   <p class="eyebrow">How the numbers are made</p>
   <h1 class="h-page mt-3">Methodology</h1>
@@ -35,7 +35,7 @@ cost_per_solved_task = cost_per_attempt / pass_rate</code></pre>
 
     <h3 id="bases">Cost bases, never mixed</h3>
     <p>Where a benchmark publishes a per-task cost it actually observed, that figure is used
-      directly and <strong>no Solvency assumption touches it</strong> — no loop count, no
+      directly and <strong>no Solvency assumption touches it</strong>, no loop count, no
       per-loop token estimate, no efficiency multiplier. Where only a pass rate is published,
       cost comes from a loop model that is an assumption, and is labelled as one. These bases are
       reported separately and are never averaged. Tests assert that changing an assumption
@@ -50,7 +50,7 @@ cost_per_solved_task = cost_per_attempt / pass_rate</code></pre>
     <h3 id="frontier">The frontier</h3>
     <p>The scatter on the calculator plots pass rate against cost per solved task. The
       frontier joins the <strong>measured</strong> models that no other measured model beats on
-      both axes at once — cheaper and at least as likely to solve the task. Modeled points are
+      both axes at once, cheaper and at least as likely to solve the task. Modeled points are
       drawn hollow and are never on the line, because a modeled cost and a measured cost are
       not the same kind of number.</p>
 
@@ -58,12 +58,12 @@ cost_per_solved_task = cost_per_attempt / pass_rate</code></pre>
     <p>Three are computed. The calculator leads with <code>naive</code> (<code>cost / p</code>):
       unlimited independent retries.</p>
     <ul>
-      <li><code>capped</code> — <code>min(1/p, K) × cost + residual × (1−p)^K</code>; only meaningful with a real human-takeover cost set.</li>
-      <li><code>truncatedGeometric</code> — <code>(E[N] × cost + (1−p)^K × residual) / P(solved)</code>, the rigorous truncated-geometric form.</li>
+      <li><code>capped</code>, <code>min(1/p, K) × cost + residual × (1−p)^K</code>; only meaningful with a real human-takeover cost set.</li>
+      <li><code>truncatedGeometric</code>, <code>(E[N] × cost + (1−p)^K × residual) / P(solved)</code>, the rigorous truncated-geometric form.</li>
     </ul>
     <p>Two proven results: with no human-takeover cost, <code>truncatedGeometric</code> reduces
       <strong>exactly</strong> to <code>naive</code>; and <code>capped</code> <strong>understates</strong>
-      cost for low pass rates — at p = 0.2 it bills 3 attempts instead of 5 and books nothing
+      cost for low pass rates, at p = 0.2 it bills 3 attempts instead of 5 and books nothing
       for the 51% of tasks still unsolved, which makes weak models look cheap.</p>
 
     <h3 id="assumptions">Assumption health</h3>

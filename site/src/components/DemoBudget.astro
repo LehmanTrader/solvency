@@ -1,0 +1,100 @@
+---
+/**
+ * DemoBudget: the budgeting workflow, played by a cursor (2026-08-28: "an
+ * animated demo of the console at work with the mouse clicking around a
+ * budgeting workflow"). The cursor adds workers, flips the task tier to
+ * heavy, and saves the plan; the quote re-prices at each click. All state
+ * responses are CSS keyed off data-state; demo-cursor.ts drives the mouse.
+ */
+import DemoWindow from './DemoWindow.astro';
+---
+<DemoWindow>
+  <div class="dm" data-demo-budget data-state="" aria-hidden="true">
+    <div class="dm-side">
+      <span class="dm-mark"></span>
+      <span class="dm-nav">Overview</span>
+      <span class="dm-nav">Actuals</span>
+      <span class="dm-nav hot">Budgets</span>
+      <span class="dm-nav">Hardware</span>
+    </div>
+    <div class="dm-main">
+      <p class="dm-h">New build plan</p>
+      <div class="dm-roles">
+        <div class="dm-role"><span>orchestrator</span><b>Opus</b></div>
+        <div class="dm-role"><span>workers</span><b>Sonnet <em class="dm-w dm-w4">×4</em><em class="dm-w dm-w6">×6</em></b></div>
+        <div class="dm-role"><span>harness</span><b>Claude Code</b></div>
+      </div>
+      <button class="dm-btn dm-add" tabindex="-1">+ add workers</button>
+      <div class="dm-tiers">
+        <span>light</span><span class="dm-tier-mod">moderate</span><span class="dm-tier-heavy">heavy</span>
+      </div>
+      <div class="dm-quote">
+        <i>quoted, per solved task</i>
+        <span class="dm-qwrap"><b class="dm-q dm-q1">$0.61</b><b class="dm-q dm-q2">$0.48</b><b class="dm-q dm-q3">$1.94</b></span>
+        <u class="dm-qbar"></u>
+      </div>
+      <button class="dm-btn dm-accent dm-save" tabindex="-1">Save plan</button>
+      <span class="dm-toast">Saved to your account</span>
+    </div>
+  </div>
+</DemoWindow>
+
+<style>
+  .dm { position: relative; display: grid; grid-template-columns: 5.6rem 1fr; background: var(--color-bg); min-height: 17rem; }
+  .dm-side { border-right: 1px solid var(--color-rule); background: var(--color-panel-2); padding: .8rem .55rem; display: flex; flex-direction: column; gap: .4rem; }
+  .dm-mark { width: 14px; height: 14px; border-radius: 3px; margin-bottom: .35rem;
+             background: linear-gradient(135deg, var(--color-ink) 38%, var(--color-accent) 38% 62%, var(--color-ink) 62%); opacity: .85; }
+  .dm-nav { font-family: var(--font-sans); font-size: .6rem; color: var(--color-muted); padding: .18rem .4rem; border-radius: 4px; }
+  .dm-nav.hot { color: var(--color-ink); background: var(--color-panel); border: 1px solid var(--color-rule); font-weight: 600; }
+  .dm-main { padding: .9rem 1.1rem 1rem; position: relative; }
+  .dm-h { font-family: var(--font-sans); font-weight: 600; font-size: .78rem; color: var(--color-ink); margin: 0 0 .6rem; }
+  .dm-roles { display: flex; flex-direction: column; gap: .4rem; }
+  .dm-role { display: flex; justify-content: space-between; align-items: center; background: var(--color-panel);
+             border: 1px solid var(--color-rule); border-radius: 7px; padding: .4rem .65rem; }
+  .dm-role span { font-family: var(--font-sans); font-size: .62rem; color: var(--color-muted); }
+  .dm-role b { font-family: var(--font-mono); font-size: .68rem; color: var(--color-ink); font-weight: 500; }
+  .dm-w { font-style: normal; transition: opacity .25s ease; }
+  .dm-w6 { display: none; color: var(--color-accent); }
+  .dm-btn { font-family: var(--font-mono); font-size: .62rem; border: 1px solid var(--color-control-border);
+            border-radius: 6px; padding: .3rem .6rem; background: var(--color-panel); color: var(--color-ink); margin-top: .5rem; pointer-events: none; }
+  .dm-accent { background: var(--color-accent); border-color: var(--color-accent); color: var(--color-on-accent); font-weight: 700; }
+  .dm-tiers { display: inline-flex; margin-top: .6rem; border: 1px solid var(--color-rule); border-radius: 7px; overflow: hidden; }
+  .dm-tiers span { font-family: var(--font-sans); font-size: .6rem; padding: .28rem .6rem; color: var(--color-muted); transition: background .2s, color .2s; }
+  .dm-tier-mod { background: var(--color-panel-3); color: var(--color-ink); font-weight: 600; }
+  .dm-quote { margin-top: .7rem; background: var(--color-panel); border: 1px solid var(--color-rule); border-radius: 8px; padding: .55rem .7rem; }
+  .dm-quote i { display: block; font-style: normal; font-family: var(--font-sans); font-size: .56rem; letter-spacing: .08em; text-transform: uppercase; color: var(--color-muted); }
+  .dm-qwrap { position: relative; display: block; height: 1.4rem; margin-top: .15rem; }
+  .dm-q { position: absolute; left: 0; top: 0; font-family: var(--font-mono); font-size: 1.05rem; color: var(--color-ink);
+          font-variant-numeric: tabular-nums; opacity: 0; transform: translateY(6px); transition: opacity .3s ease, transform .35s cubic-bezier(.22,1,.36,1); }
+  .dm-q1 { opacity: 1; transform: none; }
+  .dm-qbar { display: block; height: 5px; border-radius: 3px; margin-top: .3rem; background: linear-gradient(90deg, var(--color-accent), var(--color-accent-dim));
+             transform: scaleX(.31); transform-origin: left; transition: transform .6s cubic-bezier(.22,1,.36,1); }
+  .dm-save { position: absolute; right: 1.1rem; bottom: 1rem; margin: 0; }
+  .dm-toast { position: absolute; right: 1.1rem; bottom: 2.9rem; font-family: var(--font-sans); font-size: .6rem;
+              color: var(--color-better); background: color-mix(in srgb, var(--color-better) 12%, transparent);
+              border-radius: 6px; padding: .28rem .55rem; opacity: 0; transform: translateY(6px); transition: opacity .3s, transform .35s; }
+
+  /* State ladder: w6 -> heavy -> saved (later states keep earlier changes). */
+  :is([data-state="w6"], [data-state="heavy"], [data-state="saved"]) .dm-w4 { display: none; }
+  :is([data-state="w6"], [data-state="heavy"], [data-state="saved"]) .dm-w6 { display: inline; }
+  [data-state="w6"] .dm-q1 { opacity: 0; transform: translateY(-6px); }
+  [data-state="w6"] .dm-q2 { opacity: 1; transform: none; }
+  [data-state="w6"] .dm-qbar { transform: scaleX(.24); }
+  :is([data-state="heavy"], [data-state="saved"]) .dm-q1, :is([data-state="heavy"], [data-state="saved"]) .dm-q2 { opacity: 0; transform: translateY(-6px); }
+  :is([data-state="heavy"], [data-state="saved"]) .dm-q3 { opacity: 1; transform: none; }
+  :is([data-state="heavy"], [data-state="saved"]) .dm-qbar { transform: scaleX(.86); }
+  :is([data-state="heavy"], [data-state="saved"]) .dm-tier-mod { background: transparent; color: var(--color-muted); font-weight: 400; }
+  :is([data-state="heavy"], [data-state="saved"]) .dm-tier-heavy { background: var(--color-panel-3); color: var(--color-ink); font-weight: 600; }
+  [data-state="saved"] .dm-toast { opacity: 1; transform: none; }
+</style>
+
+<script>
+  import { runDemo } from '../lib/demo-cursor.ts';
+  for (const scene of document.querySelectorAll<HTMLElement>('[data-demo-budget]')) {
+    runDemo(scene, [
+      { sel: '.dm-add', dur: 800, click: true, state: 'w6', wait: 900 },
+      { sel: '.dm-tier-heavy', dur: 700, click: true, state: 'heavy', wait: 1000 },
+      { sel: '.dm-save', dur: 750, click: true, state: 'saved', wait: 1600 },
+    ], 'saved');
+  }
+</script>

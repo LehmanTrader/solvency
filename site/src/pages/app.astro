@@ -41,7 +41,7 @@ const SECTIONS = [
   ['hardware', 'Hardware'], ['ops', 'Operations'], ['marketing', 'Marketing'], ['sales', 'Sales'],
 ] as const;
 ---
-<AppShell title="Console — Solvency">
+<AppShell title="Console · Solvency">
   <nav slot="sidebar" aria-label="Console" class="mt-4">
     <ul class="space-y-1">
       {SECTIONS.map(([id, name]) => (
@@ -75,7 +75,7 @@ const SECTIONS = [
       </div>
       <div class="mt-6 card card-pad">
         <p class="label">Start here</p>
-        <p class="small mt-2">1 · Open <a class="link" href="#actuals">Actuals</a> and drop in a usage export (or load the sample team). 2 · Set your seat fee. 3 · Every seat gets a keep / review / move verdict, repriced at verified metered rates. Your file is parsed in this tab — usage data never leaves your machine.</p>
+        <p class="small mt-2">1 · Open <a class="link" href="#actuals">Actuals</a> and drop in a usage export (or load the sample team). 2 · Set your seat fee. 3 · Every seat gets a keep / review / move verdict, repriced at verified metered rates. Your file is parsed in this tab; usage data never leaves your machine.</p>
       </div>
     </section>
 
@@ -112,14 +112,14 @@ const SECTIONS = [
           </table>
         </div>
         <p class="small mt-3" id="ac-unknown" hidden></p>
-        <p class="small mt-3" style="color:var(--color-muted)">Method: subscription_usage_repriced — cache reads at the cached-input rate, cache writes at the uncached input rate, unknown models excluded and listed, never guessed. Flat fees never enter per-task math.</p>
+        <p class="small mt-3" style="color:var(--color-muted)">Method: subscription_usage_repriced. Cache reads at the cached-input rate, cache writes at the uncached input rate, unknown models excluded and listed, never guessed. Flat fees never enter per-task math.</p>
       </div>
     </section>
 
     <section id="sec-budgets" data-panel="budgets" hidden>
       <p class="eyebrow">Console · Budgets</p>
       <h1 class="h-page mt-2">Budget a stack before you commit</h1>
-      <p class="small mt-3 max-w-2xl">The full Composer — roles, models, harness and workload priced from measured pass rates — lives at <a class="link" href="/build-planner">/build-planner</a> and saves plans to this account. The ranked cost-per-solved-task calculator is below.</p>
+      <p class="small mt-3 max-w-2xl">The full Composer, with roles, models, harness and workload priced from measured pass rates, lives at <a class="link" href="/build-planner">/build-planner</a> and saves plans to this account. The ranked cost-per-solved-task calculator is below.</p>
       <div class="mt-6"><Calculator /></div>
     </section>
 
@@ -127,7 +127,7 @@ const SECTIONS = [
       <p class="eyebrow">Console · Hardware</p>
       <h1 class="h-page mt-2">Local rigs vs cloud, priced per solved task</h1>
       <div class="mt-6 card card-pad max-w-2xl">
-        <p class="small">The Local Rig Composer prices Apple Silicon and used-GPU builds against cloud rates — capex vs opex with power costs, fail-closed on unprofiled part mixes.</p>
+        <p class="small">The Local Rig Composer prices Apple Silicon and used-GPU builds against cloud rates: capex vs opex with power costs, fail closed on unprofiled part mixes.</p>
         <a class="btn btn-accent mt-4" href="/local-hardware">Open the Local Rig Composer →</a>
       </div>
     </section>
@@ -160,7 +160,7 @@ const SECTIONS = [
           <ul class="mt-3 space-y-2 text-sm">
             {(items as string[]).map((t) => <li class="flex gap-2"><span style="color:var(--color-accent)">→</span><span>{t}</span></li>)}
           </ul>
-          <p class="small mt-4">These views are being built with design partners now — the same repricing engine under Actuals, aggregated for {String(name).toLowerCase()}. <a class="link" href="mailto:robertdhanda@gmail.com?subject=Solvency%20design%20partner">Get on the list</a>.</p>
+          <p class="small mt-4">These views are being built with design partners now, using the same repricing engine under Actuals, aggregated for {String(name).toLowerCase()}. <a class="link" href="mailto:robertdhanda@gmail.com?subject=Solvency%20design%20partner">Get on the list</a>.</p>
         </div>
       </section>
     ))}
@@ -261,7 +261,7 @@ const SECTIONS = [
       }));
       const unk = $('ac-unknown');
       unk.hidden = !unknown.length;
-      if (unknown.length) unk.innerHTML = `<b>Not priced (fail closed):</b> ${unknown.map((u) => `${u.model} (${u.calls} calls)`).join(' · ')} — missing from the verified catalog; excluded, never guessed.`;
+      if (unknown.length) unk.innerHTML = `<b>Not priced (fail closed):</b> ${unknown.map((u) => `${u.model} (${u.calls} calls)`).join(' · ')}: missing from the verified catalog; excluded, never guessed.`;
       // overview KPIs
       $('ov-rows').textContent = String(loadedRows.length);
       $('ov-rows-note').textContent = `usage rows across ${seats.length} seat${seats.length === 1 ? '' : 's'}`;

@@ -14,7 +14,7 @@ const schema = {
   ],
 };
 ---
-<Base title="Data — Solvency" description="AI model pricing, free under CC-BY.">
+<Base title="Data · Solvency" description="AI model pricing, free under CC-BY.">
   <script type="application/ld+json" set:html={JSON.stringify(schema)} />
   <div class="wrap pt-10">
   <p class="eyebrow">Open data</p>
@@ -29,7 +29,7 @@ const schema = {
   <div class="prose mt-12 measure">
     <h3>Licence</h3>
     <p>The pricing dataset is published under <a href="https://creativecommons.org/licenses/by/4.0/">CC-BY 4.0</a>.
-      Use it commercially, modify it, redistribute it — attribute it as <code>Source: Solvency (solvency.dev)</code> with a link.</p>
+      Use it commercially, modify it, redistribute it, attribute it as <code>Source: Solvency (solvency.dev)</code> with a link.</p>
 
     <h3>What is not here, and why</h3>
     <p>Benchmark pass rates are <strong>not</strong> included in any download. They are third-party
@@ -37,7 +37,7 @@ const schema = {
       redistributing them. The build fails if any benchmark row is not marked non-redistributable,
       so this cannot be forgotten in a future change.</p>
     <ul>
-      {sources.map((s) => <li><a href={s.source_url}>{s.attribution}</a> — cited, not redistributed.</li>)}
+      {sources.map((s) => <li><a href={s.source_url}>{s.attribution}</a>, cited, not redistributed.</li>)}
     </ul>
     <p>Solvency's own measured benchmark runs, once they exist, will be published here under the same CC-BY terms.</p>
 

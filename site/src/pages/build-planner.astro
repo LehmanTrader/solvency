@@ -25,7 +25,7 @@ const harnessExamples = [
   'Cursor', 'OpenCode', 'OpenHands', 'Goose',
 ];
 ---
-<Base title="Composer preview — interactive org chart — Solvency"
+<Base title="Composer preview · interactive org chart · Solvency"
       description="Prototype: an interactive org-chart view of the Build Composer. Add orchestrator, worker and fallback roles, assign models, and watch price and sensitivity update live.">
   <div class="wrap pt-8 md:pt-12" id="composer-preview"
        data-account-plans-enabled={ACCOUNT_PLANS_ENABLED ? 'true' : 'false'}>
@@ -34,7 +34,7 @@ const harnessExamples = [
         <p class="eyebrow">Build Composer</p>
         <h1 class="h-page">Build your stack.</h1>
       </div>
-      <p class="cp-appbar-sub">Pick roles, models and a harness — the quote reprices live from measured data. Plans travel in the share link.</p>
+      <p class="cp-appbar-sub">Pick roles, models and a harness; the quote reprices live from measured data. Plans travel in the share link.</p>
     </div>
 
     <section class="card mt-6 overflow-hidden" aria-labelledby="cp-settings-title">
@@ -52,7 +52,7 @@ const harnessExamples = [
           <select class="ctl ctl-row mt-2 w-full" id="cp-project-type">
             <option value="">Custom workload</option>
             {projectPresets.presets.map((p) => (
-              <option value={p.id}>{p.label} — {p.median_tasks_to_first_ship} tasks median</option>
+              <option value={p.id}>{p.label} · {p.median_tasks_to_first_ship} tasks median</option>
             ))}
           </select>
           <p class="small mt-1" id="cp-project-note" hidden></p>
@@ -62,7 +62,7 @@ const harnessExamples = [
           <select class="ctl ctl-row mt-2 w-full" id="cp-harness-select">
             <option value="">Custom harness (type your own)</option>
             {harnessProfiles.profiles.filter((p) => p.overhead_per_invocation).map((p) => (
-              <option value={p.id}>{p.label}{p.version ? ` · ${p.version}` : ''} — measured</option>
+              <option value={p.id}>{p.label}{p.version ? ` · ${p.version}` : ''} · measured</option>
             ))}
           </select>
           <input class="ctl ctl-row mt-2 w-full" id="cp-harness" maxlength={BUILD_PLAN_LIMITS.maxHarnessNameChars} value="Custom harness" autocomplete="off" />
@@ -106,7 +106,7 @@ const harnessExamples = [
           <label class="block lg:col-span-2">
             <span class="label">End-to-end system success</span>
             <span class="percent-input mt-2"><input class="ctl ctl-row w-full" id="cp-success" type="number" min="0.01" max="100" step="any" placeholder="Not supplied" /><span>%</span></span>
-            <span class="small block mt-1">Optional. Must describe the whole configured system—not individual model benchmarks.</span>
+            <span class="small block mt-1">Optional. Must describe the whole configured system; not individual model benchmarks.</span>
           </label>
           <label class="block lg:col-span-2">
             <span class="label">Success-rate basis</span>
@@ -494,7 +494,7 @@ import projectPresets from '../data/composer-project-presets.json';
     }
     plan.harness.fixedCostPerBuildAttemptUsd = Number(total.toFixed(6));
     note.hidden = false;
-    note.textContent = `Measured overhead: ${p.label}'s scaffold (${o.input_tokens + o.cache_read_tokens + o.cache_write_tokens} tokens/call median, 8-arm study 2026-08-26) priced at each role's model — $${total.toFixed(4)} per build attempt.`;
+    note.textContent = `Measured overhead: ${p.label}'s scaffold (${o.input_tokens + o.cache_read_tokens + o.cache_write_tokens} tokens/call median, 8-arm study 2026-08-26) priced at each role's model, $${total.toFixed(4)} per build attempt.`;
   }
   function pickHarnessProfile(id: string) {
     selectedHarnessId = id;
@@ -615,9 +615,9 @@ import projectPresets from '../data/composer-project-presets.json';
   }
 
   function ghostNodeHtml(): string {
-    return `<button type="button" class="cp-node cp-node-ghost" data-action="ghost-add" aria-label="Add a third role — Pro">
+    return `<button type="button" class="cp-node cp-node-ghost" data-action="ghost-add" aria-label="Add a third role · Pro">
       <div class="cp-node-head"><span class="cp-badge cp-badge-lock" aria-hidden="true">🔒</span><span class="cp-kind-label">Locked</span></div>
-      <p class="cp-ghost-text">Add a third role — Pro</p>
+      <p class="cp-ghost-text">Add a third role · Pro</p>
     </button>`;
   }
 
@@ -702,7 +702,7 @@ import projectPresets from '../data/composer-project-presets.json';
       </div>
       <button type="button" class="cp-custom-toggle-row" data-action="gate-custom" data-role-id="${role.roleId}" aria-describedby="cp-demo-gate-detail">
         <span class="cp-lock" aria-hidden="true">🔒</span>
-        <span>Use custom or contracted token prices for this role — Pro</span>
+        <span>Use custom or contracted token prices for this role, Pro</span>
       </button>
     </div>` : '';
     return `<button type="button" class="cp-details-toggle" data-action="toggle-details" data-role-id="${role.roleId}" aria-expanded="${expanded}" aria-controls="cp-detail-panel-${role.roleId}">${toggleLabel}</button>${panel}`;
@@ -734,7 +734,7 @@ import projectPresets from '../data/composer-project-presets.json';
         <button type="button" class="btn btn-quiet" data-action="preset" data-preset="openhands">OpenHands</button>
         <button type="button" class="btn btn-quiet" data-action="preset" data-preset="custom">Custom harness</button>
       </div>
-      <p class="small">One click away: a starter team — orchestrator + worker pair — live-priced.</p>
+      <p class="small">One click away: a starter team, orchestrator + worker pair, live-priced.</p>
     </div>`;
   }
 
@@ -1335,7 +1335,7 @@ import projectPresets from '../data/composer-project-presets.json';
   .cp-node-ghost:hover { outline: 2px solid var(--color-purple); outline-offset: 1px; }
 
   /* Node detail panel: expand-on-click usage & pricing editing
-     (composer-concept-architecture.md §1/§2 — same data-field inputs as
+     (composer-concept-architecture.md §1/§2, same data-field inputs as
      build-planner.astro's role editor, laid out inside the node instead of
      a flat card). */
   .cp-details-toggle {

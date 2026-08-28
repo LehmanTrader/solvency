@@ -35,7 +35,7 @@ test('pricing page separates what is free now from planned Pro', () => {
   assert.match(page, /<dt class="label">\{CHECKOUT_UI_ENABLED \? 'Pro' : 'Pro planned'\}<\/dt>/);
   // The page title and meta description are launch-aware too: the live build
   // must never describe billing as not live.
-  assert.match(page, /'Pricing — Solvency Pro, \$19\/month — Solvency'/);
+  assert.match(page, /'Pricing · Solvency Pro, \$19\/month · Solvency'/);
   assert.match(page, /billing is not live\.'/);
   assert.match(page, /24-role safety cap/);
   assert.match(page, /2-role demo/);
@@ -46,8 +46,8 @@ test('pricing page separates what is free now from planned Pro', () => {
   assert.match(page, /Unlisted share links and JSON, CSV and PNG exports/);
   assert.match(page, /Founding rate lock: your rate never increases while subscribed/);
   assert.doesNotMatch(page, /Unlimited roles|generic exports[^\n]*Pro/i);
-  assert.match(page, /re-planning, review and monitoring—not access to public evidence/);
-  assert.match(page, /Solvency prices everything — the calculator, the frontier chart and Build Composer — the same way: cost per completed task, verified against a source\. Pro is that same math applied to the plans you save\./);
+  assert.match(page, /re-planning, review and monitoring, not access to public evidence/);
+  assert.match(page, /Solvency prices everything, the calculator, the frontier chart and Build Composer, the same way: cost per completed task, verified against a source\. Pro is that same math applied to the plans you save\./);
 });
 
 test('pricing names the roadmap items as planned and alerts as not sold until it exists', () => {
@@ -64,7 +64,7 @@ test('pricing names the roadmap items as planned and alerts as not sold until it
   assert.match(page, /break-even volume/);
   assert.match(page, /Roadmap, not sold as active features/);
   assert.match(component, /Roadmap, not sold as active features/);
-  assert.match(page, /Roadmap — planned, never sold as an active feature/);
+  assert.match(page, /Roadmap: planned, never sold as an active feature/);
   // Alerts are never sold as an active feature: pinned in both comparison columns plus the Pro tile.
   const alertCount = (page.match(/Not sold until it exists/g) ?? []).length;
   assert.ok(alertCount >= 2, 'alerts must be pinned "not sold until it exists" in both comparison columns');
@@ -79,7 +79,7 @@ test('pricing funds independent benchmarking, in both flag states', () => {
   assert.match(page, /Solvency takes no money from model vendors; the paid tier is what funds its independent benchmark runs\./);
   // Primary placement: inside the ProCheckout card, directly under the price\/interval display.
   assert.match(component, /<p class="tile-v mt-3">\$19\/month[\s\S]{0,300}Pro funds the measurements\./);
-  assert.match(component, /Pro funds the measurements\.(<\/strong>)? Solvency's benchmark runs — the measured cost-per-solved-task data this site exists to publish — are paid for by subscriptions, not by model vendors\. One full run of a 90-task-per-model batch costs about \$2,700: roughly 142 subscriber-months\. You are not just buying software; you are funding independent measurement\./);
+  assert.match(component, /Pro funds the measurements\.(<\/strong>)? Solvency's benchmark runs, the measured cost-per-solved-task data this site exists to publish, are paid for by subscriptions, not by model vendors\. One full run of a 90-task-per-model batch costs about \$2,700: roughly 142 subscriber-months\. You are not just buying software; you are funding independent measurement\./);
 });
 
 test('provisional prices cannot be mistaken for an active offer', () => {
@@ -138,7 +138,7 @@ test('the live checkout surface exists only inside ProCheckout, gated by the exa
   // Owner ask: once subscribed, the buy controls give way to a status block.
   // Hidden by default so a not-yet-confirmed visitor gets today's buy card.
   assert.match(component, /id="pro-checkout-subscribed" hidden>/);
-  assert.match(component, /id="pro-checkout-subscribed-status"[^>]*>You're subscribed — Pro is active\.</);
+  assert.match(component, /id="pro-checkout-subscribed-status"[^>]*>You're subscribed; Pro is active\.</);
 
   // Required pre-payment disclosure: amount/cadence, auto-renewal,
   // cancellation, refund and tax treatment, decided at launch (final copy,

@@ -48,7 +48,7 @@ const desc = both && sa.basis === sb.basis
 const src = sourceOf(sa) ?? sourceOf(sb);
 const statusNote = [a, b].filter((m) => m.status !== 'current').map((m) => `${m.display_name} is ${m.status}`).join('; ');
 ---
-<Base title={`${a.display_name} vs ${b.display_name} — cost per solved task — Solvency`} description={desc}>
+<Base title={`${a.display_name} vs ${b.display_name}, cost per solved task, Solvency`} description={desc}>
   <div class="wrap pt-8 md:pt-12" id="cmp" data-a={a.model_id} data-b={b.model_id}>
     <p class="eyebrow">Head to head</p>
     <!-- Stage 2 (direction doc §2 "comparisons get the two models' chips
@@ -64,13 +64,13 @@ const statusNote = [a, b].filter((m) => m.status !== 'current').map((m) => `${m.
         row against a paid one (verdictHtml above already refuses to give a
         cheaper/pricier verdict across differing bases), but the $0 cells in
         the table below must never stand without their cap named somewhere
-        on the page — docs/free-models-scoping.md §4 "never lets $0 stand
+        on the page, docs/free-models-scoping.md §4 "never lets $0 stand
         alone." */}
     {(a.access_tier === 'free' || b.access_tier === 'free') && (
       <p class="small mt-2">
-        {a.access_tier === 'free' && <><span class="t-free">FREE · rate-capped</span>{' '}— {a.display_name}: {capsLabel(a.rate_caps)}</>}
+        {a.access_tier === 'free' && <><span class="t-free">FREE · rate-capped</span>{' '}: {a.display_name}: {capsLabel(a.rate_caps)}</>}
         {a.access_tier === 'free' && b.access_tier === 'free' && ' · '}
-        {b.access_tier === 'free' && <><span class="t-free">FREE · rate-capped</span>{' '}— {b.display_name}: {capsLabel(b.rate_caps)}</>}
+        {b.access_tier === 'free' && <><span class="t-free">FREE · rate-capped</span>{' '}: {b.display_name}: {capsLabel(b.rate_caps)}</>}
       </p>
     )}
 

@@ -1,18 +1,19 @@
 ---
 /**
- * Homepage — motion pass (2026-08-28: "live animations of the portal
- * working as people scroll… sleeker, more modern, more flowy"). Product-
- * forward: the animated console (ConsoleDemo) sits in the hero with a
- * gentle scroll parallax; sections reveal on scroll via [data-reveal] +
- * IntersectionObserver; the three how-it-works steps carry their own small
- * CSS visuals instead of paragraphs. All motion is transform/opacity only
- * and collapses to final state under prefers-reduced-motion. The old
- * calculator share-link forwarder stays. Console features are the sales
- * surface here; deep prose lives on /actuals, /methodology and /research.
+ * Homepage rebuild #3 (2026-08-28 evening, operator direction): cursor-driven
+ * product demos replace the static story boxes ("that should be an animated
+ * demo of the console at work with the mouse clicking around"), feature
+ * cards carry illustrations, prose is sans (readability pass in global.css),
+ * and the copy carries no em dashes anywhere. Demos: DemoActuals in the
+ * hero (light console window on the dark ground, xhawk pattern), then
+ * DemoBudget / DemoActuals-full / DemoGovern as the three workflow
+ * sections. Scroll reveals and the share-link forwarder carry over.
  */
 import { getCollection } from 'astro:content';
 import Base from '../layouts/Base.astro';
-import ConsoleDemo from '../components/ConsoleDemo.astro';
+import DemoActuals from '../components/DemoActuals.astro';
+import DemoBudget from '../components/DemoBudget.astro';
+import DemoGovern from '../components/DemoGovern.astro';
 import { models } from '../lib/data.ts';
 
 const latest = (await getCollection('reports')).sort((a, b) => b.data.date - a.data.date)[0];
@@ -20,17 +21,26 @@ const latestHref = latest ? `/research/${latest.id.replace(/^\d{4}-\d{2}-/, '')}
 const verified = models.reduce((a, m) => (m.last_verified > a ? m.last_verified : a), '');
 const DEMO = 'mailto:robertdhanda@gmail.com?subject=Solvency%20demo&body=Team%20size%2C%20AI%20tools%20in%20use%2C%20roughly%20what%20you%20spend%20monthly%3A';
 
+const ART = {
+  actuals: `<svg viewBox="0 0 120 56" fill="none"><rect x="4" y="8" width="66" height="7" rx="3.5" fill="#5B45E0"/><circle cx="112" cy="11.5" r="5" fill="#1E7A3D" opacity=".85"/><rect x="4" y="24" width="40" height="7" rx="3.5" fill="#8E80E6"/><circle cx="112" cy="27.5" r="5" fill="#B8860B" opacity=".8"/><rect x="4" y="40" width="18" height="7" rx="3.5" fill="#C9CCD6"/><circle cx="112" cy="43.5" r="5" fill="#D32F2F" opacity=".8"/><rect x="78" y="8" width="26" height="7" rx="3.5" fill="#E3E5EB"/><rect x="52" y="24" width="52" height="7" rx="3.5" fill="#E3E5EB"/><rect x="30" y="40" width="74" height="7" rx="3.5" fill="#E3E5EB"/></svg>`,
+  budgets: `<svg viewBox="0 0 120 56" fill="none"><rect x="4" y="6" width="52" height="12" rx="6" fill="#E3E5EB"/><rect x="4" y="22" width="72" height="12" rx="6" fill="#8E80E6"/><rect x="4" y="38" width="44" height="12" rx="6" fill="#E3E5EB"/><rect x="84" y="14" width="32" height="28" rx="7" fill="#5B45E0"/><text x="100" y="32" text-anchor="middle" font-family="monospace" font-size="10" fill="#fff">$0.61</text></svg>`,
+  hardware: `<svg viewBox="0 0 120 56" fill="none"><rect x="10" y="8" width="26" height="40" rx="5" fill="#191B22"/><circle cx="23" cy="16" r="2.5" fill="#8E80E6"/><rect x="16" y="24" width="14" height="3" rx="1.5" fill="#3A4468"/><rect x="16" y="31" width="14" height="3" rx="1.5" fill="#3A4468"/><path d="M78 18a12 12 0 0 1 24 2 9 9 0 0 1-2 17.8H76A11 11 0 0 1 78 18z" fill="#E3E5EB"/><path d="M48 28h20m0 0-5-5m5 5-5 5" stroke="#5B45E0" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  ops: `<svg viewBox="0 0 120 56" fill="none"><rect x="6" y="24" width="82" height="9" rx="4.5" fill="#E3E5EB"/><rect x="6" y="24" width="60" height="9" rx="4.5" fill="#5B45E0"/><rect x="72" y="18" width="3" height="21" rx="1.5" fill="#D32F2F"/><path d="M104 16a8 8 0 0 1 8 8v6l3 4h-22l3-4v-6a8 8 0 0 1 8-8z" fill="#B8860B" opacity=".85"/><circle cx="104" cy="38" r="2.6" fill="#B8860B"/></svg>`,
+  marketing: `<svg viewBox="0 0 120 56" fill="none"><rect x="8" y="12" width="34" height="34" rx="6" fill="#E3E5EB" transform="rotate(-6 8 12)"/><rect x="34" y="8" width="34" height="36" rx="6" fill="#8E80E6"/><circle cx="45" cy="20" r="5" fill="#fff" opacity=".85"/><path d="M36 38l9-9 7 6 8-9 8 12" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/><rect x="82" y="18" width="30" height="14" rx="7" fill="#5B45E0"/><text x="97" y="28" text-anchor="middle" font-family="monospace" font-size="8.6" fill="#fff">$/asset</text></svg>`,
+  sales: `<svg viewBox="0 0 120 56" fill="none"><path d="M16 8h64L64 30v16l-16 6V30L16 8z" fill="#E3E5EB"/><path d="M28 12h40L56 27v13l-8 3V27L28 12z" fill="#8E80E6"/><circle cx="98" cy="16" r="7" fill="#5B45E0"/><circle cx="106" cy="34" r="5" fill="#8E80E6"/><circle cx="94" cy="44" r="3.6" fill="#C9CCD6"/><text x="98" y="19.4" text-anchor="middle" font-family="monospace" font-size="8.4" fill="#fff">$</text></svg>`,
+};
+
 const features = [
-  { href: '/app#actuals', tag: 'Actuals', live: true, h: 'Seat verdicts from real usage', p: 'Drop an export; every seat gets keep / review / move — priced, in your browser.' },
-  { href: '/app#budgets', tag: 'Budgets', live: true, h: 'Price a stack before you commit', p: 'Orchestrator, workers, harness — quoted from measured pass rates.' },
-  { href: '/app#hardware', tag: 'Hardware', live: true, h: 'Local rig vs cloud break-even', p: 'Apple Silicon and used-GPU builds priced per solved task.' },
-  { href: '/app#ops', tag: 'Operations', live: false, h: 'Budgets, drift and idle-seat alerts', p: 'Spend by team and tool, flagged before the invoice lands.' },
-  { href: '/app#marketing', tag: 'Marketing', live: false, h: 'Cost per produced asset', p: 'Price the content pipeline per post, image and variant.' },
-  { href: '/app#sales', tag: 'Sales', live: false, h: 'AI cost per deal, attributed', p: 'Per-lead and per-meeting costs that survive CAC math.' },
+  { href: '/app#actuals', tag: 'Actuals', live: true, art: ART.actuals, h: 'Seat verdicts from real usage', p: 'Drop an export and every seat gets keep, review, or move, priced in your browser.' },
+  { href: '/app#budgets', tag: 'Budgets', live: true, art: ART.budgets, h: 'Price a stack before you commit', p: 'Orchestrator, workers, and harness quoted from measured pass rates.' },
+  { href: '/app#hardware', tag: 'Hardware', live: true, art: ART.hardware, h: 'Local rig vs cloud break-even', p: 'Apple Silicon and used-GPU builds priced per solved task.' },
+  { href: '/app#ops', tag: 'Operations', live: false, art: ART.ops, h: 'Budgets, drift and idle-seat alerts', p: 'Spend by team and tool, flagged before the invoice lands.' },
+  { href: '/app#marketing', tag: 'Marketing', live: false, art: ART.marketing, h: 'Cost per produced asset', p: 'Price the content pipeline per post, image and variant.' },
+  { href: '/app#sales', tag: 'Sales', live: false, art: ART.sales, h: 'AI cost per deal, attributed', p: 'Per-lead and per-meeting costs that survive CAC math.' },
 ];
 ---
-<Base title="Solvency — the AI spend suite"
-      description="Budget the work. Reconcile the bill. Right-size the seats. AI spend economics for engineering, operations, marketing and sales — built on first-party task-level benchmarks."
+<Base title="Solvency · the AI spend suite"
+      description="Budget the work. Reconcile the bill. Right-size the seats. AI spend economics for engineering, operations, marketing and sales, built on first-party task-level benchmarks."
       og="/og/cards/home.png">
   <script is:inline>(function(){var q=new URLSearchParams(location.search);if(['tier','volume','variant','highlight','pop','taskcount'].some(function(k){return q.has(k)}))location.replace('/calculator'+location.search+location.hash);})();</script>
 
@@ -39,7 +49,7 @@ const features = [
       <div>
         <p class="eyebrow" style="color:#8FA0D8" data-reveal>The AI spend suite</p>
         <h1 class="hero-h mt-4" data-reveal="1" data-d=".08s">AI is priced in tokens.<br />Your business buys outcomes.</h1>
-        <p class="hero-p mt-5" style="max-width:30rem" data-reveal="1" data-d=".16s">Budget the work, reconcile the bill, right-size the seats — on measured numbers, for every team that spends on AI.</p>
+        <p class="hero-p mt-5" style="max-width:30rem" data-reveal="1" data-d=".16s">Budget the work, reconcile the bill, right-size the seats. Measured numbers for every team that spends on AI.</p>
         <div class="mt-8 flex flex-wrap gap-3" data-reveal="1" data-d=".24s">
           <a class="btn btn-accent btn-lg" href={DEMO} data-analytics="hero-demo">Request a demo</a>
           <a class="btn hero-btn-ghost btn-lg" href="/app">Open the console</a>
@@ -47,58 +57,46 @@ const features = [
         <div class="hero-stats mt-10" data-reveal="1" data-d=".32s">
           <div><b>{models.length}</b><span>models on verified rates</span></div>
           <div><b>First-party</b><span>bench, journaled runs</span></div>
-          <div><b>Fail closed</b><span>missing ≠ guessed</span></div>
+          <div><b>Fail closed</b><span>missing is never guessed</span></div>
         </div>
       </div>
-      <div class="hero-demo" data-parallax>
-        <ConsoleDemo />
+      <div class="hero-demo" data-parallax data-reveal="1" data-d=".2s">
+        <DemoActuals />
       </div>
     </div>
   </section>
 
   <div class="wrap">
     <section class="mt-20" aria-labelledby="story-h">
-      <p class="eyebrow" data-reveal>How it works</p>
-      <h2 class="h-section mt-2" id="story-h" data-reveal="1" data-d=".06s">Three moves, one ledger</h2>
+      <p class="eyebrow" data-reveal>See it work</p>
+      <h2 class="h-section mt-2" id="story-h" data-reveal="1" data-d=".06s">Three workflows, one console</h2>
 
       <div class="story mt-10">
         <div class="story-row" data-reveal>
           <div class="story-copy">
             <p class="story-n">01</p>
             <h3 class="h-card">Budget it</h3>
-            <p class="small mt-2">Compose the stack and get the quote — per solved task, before a dollar is spent.</p>
+            <p class="story-p mt-2">Compose the stack, watch the quote reprice as you change it, save the plan. Every figure comes from measured pass rates.</p>
           </div>
-          <div class="story-vis vis-budget" aria-hidden="true">
-            <span class="vb-chip" style="--d:.1s">orchestrator · Opus</span>
-            <span class="vb-chip" style="--d:.22s">workers · Sonnet ×4</span>
-            <span class="vb-chip" style="--d:.34s">harness · Claude Code</span>
-            <span class="vb-total" style="--d:.5s"><i>quoted</i>$0.61 / solved task</span>
-          </div>
+          <div class="story-demo"><DemoBudget /></div>
         </div>
 
         <div class="story-row rev" data-reveal>
           <div class="story-copy">
             <p class="story-n">02</p>
             <h3 class="h-card">Reconcile it</h3>
-            <p class="small mt-2">Bring the usage export. Every seat repriced at metered rates, every fee justified — or not.</p>
+            <p class="story-p mt-2">Drop the usage export your vendor already gives you. Seats reprice at metered rates, and one click opens the model mix behind any verdict.</p>
           </div>
-          <div class="story-vis vis-seats" aria-hidden="true">
-            <span class="vs-row" style="--d:.1s"><i>ana</i><u><b style="--w:.9"></b></u><em class="ok">keep</em></span>
-            <span class="vs-row" style="--d:.24s"><i>carla</i><u><b style="--w:.34"></b></u><em class="warn">review</em></span>
-            <span class="vs-row" style="--d:.38s"><i>eli</i><u><b style="--w:.08"></b></u><em class="over">move</em></span>
-          </div>
+          <div class="story-demo"><DemoActuals full={true} /></div>
         </div>
 
         <div class="story-row" data-reveal>
           <div class="story-copy">
             <p class="story-n">03</p>
             <h3 class="h-card">Govern it</h3>
-            <p class="small mt-2">Budgets by team and tool, alerts before the threshold — not after the invoice.</p>
+            <p class="story-p mt-2">Set the threshold, arm the alert, and hear about the overrun before the invoice does. Budgets live per team and per tool.</p>
           </div>
-          <div class="story-vis vis-govern" aria-hidden="true">
-            <span class="vg-track"><span class="vg-tick"></span><span class="vg-bar"></span></span>
-            <span class="vg-alert" style="--d:.55s">⚠ eng · 84% of August budget</span>
-          </div>
+          <div class="story-demo"><DemoGovern /></div>
         </div>
       </div>
     </section>
@@ -108,14 +106,17 @@ const features = [
       <h2 class="h-section mt-2" id="feat-h" data-reveal="1" data-d=".06s">One login. Every AI ledger.</h2>
       <div class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {features.map((f, i) => (
-          <a class="card card-pad block feat" href={f.href} data-reveal="1" data-d={`${(i % 3) * 0.08}s`}>
-            <p class="label" style="color:var(--color-accent)">{f.tag}{!f.live && <span class="small" style="color:var(--color-muted)"> · preview</span>}</p>
-            <h3 class="h-card mt-1">{f.h}</h3>
-            <p class="small mt-2">{f.p}</p>
+          <a class="card feat block" href={f.href} data-reveal="1" data-d={`${(i % 3) * 0.08}s`}>
+            <span class="feat-art" aria-hidden="true"><Fragment set:html={f.art} /></span>
+            <span class="feat-body">
+              <p class="label" style="color:var(--color-accent)">{f.tag}{!f.live && <span class="small" style="color:var(--color-muted)"> · preview</span>}</p>
+              <h3 class="h-card mt-1">{f.h}</h3>
+              <p class="small mt-2">{f.p}</p>
+            </span>
           </a>
         ))}
       </div>
-      <p class="small mt-6" data-reveal>Engineering, operations, marketing, sales — same engine, four ledgers. <a class="link" href={DEMO}>Request a demo</a> or <a class="link" href="/app">open the console</a>.</p>
+      <p class="small mt-6" data-reveal>Engineering, operations, marketing, sales. Same engine, four ledgers. <a class="link" href={DEMO}>Request a demo</a> or <a class="link" href="/app">open the console</a>.</p>
     </section>
 
     <section class="mt-20 card card-pad" aria-labelledby="ev-h" data-reveal>
@@ -123,7 +124,7 @@ const features = [
         <div class="max-w-xl">
           <p class="eyebrow">The receipts</p>
           <h2 class="h-card mt-2" id="ev-h">Built on an instrument, not a spreadsheet</h2>
-          <p class="small mt-2">First-party agentic bench, journaled runs, a metered catalog verified {verified}. Where a number does not exist, it is reported as missing.</p>
+          <p class="small mt-2">First-party agentic bench, journaled runs, and a metered catalog verified {verified}. Where a number does not exist, it is reported as missing.</p>
         </div>
         <div class="mt-5 md:mt-0 shrink-0 space-y-2 text-sm">
           <p><a class="link" href="/calculator">The ranked table →</a></p>
@@ -136,7 +137,7 @@ const features = [
     <section class="mt-20 mb-4 text-center hero-dark rounded-xl" aria-labelledby="cta-h" data-reveal>
       <div class="py-12 px-6">
         <h2 class="h-section" id="cta-h" style="color:#fff">Put a number under your AI spend</h2>
-        <p class="hero-p mt-3 max-w-xl mx-auto">Free while we build with design partners. Bring one usage export; leave with seat verdicts.</p>
+        <p class="hero-p mt-3 max-w-xl mx-auto">Free while we build with design partners. Bring one usage export and leave with seat verdicts.</p>
         <div class="mt-6 flex justify-center gap-3">
           <a class="btn btn-accent btn-lg" href={DEMO} data-analytics="footer-demo">Request a demo</a>
           <a class="btn hero-btn-ghost btn-lg" href="/app">Open the console</a>
@@ -153,76 +154,46 @@ const features = [
       animation: hero-breathe 9s ease-in-out infinite alternate; }
     @keyframes hero-breathe { from { opacity: .5; transform: translateY(0); } to { opacity: 1; transform: translateY(14px); } }
     .hero-grid { display: grid; gap: 3rem; align-items: center; position: relative; z-index: 1; }
-    @media (min-width: 900px) { .hero-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 34rem); } }
+    @media (min-width: 900px) { .hero-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 36rem); } }
     .hero-h { font-family: var(--font-serif); font-size: clamp(1.9rem, 4.4vw, 3.2rem); line-height: 1.08; color: #fff; letter-spacing: -.01em; }
-    .hero-p { font-size: 1.02rem; line-height: 1.6; color: #B9C0D4; }
+    .hero-p { font-family: var(--font-sans); font-size: 1.05rem; line-height: 1.65; color: #B9C0D4; }
     .btn-lg { font-size: .9rem; padding: .7rem 1.2rem; }
     .hero-btn-ghost { color: #fff; border-color: #3A4468; background: transparent; }
     .hero-btn-ghost:hover { background: #1A2342; border-color: #8FA0D8; color: #fff; }
     .hero-stats { display: grid; grid-template-columns: repeat(3, auto); gap: 1.4rem; justify-content: start; }
     .hero-stats b { display: block; font-family: var(--font-mono); font-size: 1.15rem; color: #fff; font-variant-numeric: tabular-nums; }
-    .hero-stats span { font-size: .74rem; color: #8FA0D8; }
+    .hero-stats span { font-family: var(--font-sans); font-size: .74rem; color: #8FA0D8; }
     .hero-demo { will-change: transform; }
 
-    /* Scroll reveal — transform/opacity only; JS adds .in once per element. */
     [data-reveal] { opacity: 0; transform: translateY(18px);
       transition: opacity .55s ease var(--d, 0s), transform .65s cubic-bezier(.22,1,.36,1) var(--d, 0s); }
     [data-reveal].in { opacity: 1; transform: none; }
 
-    .story { display: flex; flex-direction: column; gap: 3.2rem; }
-    .story-row { display: grid; gap: 1.6rem; align-items: center; }
-    @media (min-width: 760px) {
-      .story-row { grid-template-columns: minmax(0, 22rem) minmax(0, 1fr); }
-      .story-row.rev { grid-template-columns: minmax(0, 1fr) minmax(0, 22rem); }
+    .story { display: flex; flex-direction: column; gap: 4rem; }
+    .story-row { display: grid; gap: 1.8rem; align-items: center; }
+    @media (min-width: 820px) {
+      .story-row { grid-template-columns: minmax(0, 20rem) minmax(0, 1fr); }
+      .story-row.rev { grid-template-columns: minmax(0, 1fr) minmax(0, 20rem); }
       .story-row.rev .story-copy { order: 2; }
-      .story-row.rev .story-vis { order: 1; }
+      .story-row.rev .story-demo { order: 1; }
     }
     .story-n { font-family: var(--font-mono); font-size: .7rem; color: var(--color-accent); letter-spacing: .12em; margin-bottom: .3rem; }
-    .story-vis { border: 1px solid var(--color-rule); border-radius: 10px; background: var(--color-panel);
-                 padding: 1.2rem 1.3rem; display: flex; flex-direction: column; gap: .55rem; font-family: var(--font-mono); }
-    .story-vis > * { opacity: 0; transform: translateY(10px);
-      transition: opacity .5s ease var(--d, 0s), transform .55s cubic-bezier(.22,1,.36,1) var(--d, 0s); }
-    .story-row.in .story-vis > * { opacity: 1; transform: none; }
+    .story-p { font-family: var(--font-sans); font-size: .92rem; line-height: 1.65; color: var(--color-body); max-width: 34ch; }
 
-    .vb-chip { align-self: flex-start; font-size: .72rem; color: var(--color-ink); background: var(--color-panel-2);
-               border: 1px solid var(--color-rule); border-radius: 6px; padding: .3rem .6rem; }
-    .vb-total { margin-top: .3rem; font-size: .95rem; color: var(--color-ink); font-variant-numeric: tabular-nums; }
-    .vb-total i { display: block; font-style: normal; font-size: .58rem; letter-spacing: .1em; text-transform: uppercase; color: var(--color-muted); }
-
-    .vs-row { display: grid; grid-template-columns: 3.4rem 1fr auto; gap: .7rem; align-items: center; font-size: .74rem; color: var(--color-body); }
-    .vs-row i { font-style: normal; }
-    .vs-row u { text-decoration: none; display: block; height: 8px; background: var(--color-panel-3); border-radius: 4px; overflow: hidden; }
-    .vs-row b { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--color-accent), var(--color-accent-dim));
-                transform: scaleX(0); transform-origin: left; transition: transform .8s cubic-bezier(.22,1,.36,1) calc(var(--d, 0s) + .15s); }
-    .story-row.in .vs-row b { transform: scaleX(var(--w)); }
-    .vs-row em { font-style: normal; font-size: .6rem; padding: .12rem .5rem; border-radius: 99px; }
-    .vs-row em.ok { background: color-mix(in srgb, var(--color-better) 14%, transparent); color: var(--color-better); }
-    .vs-row em.warn { background: color-mix(in srgb, #9A6A10 14%, transparent); color: #9A6A10; }
-    .vs-row em.over { background: color-mix(in srgb, var(--color-worse) 12%, transparent); color: var(--color-worse); }
-
-    .vis-govern { gap: .8rem; }
-    .vg-track { position: relative; display: block; height: 10px; background: var(--color-panel-3); border-radius: 5px; }
-    .vg-tick { position: absolute; left: 84%; top: -4px; bottom: -4px; width: 2px; background: var(--color-worse); border-radius: 1px; }
-    .vg-bar { position: absolute; inset: 0; border-radius: 5px; background: linear-gradient(90deg, var(--color-accent), var(--color-accent-dim));
-              transform: scaleX(0); transform-origin: left; transition: transform 1.1s cubic-bezier(.22,1,.36,1) .2s; }
-    .story-row.in .vg-bar { transform: scaleX(.84); }
-    .vg-alert { align-self: flex-start; font-size: .68rem; color: #9A6A10; background: color-mix(in srgb, #9A6A10 12%, transparent);
-                border-radius: 6px; padding: .3rem .6rem; }
-
-    .feat { transition: border-color .15s, transform .2s cubic-bezier(.22,1,.36,1), opacity .55s ease var(--d, 0s); }
-    .feat:hover { border-color: var(--color-accent); transform: translateY(-3px); }
+    .feat { display: flex; flex-direction: column; overflow: hidden; transition: border-color .15s, transform .2s cubic-bezier(.22,1,.36,1), opacity .55s ease var(--d, 0s), box-shadow .2s; }
+    .feat:hover { border-color: var(--color-accent); transform: translateY(-3px); box-shadow: 0 14px 30px -18px rgba(10, 14, 35, .35); }
+    .feat-art { display: block; padding: 1.1rem 1.25rem .4rem; background: var(--color-panel-2); }
+    .feat-art svg { display: block; width: 100%; height: auto; max-height: 74px; }
+    .feat-body { display: block; padding: .9rem 1.25rem 1.1rem; }
 
     @media (prefers-reduced-motion: reduce) {
-      [data-reveal], .story-vis > *, .feat { opacity: 1 !important; transform: none !important; transition: none !important; }
-      .story-row .vs-row b { transform: scaleX(var(--w)); transition: none; }
-      .story-row .vg-bar { transform: scaleX(.84); transition: none; }
+      [data-reveal] { opacity: 1 !important; transform: none !important; transition: none !important; }
       .hero-main::after { animation: none; }
       .hero-demo { transform: none !important; }
     }
   </style>
 
   <script>
-    // data-d → --d transition delays (kept as data attrs so markup stays tidy).
     for (const el of document.querySelectorAll<HTMLElement>('[data-d]')) el.style.setProperty('--d', el.dataset.d!);
 
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -235,7 +206,6 @@ const features = [
       }, { threshold: 0.18, rootMargin: '0px 0px -8% 0px' });
       revealed.forEach((el) => io.observe(el));
 
-      // Gentle hero parallax: the console frame drifts against the scroll.
       const frame = document.querySelector<HTMLElement>('[data-parallax]');
       if (frame) {
         let raf = 0;

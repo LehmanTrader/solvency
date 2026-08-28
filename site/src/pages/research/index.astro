@@ -8,7 +8,7 @@ const href = (r) => `/research/${r.id.replace(/^\d{4}-\d{2}-/, '')}`;
 const h = headline();
 const noteOne = reports.find((report) => report.data.note === 1);
 ---
-<Base title="Research notes — Solvency" description="Research notes on the real cost of AI coding models.">
+<Base title="Research notes · Solvency" description="Research notes on the real cost of AI coding models.">
   <div class="wrap pt-10">
     <p class="eyebrow">Solvency research</p>
     <h1 class="h-page mt-3">Research notes</h1>
@@ -19,7 +19,7 @@ const noteOne = reports.find((report) => report.data.note === 1);
         <p class="label">Headline finding</p>
         <p class="mt-2 text-[var(--color-ink)] leading-relaxed">
           <strong>{h.cheap.m.display_name}</strong> is {fmtX(h.inX)} cheaper than {h.dear.m.display_name} per input token and{' '}
-          {fmtX(h.outX)} per output token — but <strong class="t-better">▼ {fmtX(h.solvedX)}</strong> cheaper per solved task
+          {fmtX(h.outX)} per output token, but <strong class="t-better">▼ {fmtX(h.solvedX)}</strong> cheaper per solved task
           ({money(h.cheap.cost)} vs {money(h.dear.cost)}).
         </p>
       </div>

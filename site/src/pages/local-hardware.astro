@@ -42,17 +42,17 @@ const CATALOG_LITE = RIG_CATALOG.map((e) => ({
   model: e.model, defaultHorizonMonths: e.defaultHorizonMonths,
 }));
 ---
-<Base title="Local Rig Composer — Solvency"
-      description="Prototype: drag PC components into a bay and price the build the way the Composer prices an agent stack — TCO-modelled cost per attempt, honest Missing until a pass rate exists.">
+<Base title="Local Rig Composer · Solvency"
+      description="Prototype: drag PC components into a bay and price the build the way the Composer prices an agent stack, TCO-modelled cost per attempt, honest Missing until a pass rate exists.">
   <main id="main" class="wrap py-10">
     <p class="label">Local rig composer · preview</p>
     <div class="cp-appbar" style="border-bottom:1px solid var(--color-rule);padding-bottom:1.1rem;display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:.75rem 2rem">
       <div><p class="eyebrow">Local Rig Composer</p><h1 class="h-page">Build the box.</h1></div>
-      <p style="max-width:34rem;color:var(--color-muted);font-size:.92rem;line-height:1.5">Drag parts into a rig, price it against cloud per solved task, and find your break-even volume — dated part prices, stated power costs.</p>
+      <p style="max-width:34rem;color:var(--color-muted);font-size:.92rem;line-height:1.5">Drag parts into a rig, price it against cloud per solved task, and find your break-even volume, dated part prices, stated power costs.</p>
     </div>
-    <p class="mt-2 small">Saved rigs and fleet exports are a planned <a class="link" href="/pricing#pro">Pro</a> feature — everything on this page is free.</p>
+    <p class="mt-2 small">Saved rigs and fleet exports are a planned <a class="link" href="/pricing#pro">Pro</a> feature, everything on this page is free.</p>
     <p class="mt-3 max-w-[62ch] text-[var(--color-body)]">
-      Drag parts from the shelf into the bay — or use the Add buttons. A build that matches a
+      Drag parts from the shelf into the bay, or use the Add buttons. A build that matches a
       measured reference profile gets a full quote: hardware amortized over {DEFAULT_HORIZON_MONTHS} months,
       wall power at your electricity rate, cost per attempt, and break-even against a measured
       cloud model. A combination nobody has profiled says so instead of guessing.
@@ -61,7 +61,7 @@ const CATALOG_LITE = RIG_CATALOG.map((e) => ({
     <div class="grid gap-4 md:grid-cols-3 mt-6" aria-live="polite">
       <div class="card card-pad"><p class="label">Build cost</p><p class="h-card num mt-1" id="lr-build">—</p></div>
       <div class="card card-pad"><p class="label">Per attempt</p><p class="h-card num mt-1" id="lr-attempt">—</p></div>
-      <div class="card card-pad"><p class="label">Per solved task</p><p class="h-card num mt-1" id="lr-solved">Missing</p><p class="small" id="lr-solved-why">Needs a pass rate — never estimated.</p></div>
+      <div class="card card-pad"><p class="label">Per solved task</p><p class="h-card num mt-1" id="lr-solved">Missing</p><p class="small" id="lr-solved-why">Needs a pass rate, never estimated.</p></div>
     </div>
 
     <div class="grid gap-6 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] mt-8">
@@ -104,14 +104,14 @@ const CATALOG_LITE = RIG_CATALOG.map((e) => ({
               <input id="lr-volume" class="ctl mt-2 w-full" type="number" min="1" max="1000000" step="1" value={DEFAULT_WORKLOAD.tasksPerMonth} /></label>
             <label class="block"><span class="label">Electricity $/kWh</span>
               <input id="lr-kwh" class="ctl mt-2 w-full" type="number" min="0" max="2" step="0.0001" value={ELECTRICITY_DEFAULT.usdPerKwh} /></label>
-            <label class="block sm:col-span-2"><span class="label">Pass rate % (yours — measured on your model + quant; blank keeps Missing)</span>
+            <label class="block sm:col-span-2"><span class="label">Pass rate % (yours, measured on your model + quant; blank keeps Missing)</span>
               <input id="lr-pass" class="ctl mt-2 w-full" type="number" min="1" max="100" step="0.1" placeholder="never estimated" /></label>
           </div>
           <div class="mt-5 border-t border-[var(--color-rule)] pt-4">
             <p class="label">Break-even vs a measured cloud model</p>
             <div class="mt-2 flex flex-wrap items-center gap-3">
               <select id="lr-cloud" class="ctl">
-                {cloud.map((c: any) => <option value={c.perSolved}>{c.name} — ${c.perSolved.toFixed(2)}/solved</option>)}
+                {cloud.map((c: any) => <option value={c.perSolved}>{c.name}, ${c.perSolved.toFixed(2)}/solved</option>)}
               </select>
               <p class="small" id="lr-break" role="status"></p>
             </div>
@@ -122,13 +122,13 @@ const CATALOG_LITE = RIG_CATALOG.map((e) => ({
           <p class="ghead"><span class="gword">No measured profile</span></p>
           <p class="small mt-2" id="lr-gate-why"></p>
           <p class="small mt-2">Solvency prices only hardware combinations with a recorded power and
-            throughput profile — it never synthesizes tokens-per-second for a box nobody measured.
+            throughput profile, it never synthesizes tokens-per-second for a box nobody measured.
             Complete one of the reference builds, or clear the bay.</p>
         </div>
       </section>
     </div>
 
-    <p class="small mt-8 max-w-[68ch]">Basis: <code>local_tco_modeled</code> (rig-cost-v1) — hardware
+    <p class="small mt-8 max-w-[68ch]">Basis: <code>local_tco_modeled</code> (rig-cost-v1), hardware
       amortized against resale over {DEFAULT_HORIZON_MONTHS} months, wall power at the rate above, reference-model
       throughput as recorded per profile. Cloud comparators are the measured leaderboard. Cost per
       solved task appears only with a pass rate you assert for your own model and quant.</p>
@@ -177,7 +177,7 @@ const CATALOG_LITE = RIG_CATALOG.map((e) => ({
       const partial = catalog.find((e) => parts.every((p) => e.componentIds.includes(p)));
       if (partial) {
         const missing = partial.componentIds.filter((p: string) => !parts.includes(p)).map((p: string) => partById.get(p).label);
-        return { hint: `On the way to the ${partial.name} profile — still needs: ${missing.join('; ')}.` };
+        return { hint: `On the way to the ${partial.name} profile, still needs: ${missing.join('; ')}.` };
       }
       return { hint: 'These parts span different reference builds; no recorded profile covers the mix.' };
     }
@@ -194,11 +194,11 @@ const CATALOG_LITE = RIG_CATALOG.map((e) => ({
         profile.textContent = '';
         $('lr-attempt').textContent = '—';
         $('lr-solved').textContent = 'Missing';
-        $('lr-solved-why').textContent = 'Needs a pass rate — never estimated.';
+        $('lr-solved-why').textContent = 'Needs a pass rate, never estimated.';
         return;
       }
       gate.hidden = true;
-      profile.textContent = `Matched profile: ${entry.name} — ${entry.summary}`;
+      profile.textContent = `Matched profile: ${entry.name}, ${entry.summary}`;
       const volume = Math.max(1, Number(($('lr-volume') as unknown as HTMLInputElement).value) || workloadDefault.tasksPerMonth);
       const kwh = Math.max(0, Number(($('lr-kwh') as unknown as HTMLInputElement).value) || electricityDefault.usdPerKwh);
       const passPct = Number(($('lr-pass') as unknown as HTMLInputElement).value);
@@ -224,16 +224,16 @@ const CATALOG_LITE = RIG_CATALOG.map((e) => ({
       $('lr-month').textContent = q.monthlyCostUsd != null ? money(q.monthlyCostUsd) : '—';
       $('lr-solved').textContent = q.costPerSolvedTaskUsd != null ? money(q.costPerSolvedTaskUsd, 4) : 'Missing';
       $('lr-solved-why').textContent = q.costPerSolvedTaskUsd != null
-        ? `at your asserted ${passPct.toFixed(1)}% pass rate` : 'Needs a pass rate — never estimated.';
+        ? `at your asserted ${passPct.toFixed(1)}% pass rate` : 'Needs a pass rate, never estimated.';
       $('lr-basis').textContent = `Throughput ${q.throughput.tokensPerSecond} tok/s (${q.throughput.runtime}, ${q.throughput.method}); power ${q.power.systemWatts}W (${q.power.method}); ${q.missing.length ? 'missing: ' + q.missing.join(', ') : 'no missing inputs'}.`;
       const cloudPerSolved = Number(($('lr-cloud') as unknown as HTMLSelectElement).value);
       const breakEl = $('lr-break');
       if (q.costPerSolvedTaskUsd == null) {
-        breakEl.textContent = 'Break-even needs the rig’s cost per solved task — supply a pass rate first.';
+        breakEl.textContent = 'Break-even needs the rig’s cost per solved task, supply a pass rate first.';
       } else if (q.costPerSolvedTaskUsd >= cloudPerSolved) {
         breakEl.textContent = `Not at this volume: the rig’s ${money(q.costPerSolvedTaskUsd, 2)}/solved is not below the cloud’s ${money(cloudPerSolved)}/solved.`;
       } else {
-        breakEl.textContent = `Cheaper per solved task than this cloud row at your asserted pass rate — ${money(q.costPerSolvedTaskUsd, 2)} vs ${money(cloudPerSolved)}; hardware is already amortized inside the rig figure.`;
+        breakEl.textContent = `Cheaper per solved task than this cloud row at your asserted pass rate, ${money(q.costPerSolvedTaskUsd, 2)} vs ${money(cloudPerSolved)}; hardware is already amortized inside the rig figure.`;
       }
     }
 

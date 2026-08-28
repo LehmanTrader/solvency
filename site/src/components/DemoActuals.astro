@@ -1,0 +1,133 @@
+---
+/**
+ * DemoActuals: the seat-audit workflow, played by a cursor. The mouse picks
+ * up the usage export, drops it on the console, hits reprice, and (full
+ * variant) drills into a seat to see its model mix. Companion to
+ * DemoBudget/DemoGovern; states are CSS off data-state, driven by
+ * demo-cursor.ts. The hero uses full={false}; how-it-works step 02 uses the
+ * full drill-down.
+ */
+import DemoWindow from './DemoWindow.astro';
+interface Props { full?: boolean; }
+const { full = false } = Astro.props;
+---
+<DemoWindow>
+  <div class="dm" data-demo-actuals data-full={full ? '1' : undefined} data-state="" aria-hidden="true">
+    <div class="dm-side">
+      <span class="dm-mark"></span>
+      <span class="dm-nav">Overview</span>
+      <span class="dm-nav hot">Actuals</span>
+      <span class="dm-nav">Budgets</span>
+      <span class="dm-nav">Hardware</span>
+    </div>
+    <div class="dm-main">
+      <div class="dm-toprow">
+        <span class="dm-file">usage-aug.csv</span>
+        <span class="dm-zone"><span class="dm-zone-idle">Drop the export here</span><span class="dm-zone-got">usage-aug.csv · 8 seats</span></span>
+        <button class="dm-btn dm-accent dm-reprice" tabindex="-1">Reprice</button>
+      </div>
+      <div class="dm-kpis">
+        <span class="dm-kpi"><i>Seat fees</i><b>$1,600/mo</b></span>
+        <span class="dm-kpi"><i>Metered-equivalent</i><b>$4,858</b></span>
+        <span class="dm-kpi"><i>Net vs API</i><b class="good">+$3,258</b></span>
+      </div>
+      <div class="dm-rows">
+        <span class="dm-row" style="--i:0"><i>ana</i><u><b style="--w:.92"></b></u><em class="ok">keep</em></span>
+        <span class="dm-row" style="--i:1"><i>ben</i><u><b style="--w:.55"></b></u><em class="ok">keep</em></span>
+        <span class="dm-row dm-row-carla" style="--i:2"><i>carla</i><u><b style="--w:.34"></b></u><em class="warn">review</em></span>
+        <span class="dm-row" style="--i:3"><i>dev</i><u><b style="--w:.18"></b></u><em class="warn">review</em></span>
+        <span class="dm-row" style="--i:4"><i>eli</i><u><b style="--w:.07"></b></u><em class="over">move to API</em></span>
+      </div>
+      {full && (
+        <div class="dm-drill">
+          <p class="dm-drill-h">carla · model mix</p>
+          <span class="dm-mix"><i>Opus</i><u><b style="--w:.62"></b></u><em>$212</em></span>
+          <span class="dm-mix"><i>Sonnet</i><u><b style="--w:.3"></b></u><em>$104</em></span>
+          <span class="dm-mix"><i>Haiku</i><u><b style="--w:.08"></b></u><em>$27</em></span>
+          <p class="dm-drill-tip">Heavy tasks fit a lower tier here. Suggested: downgrade one seat class.</p>
+        </div>
+      )}
+    </div>
+  </div>
+</DemoWindow>
+
+<style>
+  .dm { position: relative; display: grid; grid-template-columns: 5.6rem 1fr; background: var(--color-bg); min-height: 17rem; overflow: hidden; }
+  .dm-side { border-right: 1px solid var(--color-rule); background: var(--color-panel-2); padding: .8rem .55rem; display: flex; flex-direction: column; gap: .4rem; }
+  .dm-mark { width: 14px; height: 14px; border-radius: 3px; margin-bottom: .35rem;
+             background: linear-gradient(135deg, var(--color-ink) 38%, var(--color-accent) 38% 62%, var(--color-ink) 62%); opacity: .85; }
+  .dm-nav { font-family: var(--font-sans); font-size: .6rem; color: var(--color-muted); padding: .18rem .4rem; border-radius: 4px; }
+  .dm-nav.hot { color: var(--color-ink); background: var(--color-panel); border: 1px solid var(--color-rule); font-weight: 600; }
+  .dm-main { padding: .9rem 1.1rem 1rem; position: relative; }
+
+  .dm-toprow { display: flex; align-items: center; gap: .6rem; }
+  .dm-file { font-family: var(--font-mono); font-size: .64rem; color: var(--color-ink); background: var(--color-panel);
+             border: 1px solid var(--color-control-border); border-radius: 6px; padding: .26rem .55rem;
+             transition: transform .55s cubic-bezier(.22,1,.36,1), opacity .3s ease .25s; }
+  .dm-zone { flex: 1; border: 1.5px dashed var(--color-control-border); border-radius: 7px; padding: .28rem .6rem;
+             font-family: var(--font-sans); font-size: .62rem; color: var(--color-muted); transition: border-color .25s, background .25s; }
+  .dm-zone-got { display: none; color: var(--color-ink); font-family: var(--font-mono); font-size: .6rem; }
+  .dm-btn { font-family: var(--font-mono); font-size: .62rem; border: 1px solid var(--color-control-border);
+            border-radius: 6px; padding: .3rem .6rem; background: var(--color-panel); color: var(--color-ink); pointer-events: none; }
+  .dm-accent { background: var(--color-accent); border-color: var(--color-accent); color: var(--color-on-accent); font-weight: 700; opacity: .45; transition: opacity .25s; }
+
+  .dm-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; margin-top: .7rem; }
+  .dm-kpi { background: var(--color-panel); border: 1px solid var(--color-rule); border-radius: 8px; padding: .45rem .6rem;
+            opacity: 0; transform: translateY(8px); transition: opacity .4s ease, transform .5s cubic-bezier(.22,1,.36,1); }
+  .dm-kpi i { display: block; font-style: normal; font-family: var(--font-sans); font-size: .52rem; letter-spacing: .06em; text-transform: uppercase; color: var(--color-muted); }
+  .dm-kpi b { display: block; margin-top: .15rem; font-family: var(--font-mono); font-size: .8rem; color: var(--color-ink); font-variant-numeric: tabular-nums; }
+  .dm-kpi b.good { color: var(--color-better); }
+
+  .dm-rows { margin-top: .7rem; display: flex; flex-direction: column; gap: .38rem; }
+  .dm-row { display: grid; grid-template-columns: 2.9rem 1fr auto; gap: .55rem; align-items: center;
+            font-family: var(--font-sans); font-size: .66rem; color: var(--color-body); border-radius: 6px; padding: .12rem .3rem;
+            opacity: 0; transform: translateY(8px);
+            transition: opacity .4s ease calc(var(--i) * .12s), transform .5s cubic-bezier(.22,1,.36,1) calc(var(--i) * .12s), background .25s; }
+  .dm-row i { font-style: normal; }
+  .dm-row u { text-decoration: none; display: block; height: 6px; background: var(--color-panel-3); border-radius: 3px; overflow: hidden; }
+  .dm-row u b { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--color-accent), var(--color-accent-dim));
+                transform: scaleX(0); transform-origin: left; transition: transform .7s cubic-bezier(.22,1,.36,1) calc(var(--i) * .12s + .15s); }
+  .dm-row em { font-style: normal; font-family: var(--font-mono); font-size: .54rem; padding: .1rem .45rem; border-radius: 99px; }
+  .dm-row em.ok { background: color-mix(in srgb, var(--color-better) 14%, transparent); color: var(--color-better); }
+  .dm-row em.warn { background: color-mix(in srgb, #9A6A10 14%, transparent); color: #9A6A10; }
+  .dm-row em.over { background: color-mix(in srgb, var(--color-worse) 12%, transparent); color: var(--color-worse); }
+
+  .dm-drill { position: absolute; top: .9rem; right: 0; bottom: 0; width: 46%; background: var(--color-panel);
+              border-left: 1px solid var(--color-rule); border-top-left-radius: 10px; padding: .8rem .9rem;
+              box-shadow: -18px 0 34px -26px rgba(10, 14, 35, .5);
+              transform: translateX(105%); transition: transform .55s cubic-bezier(.22,1,.36,1); }
+  .dm-drill-h { font-family: var(--font-sans); font-weight: 600; font-size: .68rem; color: var(--color-ink); margin: 0 0 .55rem; }
+  .dm-mix { display: grid; grid-template-columns: 2.6rem 1fr auto; gap: .5rem; align-items: center; margin-top: .35rem;
+            font-family: var(--font-sans); font-size: .6rem; color: var(--color-body); }
+  .dm-mix i { font-style: normal; }
+  .dm-mix u { text-decoration: none; display: block; height: 5px; background: var(--color-panel-3); border-radius: 3px; overflow: hidden; }
+  .dm-mix u b { display: block; height: 100%; background: var(--color-accent); transform: scaleX(0); transform-origin: left; transition: transform .6s cubic-bezier(.22,1,.36,1) .3s; }
+  .dm-mix em { font-style: normal; font-family: var(--font-mono); font-size: .58rem; color: var(--color-ink); }
+  .dm-drill-tip { margin-top: .7rem; font-family: var(--font-sans); font-size: .58rem; line-height: 1.5; color: var(--color-muted); }
+
+  /* drop -> rows -> drill */
+  :is([data-state="drop"], [data-state="rows"], [data-state="drill"]) .dm-file { transform: translateX(3.6rem) scale(.92); opacity: 0; }
+  :is([data-state="drop"], [data-state="rows"], [data-state="drill"]) .dm-zone { border-color: var(--color-accent); border-style: solid; background: color-mix(in srgb, var(--color-accent) 6%, transparent); }
+  :is([data-state="drop"], [data-state="rows"], [data-state="drill"]) .dm-zone-idle { display: none; }
+  :is([data-state="drop"], [data-state="rows"], [data-state="drill"]) .dm-zone-got { display: inline; }
+  :is([data-state="drop"], [data-state="rows"], [data-state="drill"]) .dm-accent { opacity: 1; }
+  :is([data-state="rows"], [data-state="drill"]) .dm-kpi { opacity: 1; transform: none; }
+  :is([data-state="rows"], [data-state="drill"]) .dm-row { opacity: 1; transform: none; }
+  :is([data-state="rows"], [data-state="drill"]) .dm-row u b { transform: scaleX(var(--w)); }
+  [data-state="drill"] .dm-row-carla { background: color-mix(in srgb, var(--color-accent) 8%, transparent); }
+  [data-state="drill"] .dm-drill { transform: translateX(0); }
+  [data-state="drill"] .dm-mix u b { transform: scaleX(var(--w)); }
+</style>
+
+<script>
+  import { runDemo, type DemoStep } from '../lib/demo-cursor.ts';
+  for (const scene of document.querySelectorAll<HTMLElement>('[data-demo-actuals]')) {
+    const full = scene.dataset.full === '1';
+    const steps: DemoStep[] = [
+      { sel: '.dm-file', dur: 800, click: true, state: 'drop', wait: 800 },
+      { sel: '.dm-reprice', dur: 700, click: true, state: 'rows', wait: full ? 1400 : 2200 },
+    ];
+    if (full) steps.push({ sel: '.dm-row-carla', dur: 750, click: true, state: 'drill', wait: 2200 });
+    runDemo(scene, steps, full ? 'drill' : 'rows');
+  }
+</script>

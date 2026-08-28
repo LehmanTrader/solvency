@@ -59,7 +59,7 @@ const aa = sources.find((s) => s.benchmark === 'aa-coding-agent-index');
 const verified = aa?.last_verified;
 const fresh = verified ? (Date.now() - Date.parse(verified)) / 86_400_000 <= 30 : false;
 const names = models.slice().sort((a, b) => a.display_name.localeCompare(b.display_name));
-const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Tier: ${t} — measured rows unchanged.`;
+const tierHelp = (t: string) => `${TIER_HELP[t as keyof typeof TIER_HELP]} · Tier: ${t}; measured rows unchanged.`;
 ---
 <section id="calc" aria-labelledby="q-h" data-gated={CLERK_ENABLED ? '1' : '0'} data-gate-mode={GATE_MODE}>
   <h1 id="q-h" class="h-display max-w-[30ch] text-balance">Which model is cheapest for what you actually ship?</h1>

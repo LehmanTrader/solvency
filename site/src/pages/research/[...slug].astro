@@ -26,7 +26,7 @@ const shareText = `${d.title}: ${d.description}`;
 // keyed the same way the article's own eyebrow numbers the note.
 const ogCard = `/og/cards/note-${String(d.note).padStart(2, '0')}.png`;
 ---
-<Base title={`${d.title} — Solvency`} description={d.description} og={ogCard} type="article">
+<Base title={`${d.title}, Solvency`} description={d.description} og={ogCard} type="article">
   <article class="wrap pt-10">
     <header class="measure">
       <p class="eyebrow">Research note {String(d.note).padStart(2, '0')}</p>

@@ -1,0 +1,12 @@
+---
+/**
+ * DemoWindow: the browser-window frame every landing product demo sits in
+ * (2026-08-28 rebuild). Chrome only; the scene arrives via slot.
+ */
+interface Props { url?: string; }
+const { url = 'solvency.dev/app' } = Astro.props;
+---
+<div class="demo-window">
+  <div class="demo-titlebar"><i></i><i></i><i></i><span>{url}</span></div>
+  <slot />
+</div>

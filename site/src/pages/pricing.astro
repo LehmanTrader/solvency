@@ -27,7 +27,7 @@ const comparison = [
   {
     feature: 'Research notes, leaderboard, model pages, methodology and compare',
     free: 'Included',
-    pro: 'Included — public evidence stays free',
+    pro: 'Included, public evidence stays free',
   },
   {
     feature: 'Single-model calculator and copy-link',
@@ -46,7 +46,7 @@ const comparison = [
   },
   {
     feature: 'Saved plans and versioned account history',
-    free: 'Not in the demo — nothing is saved',
+    free: 'Not in the demo, nothing is saved',
     pro: proPlanned('Versioned account saves: 20 plans, 100 versions per plan', 'Planned: versioned account saves, 20 plans and 100 versions per plan'),
   },
   {
@@ -67,12 +67,12 @@ const comparison = [
   {
     feature: 'Local-hardware vs cloud TCO comparison',
     free: 'Reference rigs at their defaults',
-    pro: proPlanned('Included — compare your own rig cost per solved task against your Composer plan, with a break-even volume', 'Planned: compare your own rig cost per solved task against your Composer plan'),
+    pro: proPlanned('Included, compare your own rig cost per solved task against your Composer plan, with a break-even volume', 'Planned: compare your own rig cost per solved task against your Composer plan'),
   },
   {
     feature: 'Re-priced digest email, rate profiles, usage import, API',
     free: 'Not included',
-    pro: 'Roadmap — planned, never sold as an active feature',
+    pro: 'Roadmap: planned, never sold as an active feature',
   },
 ];
 
@@ -96,10 +96,10 @@ const launchDecisions = [
 ];
 ---
 <Base title={CHECKOUT_UI_ENABLED
-        ? 'Pricing — Solvency Pro, $19/month — Solvency'
-        : 'Pricing — Free now, Pro planned — Solvency'}
+        ? 'Pricing · Solvency Pro, $19/month · Solvency'
+        : 'Pricing, Free now, Pro planned, Solvency'}
       description={CHECKOUT_UI_ENABLED
-        ? 'Solvency public research and calculators stay free. Pro — $19/month or $190/year — unlocks the full Build Composer and funds independent benchmark runs.'
+        ? 'Solvency public research and calculators stay free. Pro, $19/month or $190/year, unlocks the full Build Composer and funds independent benchmark runs.'
         : 'Solvency public research and calculators stay free. Compare the open Build Composer preview with a planned Pro workspace; billing is not live.'}>
   <div class="wrap pt-8 md:pt-12">
     <p class="eyebrow">Pricing</p>
@@ -107,7 +107,7 @@ const launchDecisions = [
     <p class="lede mt-4 max-w-3xl">Research, methodology, verified model prices and the calculator are free to read and use. {CHECKOUT_UI_ENABLED
       ? 'Pro is for teams that repeatedly re-plan, review and monitor a multi-model build budget.'
       : 'Pro is being designed for teams that repeatedly re-plan, review and monitor a multi-model build budget.'}</p>
-    <p class="lede mt-2 max-w-3xl">Solvency prices everything — the calculator, the frontier chart and Build Composer — the same way: cost per completed task, verified against a source. Pro is that same math applied to the plans you save.</p>
+    <p class="lede mt-2 max-w-3xl">Solvency prices everything, the calculator, the frontier chart and Build Composer, the same way: cost per completed task, verified against a source. Pro is that same math applied to the plans you save.</p>
     <p class="lede mt-2 max-w-3xl">Solvency takes no money from model vendors; the paid tier is what funds its independent benchmark runs.</p>
 
     {!CHECKOUT_UI_ENABLED && (
@@ -142,7 +142,7 @@ const launchDecisions = [
           <ul class="mt-3 list-disc pl-5 text-sm leading-relaxed">
             <li>Read every research note, the leaderboard, model pages, methodology and compare</li>
             <li>Use the single-model calculator, and copy a link to any view</li>
-            <li>Try Build Composer as a 2-role demo — verified catalog list prices only, with the same live quote math as Pro</li>
+            <li>Try Build Composer as a 2-role demo, verified catalog list prices only, with the same live quote math as Pro</li>
           </ul>
           {!CHECKOUT_UI_ENABLED && (
             <p class="small mt-4">The Build Composer demo is the approved Free packaging; it is not enforced during the open preview. Today the preview still runs the full 24-role editor, custom rates, sensitivity, break-even, saves and exports for everyone, until launch.</p>
@@ -164,8 +164,8 @@ const launchDecisions = [
               <li>Local-hardware vs cloud: your own rig’s cost per solved task, with a break-even volume against your plan</li>
             </ul>
             <p class="small mt-4">Roadmap, not sold as active features: a re-priced digest email, reusable rate profiles, usage import and an API. Model-price and budget monitoring (alerts) is not sold until it exists.</p>
-            <p class="small mt-2">Also on the roadmap (2026-08-27), same rule — nothing is sold until it exists: <b>the AI spend audit</b> (import your OpenRouter / Claude Code / Codex usage exports for reconciliation against the verified catalog, waste analysis, and a measured what-if on any other stack), <b>saved-stack re-pricing alerts</b>, <b>the data API</b> (freshness SLA, commercial licensing), <b>custom benchmark runs</b> on your own task set with auditable journals, <b>verified harness-arena badges</b>, and team workspaces.</p>
-            <p class="small mt-2">The recurring hook is re-planning, review and monitoring—not access to public evidence.</p>
+            <p class="small mt-2">Also on the roadmap (2026-08-27), same rule, nothing is sold until it exists: <b>the AI spend audit</b> (import your OpenRouter / Claude Code / Codex usage exports for reconciliation against the verified catalog, waste analysis, and a measured what-if on any other stack), <b>saved-stack re-pricing alerts</b>, <b>the data API</b> (freshness SLA, commercial licensing), <b>custom benchmark runs</b> on your own task set with auditable journals, <b>verified harness-arena badges</b>, and team workspaces.</p>
+            <p class="small mt-2">The recurring hook is re-planning, review and monitoring, not access to public evidence.</p>
             <div class="mt-5 border-t border-[var(--color-rule)] pt-4">
               <h4 class="text-sm font-semibold text-[var(--color-ink)]">Would that recurring workflow be worth $19/month?</h4>
               <button type="button" class="btn mt-3" id="pricing-pro-interest-button" aria-describedby="pricing-pro-interest-help pricing-pro-interest-status" disabled>I’d consider Pro at $19</button>
@@ -266,7 +266,7 @@ const launchDecisions = [
           button.setAttribute('aria-busy', 'true');
           const submitted = await recordProductIntentSignal('pro_price_interest');
           status.textContent = submitted
-            ? 'Thanks—your account-based research signal was accepted. No upgrade exists and nothing was charged.'
+            ? 'Thanks, your account-based research signal was accepted. No upgrade exists and nothing was charged.'
             : 'We could not confirm your interest signal. You can retry safely; account-based signals are deduplicated. No upgrade exists and nothing was charged.';
           button.removeAttribute('aria-busy');
           const authReady = latestAuthState.status === 'signed-in' || latestAuthState.status === 'signed-out';
