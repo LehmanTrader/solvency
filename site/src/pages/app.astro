@@ -1,11 +1,15 @@
 ---
 /**
- * /app — the Solvency console (enterprise pivot, 2026-08-27 night).
- * The product behind its own login: Overview, Actuals (working — usage
- * export in, seat economics out, computed entirely in the browser; no
- * usage data ever leaves the machine), Budgets (the Composer engine),
- * Hardware, and the cross-functional previews (Operations, Marketing,
- * Sales) being built with design partners. Marketing site stays at /.
+ * /app: the Solvency console, full build (2026-08-28, operator: "flesh out
+ * the console fully first... make the mvp as feature rich as possible").
+ * Ten sections behind one login: Overview (KPIs, spend chart, team bars,
+ * alert feed), Actuals (import, filters, sortable table, seat drill-down),
+ * Plans (Composer entry), Hardware, Teams & seats (seat-to-team mapping),
+ * Budgets & alerts (per-team budgets, live threshold status), Policies
+ * (preview), Reports (client-generated seat report download), Integrations,
+ * Settings. Everything computes in the browser from the loaded usage
+ * (seats.ts) and persists via console-state.ts; the sample workspace
+ * populates every surface with one click so the whole product is testable.
  */
 import AppShell from '../layouts/AppShell.astro';
 import Calculator from '../components/Calculator.astro';
@@ -21,35 +25,86 @@ const catalog = models.map((m) => ({
 }));
 const verified = models.reduce((a, m) => (m.last_verified > a ? m.last_verified : a), '');
 
-// Synthetic sample team built from real catalog ids so every row prices.
 const pick = (frag: string) => catalog.find((m) => m.model_id.includes(frag))?.model_id ?? catalog[0].model_id;
 const M1 = pick('opus'), M2 = pick('sonnet'), M3 = pick('haiku');
 const SAMPLE_CSV = [
   'seat,date,model,input_tokens,output_tokens,cache_read_tokens,cache_write_tokens',
   `ana,2026-08-04,${M1},1200000,9800000,310000000,26000000`,
+  `ana,2026-08-12,${M2},260000,1400000,52000000,6000000`,
   `ana,2026-08-18,${M2},400000,2100000,88000000,9000000`,
   `ben,2026-08-05,${M1},300000,2400000,96000000,8000000`,
+  `ben,2026-08-14,${M1},180000,1500000,61000000,5200000`,
   `ben,2026-08-19,${M2},120000,700000,21000000,2500000`,
   `carla,2026-08-06,${M2},90000,510000,15000000,1800000`,
+  `carla,2026-08-21,${M2},110000,650000,19000000,2200000`,
   `dev,2026-08-07,${M2},20000,90000,2100000,400000`,
+  `dev,2026-08-25,${M3},30000,140000,3400000,600000`,
   `eli,2026-08-08,${M3},8000,31000,600000,120000`,
   `fern,2026-08-11,${M1},2000,9000,150000,40000`,
 ].join('\n');
+const SAMPLE_TEAMS = { ana: 'engineering', ben: 'engineering', carla: 'marketing', dev: 'engineering', eli: 'sales', fern: 'operations' };
+// Calibrated to the sample team's real repriced spend (engineering ≈ $895,
+// marketing ≈ $27) so the demo shows one overrun and one near-threshold.
+const SAMPLE_BUDGETS = { engineering: 800, marketing: 30, sales: 40, operations: 100 };
 
-const SECTIONS = [
-  ['overview', 'Overview'], ['actuals', 'Actuals'], ['budgets', 'Budgets'],
-  ['hardware', 'Hardware'], ['ops', 'Operations'], ['marketing', 'Marketing'], ['sales', 'Sales'],
-] as const;
+const IC = {
+  home: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>',
+  rows: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M3 14h18"/></svg>',
+  calc: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 12h2M8 16h2M14 12h2M14 16h2"/></svg>',
+  chip: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg>',
+  users: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.4"/><path d="M2.5 20c.8-3.4 3.4-5 6.5-5s5.7 1.6 6.5 5"/><circle cx="17" cy="9" r="2.6"/><path d="M16 15.2c2.6.2 4.6 1.6 5.3 4.3"/></svg>',
+  gauge: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 14a8 8 0 1 1 16 0"/><path d="M12 14l4-4"/><path d="M2 20h20"/></svg>',
+  shield: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l8 3v6c0 4.5-3.2 7.6-8 9-4.8-1.4-8-4.5-8-9V6l8-3z"/></svg>',
+  doc: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5M10 13h6M10 17h6"/></svg>',
+  plug: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 7V3M15 7V3M7 7h10v4a5 5 0 0 1-10 0V7z"/><path d="M12 16v5"/></svg>',
+  gear: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v3M12 18.2v3M2.8 12h3M18.2 12h3M5.5 5.5l2.1 2.1M16.4 16.4l2.1 2.1M18.5 5.5l-2.1 2.1M7.6 16.4l-2.1 2.1"/></svg>',
+};
+
+const NAV_GROUPS: Array<{ label: string; items: Array<{ id: string; name: string; icon: string; tag?: string }> }> = [
+  { label: 'Workspace', items: [
+    { id: 'overview', name: 'Overview', icon: IC.home },
+    { id: 'actuals', name: 'Actuals', icon: IC.rows },
+    { id: 'plans', name: 'Plans', icon: IC.calc },
+    { id: 'hardware', name: 'Hardware', icon: IC.chip },
+    { id: 'reports', name: 'Reports', icon: IC.doc },
+  ]},
+  { label: 'Govern', items: [
+    { id: 'teams', name: 'Teams & seats', icon: IC.users },
+    { id: 'budgets', name: 'Budgets & alerts', icon: IC.gauge },
+    { id: 'policies', name: 'Policies', icon: IC.shield, tag: 'preview' },
+  ]},
+  { label: 'Manage', items: [
+    { id: 'integrations', name: 'Integrations', icon: IC.plug },
+    { id: 'settings', name: 'Settings', icon: IC.gear },
+  ]},
+];
+
+const INTEGRATIONS = [
+  { id: 'openrouter-csv', name: 'OpenRouter activity export', desc: 'Drop the CSV from your OpenRouter activity page straight into Actuals.', action: 'upload' },
+  { id: 'openai-csv', name: 'OpenAI platform usage export', desc: 'The platform usage CSV parses directly; seats come from API key names.', action: 'upload' },
+  { id: 'claude-code-cli', name: 'Claude Code transcripts', desc: 'One command turns local session transcripts into the seats CSV.', action: 'cli' },
+  { id: 'anthropic-admin', name: 'Anthropic admin usage', desc: 'Org-wide seat usage synced from the Anthropic admin console.', action: 'planned' },
+  { id: 'slack-alerts', name: 'Slack alerts', desc: 'Budget threshold and idle-seat alerts delivered to a channel.', action: 'planned' },
+  { id: 'hubspot', name: 'HubSpot deal join', desc: 'Attribute AI spend to deals for real CAC math.', action: 'planned' },
+];
 ---
 <AppShell title="Console · Solvency">
-  <nav slot="sidebar" aria-label="Console" class="mt-4">
-    <ul class="space-y-1">
-      {SECTIONS.map(([id, name]) => (
-        <li><a href={`#${id}`} class="side-a" data-section={id}>{name}</a></li>
-      ))}
-    </ul>
-    <p class="small mt-6" style="font-size:.68rem"><a class="hover:underline" href="/research">Evidence layer →</a></p>
+  <nav slot="sidebar" aria-label="Console">
+    {NAV_GROUPS.map((g) => (
+      <>
+        <p class="side-label">{g.label}</p>
+        {g.items.map((it) => (
+          <a href={`#${it.id}`} class="side-a" data-section={it.id}>
+            <Fragment set:html={it.icon} />
+            <span>{it.name}</span>
+            {it.tag && <span class="side-tag">{it.tag}</span>}
+          </a>
+        ))}
+      </>
+    ))}
   </nav>
+
+  <span slot="topbar" class="topbar-title" id="topbar-title">Overview</span>
 
   {CLERK_ENABLED && (
     <div id="app-gate" class="card card-pad max-w-md mx-auto mt-16" hidden>
@@ -65,224 +120,609 @@ const SECTIONS = [
   )}
 
   <div id="app-console" hidden>
-    <section id="sec-overview" data-panel="overview">
-      <p class="eyebrow">Console · Overview</p>
-      <h1 class="h-page mt-2">Your AI spend, priced in outcomes</h1>
-      <div class="mt-6 grid gap-4 sm:grid-cols-3">
-        <div class="card card-pad"><p class="label">Verified catalog</p><p class="kpi-n" id="ov-models">{catalog.length}</p><p class="small">models with verified metered rates · prices verified {verified}</p></div>
-        <div class="card card-pad"><p class="label">Loaded usage</p><p class="kpi-n" id="ov-rows">—</p><p class="small" id="ov-rows-note">No usage loaded yet. Bring an export into Actuals.</p></div>
-        <div class="card card-pad"><p class="label">Metered-equivalent</p><p class="kpi-n" id="ov-usd">—</p><p class="small" id="ov-usd-note">Loads with your usage data.</p></div>
+
+    <section data-panel="overview" data-title="Overview">
+      <div id="ov-empty" class="card card-pad text-center" style="padding:3rem 1.5rem" hidden>
+        <h1 class="h-card">Welcome to your console</h1>
+        <p class="small mt-2 max-w-md mx-auto">Load a usage export in Actuals, or start with the sample workspace: eight seats, four teams, budgets and alerts already set.</p>
+        <div class="mt-5 flex justify-center gap-3">
+          <button type="button" id="ov-sample" class="btn btn-accent">Load the sample workspace</button>
+          <a class="btn" href="#actuals">Bring my own export</a>
+        </div>
       </div>
-      <div class="mt-6 card card-pad">
-        <p class="label">Start here</p>
-        <p class="small mt-2">1 · Open <a class="link" href="#actuals">Actuals</a> and drop in a usage export (or load the sample team). 2 · Set your seat fee. 3 · Every seat gets a keep / review / move verdict, repriced at verified metered rates. Your file is parsed in this tab; usage data never leaves your machine.</p>
+      <div id="ov-full" hidden>
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div class="acard"><p class="alabel">Metered-equivalent</p><p class="anum" id="ov-usd">$0</p><p class="asub" id="ov-usd-sub">this period</p></div>
+          <div class="acard"><p class="alabel">Seat fees</p><p class="anum" id="ov-fees">$0</p><p class="asub" id="ov-fees-sub">0 seats</p></div>
+          <div class="acard"><p class="alabel">Net vs API</p><p class="anum" id="ov-net">$0</p><p class="asub">positive means seats are the cheap path</p></div>
+          <div class="acard"><p class="alabel">Open alerts</p><p class="anum" id="ov-alerts">0</p><p class="asub"><a class="link" href="#budgets">manage budgets →</a></p></div>
+        </div>
+        <div class="mt-4 grid gap-4 lg:grid-cols-[1.6fr_1fr]">
+          <div class="acard">
+            <div class="ahead"><p class="alabel">Spend over time</p><span class="asub" id="ov-range"></span></div>
+            <svg id="ov-chart" viewBox="0 0 560 150" preserveAspectRatio="none" style="width:100%;height:150px;display:block" aria-label="Daily metered-equivalent spend">
+              <path id="ov-chart-area" fill="url(#ovg)" d=""></path>
+              <path id="ov-chart-line" fill="none" stroke="var(--color-accent)" stroke-width="2" d=""></path>
+              <defs><linearGradient id="ovg" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="var(--color-accent)" stop-opacity=".22"/>
+                <stop offset="1" stop-color="var(--color-accent)" stop-opacity="0"/>
+              </linearGradient></defs>
+            </svg>
+          </div>
+          <div class="acard">
+            <div class="ahead"><p class="alabel">Spend by team</p><a class="asub link" href="#teams">assign seats →</a></div>
+            <div id="ov-teams" class="mt-1"></div>
+          </div>
+        </div>
+        <div class="mt-4 acard">
+          <div class="ahead"><p class="alabel">Alert feed</p><span class="asub">computed from your data, prices verified {verified}</span></div>
+          <div id="ov-feed"></div>
+        </div>
       </div>
     </section>
 
-    <section id="sec-actuals" data-panel="actuals" hidden>
-      <p class="eyebrow">Console · Actuals</p>
-      <h1 class="h-page mt-2">Seat economics from your real usage</h1>
-      <div class="mt-6 card card-pad">
-        <div class="flex flex-wrap gap-3 items-end">
-          <label class="block">
-            <span class="label">Usage export (CSV)</span>
-            <input type="file" id="ac-file" accept=".csv,text/csv" class="block mt-2 text-sm" />
+    <section data-panel="actuals" data-title="Actuals" hidden>
+      <div class="acard">
+        <div class="flex flex-wrap gap-3 items-center">
+          <div id="ac-drop" class="dropzone">
+            <input type="file" id="ac-file" accept=".csv,text/csv" aria-label="Usage export CSV" />
+            <span id="ac-drop-label">Drop a usage export here, or click to browse</span>
+          </div>
+          <label class="block shrink-0">
+            <span class="alabel">Seat fee / month</span>
+            <input type="number" id="ac-fee" value="200" min="0" step="10" class="ainput" style="width:6.5rem" />
           </label>
-          <label class="block">
-            <span class="label">Seat fee / month ($)</span>
-            <input type="number" id="ac-fee" value="200" min="0" step="10" class="block mt-2 text-sm px-2 py-1.5 rounded border" style="border-color:var(--color-control-border);background:var(--color-panel);width:7rem" />
-          </label>
-          <button type="button" id="ac-sample" class="btn">Load sample team</button>
+          <button type="button" id="ac-sample" class="btn shrink-0">Load sample</button>
         </div>
-        <p class="small mt-3">Accepted today: the generic seats CSV, OpenRouter activity exports, OpenAI platform usage exports, and Claude Code transcripts via the <code>import-claude-code</code> CLI. Computed in your browser; nothing uploads.</p>
-        <p class="small mt-1" id="ac-status" role="status" aria-live="polite"></p>
+        <p class="asub mt-2">OpenRouter, OpenAI platform, or the generic seats CSV. Claude Code transcripts convert via the CLI in <a class="link" href="#integrations">Integrations</a>. Parsed in your browser; usage never uploads.</p>
+        <p class="asub mt-1" id="ac-status" role="status" aria-live="polite"></p>
       </div>
-      <div id="ac-out" class="mt-6" hidden>
-        <div class="grid gap-4 sm:grid-cols-3">
-          <div class="card card-pad"><p class="label">Seat fees</p><p class="kpi-n" id="ac-k-fees">—</p><p class="small">per month at the fee above</p></div>
-          <div class="card card-pad"><p class="label">Metered-equivalent work</p><p class="kpi-n" id="ac-k-work">—</p><p class="small">usage repriced at verified rates</p></div>
-          <div class="card card-pad"><p class="label">Net vs API</p><p class="kpi-n" id="ac-k-net">—</p><p class="small">positive = the seats are the cheap path</p></div>
+
+      <div id="ac-out" class="mt-4" hidden>
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="chiprow" role="tablist" aria-label="Verdict filter">
+            <button class="chip on" data-filter="all">All</button>
+            <button class="chip" data-filter="keep">Keep</button>
+            <button class="chip" data-filter="review">Review</button>
+            <button class="chip" data-filter="move">Move</button>
+          </div>
+          <input type="search" id="ac-search" class="ainput" placeholder="Search seats" style="margin-left:auto;width:11rem" />
         </div>
-        <div class="card mt-4" style="overflow-x:auto">
-          <table class="w-full text-sm" id="ac-table">
+        <div class="acard mt-3" style="padding:0;overflow-x:auto">
+          <table class="atable" id="ac-table">
             <thead><tr>
-              <th class="th">Seat</th><th class="th num">Calls</th><th class="th num">Metered-equiv.</th><th class="th num">Net</th><th class="th">Top models</th><th class="th">Verdict</th>
+              <th>Seat</th><th>Team</th><th class="num sortable" data-sort="calls">Calls</th>
+              <th class="num sortable" data-sort="usd">Metered-equiv.</th><th class="num sortable" data-sort="net">Net</th>
+              <th>Top models</th><th>Verdict</th>
             </tr></thead>
             <tbody></tbody>
           </table>
         </div>
-        <p class="small mt-3" id="ac-unknown" hidden></p>
-        <p class="small mt-3" style="color:var(--color-muted)">Method: subscription_usage_repriced. Cache reads at the cached-input rate, cache writes at the uncached input rate, unknown models excluded and listed, never guessed. Flat fees never enter per-task math.</p>
+        <p class="asub mt-2" id="ac-unknown" hidden></p>
+        <p class="asub mt-2">Method: subscription_usage_repriced. Cache reads at the cached-input rate, cache writes at the uncached input rate, unknown models excluded and listed, never guessed.</p>
+      </div>
+
+      <aside id="ac-drawer" class="drawer" hidden>
+        <div class="ahead"><p class="alabel" id="dr-title">Seat</p><button type="button" id="dr-close" class="btn btn-quiet" aria-label="Close">✕</button></div>
+        <div id="dr-kpis" class="grid gap-3 grid-cols-2 mt-1"></div>
+        <p class="alabel mt-4">Model mix</p>
+        <div id="dr-mix" class="mt-1"></div>
+        <p class="asub mt-4" id="dr-tip"></p>
+      </aside>
+    </section>
+
+    <section data-panel="plans" data-title="Plans" hidden>
+      <div class="acard">
+        <div class="ahead">
+          <p class="alabel">Build plans</p>
+          <a class="btn btn-accent" href="/build-planner">+ New plan in the Composer</a>
+        </div>
+        <p class="asub">The Composer prices whole stacks (orchestrator, workers, harness, access path) from measured pass rates and saves plans to this account.</p>
+      </div>
+      <div class="acard mt-4">
+        <div class="ahead"><p class="alabel">Ranked cost per solved task</p><a class="asub link" href="/calculator">open full page →</a></div>
+        <div class="mt-2"><Calculator /></div>
       </div>
     </section>
 
-    <section id="sec-budgets" data-panel="budgets" hidden>
-      <p class="eyebrow">Console · Budgets</p>
-      <h1 class="h-page mt-2">Budget a stack before you commit</h1>
-      <p class="small mt-3 max-w-2xl">The full Composer, with roles, models, harness and workload priced from measured pass rates, lives at <a class="link" href="/build-planner">/build-planner</a> and saves plans to this account. The ranked cost-per-solved-task calculator is below.</p>
-      <div class="mt-6"><Calculator /></div>
-    </section>
-
-    <section id="sec-hardware" data-panel="hardware" hidden>
-      <p class="eyebrow">Console · Hardware</p>
-      <h1 class="h-page mt-2">Local rigs vs cloud, priced per solved task</h1>
-      <div class="mt-6 card card-pad max-w-2xl">
-        <p class="small">The Local Rig Composer prices Apple Silicon and used-GPU builds against cloud rates: capex vs opex with power costs, fail closed on unprofiled part mixes.</p>
+    <section data-panel="hardware" data-title="Hardware" hidden>
+      <div class="acard max-w-2xl">
+        <p class="alabel">Local rig vs cloud</p>
+        <p class="asub mt-1">The Local Rig Composer prices Apple Silicon and used-GPU builds against cloud rates: capex vs opex with power costs, fail closed on unprofiled part mixes.</p>
         <a class="btn btn-accent mt-4" href="/local-hardware">Open the Local Rig Composer →</a>
       </div>
     </section>
 
-    {[
-      ['ops', 'Operations', 'Which teams and tools spend what, against which budget', [
-        'Spend by team, tool and model with month-over-month drift',
-        'Budget thresholds with alerts before the invoice lands',
-        'Idle-seat and duplicate-tool flags across the org',
-        'Vendor renewal briefs: what you used vs what you pay',
-      ]],
-      ['marketing', 'Marketing', 'Cost per produced asset, not per token', [
-        'Cost per drafted post, image, video and campaign variant',
-        'Content-pipeline budgets: brief → draft → review, priced per stage',
-        'Model right-sizing for creative work vs analysis work',
-        'Agency/AI spend comparison with measured quality gates',
-      ]],
-      ['sales', 'Sales', 'What an AI-assisted pipeline actually costs', [
-        'Cost per enriched lead, per drafted outreach, per qualified meeting',
-        'Seat economics for SDR copilots vs shared API pools',
-        'Per-deal AI cost attribution for CAC math',
-        'Territory-level spend budgets with drift alerts',
-      ]],
-    ].map(([id, name, sub, items]) => (
-      <section id={`sec-${id}`} data-panel={id} hidden>
-        <p class="eyebrow">Console · {name}</p>
-        <h1 class="h-page mt-2">{sub}</h1>
-        <div class="mt-6 card card-pad max-w-2xl">
-          <p class="label">Design-partner preview</p>
-          <ul class="mt-3 space-y-2 text-sm">
-            {(items as string[]).map((t) => <li class="flex gap-2"><span style="color:var(--color-accent)">→</span><span>{t}</span></li>)}
-          </ul>
-          <p class="small mt-4">These views are being built with design partners now, using the same repricing engine under Actuals, aggregated for {String(name).toLowerCase()}. <a class="link" href="mailto:robertdhanda@gmail.com?subject=Solvency%20design%20partner">Get on the list</a>.</p>
+    <section data-panel="reports" data-title="Reports" hidden>
+      <div class="grid gap-4 sm:grid-cols-2 max-w-3xl">
+        <div class="acard">
+          <p class="alabel">Seat economics report</p>
+          <p class="asub mt-1">A standalone file of the current Actuals view: fees vs metered-equivalent, verdicts per seat. Built in your browser; share it with whoever owns the budget.</p>
+          <button type="button" id="rp-seats" class="btn btn-accent mt-4" disabled>Download report</button>
+          <p class="asub mt-2" id="rp-note">Load usage data first.</p>
         </div>
-      </section>
-    ))}
+        <div class="acard">
+          <p class="alabel">Sample report</p>
+          <p class="asub mt-1">Real generator output on the synthetic eight-seat team, the same file design partners receive.</p>
+          <a class="btn mt-4" href="/samples/seat-report-sample.html" target="_blank" rel="noopener">View sample</a>
+        </div>
+      </div>
+    </section>
+
+    <section data-panel="teams" data-title="Teams & seats" hidden>
+      <div class="acard">
+        <div class="ahead"><p class="alabel">Seat assignments</p><span class="asub">rollups feed Overview and Budgets</span></div>
+        <p class="asub" id="tm-empty">Load usage data in Actuals to see seats.</p>
+        <div style="overflow-x:auto"><table class="atable" id="tm-table" hidden>
+          <thead><tr><th>Seat</th><th class="num">Metered-equiv.</th><th>Team</th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+      </div>
+      <div class="acard mt-4">
+        <div class="ahead"><p class="alabel">Team rollup</p></div>
+        <div id="tm-rollup"></div>
+      </div>
+    </section>
+
+    <section data-panel="budgets" data-title="Budgets & alerts" hidden>
+      <div class="acard">
+        <div class="ahead">
+          <p class="alabel">Monthly budgets by team</p>
+          <label class="asub" style="display:flex;align-items:center;gap:.45rem">
+            <input type="checkbox" id="bg-armed" /> alerts armed
+          </label>
+        </div>
+        <p class="asub" id="bg-empty">Assign seats to teams first, then set budgets here.</p>
+        <div id="bg-rows"></div>
+        <p class="asub mt-3">Alert bands: 80% of budget raises a warning, 100% raises an overrun. Email and Slack delivery are in design partnership; the feed on Overview is live now.</p>
+      </div>
+    </section>
+
+    <section data-panel="policies" data-title="Policies" hidden>
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 max-w-4xl">
+        <div class="acard"><p class="alabel">Model allowlist</p><p class="asub mt-1">Only approved models charge to team budgets; anything else lands in review.</p><span class="ptag">Design partner preview</span></div>
+        <div class="acard"><p class="alabel">Tier ceilings</p><p class="asub mt-1">Cap frontier-tier usage per team; route light tasks to value-tier models.</p><span class="ptag">Design partner preview</span></div>
+        <div class="acard"><p class="alabel">Seat class rules</p><p class="asub mt-1">Auto-flag seats whose usage fits a cheaper class two months running.</p><span class="ptag">Design partner preview</span></div>
+      </div>
+      <p class="asub mt-4 max-w-2xl">Policies execute where the spend happens, so enforcement ships with the first design partners rather than ahead of them. <a class="link" href="mailto:robertdhanda@gmail.com?subject=Solvency%20design%20partner">Get on the list</a>.</p>
+    </section>
+
+    <section data-panel="integrations" data-title="Integrations" hidden>
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {INTEGRATIONS.map((it) => (
+          <div class="acard" data-integration={it.id}>
+            <div class="ahead"><p class="alabel">{it.name}</p><span class="itag" data-status></span></div>
+            <p class="asub">{it.desc}</p>
+            {it.action === 'upload' && <a class="btn mt-3" href="#actuals">Upload in Actuals</a>}
+            {it.action === 'cli' && <code class="clibox mt-3">node tools/seats-report/import-claude-code.mjs --seat you=~/.claude/projects --out usage.csv</code>}
+            {it.action === 'planned' && <a class="btn mt-3" href={`mailto:robertdhanda@gmail.com?subject=Solvency%20integration%3A%20${encodeURIComponent(it.name)}`}>Request early access</a>}
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <section data-panel="settings" data-title="Settings" hidden>
+      <div class="acard max-w-xl">
+        <p class="alabel">Workspace</p>
+        <label class="block mt-3"><span class="asub">Workspace name</span>
+          <input type="text" id="st-name" class="ainput mt-1" style="width:100%" maxlength="40" />
+        </label>
+        <label class="block mt-3"><span class="asub">Default seat fee per month ($)</span>
+          <input type="number" id="st-fee" class="ainput mt-1" min="0" step="10" style="width:8rem" />
+        </label>
+        <p class="asub mt-3">Plan: <b id="st-plan">Design partner</b> · free while the suite is in design partnership.</p>
+      </div>
+      <div class="acard max-w-xl mt-4">
+        <p class="alabel">Data</p>
+        <p class="asub mt-1">Everything in this console lives in this browser. Nothing has been uploaded anywhere.</p>
+        <button type="button" id="st-reset" class="btn mt-3" style="color:var(--color-worse);border-color:var(--color-worse)">Clear workspace data</button>
+      </div>
+    </section>
   </div>
 
   <script type="application/json" id="catalog-json" set:html={JSON.stringify(catalog)} />
   <script type="text/plain" id="sample-csv" set:html={SAMPLE_CSV} />
+  <script type="application/json" id="sample-extras" set:html={JSON.stringify({ teams: SAMPLE_TEAMS, budgets: SAMPLE_BUDGETS })} />
 
-  <style>
-    .side-a { display: block; padding: .42rem .6rem; border-radius: 6px; font-size: .82rem; color: var(--color-body); }
-    .side-a:hover { background: var(--color-panel-3); color: var(--color-ink); }
-    .side-a[aria-current="true"] { background: var(--color-panel); color: var(--color-ink); font-weight: 600; border: 1px solid var(--color-rule); }
-    .kpi-n { font-family: var(--font-mono); font-size: 1.5rem; color: var(--color-ink); margin-top: .35rem; font-variant-numeric: tabular-nums; }
-    .th { text-align: left; font-family: var(--font-mono); font-size: .6rem; letter-spacing: .1em; text-transform: uppercase;
-          color: var(--color-muted); padding: .55rem .9rem; border-bottom: 1px solid var(--color-rule); background: var(--color-panel-2); }
-    .th.num, td.num { text-align: right; font-family: var(--font-mono); white-space: nowrap; font-variant-numeric: tabular-nums; }
-    #ac-table td { padding: .5rem .9rem; border-bottom: 1px solid var(--color-rule); }
-    #ac-table tr:last-child td { border-bottom: none; }
-    .pill { display: inline-block; font-family: var(--font-mono); font-size: .62rem; padding: .14rem .5rem; border-radius: 99px; white-space: nowrap; }
+  <!-- is:global: most of the console's DOM is injected by the runtime
+       (table rows, team bars, feed items), and Astro's scoped selectors
+       cannot reach dynamically-created elements. -->
+  <style is:global>
+    .acard { background: var(--color-panel); border: 1px solid var(--color-rule); border-radius: 12px; padding: 1rem 1.15rem; }
+    .ahead { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: .5rem; }
+    .alabel { font-family: var(--font-sans); font-size: .68rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--color-muted); }
+    .anum { font-family: var(--font-mono); font-size: 1.45rem; color: var(--color-ink); margin-top: .3rem; font-variant-numeric: tabular-nums; }
+    .asub { font-family: var(--font-sans); font-size: .76rem; color: var(--color-muted); line-height: 1.55; }
+    .ainput { font-family: var(--font-sans); font-size: .82rem; padding: .42rem .6rem; border-radius: 8px;
+              border: 1px solid var(--color-control-border); background: var(--color-panel); color: var(--color-ink); display: block; }
+    .dropzone { position: relative; flex: 1; min-width: 14rem; border: 1.5px dashed var(--color-control-border);
+                border-radius: 10px; padding: .8rem 1rem; font-family: var(--font-sans); font-size: .8rem;
+                color: var(--color-muted); transition: border-color .15s, background .15s; }
+    .dropzone.over { border-color: var(--color-accent); background: color-mix(in srgb, var(--color-accent) 6%, transparent); }
+    .dropzone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .chiprow { display: inline-flex; gap: .35rem; }
+    .chip { font-family: var(--font-sans); font-size: .74rem; padding: .32rem .75rem; border-radius: 99px;
+            border: 1px solid var(--color-rule); background: var(--color-panel); color: var(--color-body); cursor: pointer; }
+    .chip.on { background: var(--color-ink); border-color: var(--color-ink); color: var(--color-bg); font-weight: 600; }
+    .atable { width: 100%; border-collapse: collapse; font-family: var(--font-sans); font-size: .8rem; }
+    .atable th { text-align: left; font-size: .62rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+                 color: var(--color-muted); padding: .6rem .9rem; border-bottom: 1px solid var(--color-rule); background: var(--color-panel-2); }
+    .atable th.num, .atable td.num { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .atable th.sortable { cursor: pointer; user-select: none; }
+    .atable th.sortable:hover { color: var(--color-ink); }
+    .atable td { padding: .55rem .9rem; border-bottom: 1px solid var(--color-rule); color: var(--color-ink); }
+    .atable tbody tr:last-child td { border-bottom: none; }
+    .atable tbody tr { cursor: pointer; }
+    .atable tbody tr:hover { background: var(--color-panel-2); }
+    .pill { display: inline-block; font-family: var(--font-sans); font-size: .64rem; font-weight: 600; padding: .16rem .55rem; border-radius: 99px; white-space: nowrap; }
     .pill.ok { background: color-mix(in srgb, var(--color-better) 14%, transparent); color: var(--color-better); }
     .pill.warn { background: color-mix(in srgb, #9A6A10 14%, transparent); color: #9A6A10; }
     .pill.over { background: color-mix(in srgb, var(--color-worse) 12%, transparent); color: var(--color-worse); }
+    .teambar { display: grid; grid-template-columns: 7.2rem 1fr auto; gap: .6rem; align-items: center; padding: .34rem 0;
+               font-family: var(--font-sans); font-size: .78rem; color: var(--color-ink); }
+    .teambar u { text-decoration: none; height: 7px; background: var(--color-panel-3); border-radius: 4px; overflow: hidden; display: block; }
+    .teambar u b { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--color-accent), var(--color-accent-dim)); }
+    .teambar em { font-style: normal; font-family: var(--font-mono); font-size: .72rem; font-variant-numeric: tabular-nums; }
+    .feeditem { display: flex; gap: .55rem; align-items: flex-start; padding: .5rem .2rem; border-bottom: 1px solid var(--color-rule);
+                font-family: var(--font-sans); font-size: .8rem; color: var(--color-body); }
+    .feeditem:last-child { border-bottom: none; }
+    .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(24rem, 92vw); z-index: 50; background: var(--color-panel);
+              border-left: 1px solid var(--color-rule); box-shadow: -24px 0 48px -24px rgba(10, 14, 35, .4); padding: 1.1rem 1.2rem; overflow-y: auto; }
+    .mixrow { display: grid; grid-template-columns: 6.5rem 1fr auto; gap: .6rem; align-items: center; padding: .3rem 0;
+              font-family: var(--font-sans); font-size: .76rem; color: var(--color-ink); }
+    .mixrow u { text-decoration: none; height: 6px; background: var(--color-panel-3); border-radius: 3px; overflow: hidden; display: block; }
+    .mixrow u b { display: block; height: 100%; background: var(--color-accent); border-radius: 3px; }
+    .mixrow em { font-style: normal; font-family: var(--font-mono); font-size: .7rem; }
+    .bgrow { display: grid; grid-template-columns: 7rem 7rem 1fr auto; gap: .8rem; align-items: center; padding: .5rem 0;
+             border-bottom: 1px solid var(--color-rule); font-family: var(--font-sans); font-size: .8rem; color: var(--color-ink); }
+    .bgrow:last-child { border-bottom: none; }
+    .bgrow u { text-decoration: none; position: relative; height: 8px; background: var(--color-panel-3); border-radius: 4px; display: block; }
+    .bgrow u b { position: absolute; inset: 0; border-radius: 4px; background: linear-gradient(90deg, var(--color-accent), var(--color-accent-dim)); transform-origin: left; }
+    .bgrow u i { position: absolute; top: -3px; bottom: -3px; left: 80%; width: 2px; background: var(--color-worse); border-radius: 1px; }
+    .ptag { display: inline-block; margin-top: .8rem; font-family: var(--font-sans); font-size: .62rem; color: var(--color-muted);
+            border: 1px solid var(--color-rule); border-radius: 99px; padding: .16rem .55rem; }
+    .itag { font-family: var(--font-sans); font-size: .62rem; font-weight: 600; border-radius: 99px; padding: .16rem .55rem; }
+    .itag.available { background: color-mix(in srgb, var(--color-better) 12%, transparent); color: var(--color-better); }
+    .itag.planned { background: var(--color-panel-2); color: var(--color-muted); }
+    .clibox { display: block; font-family: var(--font-mono); font-size: .64rem; line-height: 1.5; background: var(--color-panel-2);
+              border: 1px solid var(--color-rule); border-radius: 8px; padding: .5rem .6rem; word-break: break-all; color: var(--color-ink); }
   </style>
 
   <script>
     import { observeClerkAuth, openSignIn, openSignUp, mountUserButtonThemed } from '../lib/clerk-client.ts';
-    import { parseUsageCsv, buildSeatReports, verdictFor } from '../lib/seats.ts';
-    import type { UsageRow } from '../lib/seats.ts';
+    import { parseUsageCsv, buildSeatReports, verdictFor, findModel, priceUsage } from '../lib/seats.ts';
+    import type { SeatReport, UsageRow } from '../lib/seats.ts';
+    import { loadState, saveState, resetState, computeTeamSpend, budgetStatus, buildAlerts, dailySeries, areaPath, teamOf } from '../lib/console-state.ts';
 
     const $ = (id: string) => document.getElementById(id)!;
     const catalog = JSON.parse($('catalog-json').textContent!) as Parameters<typeof buildSeatReports>[1];
+    const money = (n: number) => `$${n.toLocaleString(undefined, { maximumFractionDigits: Math.abs(n) < 10 ? 2 : 0 })}`;
 
-    // --- auth gate (same client-side convention as the calculator gate) ---
+    // ---------- auth gate ----------
     const gate = document.getElementById('app-gate');
     const consoleEl = $('app-console');
-    if (!gate) {
-      consoleEl.hidden = false; // ungated build (no Clerk key)
-    } else {
+    if (!gate) consoleEl.hidden = false;
+    else {
       const status = $('app-gate-status');
       $('app-signin').addEventListener('click', () => { if (openSignIn() === 'unavailable') status.textContent = 'Sign-in is unavailable right now. Reload and try again.'; });
       $('app-signup').addEventListener('click', () => { if (openSignUp('gate', 'Create your Solvency account to open the console.') === 'unavailable') status.textContent = 'Sign-up is unavailable right now. Reload and try again.'; });
-      observeClerkAuth((state) => {
-        const on = state.status === 'signed-in';
-        gate.hidden = on;
-        consoleEl.hidden = !on;
-        if (state.status === 'checking') status.textContent = 'Checking your session…';
-        else if (state.status === 'error') status.textContent = 'Account services failed to load. Reload to try again.';
-        else status.textContent = '';
+      observeClerkAuth((s) => {
+        const on = s.status === 'signed-in';
+        gate.hidden = on; consoleEl.hidden = !on;
+        status.textContent = s.status === 'checking' ? 'Checking your session…' : s.status === 'error' ? 'Account services failed to load. Reload to try again.' : '';
         const u = $('app-auth-user');
         if (on && (window as any).Clerk && !u.hasChildNodes()) mountUserButtonThemed(u);
         if (!on && (window as any).Clerk && u.hasChildNodes()) { (window as any).Clerk.unmountUserButton(u); u.replaceChildren(); }
       }, { enabled: true });
     }
 
-    // --- hash router ---
-    const panels = [...document.querySelectorAll<HTMLElement>('[data-panel]')];
-    const links = [...document.querySelectorAll<HTMLAnchorElement>('.side-a')];
-    function route() {
-      const id = (location.hash || '#overview').slice(1);
-      const known = panels.some((p) => p.dataset.panel === id);
-      const target = known ? id : 'overview';
-      for (const p of panels) p.hidden = p.dataset.panel !== target;
-      for (const a of links) {
-        if (a.dataset.section === target) a.setAttribute('aria-current', 'true');
-        else a.removeAttribute('aria-current');
+    // ---------- state ----------
+    let state = loadState();
+    let rows: UsageRow[] = [];
+    let seats: SeatReport[] = [];
+    let unknown: Array<{ model: string; calls: number }> = [];
+    let filter = 'all';
+    let sortKey: 'usd' | 'net' | 'calls' = 'usd';
+    let sortDir = -1;
+
+    const priceRow = (r: UsageRow) => { const m = findModel(catalog, r.model); return m ? priceUsage(r, m) : null; };
+
+    function persist() { saveState(state); }
+
+    function loadUsage(text: string, label: string, announce = true) {
+      const parsed = parseUsageCsv(text);
+      if (parsed.error || !parsed.rows.length) {
+        if (announce) $('ac-status').textContent = `Could not read ${label}: ${parsed.error ?? 'no rows'}`;
+        return false;
       }
-      window.scrollTo(0, 0);
+      rows = parsed.rows;
+      state.usageCsv = text; state.usageLabel = label; persist();
+      if (announce) $('ac-status').textContent = `Loaded ${label}: ${rows.length} rows.`;
+      renderAll();
+      return true;
     }
-    addEventListener('hashchange', route);
-    route();
 
-    // --- actuals ---
-    const money = (n: number) => `$${n.toLocaleString(undefined, { maximumFractionDigits: Math.abs(n) < 10 ? 2 : 0 })}`;
-    let loadedRows: UsageRow[] = [];
+    // ---------- rendering ----------
+    function renderAll() {
+      $('ws-name').textContent = state.workspaceName;
+      $('ws-plan').textContent = state.plan;
+      ($('st-name') as HTMLInputElement).value = state.workspaceName;
+      ($('st-fee') as HTMLInputElement).value = String(state.seatFee);
+      ($('ac-fee') as HTMLInputElement).value = String(state.seatFee);
+      ($('bg-armed') as HTMLInputElement).checked = state.alertsArmed;
+      $('st-plan').textContent = state.plan;
 
-    function render() {
-      if (!loadedRows.length) return;
-      const fee = Number(($('ac-fee') as HTMLInputElement).value) || 0;
-      const { seats, unknown } = buildSeatReports(loadedRows, catalog);
-      const totFee = fee * seats.length;
+      const built = buildSeatReports(rows, catalog);
+      seats = built.seats; unknown = built.unknown;
+      const fee = state.seatFee;
       const totWork = seats.reduce((a, s) => a + s.usd, 0);
-      $('ac-out').hidden = false;
-      $('ac-k-fees').textContent = `${money(totFee)}/mo`;
-      $('ac-k-work').textContent = money(totWork);
-      const net = totWork - totFee;
-      $('ac-k-net').textContent = `${net >= 0 ? '+' : ''}${money(net)}`;
-      ($('ac-k-net') as HTMLElement).style.color = net >= 0 ? 'var(--color-better)' : 'var(--color-worse)';
+      const totFees = fee * seats.length;
+      const teamSpend = computeTeamSpend(seats, state.seatTeams, fee);
+      const statuses = teamSpend.map((t) => budgetStatus(t, state.teamBudgets));
+      const alerts = state.alertsArmed ? buildAlerts(statuses, seats, fee) : [];
+
+      // Overview
+      const has = seats.length > 0;
+      $('ov-empty').hidden = has;
+      $('ov-full').hidden = !has;
+      if (has) {
+        $('ov-usd').textContent = money(totWork);
+        $('ov-usd-sub').textContent = state.usageLabel ?? 'loaded usage';
+        $('ov-fees').textContent = `${money(totFees)}/mo`;
+        $('ov-fees-sub').textContent = `${seats.length} seats at ${money(fee)}`;
+        const net = totWork - totFees;
+        $('ov-net').textContent = `${net >= 0 ? '+' : ''}${money(net)}`;
+        ($('ov-net') as HTMLElement).style.color = net >= 0 ? 'var(--color-better)' : 'var(--color-worse)';
+        $('ov-alerts').textContent = String(alerts.length);
+
+        const series = dailySeries(rows, priceRow);
+        const { line, area } = areaPath(series, 560, 150);
+        $('ov-chart-line').setAttribute('d', line);
+        $('ov-chart-area').setAttribute('d', area);
+        $('ov-range').textContent = series.length ? `${series[0].date} to ${series[series.length - 1].date}` : '';
+
+        const maxTeam = Math.max(...teamSpend.map((t) => t.usd), 1);
+        $('ov-teams').innerHTML = teamSpend.map((t) =>
+          `<div class="teambar"><span>${t.team}</span><u><b style="width:${(t.usd / maxTeam * 100).toFixed(1)}%"></b></u><em>${money(t.usd)}</em></div>`).join('');
+
+        $('ov-feed').innerHTML = alerts.length
+          ? alerts.map((a) => `<div class="feeditem"><span class="notif-dot ${a.kind}"></span><span>${a.text}</span></div>`).join('')
+          : '<div class="feeditem"><span class="notif-dot info"></span><span>All quiet. Budgets are inside their thresholds.</span></div>';
+      }
+
+      renderActuals(fee);
+      renderTeams(teamSpend);
+      renderBudgets(teamSpend, statuses);
+      renderIntegrations();
+      renderBell(alerts);
+
+      ($('rp-seats') as HTMLButtonElement).disabled = !has;
+      $('rp-note').textContent = has ? `Covers ${seats.length} seats from ${state.usageLabel ?? 'loaded usage'}.` : 'Load usage data first.';
+    }
+
+    function verdictBand(s: SeatReport, fee: number): 'keep' | 'review' | 'move' {
+      const v = verdictFor(s, fee);
+      return v.cls === 'ok' ? 'keep' : v.cls === 'warn' ? 'review' : 'move';
+    }
+
+    function renderActuals(fee: number) {
+      $('ac-out').hidden = seats.length === 0;
+      if (!seats.length) return;
+      const q = ($('ac-search') as HTMLInputElement).value.trim().toLowerCase();
+      let list = seats.filter((s) => (filter === 'all' || verdictBand(s, fee) === filter) && (!q || s.seat.toLowerCase().includes(q)));
+      list = [...list].sort((a, b) => {
+        const va = sortKey === 'net' ? a.usd - fee : (a as any)[sortKey];
+        const vb = sortKey === 'net' ? b.usd - fee : (b as any)[sortKey];
+        return (va - vb) * sortDir;
+      });
       const tb = $('ac-table').querySelector('tbody')!;
-      tb.replaceChildren(...seats.map((s) => {
+      tb.replaceChildren(...list.map((s) => {
         const v = verdictFor(s, fee);
+        const net = s.usd - fee;
         const tr = document.createElement('tr');
-        const top = s.byModel.slice(0, 2).map((b) => `${b.display} ${money(b.usd)}`).join(' · ') || '—';
-        const netSeat = s.usd - fee;
-        tr.innerHTML = `<td>${s.seat}</td><td class="num">${s.calls.toLocaleString()}</td><td class="num">${money(s.usd)}</td>` +
-          `<td class="num" style="color:${netSeat >= 0 ? 'var(--color-better)' : 'var(--color-worse)'}">${netSeat >= 0 ? '+' : ''}${money(netSeat)}</td>` +
-          `<td class="small">${top}</td><td><span class="pill ${v.cls}">${v.verdict}</span></td>`;
+        tr.dataset.seat = s.seat;
+        tr.innerHTML = `<td>${s.seat}</td><td class="asub">${teamOf(s.seat, state.seatTeams)}</td>` +
+          `<td class="num">${s.calls.toLocaleString()}</td><td class="num">${money(s.usd)}</td>` +
+          `<td class="num" style="color:${net >= 0 ? 'var(--color-better)' : 'var(--color-worse)'}">${net >= 0 ? '+' : ''}${money(net)}</td>` +
+          `<td class="asub">${s.byModel.slice(0, 2).map((b) => b.display).join(' · ') || '·'}</td>` +
+          `<td><span class="pill ${v.cls}">${v.verdict.split(',')[0].split(';')[0]}</span></td>`;
+        tr.addEventListener('click', () => openDrawer(s, fee));
         return tr;
       }));
       const unk = $('ac-unknown');
       unk.hidden = !unknown.length;
       if (unknown.length) unk.innerHTML = `<b>Not priced (fail closed):</b> ${unknown.map((u) => `${u.model} (${u.calls} calls)`).join(' · ')}: missing from the verified catalog; excluded, never guessed.`;
-      // overview KPIs
-      $('ov-rows').textContent = String(loadedRows.length);
-      $('ov-rows-note').textContent = `usage rows across ${seats.length} seat${seats.length === 1 ? '' : 's'}`;
-      $('ov-usd').textContent = money(totWork);
-      $('ov-usd-note').textContent = 'metered-equivalent of the loaded usage';
     }
 
-    function load(text: string, label: string) {
-      const { rows, error } = parseUsageCsv(text);
-      const status = $('ac-status');
-      if (error || !rows.length) { status.textContent = `Could not read ${label}: ${error ?? 'no rows'}`; return; }
-      loadedRows = rows;
-      status.textContent = `Loaded ${label}: ${rows.length} rows.`;
-      render();
+    function openDrawer(s: SeatReport, fee: number) {
+      $('dr-title').textContent = `${s.seat} · ${teamOf(s.seat, state.seatTeams)}`;
+      const net = s.usd - fee;
+      $('dr-kpis').innerHTML =
+        `<div class="acard" style="padding:.6rem .7rem"><p class="alabel">Metered-equiv.</p><p class="anum" style="font-size:1.1rem">${money(s.usd)}</p></div>` +
+        `<div class="acard" style="padding:.6rem .7rem"><p class="alabel">Net vs fee</p><p class="anum" style="font-size:1.1rem;color:${net >= 0 ? 'var(--color-better)' : 'var(--color-worse)'}">${net >= 0 ? '+' : ''}${money(net)}</p></div>`;
+      const maxM = Math.max(...s.byModel.map((b) => b.usd), 1);
+      $('dr-mix').innerHTML = s.byModel.map((b) =>
+        `<div class="mixrow"><span>${b.display}</span><u><b style="width:${(b.usd / maxM * 100).toFixed(1)}%"></b></u><em>${money(b.usd)}</em></div>`).join('') || '<p class="asub">No priced calls.</p>';
+      const v = verdictFor(s, fee);
+      $('dr-tip').textContent = v.cls === 'ok'
+        ? 'This seat clearly earns its fee at metered rates.'
+        : v.cls === 'warn'
+          ? 'Usage sits below the fee. A lower seat class or a metered key may fit better.'
+          : 'Usage is far below the fee. Moving this seat to a metered API key saves money immediately.';
+      $('ac-drawer').hidden = false;
     }
 
-    ($('ac-file') as HTMLInputElement).addEventListener('change', async (e) => {
-      const f = (e.target as HTMLInputElement).files?.[0];
-      if (f) load(await f.text(), f.name);
+    function renderTeams(teamSpend: ReturnType<typeof computeTeamSpend>) {
+      const has = seats.length > 0;
+      $('tm-empty').hidden = has;
+      $('tm-table').hidden = !has;
+      if (has) {
+        const teams = [...new Set([...Object.values(state.seatTeams), 'engineering', 'marketing', 'sales', 'operations'])].filter(Boolean).sort();
+        const tb = $('tm-table').querySelector('tbody')!;
+        tb.replaceChildren(...seats.map((s) => {
+          const tr = document.createElement('tr');
+          tr.style.cursor = 'default';
+          tr.innerHTML = `<td>${s.seat}</td><td class="num">${money(s.usd)}</td>`;
+          const td = document.createElement('td');
+          const input = document.createElement('input');
+          input.className = 'ainput';
+          input.style.width = '10rem';
+          input.setAttribute('list', 'tm-teams');
+          input.value = state.seatTeams[s.seat] ?? '';
+          input.placeholder = 'unassigned';
+          input.addEventListener('change', () => {
+            if (input.value.trim()) state.seatTeams[s.seat] = input.value.trim().toLowerCase();
+            else delete state.seatTeams[s.seat];
+            persist(); renderAll();
+          });
+          td.appendChild(input); tr.appendChild(td);
+          return tr;
+        }));
+        let dl = document.getElementById('tm-teams') as HTMLDataListElement | null;
+        if (!dl) { dl = document.createElement('datalist'); dl.id = 'tm-teams'; document.body.appendChild(dl); }
+        dl.replaceChildren(...teams.map((t) => Object.assign(document.createElement('option'), { value: t })));
+      }
+      const maxT = Math.max(...teamSpend.map((t) => t.usd), 1);
+      $('tm-rollup').innerHTML = teamSpend.length
+        ? teamSpend.map((t) => `<div class="teambar"><span>${t.team}</span><u><b style="width:${(t.usd / maxT * 100).toFixed(1)}%"></b></u><em>${money(t.usd)} · ${t.seats} seat${t.seats === 1 ? '' : 's'}</em></div>`).join('')
+        : '<p class="asub">Nothing to roll up yet.</p>';
+    }
+
+    function renderBudgets(teamSpend: ReturnType<typeof computeTeamSpend>, statuses: ReturnType<typeof budgetStatus>[]) {
+      const has = teamSpend.length > 0;
+      $('bg-empty').hidden = has;
+      const wrap = $('bg-rows');
+      wrap.replaceChildren(...statuses.map((st) => {
+        const div = document.createElement('div');
+        div.className = 'bgrow';
+        const pct = st.pct === null ? 0 : Math.min(st.pct, 1.15);
+        const color = st.level === 'over' ? 'var(--color-worse)' : st.level === 'near' ? '#B8860B' : 'var(--color-accent)';
+        div.innerHTML = `<span>${st.team}</span>`;
+        const input = document.createElement('input');
+        input.type = 'number'; input.min = '0'; input.step = '50'; input.className = 'ainput'; input.style.width = '6.5rem';
+        input.value = st.budget === null ? '' : String(st.budget);
+        input.placeholder = 'budget $';
+        input.addEventListener('change', () => {
+          const v = Number(input.value);
+          if (v > 0) state.teamBudgets[st.team] = v; else delete state.teamBudgets[st.team];
+          persist(); renderAll();
+        });
+        div.appendChild(input);
+        const bar = document.createElement('u');
+        bar.innerHTML = `<b style="transform:scaleX(${st.budget === null ? 0 : (pct / 1.25).toFixed(3)});background:${color}"></b><i></i>`;
+        div.appendChild(bar);
+        const label = document.createElement('span');
+        label.className = 'asub';
+        label.style.fontFamily = 'var(--font-mono)';
+        label.textContent = st.budget === null ? `${money(st.spend)} · no budget` : `${money(st.spend)} of ${money(st.budget)} (${Math.round((st.pct ?? 0) * 100)}%)`;
+        div.appendChild(label);
+        return div;
+      }));
+    }
+
+    function renderIntegrations() {
+      for (const card of document.querySelectorAll<HTMLElement>('[data-integration]')) {
+        const st = state.integrations[card.dataset.integration!] ?? 'planned';
+        const tag = card.querySelector('[data-status]')!;
+        tag.className = `itag ${st === 'planned' ? 'planned' : 'available'}`;
+        tag.textContent = st === 'planned' ? 'Planned' : st === 'connected' ? 'Connected' : 'Available';
+      }
+    }
+
+    function renderBell(alerts: ReturnType<typeof buildAlerts>) {
+      const items = [...alerts.map((a) => ({ dot: a.kind as string, text: a.text })),
+        { dot: 'info', text: `Metered catalog verified. Every reprice uses current rates.` }];
+      $('bell-badge').hidden = alerts.length === 0;
+      $('bell-badge').textContent = String(alerts.length);
+      $('notif-list').innerHTML = items.map((i) => `<div class="notif-item"><span class="notif-dot ${i.dot}"></span><span>${i.text}</span></div>`).join('');
+    }
+
+    // ---------- report download ----------
+    function downloadReport() {
+      const fee = state.seatFee;
+      const rowsHtml = seats.map((s) => {
+        const v = verdictFor(s, fee); const net = s.usd - fee;
+        return `<tr><td>${s.seat}</td><td>${teamOf(s.seat, state.seatTeams)}</td><td class="n">${s.calls.toLocaleString()}</td><td class="n">${money(s.usd)}</td><td class="n">${net >= 0 ? '+' : ''}${money(net)}</td><td>${v.verdict}</td></tr>`;
+      }).join('');
+      const totWork = seats.reduce((a, s) => a + s.usd, 0);
+      const html = `<!doctype html><meta charset="utf-8"><title>Seat economics · ${state.workspaceName}</title><style>body{font:14px/1.5 -apple-system,sans-serif;color:#191B22;max-width:860px;margin:2rem auto;padding:0 1rem}h1{font-size:1.3rem}table{border-collapse:collapse;width:100%;font-size:.85rem}th,td{text-align:left;padding:.45rem .6rem;border-bottom:1px solid #E3E5EB}.n{text-align:right;font-variant-numeric:tabular-nums}p.f{font-size:.75rem;color:#5D6373}</style><h1>Seat economics · ${state.workspaceName}</h1><p>${seats.length} seats · fees ${money(fee * seats.length)}/mo · metered-equivalent ${money(totWork)} · source: ${state.usageLabel ?? 'usage export'}</p><table><tr><th>Seat</th><th>Team</th><th class="n">Calls</th><th class="n">Metered-equiv.</th><th class="n">Net</th><th>Verdict</th></tr>${rowsHtml}</table><p class="f">Method: subscription_usage_repriced. Cache reads at the cached rate, cache writes at the uncached input rate, unknown models excluded, never guessed. Generated by Solvency, solvency.dev</p>`;
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+      a.download = `solvency-seat-report.html`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    }
+
+    // ---------- wiring ----------
+    const panels = [...document.querySelectorAll<HTMLElement>('[data-panel]')];
+    const links = [...document.querySelectorAll<HTMLAnchorElement>('.side-a')];
+    function route() {
+      const id = (location.hash || '#overview').slice(1);
+      const target = panels.some((p) => p.dataset.panel === id) ? id : 'overview';
+      for (const p of panels) {
+        p.hidden = p.dataset.panel !== target;
+        if (p.dataset.panel === target) $('topbar-title').textContent = p.dataset.title ?? '';
+      }
+      for (const a of links) { if (a.dataset.section === target) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current'); }
+      $('ac-drawer').hidden = true;
+      $('app-notif').hidden = true;
+      window.scrollTo(0, 0);
+    }
+    addEventListener('hashchange', route);
+
+    $('ov-sample').addEventListener('click', () => {
+      const extras = JSON.parse($('sample-extras').textContent!);
+      state.seatTeams = { ...extras.teams };
+      state.teamBudgets = { ...extras.budgets };
+      state.workspaceName = 'Acme Robotics';
+      persist();
+      loadUsage($('sample-csv').textContent!, 'the sample workspace', false);
     });
-    $('ac-sample').addEventListener('click', () => load($('sample-csv').textContent!, 'the sample team'));
-    $('ac-fee').addEventListener('input', render);
+    $('ac-sample').addEventListener('click', () => loadUsage($('sample-csv').textContent!, 'the sample team'));
+
+    const drop = $('ac-drop');
+    const fileInput = $('ac-file') as HTMLInputElement;
+    fileInput.addEventListener('change', async () => { const f = fileInput.files?.[0]; if (f) loadUsage(await f.text(), f.name); });
+    for (const ev of ['dragenter', 'dragover']) drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add('over'); });
+    for (const ev of ['dragleave', 'drop']) drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove('over'); });
+    drop.addEventListener('drop', async (e: DragEvent) => { const f = e.dataTransfer?.files?.[0]; if (f) loadUsage(await f.text(), f.name); });
+
+    ($('ac-fee') as HTMLInputElement).addEventListener('change', (e) => { state.seatFee = Number((e.target as HTMLInputElement).value) || 0; persist(); renderAll(); });
+    for (const chip of document.querySelectorAll<HTMLButtonElement>('.chip')) chip.addEventListener('click', () => {
+      document.querySelectorAll('.chip').forEach((c) => c.classList.remove('on'));
+      chip.classList.add('on'); filter = chip.dataset.filter!; renderActuals(state.seatFee);
+    });
+    $('ac-search').addEventListener('input', () => renderActuals(state.seatFee));
+    for (const th of document.querySelectorAll<HTMLElement>('.atable th.sortable')) th.addEventListener('click', () => {
+      const k = th.dataset.sort as typeof sortKey;
+      if (sortKey === k) sortDir *= -1; else { sortKey = k; sortDir = -1; }
+      renderActuals(state.seatFee);
+    });
+    $('dr-close').addEventListener('click', () => { $('ac-drawer').hidden = true; });
+
+    ($('bg-armed') as HTMLInputElement).addEventListener('change', (e) => { state.alertsArmed = (e.target as HTMLInputElement).checked; persist(); renderAll(); });
+    ($('st-name') as HTMLInputElement).addEventListener('change', (e) => { state.workspaceName = (e.target as HTMLInputElement).value.trim() || 'My workspace'; persist(); renderAll(); });
+    ($('st-fee') as HTMLInputElement).addEventListener('change', (e) => { state.seatFee = Number((e.target as HTMLInputElement).value) || 0; persist(); renderAll(); });
+    $('st-reset').addEventListener('click', () => {
+      if (confirm('Clear all workspace data from this browser?')) { resetState(); state = loadState(); rows = []; renderAll(); location.hash = '#overview'; }
+    });
+    $('rp-seats').addEventListener('click', downloadReport);
+
+    $('app-bell').addEventListener('click', () => {
+      const n = $('app-notif');
+      n.hidden = !n.hidden;
+      $('app-bell').setAttribute('aria-expanded', String(!n.hidden));
+    });
+    $('app-theme').addEventListener('click', () => {
+      const r = document.documentElement;
+      const next = (r.getAttribute('data-theme') || 'light') === 'light' ? 'dark' : 'light';
+      r.setAttribute('data-theme', next);
+      try { localStorage.setItem('theme', next); } catch { /* fine */ }
+    });
+
+    // ---------- boot ----------
+    if (state.usageCsv) loadUsage(state.usageCsv, state.usageLabel ?? 'saved usage', false);
+    else renderAll();
+    route();
   </script>
 </AppShell>
