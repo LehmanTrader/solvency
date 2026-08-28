@@ -119,11 +119,10 @@ const RANKED_FONT_FACE_CSS = FONT_FACE_CSS + `
   @font-face { font-family: 'IBM Plex Sans'; font-style: normal; font-weight: 300 700; src: url('${fontUrl('ibm-plex-sans-latin.woff2')}') format('woff2'); }
 `;
 
-// The balance mark (operator direction 2026-08-26: the drawn balance, Arena
-// register). Interim raster from the approved round-4 direction; replaced by
-// the vector trace once that is approved. Ink-colored on transparency, so it
-// sits on the cream card ground directly.
-const BRAND_MARK = pathToFileURL(join(ROOT, 'site', 'public', 'brand', 'mark-balance.png')).href;
+// The Ledger S (operator's pick 2026-08-28, round-5 concept 01). Ink-colored
+// bars with the fixed indigo middle bar, on transparency, so it sits on the
+// card ground directly. Raster of site/public/brand/mark-s1.svg.
+const BRAND_MARK = pathToFileURL(join(ROOT, 'site', 'public', 'brand', 'mark-s1.png')).href;
 const rankedMarkSvg = (px: number) =>
   `<img src="${BRAND_MARK}" width="${px}" height="${px}" style="display:block" alt=""/>`;
 
