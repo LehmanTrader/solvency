@@ -585,11 +585,19 @@ describe('buildState: v2 fields (data/ enrichment, archivedDates, overnightNumbe
       // Local-date arithmetic, matching buildState's localIsoDate — the old
       // toISOString() (UTC) version made this test fail between 8pm and
       // midnight ET, when the UTC date is already tomorrow.
-      const d5 = new Date(Date.now() - 5 * 86_400_000);
-      const fiveDaysAgo = `${d5.getFullYear()}-${String(d5.getMonth() + 1).padStart(2, '0')}-${String(d5.getDate()).padStart(2, '0')}`;
+      // The price_change entries must be relative too: buildState's earliest-
+      // entry scan spans ALL entries, so a fixed '2026-08-22' would become the
+      // launch date once the wall clock passes five days after it (this bit —
+      // CI, which runs on UTC, crossed that line hours before local time did).
+      const rel = (n: number) => {
+        const d = new Date(Date.now() - n * 86_400_000);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      };
+      const fiveDaysAgo = rel(5);
+      const relDates: Record<string, string> = { '2026-08-22': rel(4), '2026-08-23': rel(3), '2026-08-24': rel(2) };
       const entriesWithPinnedLaunch = [
         { date: fiveDaysAgo, kind: 'initial', summary: 'Initial dataset published.' },
-        ...CHANGELOG_WITH_PRICE_HISTORY.filter((e) => e.kind === 'price_change'),
+        ...CHANGELOG_WITH_PRICE_HISTORY.filter((e) => e.kind === 'price_change').map((e) => ({ ...e, date: relDates[e.date] ?? e.date })),
       ];
       writeFileSync(join(dataRoot, 'changelog.json'), JSON.stringify({ entries: entriesWithPinnedLaunch }));
 
