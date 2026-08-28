@@ -61,6 +61,9 @@ const BUILD_SHA = /^[0-9a-f]{40}$/.test(buildShaInput) ? buildShaInput : 'local'
 // the conditional script below and dist/ never contains its
 // /api/billing-portal literal (see scripts/verify-production-artifact-dark.mjs).
 const CHECKOUT_UI_ENABLED = import.meta.env.PUBLIC_STRIPE_CHECKOUT_ENABLED === 'true';
+// Header CTA pair (2026-08-28): signed-out visitors see "Request a demo";
+// once signed in the script below swaps it for the console link.
+const DEMO_MAILTO = 'mailto:robertdhanda@gmail.com?subject=Solvency%20demo&body=Team%20size%2C%20AI%20tools%20in%20use%2C%20roughly%20what%20you%20spend%20monthly%3A';
 ---
 <!doctype html>
 <html lang="en" data-product-intents-enabled={PRODUCT_INTENTS_ENABLED ? 'true' : 'false'}>
@@ -130,8 +133,9 @@ const CHECKOUT_UI_ENABLED = import.meta.env.PUBLIC_STRIPE_CHECKOUT_ENABLED === '
       var n=document.getElementById('nav-list');if(n){var c=n.querySelector('[aria-current="page"]');function more(){if(n.scrollLeft+n.clientWidth<n.scrollWidth-1)n.setAttribute('data-more','1');else n.removeAttribute('data-more');}function place(){if(c&&n.scrollWidth>n.clientWidth+1)n.scrollLeft=Math.max(0,c.offsetLeft-(n.clientWidth-c.offsetWidth)/2);more();}n.addEventListener('scroll',more,{passive:true});addEventListener('resize',function(){requestAnimationFrame(place);});requestAnimationFrame(place);}})();</script>
       {CLERK_ENABLED && (
         <div class="site-header-auth shrink-0 flex items-center">
-          <button type="button" id="auth-signin" aria-describedby="auth-readiness" class="small mr-2 sm:mr-3 inline-flex items-center min-h-11 sm:min-h-0 text-[var(--color-ink)] bg-transparent border-0 p-0 hover:underline disabled:cursor-default" disabled>Sign in</button>
-          <a href="/app" id="nav-console" class="btn btn-accent" data-analytics="nav-console">Open console</a>
+          <button type="button" id="auth-signin" aria-describedby="auth-readiness" class="small mr-2 sm:mr-3 inline-flex items-center min-h-11 sm:min-h-0 text-[var(--color-ink)] bg-transparent border-0 p-0 hover:underline disabled:cursor-default" disabled>Log in</button>
+          <a href={DEMO_MAILTO} id="nav-demo" class="btn btn-accent" data-analytics="nav-demo">Request a demo</a>
+          <a href="/app" id="nav-console" class="btn btn-accent" data-analytics="nav-console" hidden>Console</a>
           <div id="auth-user" class="hidden min-h-8" aria-label="Account"></div>
           <p id="auth-readiness" class="sr-only" role="status" aria-live="polite" aria-atomic="true">Account controls are loading.</p>
         </div>
@@ -169,6 +173,11 @@ const CHECKOUT_UI_ENABLED = import.meta.env.PUBLIC_STRIPE_CHECKOUT_ENABLED === '
             const c = (window as any).Clerk;
             const on = state.status === 'signed-in';
             s.style.display = on ? 'none' : ''; u.classList.toggle('hidden', !on);
+            // Signed-out: "Request a demo". Signed-in: the console link.
+            const demo = document.getElementById('nav-demo');
+            const con = document.getElementById('nav-console');
+            if (demo) demo.hidden = on;
+            if (con) con.hidden = !on;
             if (on && c && !u.hasChildNodes()) mountUserButtonThemed(u);
             if (!on && c && u.hasChildNodes()) { c.unmountUserButton(u); u.replaceChildren(); }
           }, { enabled: true });

@@ -37,10 +37,12 @@ test('mobile navigation reveals the current item and keeps direct sign-in', () =
   assert.match(base, /scrollLeft\s*=/);
   assert.match(base, /n\.scrollWidth\s*>\s*n\.clientWidth\s*\+\s*1/);
   assert.doesNotMatch(base, /id="auth-signin"[^>]*\bhidden\b/);
-  assert.match(base, /<button type="button" id="auth-signin"[^>]*disabled>Sign in<\/button>/);
-  // Enterprise redesign 2026-08-27: the filled header CTA is a static link
-  // to the console (never disabled), replacing the Clerk sign-up modal button.
-  assert.match(base, /<a href="\/app" id="nav-console" class="btn btn-accent"/);
+  assert.match(base, /<button type="button" id="auth-signin"[^>]*disabled>Log in<\/button>/);
+  // Enterprise header contract (2026-08-28): signed-out visitors get "Log in"
+  // plus a "Request a demo" CTA; the console link exists in markup but stays
+  // hidden until the auth observer reveals it for signed-in users.
+  assert.match(base, /id="nav-demo" class="btn btn-accent"[^>]*>Request a demo<\/a>/);
+  assert.match(base, /<a href="\/app" id="nav-console" class="btn btn-accent"[^>]*hidden>/);
   assert.doesNotMatch(base, /id="auth-signup"/);
   assert.match(base, /s\.disabled = !available/);
   assert.match(base, /observeClerkAuth/);

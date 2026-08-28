@@ -1,126 +1,247 @@
 ---
 /**
- * Homepage — enterprise marketing surface (redesign 2026-08-27 night,
- * xhawk.ai-style brief: dark hero, persona-segmented pitch, product behind
- * its own login at /app). The calculator moved to /calculator (public
- * evidence layer); an inline forwarder below keeps every previously shared
- * "/?tier=..." scenario link resolving. Cross-functional pitch: the same
- * repricing engine serves engineering, operations, marketing and sales —
- * roadmap in docs/roadmap-cross-functional.md.
+ * Homepage — motion pass (2026-08-28: "live animations of the portal
+ * working as people scroll… sleeker, more modern, more flowy"). Product-
+ * forward: the animated console (ConsoleDemo) sits in the hero with a
+ * gentle scroll parallax; sections reveal on scroll via [data-reveal] +
+ * IntersectionObserver; the three how-it-works steps carry their own small
+ * CSS visuals instead of paragraphs. All motion is transform/opacity only
+ * and collapses to final state under prefers-reduced-motion. The old
+ * calculator share-link forwarder stays. Console features are the sales
+ * surface here; deep prose lives on /actuals, /methodology and /research.
  */
 import { getCollection } from 'astro:content';
 import Base from '../layouts/Base.astro';
+import ConsoleDemo from '../components/ConsoleDemo.astro';
 import { models } from '../lib/data.ts';
 
 const latest = (await getCollection('reports')).sort((a, b) => b.data.date - a.data.date)[0];
 const latestHref = latest ? `/research/${latest.id.replace(/^\d{4}-\d{2}-/, '')}` : '/research';
 const verified = models.reduce((a, m) => (m.last_verified > a ? m.last_verified : a), '');
+const DEMO = 'mailto:robertdhanda@gmail.com?subject=Solvency%20demo&body=Team%20size%2C%20AI%20tools%20in%20use%2C%20roughly%20what%20you%20spend%20monthly%3A';
 
-const personas = [
-  { k: 'Engineering', h: 'Which seats earn their fee', p: 'Reprice every Claude Code, Codex and API seat at metered rates. Keep, downgrade or move each one — with the math attached.' },
-  { k: 'Operations', h: 'Spend by team, against budget', p: 'One ledger for AI spend across tools and vendors. Budget thresholds, drift alerts, renewal briefs built from what you actually used.' },
-  { k: 'Marketing', h: 'Cost per asset, not per token', p: 'Price the content pipeline — per drafted post, image and campaign variant — and right-size models for creative work vs analysis.' },
-  { k: 'Sales', h: 'AI cost per deal, attributed', p: 'Cost per enriched lead, per outreach, per qualified meeting. Put real AI numbers into CAC before the board asks.' },
-];
-
-const suite = [
-  { label: 'Budgets', href: '/build-planner', h: 'Plan a stack before you commit', p: 'The Composer prices whole stacks — orchestrator, workers, harness, access path — from measured pass rates, not list-price arithmetic.', cta: 'Open the Composer →', live: true },
-  { label: 'Actuals', href: '/actuals', h: 'Reconcile what you really spent', p: 'Drop in a usage export: seat-by-seat repricing at verified metered rates and a keep / review / move verdict per seat.', cta: 'See how Actuals works →', live: true },
-  { label: 'Governance', href: '/app#ops', h: 'Keep spend inside policy', p: 'Budgets by team and tool, threshold alerts, model-mix drift and idle-seat flags — in design partnership now.', cta: 'Preview in the console →', live: false },
+const features = [
+  { href: '/app#actuals', tag: 'Actuals', live: true, h: 'Seat verdicts from real usage', p: 'Drop an export; every seat gets keep / review / move — priced, in your browser.' },
+  { href: '/app#budgets', tag: 'Budgets', live: true, h: 'Price a stack before you commit', p: 'Orchestrator, workers, harness — quoted from measured pass rates.' },
+  { href: '/app#hardware', tag: 'Hardware', live: true, h: 'Local rig vs cloud break-even', p: 'Apple Silicon and used-GPU builds priced per solved task.' },
+  { href: '/app#ops', tag: 'Operations', live: false, h: 'Budgets, drift and idle-seat alerts', p: 'Spend by team and tool, flagged before the invoice lands.' },
+  { href: '/app#marketing', tag: 'Marketing', live: false, h: 'Cost per produced asset', p: 'Price the content pipeline per post, image and variant.' },
+  { href: '/app#sales', tag: 'Sales', live: false, h: 'AI cost per deal, attributed', p: 'Per-lead and per-meeting costs that survive CAC math.' },
 ];
 ---
 <Base title="Solvency — the AI spend suite"
       description="Budget the work. Reconcile the bill. Right-size the seats. AI spend economics for engineering, operations, marketing and sales — built on first-party task-level benchmarks."
       og="/og/cards/home.png">
-  <!-- Old calculator share links resolved to "/?tier=..." before the
-       enterprise redesign; forward them to the table's new public home. -->
   <script is:inline>(function(){var q=new URLSearchParams(location.search);if(['tier','volume','variant','highlight','pop','taskcount'].some(function(k){return q.has(k)}))location.replace('/calculator'+location.search+location.hash);})();</script>
 
-  <section class="hero-dark">
-    <div class="wrap pt-14 pb-16 md:pt-20 md:pb-20">
-      <p class="eyebrow" style="color:#8FA0D8">The AI spend suite</p>
-      <h1 class="hero-h mt-4">AI is priced in tokens.<br />Your business buys outcomes.</h1>
-      <p class="hero-p mt-5 max-w-2xl">Solvency prices the outcome — per solved task, per produced asset, per closed deal — so every team's AI budget, bill and seat count stands on a measured number.</p>
-      <div class="mt-8 flex flex-wrap gap-3">
-        <a class="btn btn-accent" style="font-size:.9rem;padding:.7rem 1.2rem" href="/app">Open the console</a>
-        <a class="btn hero-btn-ghost" style="font-size:.9rem;padding:.7rem 1.2rem" href="/research">See the evidence</a>
+  <section class="hero-dark hero-main">
+    <div class="wrap pt-14 pb-16 md:pt-20 md:pb-24 hero-grid">
+      <div>
+        <p class="eyebrow" style="color:#8FA0D8" data-reveal>The AI spend suite</p>
+        <h1 class="hero-h mt-4" data-reveal="1" data-d=".08s">AI is priced in tokens.<br />Your business buys outcomes.</h1>
+        <p class="hero-p mt-5" style="max-width:30rem" data-reveal="1" data-d=".16s">Budget the work, reconcile the bill, right-size the seats — on measured numbers, for every team that spends on AI.</p>
+        <div class="mt-8 flex flex-wrap gap-3" data-reveal="1" data-d=".24s">
+          <a class="btn btn-accent btn-lg" href={DEMO} data-analytics="hero-demo">Request a demo</a>
+          <a class="btn hero-btn-ghost btn-lg" href="/app">Open the console</a>
+        </div>
+        <div class="hero-stats mt-10" data-reveal="1" data-d=".32s">
+          <div><b>{models.length}</b><span>models on verified rates</span></div>
+          <div><b>First-party</b><span>bench, journaled runs</span></div>
+          <div><b>Fail closed</b><span>missing ≠ guessed</span></div>
+        </div>
       </div>
-      <div class="hero-stats mt-12">
-        <div><b>{models.length}</b><span>models on verified metered rates</span></div>
-        <div><b>First-party</b><span>agentic bench, journaled runs</span></div>
-        <div><b>Fail closed</b><span>missing numbers reported, never guessed</span></div>
+      <div class="hero-demo" data-parallax>
+        <ConsoleDemo />
       </div>
     </div>
   </section>
 
   <div class="wrap">
-    <section class="mt-16" aria-labelledby="teams-h">
-      <p class="eyebrow">Every team that spends on AI</p>
-      <h2 class="h-section mt-2" id="teams-h">One engine, four ledgers</h2>
-      <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {personas.map((t) => (
-          <div class="card card-pad">
-            <p class="label" style="color:var(--color-accent)">{t.k}</p>
-            <h3 class="h-card mt-2">{t.h}</h3>
-            <p class="small mt-2">{t.p}</p>
+    <section class="mt-20" aria-labelledby="story-h">
+      <p class="eyebrow" data-reveal>How it works</p>
+      <h2 class="h-section mt-2" id="story-h" data-reveal="1" data-d=".06s">Three moves, one ledger</h2>
+
+      <div class="story mt-10">
+        <div class="story-row" data-reveal>
+          <div class="story-copy">
+            <p class="story-n">01</p>
+            <h3 class="h-card">Budget it</h3>
+            <p class="small mt-2">Compose the stack and get the quote — per solved task, before a dollar is spent.</p>
           </div>
-        ))}
+          <div class="story-vis vis-budget" aria-hidden="true">
+            <span class="vb-chip" style="--d:.1s">orchestrator · Opus</span>
+            <span class="vb-chip" style="--d:.22s">workers · Sonnet ×4</span>
+            <span class="vb-chip" style="--d:.34s">harness · Claude Code</span>
+            <span class="vb-total" style="--d:.5s"><i>quoted</i>$0.61 / solved task</span>
+          </div>
+        </div>
+
+        <div class="story-row rev" data-reveal>
+          <div class="story-copy">
+            <p class="story-n">02</p>
+            <h3 class="h-card">Reconcile it</h3>
+            <p class="small mt-2">Bring the usage export. Every seat repriced at metered rates, every fee justified — or not.</p>
+          </div>
+          <div class="story-vis vis-seats" aria-hidden="true">
+            <span class="vs-row" style="--d:.1s"><i>ana</i><u><b style="--w:.9"></b></u><em class="ok">keep</em></span>
+            <span class="vs-row" style="--d:.24s"><i>carla</i><u><b style="--w:.34"></b></u><em class="warn">review</em></span>
+            <span class="vs-row" style="--d:.38s"><i>eli</i><u><b style="--w:.08"></b></u><em class="over">move</em></span>
+          </div>
+        </div>
+
+        <div class="story-row" data-reveal>
+          <div class="story-copy">
+            <p class="story-n">03</p>
+            <h3 class="h-card">Govern it</h3>
+            <p class="small mt-2">Budgets by team and tool, alerts before the threshold — not after the invoice.</p>
+          </div>
+          <div class="story-vis vis-govern" aria-hidden="true">
+            <span class="vg-track"><span class="vg-tick"></span><span class="vg-bar"></span></span>
+            <span class="vg-alert" style="--d:.55s">⚠ eng · 84% of August budget</span>
+          </div>
+        </div>
       </div>
     </section>
 
-    <section class="mt-16" aria-labelledby="suite-h">
-      <p class="eyebrow">The suite</p>
-      <h2 class="h-section mt-2" id="suite-h">Budget it. Reconcile it. Govern it.</h2>
-      <div class="mt-6 grid gap-4 sm:grid-cols-3">
-        {suite.map((s) => (
-          <a class="card card-pad block suite-door" href={s.href}>
-            <p class="label" style="color:var(--color-accent)">{s.label}{!s.live && <span class="small" style="color:var(--color-muted)"> · preview</span>}</p>
-            <h3 class="h-card mt-1">{s.h}</h3>
-            <p class="small mt-2">{s.p}</p>
-            <p class="mt-3 font-semibold" style="color:var(--color-accent)">{s.cta}</p>
+    <section class="mt-20" aria-labelledby="feat-h">
+      <p class="eyebrow" data-reveal>Inside the console</p>
+      <h2 class="h-section mt-2" id="feat-h" data-reveal="1" data-d=".06s">One login. Every AI ledger.</h2>
+      <div class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {features.map((f, i) => (
+          <a class="card card-pad block feat" href={f.href} data-reveal="1" data-d={`${(i % 3) * 0.08}s`}>
+            <p class="label" style="color:var(--color-accent)">{f.tag}{!f.live && <span class="small" style="color:var(--color-muted)"> · preview</span>}</p>
+            <h3 class="h-card mt-1">{f.h}</h3>
+            <p class="small mt-2">{f.p}</p>
           </a>
         ))}
       </div>
+      <p class="small mt-6" data-reveal>Engineering, operations, marketing, sales — same engine, four ledgers. <a class="link" href={DEMO}>Request a demo</a> or <a class="link" href="/app">open the console</a>.</p>
     </section>
 
-    <section class="mt-16 card card-pad" aria-labelledby="ev-h">
-      <div class="md:flex md:items-start md:justify-between gap-8">
-        <div class="max-w-2xl">
-          <p class="eyebrow">Why trust the numbers</p>
-          <h2 class="h-section mt-2" id="ev-h">The suite sits on an instrument, not a spreadsheet</h2>
-          <p class="small mt-3">Under every budget and verdict: our own benchmark harness — hidden-test agentic tasks, journaled runs, measured harness overheads — plus a metered-rate catalog verified {verified}. Where a number does not exist, it is reported as missing.</p>
+    <section class="mt-20 card card-pad" aria-labelledby="ev-h" data-reveal>
+      <div class="md:flex md:items-center md:justify-between gap-8">
+        <div class="max-w-xl">
+          <p class="eyebrow">The receipts</p>
+          <h2 class="h-card mt-2" id="ev-h">Built on an instrument, not a spreadsheet</h2>
+          <p class="small mt-2">First-party agentic bench, journaled runs, a metered catalog verified {verified}. Where a number does not exist, it is reported as missing.</p>
         </div>
         <div class="mt-5 md:mt-0 shrink-0 space-y-2 text-sm">
           <p><a class="link" href="/calculator">The ranked table →</a></p>
           <p><a class="link" href={latestHref}>Latest research note →</a></p>
-          <p><a class="link" href="/methodology">How the numbers are made →</a></p>
+          <p><a class="link" href="/methodology">Methodology →</a></p>
         </div>
       </div>
     </section>
 
-    <section class="mt-16 mb-4 text-center hero-dark rounded-xl" aria-labelledby="cta-h">
+    <section class="mt-20 mb-4 text-center hero-dark rounded-xl" aria-labelledby="cta-h" data-reveal>
       <div class="py-12 px-6">
         <h2 class="h-section" id="cta-h" style="color:#fff">Put a number under your AI spend</h2>
-        <p class="hero-p mt-3 max-w-xl mx-auto">The console is free while we build with design partners. Bring one usage export; leave with seat verdicts.</p>
+        <p class="hero-p mt-3 max-w-xl mx-auto">Free while we build with design partners. Bring one usage export; leave with seat verdicts.</p>
         <div class="mt-6 flex justify-center gap-3">
-          <a class="btn btn-accent" style="font-size:.9rem;padding:.7rem 1.2rem" href="/app">Open the console</a>
-          <a class="btn hero-btn-ghost" style="font-size:.9rem;padding:.7rem 1.2rem" href="mailto:robertdhanda@gmail.com?subject=Solvency%20design%20partner">Become a design partner</a>
+          <a class="btn btn-accent btn-lg" href={DEMO} data-analytics="footer-demo">Request a demo</a>
+          <a class="btn hero-btn-ghost btn-lg" href="/app">Open the console</a>
         </div>
       </div>
     </section>
   </div>
 
   <style>
-    .hero-dark { background: #0C1122; color: #B9C0D4; }
-    .hero-dark { background: radial-gradient(1200px 500px at 20% -10%, #1A2342 0%, #0C1122 55%); }
-    .hero-h { font-family: var(--font-serif); font-size: clamp(2rem, 5vw, 3.4rem); line-height: 1.08; color: #fff; letter-spacing: -.01em; }
+    .hero-dark { background: radial-gradient(1200px 500px at 20% -10%, #1A2342 0%, #0C1122 55%); color: #B9C0D4; }
+    .hero-main { position: relative; overflow: hidden; }
+    .hero-main::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+      background: radial-gradient(700px 320px at 82% 30%, rgba(91,69,224,.16), transparent 70%);
+      animation: hero-breathe 9s ease-in-out infinite alternate; }
+    @keyframes hero-breathe { from { opacity: .5; transform: translateY(0); } to { opacity: 1; transform: translateY(14px); } }
+    .hero-grid { display: grid; gap: 3rem; align-items: center; position: relative; z-index: 1; }
+    @media (min-width: 900px) { .hero-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 34rem); } }
+    .hero-h { font-family: var(--font-serif); font-size: clamp(1.9rem, 4.4vw, 3.2rem); line-height: 1.08; color: #fff; letter-spacing: -.01em; }
     .hero-p { font-size: 1.02rem; line-height: 1.6; color: #B9C0D4; }
+    .btn-lg { font-size: .9rem; padding: .7rem 1.2rem; }
     .hero-btn-ghost { color: #fff; border-color: #3A4468; background: transparent; }
     .hero-btn-ghost:hover { background: #1A2342; border-color: #8FA0D8; color: #fff; }
-    .hero-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; max-width: 46rem; }
-    .hero-stats b { display: block; font-family: var(--font-mono); font-size: 1.25rem; color: #fff; font-variant-numeric: tabular-nums; }
-    .hero-stats span { font-size: .78rem; color: #8FA0D8; }
-    .suite-door { transition: border-color .12s, transform .12s; }
-    .suite-door:hover { border-color: var(--color-accent); transform: translateY(-2px); }
+    .hero-stats { display: grid; grid-template-columns: repeat(3, auto); gap: 1.4rem; justify-content: start; }
+    .hero-stats b { display: block; font-family: var(--font-mono); font-size: 1.15rem; color: #fff; font-variant-numeric: tabular-nums; }
+    .hero-stats span { font-size: .74rem; color: #8FA0D8; }
+    .hero-demo { will-change: transform; }
+
+    /* Scroll reveal — transform/opacity only; JS adds .in once per element. */
+    [data-reveal] { opacity: 0; transform: translateY(18px);
+      transition: opacity .55s ease var(--d, 0s), transform .65s cubic-bezier(.22,1,.36,1) var(--d, 0s); }
+    [data-reveal].in { opacity: 1; transform: none; }
+
+    .story { display: flex; flex-direction: column; gap: 3.2rem; }
+    .story-row { display: grid; gap: 1.6rem; align-items: center; }
+    @media (min-width: 760px) {
+      .story-row { grid-template-columns: minmax(0, 22rem) minmax(0, 1fr); }
+      .story-row.rev { grid-template-columns: minmax(0, 1fr) minmax(0, 22rem); }
+      .story-row.rev .story-copy { order: 2; }
+      .story-row.rev .story-vis { order: 1; }
+    }
+    .story-n { font-family: var(--font-mono); font-size: .7rem; color: var(--color-accent); letter-spacing: .12em; margin-bottom: .3rem; }
+    .story-vis { border: 1px solid var(--color-rule); border-radius: 10px; background: var(--color-panel);
+                 padding: 1.2rem 1.3rem; display: flex; flex-direction: column; gap: .55rem; font-family: var(--font-mono); }
+    .story-vis > * { opacity: 0; transform: translateY(10px);
+      transition: opacity .5s ease var(--d, 0s), transform .55s cubic-bezier(.22,1,.36,1) var(--d, 0s); }
+    .story-row.in .story-vis > * { opacity: 1; transform: none; }
+
+    .vb-chip { align-self: flex-start; font-size: .72rem; color: var(--color-ink); background: var(--color-panel-2);
+               border: 1px solid var(--color-rule); border-radius: 6px; padding: .3rem .6rem; }
+    .vb-total { margin-top: .3rem; font-size: .95rem; color: var(--color-ink); font-variant-numeric: tabular-nums; }
+    .vb-total i { display: block; font-style: normal; font-size: .58rem; letter-spacing: .1em; text-transform: uppercase; color: var(--color-muted); }
+
+    .vs-row { display: grid; grid-template-columns: 3.4rem 1fr auto; gap: .7rem; align-items: center; font-size: .74rem; color: var(--color-body); }
+    .vs-row i { font-style: normal; }
+    .vs-row u { text-decoration: none; display: block; height: 8px; background: var(--color-panel-3); border-radius: 4px; overflow: hidden; }
+    .vs-row b { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--color-accent), var(--color-accent-dim));
+                transform: scaleX(0); transform-origin: left; transition: transform .8s cubic-bezier(.22,1,.36,1) calc(var(--d, 0s) + .15s); }
+    .story-row.in .vs-row b { transform: scaleX(var(--w)); }
+    .vs-row em { font-style: normal; font-size: .6rem; padding: .12rem .5rem; border-radius: 99px; }
+    .vs-row em.ok { background: color-mix(in srgb, var(--color-better) 14%, transparent); color: var(--color-better); }
+    .vs-row em.warn { background: color-mix(in srgb, #9A6A10 14%, transparent); color: #9A6A10; }
+    .vs-row em.over { background: color-mix(in srgb, var(--color-worse) 12%, transparent); color: var(--color-worse); }
+
+    .vis-govern { gap: .8rem; }
+    .vg-track { position: relative; display: block; height: 10px; background: var(--color-panel-3); border-radius: 5px; }
+    .vg-tick { position: absolute; left: 84%; top: -4px; bottom: -4px; width: 2px; background: var(--color-worse); border-radius: 1px; }
+    .vg-bar { position: absolute; inset: 0; border-radius: 5px; background: linear-gradient(90deg, var(--color-accent), var(--color-accent-dim));
+              transform: scaleX(0); transform-origin: left; transition: transform 1.1s cubic-bezier(.22,1,.36,1) .2s; }
+    .story-row.in .vg-bar { transform: scaleX(.84); }
+    .vg-alert { align-self: flex-start; font-size: .68rem; color: #9A6A10; background: color-mix(in srgb, #9A6A10 12%, transparent);
+                border-radius: 6px; padding: .3rem .6rem; }
+
+    .feat { transition: border-color .15s, transform .2s cubic-bezier(.22,1,.36,1), opacity .55s ease var(--d, 0s); }
+    .feat:hover { border-color: var(--color-accent); transform: translateY(-3px); }
+
+    @media (prefers-reduced-motion: reduce) {
+      [data-reveal], .story-vis > *, .feat { opacity: 1 !important; transform: none !important; transition: none !important; }
+      .story-row .vs-row b { transform: scaleX(var(--w)); transition: none; }
+      .story-row .vg-bar { transform: scaleX(.84); transition: none; }
+      .hero-main::after { animation: none; }
+      .hero-demo { transform: none !important; }
+    }
   </style>
+
+  <script>
+    // data-d → --d transition delays (kept as data attrs so markup stays tidy).
+    for (const el of document.querySelectorAll<HTMLElement>('[data-d]')) el.style.setProperty('--d', el.dataset.d!);
+
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const revealed = document.querySelectorAll<HTMLElement>('[data-reveal]');
+    if (reduce) {
+      revealed.forEach((el) => el.classList.add('in'));
+    } else {
+      const io = new IntersectionObserver((entries) => {
+        for (const e of entries) if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+      }, { threshold: 0.18, rootMargin: '0px 0px -8% 0px' });
+      revealed.forEach((el) => io.observe(el));
+
+      // Gentle hero parallax: the console frame drifts against the scroll.
+      const frame = document.querySelector<HTMLElement>('[data-parallax]');
+      if (frame) {
+        let raf = 0;
+        const tick = () => { raf = 0; frame.style.transform = `translateY(${Math.min(scrollY, 900) * -0.045}px)`; };
+        addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(tick); }, { passive: true });
+      }
+    }
+  </script>
 </Base>
