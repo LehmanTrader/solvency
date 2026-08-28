@@ -24,3 +24,10 @@ purge-docs.sh
 queue/**
 !queue/README.md
 bench/results/
+
+# Operator working files from the 2026-08-27 night sprint: unpicked brand
+# candidates, QA screenshots, generated report output, session config.
+brand-candidates/
+.qa-shots/
+output/
+.claude/

@@ -36,11 +36,15 @@ const path = Astro.url.pathname;
 // unchanged — labels only, plus the new /actuals page.
 // Models/Compare/Harness/Methodology stay in the footer; Pricing surfaces
 // only from signup and pro-feature gates.
-const NAV = [
-  ['/', 'Overview'], ['/build-planner', 'Budgets'], ['/actuals', 'Actuals'], ['/local-hardware', 'Hardware'], ['/research', 'Evidence'],
-];
+// Enterprise redesign 2026-08-27 night ("we need to remove tabs from our
+// site"): the header carries no section tabs — the product lives behind its
+// own login at /app ("Open console"), and every public page stays reachable
+// from the footer. NAV is kept as a constant (empty) so the aria-current
+// helper and tests keep a single source of truth.
+const NAV: [string, string][] = [];
 const FOOTER_NAV = [
-  ...NAV, ['/models', 'Models'], ['/compare', 'Compare'], ['/harness', 'Harness'], ['/methodology', 'Methodology'],
+  ['/', 'Overview'], ['/build-planner', 'Budgets'], ['/actuals', 'Actuals'], ['/local-hardware', 'Hardware'], ['/research', 'Evidence'],
+  ['/calculator', 'Ranked table'], ['/models', 'Models'], ['/compare', 'Compare'], ['/harness', 'Harness'], ['/methodology', 'Methodology'],
 ];
 const DEV = [['/data', 'Data (CC-BY)'], ['/embed', 'Embed'], ['/changelog', 'Changelog']];
 const current = (href: string) => (href === '/' ? path === '/' : path.startsWith(href));
@@ -108,23 +112,26 @@ const CHECKOUT_UI_ENABLED = import.meta.env.PUBLIC_STRIPE_CHECKOUT_ENABLED === '
   <header class="sticky top-0 z-40 border-b border-[var(--color-rule)] bg-[color-mix(in_srgb,var(--color-bg)_90%,transparent)] backdrop-blur">
     <div class="wrap min-h-14 flex flex-wrap sm:flex-nowrap items-center gap-x-3 sm:gap-x-5">
       <a href="/" class="lockup site-header-lockup shrink-0 py-2" aria-label="Solvency home"><Logo size={20} /><span class="wordmark"><b>S</b>OLVENCY</span></a>
-      <nav aria-label="Primary" class="order-last basis-full sm:order-none sm:basis-0 flex-1 min-w-0 border-t border-[var(--color-rule)] sm:border-0 -mx-5 px-5 sm:mx-0 sm:px-0">
-        <ul id="nav-list" class="nav-scroll flex items-stretch gap-0.5 -mx-1 px-1 h-11 sm:h-14">
-          {NAV.map(([href, name]) => (
-            <li class="flex items-stretch"><a href={href} class="nav-a" aria-current={current(href) ? 'page' : undefined}>{name}</a></li>
-          ))}
-        </ul>
-      </nav>
+      {NAV.length > 0 && (
+        <nav aria-label="Primary" class="order-last basis-full sm:order-none sm:basis-0 flex-1 min-w-0 border-t border-[var(--color-rule)] sm:border-0 -mx-5 px-5 sm:mx-0 sm:px-0">
+          <ul id="nav-list" class="nav-scroll flex items-stretch gap-0.5 -mx-1 px-1 h-11 sm:h-14">
+            {NAV.map(([href, name]) => (
+              <li class="flex items-stretch"><a href={href} class="nav-a" aria-current={current(href) ? 'page' : undefined}>{name}</a></li>
+            ))}
+          </ul>
+        </nav>
+      )}
+      <div class="flex-1 min-w-0"></div>
       <button type="button" id="theme-toggle" class="theme-btn shrink-0 ml-auto sm:ml-0" aria-label="Light theme" aria-pressed="true" title="Toggle theme">
         <svg class="i-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
         <svg class="i-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
       </button>
       <script is:inline>(function(){var b=document.getElementById('theme-toggle'),r=document.documentElement;function cur(){return r.getAttribute('data-theme')||'light';}function state(){var l=cur()==='light';b.setAttribute('aria-pressed',l?'true':'false');var m=document.getElementById('theme-color');if(m)m.setAttribute('content',l?'#F4F5F7':'#101116');}b.addEventListener('click',function(){var next=cur()==='light'?'dark':'light';r.setAttribute('data-theme',next);try{localStorage.setItem('theme',next);}catch(e){}state();});state();
-      var n=document.getElementById('nav-list'),c=n.querySelector('[aria-current="page"]');function more(){if(n.scrollLeft+n.clientWidth<n.scrollWidth-1)n.setAttribute('data-more','1');else n.removeAttribute('data-more');}function place(){if(c&&n.scrollWidth>n.clientWidth+1)n.scrollLeft=Math.max(0,c.offsetLeft-(n.clientWidth-c.offsetWidth)/2);more();}n.addEventListener('scroll',more,{passive:true});addEventListener('resize',function(){requestAnimationFrame(place);});requestAnimationFrame(place);})();</script>
+      var n=document.getElementById('nav-list');if(n){var c=n.querySelector('[aria-current="page"]');function more(){if(n.scrollLeft+n.clientWidth<n.scrollWidth-1)n.setAttribute('data-more','1');else n.removeAttribute('data-more');}function place(){if(c&&n.scrollWidth>n.clientWidth+1)n.scrollLeft=Math.max(0,c.offsetLeft-(n.clientWidth-c.offsetWidth)/2);more();}n.addEventListener('scroll',more,{passive:true});addEventListener('resize',function(){requestAnimationFrame(place);});requestAnimationFrame(place);}})();</script>
       {CLERK_ENABLED && (
         <div class="site-header-auth shrink-0 flex items-center">
           <button type="button" id="auth-signin" aria-describedby="auth-readiness" class="small mr-2 sm:mr-3 inline-flex items-center min-h-11 sm:min-h-0 text-[var(--color-ink)] bg-transparent border-0 p-0 hover:underline disabled:cursor-default" disabled>Sign in</button>
-          <button type="button" id="auth-signup" class="btn btn-accent" data-analytics="nav-signup" aria-describedby="auth-readiness" disabled>Sign up</button>
+          <a href="/app" id="nav-console" class="btn btn-accent" data-analytics="nav-console">Open console</a>
           <div id="auth-user" class="hidden min-h-8" aria-label="Account"></div>
           <p id="auth-readiness" class="sr-only" role="status" aria-live="polite" aria-atomic="true">Account controls are loading.</p>
         </div>
@@ -133,13 +140,14 @@ const CHECKOUT_UI_ENABLED = import.meta.env.PUBLIC_STRIPE_CHECKOUT_ENABLED === '
       <script>
         import { observeClerkAuth, openSignIn, openSignUp, wireAnalytics, mountUserButtonThemed, observeThemeChange } from '../lib/clerk-client.ts';
         wireAnalytics();
-        const b = document.getElementById('auth-signup') as HTMLButtonElement | null;
+        // Enterprise redesign: the header's filled CTA is a plain link to the
+        // console at /app (the console page owns sign-up); only "Sign in"
+        // still opens the Clerk modal from the marketing site.
         const s = document.getElementById('auth-signin') as HTMLButtonElement | null;
         const u = document.getElementById('auth-user');
         const status = document.getElementById('auth-readiness');
-        if (b && s && u && status) {
+        if (s && u && status) {
           const setAvailable = (available: boolean) => {
-            b.disabled = !available;
             s.disabled = !available;
           };
           const modalUnavailable = () => {
@@ -149,9 +157,6 @@ const CHECKOUT_UI_ENABLED = import.meta.env.PUBLIC_STRIPE_CHECKOUT_ENABLED === '
           s.addEventListener('click', () => {
             if (s.disabled) return;
             if (openSignIn() === 'unavailable') modalUnavailable();
-          });
-          b.addEventListener('click', () => {
-            if (openSignUp('gate', 'Create your free account: tune assumptions, keep scenario links and save Build Composer plans when available.') === 'unavailable') modalUnavailable();
           });
           const stop = observeClerkAuth((state) => {
             const ready = state.status === 'signed-in' || state.status === 'signed-out';
@@ -163,7 +168,7 @@ const CHECKOUT_UI_ENABLED = import.meta.env.PUBLIC_STRIPE_CHECKOUT_ENABLED === '
                 : '';
             const c = (window as any).Clerk;
             const on = state.status === 'signed-in';
-            b.classList.toggle('hidden', on); s.style.display = on ? 'none' : ''; u.classList.toggle('hidden', !on);
+            s.style.display = on ? 'none' : ''; u.classList.toggle('hidden', !on);
             if (on && c && !u.hasChildNodes()) mountUserButtonThemed(u);
             if (!on && c && u.hasChildNodes()) { c.unmountUserButton(u); u.replaceChildren(); }
           }, { enabled: true });

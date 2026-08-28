@@ -1,0 +1,20 @@
+---
+/**
+ * /calculator — the public ranked cost-per-solved-task table, moved off the
+ * homepage in the enterprise redesign (2026-08-27 night). Old share links
+ * pointed at "/?tier=..."; index.astro forwards those queries here so every
+ * previously shared scenario still resolves. The homepage is now the
+ * marketing surface; this page is part of the public evidence layer.
+ */
+import Base from '../layouts/Base.astro';
+import Calculator from '../components/Calculator.astro';
+---
+<Base title="Cost per solved task — Solvency"
+      description="Every model we track, ranked by what a solved task costs — measured first-party where possible, modelled and labelled where not.">
+  <div class="wrap pt-8 md:pt-10">
+    <p class="eyebrow">Evidence · the ranked table</p>
+    <h1 class="h-page mt-3">What a solved task costs</h1>
+    <p class="mt-4 lede max-w-2xl">Per-token price barely predicts per-task cost. This table prices the outcome — measured rows from our own bench, modelled rows labelled as assumptions.</p>
+    <div class="mt-8"><Calculator /></div>
+  </div>
+</Base>
